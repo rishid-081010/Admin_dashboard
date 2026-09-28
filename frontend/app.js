@@ -60,6 +60,7 @@ if (loadSampleBtn) {
     lucide.createIcons();
     document.getElementById('retry-btn').addEventListener('click', resetDropzone);
   }
+  });
 }
 
 function resetDropzone() {
