@@ -363,7 +363,7 @@ if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
         exit;
     }
 
-    $n8n_webhook_url = "https://n8n.asquared.ae/webhook/v2-ingest-sandbox";
+    $n8n_webhook_url = "https://n8n.asquared.ae/webhook/v2-direct-bitrix";
     $ch = curl_init($n8n_webhook_url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -384,5 +384,6 @@ if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
 http_response_code(404);
 echo json_encode(["error" => "Endpoint not found"]);
 ?>
+
 
 
