@@ -63,6 +63,41 @@ if (loadSampleBtn) {
   });
 }
 
+
+
+async function handleFile(file) {
+  dropzone.innerHTML = `<div class="flex flex-col items-center"><i data-lucide="loader-2" class="w-8 h-8 text-blue-400 animate-spin mb-2"></i><p class="text-sm text-blue-300">Uploading & Cleaning Data...</p></div>`;
+  lucide.createIcons();
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (typeof defaultPropTypeSelect !== 'undefined' && defaultPropTypeSelect) {
+      formData.append('default_property_type', defaultPropTypeSelect.value);
+    }
+
+    const res = await fetch('api.php?endpoint=preview-file', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || 'Server Error');
+    }
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    currentPreviewData = data;
+    renderResults(data);
+
+  } catch (err) {
+    dropzone.innerHTML = `<div class='flex flex-col items-center justify-center space-y-2 text-rose-400'><i data-lucide='alert-circle' class='w-8 h-8'></i><p class='text-sm font-semibold'>Error: ${err.message}</p><button id='retry-btn' class='px-3 py-1 bg-rose-500/20 rounded mt-2 text-xs'>Try Again</button></div>`;
+    lucide.createIcons();
+    document.getElementById('retry-btn').addEventListener('click', resetDropzone);
+  }
+}
 function resetDropzone() {
   dropzone.innerHTML = `
     <input type="file" id="file-input" accept=".csv, .txt, .xlsx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
@@ -285,6 +320,8 @@ if (pushLeadsBtn) {
     }
   });
 }
+
+
 
 
 
