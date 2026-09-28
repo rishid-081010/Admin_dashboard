@@ -76,7 +76,7 @@ async function handleFile(file) {
       formData.append('default_property_type', defaultPropTypeSelect.value);
     }
 
-    const res = await fetch('api.php?endpoint=preview-file', {
+    const res = await fetch('api.php?endpoint=upload-preview', {
       method: 'POST',
       body: formData
     });
