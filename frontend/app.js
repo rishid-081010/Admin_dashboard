@@ -56,7 +56,7 @@ if (loadSampleBtn) {
       const sampleFile = new File([blob], 'sample_unstructured_leads.csv', { type: 'text/csv' });
       await handleFile(sampleFile);
     } catch (err) {
-    dropzone.innerHTML = <div class='flex flex-col items-center justify-center space-y-2 text-rose-400'><i data-lucide='alert-circle' class='w-8 h-8'></i><p class='text-sm font-semibold'>Error:  + err.message + </p><button id='retry-btn' class='px-3 py-1 bg-rose-500/20 rounded mt-2 text-xs'>Try Again</button></div>;
+    dropzone.innerHTML = `<div class='flex flex-col items-center justify-center space-y-2 text-rose-400'><i data-lucide='alert-circle' class='w-8 h-8'></i><p class='text-sm font-semibold'>Error: ${err.message}</p><button id='retry-btn' class='px-3 py-1 bg-rose-500/20 rounded mt-2 text-xs'>Try Again</button></div>`;
     lucide.createIcons();
     document.getElementById('retry-btn').addEventListener('click', resetDropzone);
   }
@@ -284,5 +284,8 @@ if (pushLeadsBtn) {
     }
   });
 }
+
+
+
 
 
