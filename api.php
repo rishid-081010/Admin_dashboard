@@ -363,11 +363,20 @@ if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
         exit;
     }
 
+    $n8n_webhook_url = "https://n8n.asquared.ae/webhook/v2-ingest-sandbox";
+    $ch = curl_init($n8n_webhook_url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(["leads" => $leads]));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
+    $n8n_response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
     echo json_encode([
         "success" => true,
         "pushed_count" => count($leads),
-        "mode" => "live_synced",
-        "message" => "Successfully processed " . count($leads) . " leads into AS Properties queue."
+        "mode" => "sandbox_ingested",
+        "message" => "Successfully sent " . count($leads) . " leads to n8n V2 Sandbox Ingestor."
     ]);
     exit;
 }
@@ -375,3 +384,4 @@ if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
 http_response_code(404);
 echo json_encode(["error" => "Endpoint not found"]);
 ?>
+
