@@ -1,14 +1,51 @@
-Customer Name,Mobile,Tower / Project,Area,Flat No,Category
-MOHAMED RASHID AL-MANSOORI,050 123 4567,Princess Tower,Dubai Marina,1402,Apartment
-MOHAMED RASHID AL-MANSOORI,050 123 4567,Princess Tower,Dubai Marina,1403,Apartment
-MOHAMED RASHID AL-MANSOORI,050 123 4567,Princess Tower,Dubai Marina,1402,Apartment
-DR. KHALID AL-QASSIMI,+971 52 333 4444 / 050 999 1111,Candace Acacia,Al Furjan,310,Flat
-SHAHAD NABIL H ALKAHTANI,00971507654321,Damac Hills 2,Damac Hills 2,Villa 88,Villa
-DINESH KUMAR,509998888,Al Furjan,Al Furjan,501,Apartments
-OLENA BOHODUKHOVA,+971555313403,null,Business Bay,,Unit
-HARSHIT VERMA,055-987-6543,Silverene Tower A,Dubai Marina,804,
-STEPAN TSEPALKIN,79523729121,Zada Tower,Businessbay,1902,Apartment
-FATIMA ZAHRA AL-HASHIMI,0508881234,Marina Gate 1,Dubai Marina,,Apartment
-JUNK RECORD TEST,12345,Burj Crown,Downtown Dubai,101,Apartment
-DUBAI LANDLINE OFFICE,04 399 0000,Marina Gate 2,Dubai Marina,2201,Apartment
-AHMED BIN SALEM,00971 50 444 5566,Damac Lagoons,Dubailand,Villa 12,Townhouse
+Full Name,Mobile Number,Project/Tower,Location Area,Unit #,Prop Type
+Ali Reza,0501234567,Marina View,Dubai Marina,1204,Apartment
+sara smith,+971 52 987 6543,,Downtown,45B,Villa
+,55 123 9999,Burj Khalifa,Downtown,112,Penthouse
+JOHN DOE,971-50-111-2222,JLT Towers,JLT,,Townhouse
+Fatima,00971587654321,Palm Villas,Palm Jumeirah,99,Duplex
+Omar Al Maktoum,,Arabian Ranches,Arabian Ranches,12,Villa
+mohammed,0541122334,Downtown Views,,405,Studio
+Jane Smith,+971559998888,Emaar South,Dubai South,77,Apartment
+Tariq,501234567,Marina View,Dubai Marina,,
+aisha,971 52 444 5555,,JLT,302,Apartment
+Michael Jordan,050 999 1111,Burj Khalifa,Downtown,808,Penthouse
+Ali Reza,0581234567,JLT Towers,JLT,401,Apartment
+SARA SMITH,+971-50-555-6666,Palm Villas,Palm Jumeirah,,Villa
+John Doe,00971543332222,Arabian Ranches,Arabian Ranches,44,Townhouse
+fatima,971556667777,Downtown Views,Business Bay,901,Duplex
+OMAR AL MAKTOUM,0521112233,,Dubai South,11,Villa
+Mohammed,+971 58 888 9999,Marina View,Dubai Marina,205,Studio
+jane smith,971-50-444-3333,Burj Khalifa,Downtown,102,Apartment
+TARIQ,0547778888,JLT Towers,JLT,,
+Aisha,00971552223333,Palm Villas,Palm Jumeirah,55,Villa
+michael jordan,971 52 111 4444,Arabian Ranches,Arabian Ranches,66,Townhouse
+ALI REZA,0503334444,Downtown Views,Business Bay,303,Duplex
+Sara Smith,+971584445555,Emaar South,Dubai South,,Studio
+john doe,971-54-555-6666,Marina View,Dubai Marina,707,Apartment
+Fatima,00971506667777,Burj Khalifa,Downtown,150,Penthouse
+Omar Al Maktoum,0528889999,JLT Towers,JLT,808,Apartment
+MOHAMMED,+971 55 123 4567,Palm Villas,Palm Jumeirah,,Villa
+Jane Smith,971589876543,,Arabian Ranches,22,Townhouse
+tariq,0541119999,Downtown Views,Business Bay,1001,Duplex
+AISHA,+971-50-222-8888,Emaar South,Dubai South,404,Studio
+Michael Jordan,00971523337777,Marina View,Dubai Marina,,Apartment
+Ali Reza,971 55 444 6666,Burj Khalifa,Downtown,200,Penthouse
+SARA SMITH,0585554444,JLT Towers,JLT,505,Apartment
+John Doe,+971506663333,Palm Villas,Palm Jumeirah,77,Villa
+fatima,971-52-777-2222,Arabian Ranches,Arabian Ranches,,Townhouse
+OMAR AL MAKTOUM,00971548881111,Downtown Views,Business Bay,1202,Duplex
+Mohammed,0559990000,Emaar South,Dubai South,303,Studio
+jane smith,+971 58 111 2222,Marina View,Dubai Marina,606,Apartment
+Tariq,971502223333,Burj Khalifa,Downtown,,Penthouse
+AISHA,0523334444,JLT Towers,JLT,909,Apartment
+Michael Jordan,+971-54-444-5555,Palm Villas,Palm Jumeirah,88,Villa
+Ali Reza,00971505556666,Arabian Ranches,Arabian Ranches,33,Townhouse
+sara smith,971 58 666 7777,Downtown Views,Business Bay,,Duplex
+JOHN DOE,0557778888,Emaar South,Dubai South,202,Studio
+Fatima,+971528889999,Marina View,Dubai Marina,1101,Apartment
+Omar Al Maktoum,971-54-999-0000,Burj Khalifa,Downtown,250,Penthouse
+mohammed,00971501112222,JLT Towers,JLT,,Apartment
+Jane Smith,0582223333,Palm Villas,Palm Jumeirah,10,Villa
+TARIQ,+971 55 333 4444,Arabian Ranches,Arabian Ranches,99,Townhouse
+Aisha,971524445555,Downtown Views,Business Bay,1404,Duplex
