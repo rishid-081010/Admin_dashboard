@@ -240,7 +240,7 @@ if ($endpoint === 'upload-preview') {
         ];
     }
 
-    // Pre-fetch existing numbers to prevent making 4000 HTTP requests
+    // Pre-fetch existing numbers to prevent making HTTP requests
     $existingDbNumbers = [];
     $ch = curl_init("$SUPABASE_URL/rest/v1/master_leads?select=" . urlencode('Contact Number') . "&limit=100000");
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -268,10 +268,14 @@ if ($endpoint === 'upload-preview') {
     $duplicatesInFile = [];
     $duplicatesInDb = [];
     $seenPhones = [];
-    $landlineCount = 0;
     
     $totalRows = 0;
     $rowNum = 1;
+    $cleanCount = 0;
+    $dupFileCount = 0;
+    $dupDbCount = 0;
+    $invalidCount = 0;
+    $landlineCount = 0;
     
     // Rewind and skip to the line AFTER the detected header
     rewind($handle);
@@ -298,6 +302,7 @@ if ($endpoint === 'upload-preview') {
 
         $phoneRes = cleanPhone($rawPhone, $dummyStrings);
         if (!$phoneRes['valid']) {
+            $invalidCount++;
             if (count($invalidLeads) < 500) {
                 $invalidLeads[] = [
                     "row_num" => $rowNum,
@@ -313,6 +318,7 @@ if ($endpoint === 'upload-preview') {
 
         if ($phoneRes['is_landline']) {
             $landlineCount++;
+            $invalidCount++;
             if (count($invalidLeads) < 500) {
                 $invalidLeads[] = [
                     "row_num" => $rowNum,
@@ -349,6 +355,7 @@ if ($endpoint === 'upload-preview') {
 
         // Tier 1 Duplicate check
         if (isset($seenPhones[$digits])) {
+            $dupFileCount++;
             if (count($duplicatesInFile) < 500) {
                 $item['status'] = 'duplicate_file';
                 $item['reason'] = 'Duplicate within uploaded file (repeated phone number)';
@@ -360,6 +367,7 @@ if ($endpoint === 'upload-preview') {
 
         // Tier 2 Duplicate check (against pre-fetched DB numbers)
         if (isset($existingDbNumbers[$digits])) {
+            $dupDbCount++;
             if (count($duplicatesInDb) < 500) {
                 $item['status'] = 'duplicate_db';
                 $item['reason'] = 'Already exists in AS Properties CRM / master_leads';
@@ -368,6 +376,7 @@ if ($endpoint === 'upload-preview') {
             continue;
         }
 
+        $cleanCount++;
         $cleanCandidates[] = $item;
     }
     fclose($handle);
@@ -387,17 +396,17 @@ if ($endpoint === 'upload-preview') {
         "file_id" => $fileId,
         "stats" => [
             "total" => $totalRows,
-            "ready" => count($cleanCandidates),
-            "duplicates_file" => count($seenPhones) - count($cleanCandidates) - count($existingDbNumbers),
-            "duplicates_db" => 0, // Simplified for extremely fast processing
-            "invalid" => $totalRows - count($cleanCandidates),
+            "ready" => $cleanCount,
+            "duplicates_file" => $dupFileCount,
+            "duplicates_db" => $dupDbCount,
+            "invalid" => $invalidCount,
             "landlines" => $landlineCount
         ],
         "summary" => [
             "total_rows_imported" => $totalRows,
-            "clean_leads_count" => count($cleanCandidates),
-            "duplicate_leads_count" => count($seenPhones) - count($cleanCandidates),
-            "invalid_leads_count" => $totalRows - count($cleanCandidates),
+            "clean_leads_count" => $cleanCount,
+            "duplicate_leads_count" => $dupFileCount + $dupDbCount,
+            "invalid_leads_count" => $invalidCount,
             "detected_mappings" => $colMap
         ]
     ];
