@@ -24,7 +24,7 @@
   width: 260px;
   flex-shrink: 0;
   display: flex;
-  flex-col;
+  flex-direction: column;
   padding: 2rem 1.25rem;
 }
 
@@ -40,7 +40,9 @@
 }
 
 .nav-link {
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 0.8rem 1.2rem;
   margin-bottom: 0.25rem;
   color: #a4b4c7;
@@ -141,8 +143,8 @@
 /* Internal Cards */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.25rem;
   margin-bottom: 2rem;
 }
 
@@ -158,7 +160,7 @@
 }
 
 .card-title {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: #8c9baf;
   text-transform: uppercase;
@@ -203,17 +205,16 @@
   font-size: 0.75rem;
   color: #72849a;
   margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 .dyn-value {
   font-size: 1.2rem;
   font-weight: 700;
   color: #ffffff;
 }
-.dyn-dash {
-  color: #3b82f6; /* Example color for the dots */
-}
 
-/* Lead Ingestion Overrides for the new Theme */
+/* Lead Ingestion Elements */
 .dropzone-container {
   border: 2px dashed #24354a;
   border-radius: 16px;
@@ -227,7 +228,24 @@
   background-color: rgba(30, 48, 72, 0.3);
 }
 
-/* Custom scrollbar for deep dark theme */
+.tab-btn {
+  padding: 0.4rem 1.2rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  color: #8c9baf;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.tab-btn:hover {
+  background-color: rgba(255,255,255,0.05);
+}
+.tab-btn.active {
+  background-color: #1a273b;
+  border: 1px solid #24354a;
+  color: #fff;
+}
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #1a273b; border-radius: 4px; }
