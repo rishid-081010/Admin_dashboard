@@ -319,18 +319,42 @@ if ($endpoint === 'upload-preview') {
     // Process line by line for extremely large files
     while (($row = fgetcsv($handle, 4096, ",")) !== FALSE) {
         if (count($row) === 1 && trim($row[0]) === '') continue;
+
+        // 1. Ghost Row Filter (skip empty Excel formatted cells)
+        $nonEmptyCount = 0;
+        foreach ($row as $cell) {
+            $c = trim((string)$cell);
+            if ($c !== '' && !in_array(strtolower($c), $dummyStrings)) {
+                $nonEmptyCount++;
+            }
+        }
+        if ($nonEmptyCount < 2) {
+            continue; // Skip ghost empty rows
+        }
+
         $rowNum++;
         $totalRows++;
         
         $rawPhone = isset($colMap['phone']) ? ($row[$colMap['phone']] ?? '') : '';
-        $rawName = isset($colMap['name']) ? ($row[$colMap['name']] ?? '') : '';
-        $rawProject = isset($colMap['project']) ? ($row[$colMap['project']] ?? '') : '';
-        $rawLoc = isset($colMap['location']) ? ($row[$colMap['location']] ?? '') : '';
-        $rawUnit = isset($colMap['unit']) ? ($row[$colMap['unit']] ?? '') : '';
-        $rawType = isset($colMap['property_type']) ? ($row[$colMap['property_type']] ?? '') : $defaultPropType;
-        $rawSize = isset($colMap['size']) ? ($row[$colMap['size']] ?? '') : '';
-
         $phoneRes = cleanPhone($rawPhone, $dummyStrings);
+
+        // Self-Healing Pipeline: If mapped column had shifted text or invalid phone, search entire row!
+        if (!$phoneRes['valid']) {
+            foreach ($row as $colIdx => $cellVal) {
+                if (isset($colMap['phone']) && $colIdx === $colMap['phone']) continue;
+                $candidate = cleanPhone($cellVal, $dummyStrings);
+                if ($candidate['valid']) {
+                    // Skip 15-digit Emirates IDs (starting with 784)
+                    if (substr($candidate['primary'], 0, 3) === '784' && strlen($candidate['primary']) === 15) {
+                        continue;
+                    }
+                    $phoneRes = $candidate;
+                    $rawPhone = $cellVal;
+                    break;
+                }
+            }
+        }
+
         $cleanPhoneVal = '';
         $vapiPhoneVal = '';
         $isDuplicate = false;
@@ -356,12 +380,54 @@ if ($endpoint === 'upload-preview') {
             $vapiPhoneVal = $cleanPhoneVal;
         }
 
-        $cleanProject = cleanTxt($rawProject, $dummyStrings);
-        $cleanLoc = cleanTxt($rawLoc, $dummyStrings);
+        // Self-Healing Name Recovery
+        $rawName = isset($colMap['name']) ? ($row[$colMap['name']] ?? '') : '';
         $cleanName = cleanNameStrict($rawName, $dummyStrings);
-        $cleanUnit = cleanTxt($rawUnit, $dummyStrings);
-        $cleanType = cleanTxt($rawType, $dummyStrings) ?: $defaultPropType;
+        $invalidNameWords = ['sale', 'mortgage', 'land', 'apartment', 'villa', 'seller', 'buyer', 'procedure', 'commercial', 'residential'];
+        if (!$cleanName || in_array(strtolower($cleanName), $invalidNameWords)) {
+            foreach ($row as $colIdx => $cellVal) {
+                if (isset($colMap['name']) && $colIdx === $colMap['name']) continue;
+                $candName = cleanNameStrict($cellVal, $dummyStrings);
+                if ($candName && strlen($candName) > 3 && !in_array(strtolower($candName), $invalidNameWords)) {
+                    if (preg_match('/^[a-zA-Z\s\-\'\.]+$/', $candName)) {
+                        $cleanName = $candName;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Self-Healing Project Recovery
+        $rawProject = isset($colMap['project']) ? ($row[$colMap['project']] ?? '') : '';
+        $cleanProject = cleanTxt($rawProject, $dummyStrings);
+        if (!$cleanProject || $cleanProject === '0') {
+            foreach ($row as $cellVal) {
+                $c = cleanTxt($cellVal, $dummyStrings);
+                if ($c && strlen($c) > 4 && !is_numeric($c)) {
+                    if (stripos($c, 'jumeirah') !== false || stripos($c, 'tower') !== false || stripos($c, 'residence') !== false || stripos($c, 'hills') !== false || stripos($c, 'downtown') !== false || stripos($c, 'marina') !== false || stripos($c, 'creek') !== false || stripos($c, 'damac') !== false || stripos($c, 'emaar') !== false) {
+                        $cleanProject = $c;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Self-Healing Actual Size Recovery
+        $rawSize = isset($colMap['size']) ? ($row[$colMap['size']] ?? '') : '';
         $cleanSize = cleanTxt($rawSize, $dummyStrings);
+        if (!$cleanSize || !is_numeric($cleanSize)) {
+            foreach ($row as $cellVal) {
+                $c = cleanTxt($cellVal, $dummyStrings);
+                if ($c && is_numeric($c) && floatval($c) >= 20 && floatval($c) <= 60000 && strlen($c) <= 8) {
+                    $cleanSize = $c;
+                    break;
+                }
+            }
+        }
+
+        $cleanLoc = cleanTxt(isset($colMap['location']) ? ($row[$colMap['location']] ?? '') : '', $dummyStrings);
+        $cleanUnit = cleanTxt(isset($colMap['unit']) ? ($row[$colMap['unit']] ?? '') : '', $dummyStrings);
+        $cleanType = cleanTxt(isset($colMap['property_type']) ? ($row[$colMap['property_type']] ?? '') : '', $dummyStrings) ?: $defaultPropType;
 
         $item = [
             "row_num" => $rowNum,
