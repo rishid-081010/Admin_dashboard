@@ -66,6 +66,27 @@ if (loadSampleBtn) {
 
 
 async function handleFile(file) {
+  dropzone.innerHTML = `<div class="flex flex-col items-center"><i data-lucide="loader-2" class="w-8 h-8 text-blue-400 animate-spin mb-2"></i><p class="text-sm text-blue-300">Preparing file...</p></div>`;
+  lucide.createIcons();
+
+  if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+    dropzone.innerHTML = `<div class="flex flex-col items-center"><i data-lucide="loader-2" class="w-8 h-8 text-blue-400 animate-spin mb-2"></i><p class="text-sm text-blue-300">Converting Excel to CSV locally...</p></div>`;
+    lucide.createIcons();
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+      const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+      file = new File([csvBlob], file.name.replace(/\.xlsx?$/, '.csv'), { type: 'text/csv' });
+    } catch (e) {
+      dropzone.innerHTML = `<div class='flex flex-col items-center justify-center space-y-2 text-rose-400'><i data-lucide='alert-circle' class='w-8 h-8'></i><p class='text-sm font-semibold'>Error parsing Excel</p></div>`;
+      lucide.createIcons();
+      return;
+    }
+  }
+
   dropzone.innerHTML = `<div class="flex flex-col items-center"><i data-lucide="loader-2" class="w-8 h-8 text-blue-400 animate-spin mb-2"></i><p class="text-sm text-blue-300">Uploading & Cleaning Data...</p></div>`;
   lucide.createIcons();
 
