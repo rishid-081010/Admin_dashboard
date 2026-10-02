@@ -109,10 +109,38 @@ if ($endpoint === 'upload-preview') {
         exit;
     }
 
-    // Read headers
-    $originalHeaders = fgetcsv($handle, 4096, ",");
-    if (!$originalHeaders) {
-        echo json_encode(["error" => "File is empty or invalid"]);
+    // Broader Sheets Filtration: Find the actual header row (skip garbage/metadata at top)
+    $originalHeaders = null;
+    $bestMatchCount = -1;
+    $rowsRead = [];
+    
+    // Scan first 50 rows to find header
+    for ($i = 0; $i < 50; $i++) {
+        $row = fgetcsv($handle, 4096, ",");
+        if ($row === FALSE) break;
+        $rowsRead[] = $row;
+        
+        $matchCount = 0;
+        foreach ($row as $cell) {
+            $cellStr = strtolower(trim($cell));
+            if (in_array($cellStr, ['phone', 'mobile', 'name', 'client', 'project', 'unit', 'property', 'type', 'location', 'email', 'status', 'owner'])) {
+                $matchCount++;
+            }
+        }
+        
+        if ($matchCount > $bestMatchCount) {
+            $bestMatchCount = $matchCount;
+            $originalHeaders = $row;
+        }
+    }
+    
+    if (!$originalHeaders || $bestMatchCount == 0) {
+        // Fallback to first row if nothing found
+        $originalHeaders = $rowsRead[0] ?? [];
+    }
+    
+    if (empty($originalHeaders)) {
+        echo json_encode(["error" => "File is empty or invalid format"]);
         exit;
     }
     
@@ -161,6 +189,23 @@ if ($endpoint === 'upload-preview') {
         $t = trim((string)$txt);
         if (in_array(strtolower($t), $dummies)) return "";
         return $t;
+    }
+    
+    function cleanNameStrict($raw, $dummies) {
+        $name = cleanTxt($raw, $dummies);
+        if (!$name) return "";
+        
+        // Remove emails
+        $name = preg_replace('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', '', $name);
+        // Remove titles
+        $name = preg_replace('/\b(mr|mrs|ms|miss|dr|prof|sir|madam)\b\.?/i', '', $name);
+        // Remove all numbers and weird symbols (keep letters, spaces, hyphens, apostrophes)
+        // Also this implicitly removes emojis and garbage characters!
+        $name = preg_replace('/[^a-zA-Z\s\-\']/', '', $name);
+        // Collapse multiple spaces
+        $name = preg_replace('/\s+/', ' ', trim($name));
+        
+        return ucwords(strtolower($name));
     }
 
     function cleanPhone($raw, $dummies) {
@@ -227,6 +272,16 @@ if ($endpoint === 'upload-preview') {
     
     $totalRows = 0;
     $rowNum = 1;
+    
+    // Rewind and skip to the line AFTER the detected header
+    rewind($handle);
+    $reachedHeader = false;
+    while (($row = fgetcsv($handle, 4096, ",")) !== FALSE) {
+        if ($row === $originalHeaders) {
+            $reachedHeader = true;
+            break;
+        }
+    }
 
     // Process line by line for extremely large files
     while (($row = fgetcsv($handle, 4096, ",")) !== FALSE) {
@@ -246,7 +301,7 @@ if ($endpoint === 'upload-preview') {
             if (count($invalidLeads) < 500) {
                 $invalidLeads[] = [
                     "row_num" => $rowNum,
-                    "owner_name" => cleanTxt($rawName, $dummyStrings) ?: "Property Owner",
+                    "owner_name" => cleanNameStrict($rawName, $dummyStrings) ?: "Property Owner",
                     "raw_phone" => $rawPhone ?: "N/A",
                     "contact_number" => $rawPhone ?: "N/A",
                     "reason" => $phoneRes['reason'],
@@ -261,7 +316,7 @@ if ($endpoint === 'upload-preview') {
             if (count($invalidLeads) < 500) {
                 $invalidLeads[] = [
                     "row_num" => $rowNum,
-                    "owner_name" => cleanTxt($rawName, $dummyStrings) ?: "Property Owner",
+                    "owner_name" => cleanNameStrict($rawName, $dummyStrings) ?: "Property Owner",
                     "raw_phone" => $phoneRes['vapi_e164'],
                     "contact_number" => $phoneRes['vapi_e164'],
                     "reason" => "Dubai Landline (Cannot receive voice AI outbound call)",
@@ -274,7 +329,7 @@ if ($endpoint === 'upload-preview') {
         $digits = $phoneRes['primary'];
         $cleanProject = cleanTxt($rawProject, $dummyStrings);
         $cleanLoc = cleanTxt($rawLoc, $dummyStrings);
-        $cleanName = ucwords(strtolower(cleanTxt($rawName, $dummyStrings)));
+        $cleanName = cleanNameStrict($rawName, $dummyStrings);
         $cleanUnit = cleanTxt($rawUnit, $dummyStrings);
         $cleanType = cleanTxt($rawType, $dummyStrings) ?: $defaultPropType;
 
