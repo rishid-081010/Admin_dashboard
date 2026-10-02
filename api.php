@@ -1,4 +1,7 @@
 <?php
+if (file_exists(__DIR__ . '/secrets.php')) {
+    require_once __DIR__ . '/secrets.php';
+}
 set_time_limit(0);
 ini_set('memory_limit', '2G');
 
