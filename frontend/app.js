@@ -269,6 +269,7 @@ downloadCsvBtn.addEventListener('click', async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        file_id: currentPreviewData.file_id,
         leads: leads,
         filename: cleanName
       })
@@ -307,7 +308,7 @@ if (pushLeadsBtn) {
       const res = await fetch('api.php?endpoint=push-leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leads: leads, live_sync: true })
+        body: JSON.stringify({ file_id: currentPreviewData.file_id, leads: leads, live_sync: true })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to push leads');
