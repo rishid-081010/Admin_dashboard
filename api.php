@@ -56,13 +56,26 @@ if ($endpoint === 'health-stats') {
 }
 
 // Column mapping AI function
-function getAiColumnMapping($headers) {
+function getAiColumnMapping($headers, $sampleRows) {
     $apiKey = getenv('OPENAI_API_KEY');
     if (empty($apiKey)) {
         return null; // fallback to synonyms if no API key
     }
     
-    $prompt = "Map the following CSV headers to our standardized schema: 'phone', 'name', 'project', 'location', 'unit', 'property_type'. Headers: " . json_encode($headers) . ". Output a JSON object where keys are the standard schema names and values are the exact matching string from the CSV headers. Output only valid JSON.";
+    $prompt = "We have a standardized CRM schema with the following core columns:\n" .
+              "- 'name' (Owner Name / Client's full name)\n" .
+              "- 'phone' (Contact Number / Mobile)\n" .
+              "- 'project' (Project Name / Building or tower name)\n" .
+              "- 'location' (Location / City or community area)\n" .
+              "- 'unit' (Unit Number / Apartment or door number)\n" .
+              "- 'property_type' (Property Type / Apartment, villa, or commercial)\n" .
+              "- 'size' (Actual Size / Square footage or area)\n\n" .
+              "I will provide the CSV Headers and the first 5 rows of data. \n" .
+              "Task 1: Match the CSV headers to our core columns based on the header name and the data context.\n" .
+              "Task 2: If a CSV header contains useful data but DOES NOT match any of our core columns, invent the most appropriate clear, snake_case column name for it.\n" .
+              "Task 3: Output ONLY a JSON object where the keys are your chosen column names (core or invented) and the values are the exact matching string from the CSV headers.\n\n" .
+              "CSV Headers: " . json_encode($headers) . "\n" .
+              "Sample Data Rows: " . json_encode($sampleRows);
     
     $ch = curl_init('https://api.openai.com/v1/chat/completions');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -123,7 +136,7 @@ if ($endpoint === 'upload-preview') {
         $matchCount = 0;
         foreach ($row as $cell) {
             $cellStr = strtolower(trim($cell));
-            if (in_array($cellStr, ['phone', 'mobile', 'name', 'client', 'project', 'unit', 'property', 'type', 'location', 'email', 'status', 'owner'])) {
+            if (in_array($cellStr, ['phone', 'mobile', 'name', 'client', 'project', 'unit', 'property', 'type', 'location', 'email', 'status', 'owner', 'size', 'area'])) {
                 $matchCount++;
             }
         }
@@ -146,8 +159,27 @@ if ($endpoint === 'upload-preview') {
     
     $headers = array_map(function($h) { return trim(strtolower($h)); }, $originalHeaders);
     
-    // Attempt AI mapping first
-    $aiMapping = getAiColumnMapping($originalHeaders);
+    // Grab next 5 rows as sample data for AI context
+    $sampleRows = [];
+    // We already read up to 50 rows. We need the 5 rows immediately FOLLOWING the header row in $rowsRead.
+    $headerFoundIdx = -1;
+    foreach ($rowsRead as $idx => $r) {
+        if ($r === $originalHeaders) {
+            $headerFoundIdx = $idx;
+            break;
+        }
+    }
+    
+    if ($headerFoundIdx !== -1) {
+        for ($i = 1; $i <= 5; $i++) {
+            if (isset($rowsRead[$headerFoundIdx + $i])) {
+                $sampleRows[] = $rowsRead[$headerFoundIdx + $i];
+            }
+        }
+    }
+    
+    // Attempt AI mapping with sample data
+    $aiMapping = getAiColumnMapping($originalHeaders, $sampleRows);
     $colMap = [];
     $mappingUsed = [];
     
@@ -167,7 +199,8 @@ if ($endpoint === 'upload-preview') {
             "project" => ["project name", "project", "building", "building name", "tower", "tower name", "property name", "development", "residence"],
             "location" => ["location", "area", "community", "sub community", "sub-community", "district", "zone", "city"],
             "unit" => ["unit number", "unit no", "unit", "flat", "flat no", "apt", "apartment no", "villa no"],
-            "property_type" => ["property type", "type", "unit type", "category", "usage"]
+            "property_type" => ["property type", "type", "unit type", "category", "usage"],
+            "size" => ["actual size", "size", "area", "sqft", "sqm", "square feet"]
         ];
 
         foreach ($synonyms as $field => $terms) {
@@ -240,8 +273,6 @@ if ($endpoint === 'upload-preview') {
         ];
     }
 
-    // Supabase duplicate check deferred to push-leads endpoint
-
     $cleanCandidates = [];
     $invalidLeads = [];
     $duplicatesInFile = [];
@@ -279,6 +310,7 @@ if ($endpoint === 'upload-preview') {
         $rawLoc = isset($colMap['location']) ? ($row[$colMap['location']] ?? '') : '';
         $rawUnit = isset($colMap['unit']) ? ($row[$colMap['unit']] ?? '') : '';
         $rawType = isset($colMap['property_type']) ? ($row[$colMap['property_type']] ?? '') : $defaultPropType;
+        $rawSize = isset($colMap['size']) ? ($row[$colMap['size']] ?? '') : '';
 
         $phoneRes = cleanPhone($rawPhone, $dummyStrings);
         if (!$phoneRes['valid']) {
@@ -318,6 +350,7 @@ if ($endpoint === 'upload-preview') {
         $cleanName = cleanNameStrict($rawName, $dummyStrings);
         $cleanUnit = cleanTxt($rawUnit, $dummyStrings);
         $cleanType = cleanTxt($rawType, $dummyStrings) ?: $defaultPropType;
+        $cleanSize = cleanTxt($rawSize, $dummyStrings);
 
         $item = [
             "row_num" => $rowNum,
@@ -329,9 +362,17 @@ if ($endpoint === 'upload-preview') {
             "location" => $cleanLoc ?: "Dubai",
             "unit_number" => $cleanUnit ?: "N/A",
             "property_type" => $cleanType,
+            "actual_size" => $cleanSize,
             "source_file" => $filename,
             "status" => "ready"
         ];
+        
+        // Dynamically add any newly invented columns the AI found
+        foreach ($colMap as $key => $idx) {
+            if (!in_array($key, ['phone', 'name', 'project', 'location', 'unit', 'property_type', 'size'])) {
+                $item[$key] = cleanTxt($row[$idx] ?? '', $dummyStrings);
+            }
+        }
 
         // Tier 1 Duplicate check
         if (isset($seenPhones[$digits])) {
@@ -344,8 +385,6 @@ if ($endpoint === 'upload-preview') {
             continue;
         }
         $seenPhones[$digits] = true;
-
-        // Tier 2 Duplicate check deferred to push-leads
 
         $cleanCount++;
         $cleanCandidates[] = $item;
@@ -403,18 +442,53 @@ if ($endpoint === 'export-cleaned-csv') {
     header('Content-Disposition: attachment; filename="' . $outFilename . '"');
 
     $out = fopen('php://output', 'w');
-    fputcsv($out, ["Owner Name", "Contact Number", "Project Name", "Location", "Unit Number", "Property Type", "Secondary Phone", "Status"]);
+    
+    // Extract dynamic headers to build the CSV header row
+    $standardKeys = [
+        'owner_name' => "Owner Name",
+        'vapi_e164' => "Contact Number",
+        'project_name' => "Project Name",
+        'location' => "Location",
+        'unit_number' => "Unit Number",
+        'property_type' => "Property Type",
+        'actual_size' => "Actual Size",
+        'secondary_phone' => "Secondary Phone",
+        'status' => "Status"
+    ];
+    
+    $dynamicKeys = [];
     foreach ($leads as $l) {
-        fputcsv($out, [
+        foreach (array_keys($l) as $k) {
+            if (!isset($standardKeys[$k]) && $k !== 'contact_number' && $k !== 'row_num' && $k !== 'source_file') {
+                $dynamicKeys[$k] = ucwords(str_replace('_', ' ', $k));
+            }
+        }
+    }
+    
+    $headers = array_values($standardKeys);
+    foreach ($dynamicKeys as $dk) {
+        $headers[] = $dk;
+    }
+    fputcsv($out, $headers);
+
+    foreach ($leads as $l) {
+        $row = [
             $l['owner_name'] ?? '',
             $l['vapi_e164'] ?? ($l['contact_number'] ? '+' . $l['contact_number'] : ''),
             $l['project_name'] ?? '',
             $l['location'] ?? '',
             $l['unit_number'] ?? '',
             $l['property_type'] ?? '',
+            $l['actual_size'] ?? '',
             $l['secondary_phone'] ?? '',
-            'CLEAN & VALIDATED'
-        ]);
+            $l['status'] ?? 'CLEAN & VALIDATED'
+        ];
+        
+        foreach ($dynamicKeys as $k => $label) {
+            $row[] = $l[$k] ?? '';
+        }
+        
+        fputcsv($out, $row);
     }
     fclose($out);
     exit;
