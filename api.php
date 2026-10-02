@@ -331,38 +331,31 @@ if ($endpoint === 'upload-preview') {
         $rawSize = isset($colMap['size']) ? ($row[$colMap['size']] ?? '') : '';
 
         $phoneRes = cleanPhone($rawPhone, $dummyStrings);
-        if (!$phoneRes['valid']) {
-            $invalidCount++;
-            if (count($invalidLeads) < 500) {
-                $invalidLeads[] = [
-                    "row_num" => $rowNum,
-                    "owner_name" => cleanNameStrict($rawName, $dummyStrings) ?: "Property Owner",
-                    "raw_phone" => $rawPhone ?: "N/A",
-                    "contact_number" => $rawPhone ?: "N/A",
-                    "reason" => $phoneRes['reason'],
-                    "status" => "rejected"
-                ];
+        $cleanPhoneVal = '';
+        $vapiPhoneVal = '';
+        $isDuplicate = false;
+
+        if ($phoneRes['valid']) {
+            $digits = $phoneRes['primary'];
+            $cleanPhoneVal = $digits;
+            $vapiPhoneVal = $phoneRes['vapi_e164'];
+
+            if ($phoneRes['is_landline']) {
+                $landlineCount++;
             }
-            continue;
+
+            if (isset($seenPhones[$digits])) {
+                $dupFileCount++;
+                $isDuplicate = true;
+            } else {
+                $seenPhones[$digits] = true;
+            }
+        } else {
+            $invalidCount++;
+            $cleanPhoneVal = cleanTxt($rawPhone, $dummyStrings) ?: "N/A";
+            $vapiPhoneVal = $cleanPhoneVal;
         }
 
-        if ($phoneRes['is_landline']) {
-            $landlineCount++;
-            $invalidCount++;
-            if (count($invalidLeads) < 500) {
-                $invalidLeads[] = [
-                    "row_num" => $rowNum,
-                    "owner_name" => cleanNameStrict($rawName, $dummyStrings) ?: "Property Owner",
-                    "raw_phone" => $phoneRes['vapi_e164'],
-                    "contact_number" => $phoneRes['vapi_e164'],
-                    "reason" => "Dubai Landline (Cannot receive voice AI outbound call)",
-                    "status" => "rejected"
-                ];
-            }
-            continue;
-        }
-
-        $digits = $phoneRes['primary'];
         $cleanProject = cleanTxt($rawProject, $dummyStrings);
         $cleanLoc = cleanTxt($rawLoc, $dummyStrings);
         $cleanName = cleanNameStrict($rawName, $dummyStrings);
@@ -373,16 +366,16 @@ if ($endpoint === 'upload-preview') {
         $item = [
             "row_num" => $rowNum,
             "owner_name" => $cleanName ?: "Property Owner",
-            "contact_number" => $digits,
-            "vapi_e164" => $phoneRes['vapi_e164'],
-            "secondary_phone" => $phoneRes['secondary'],
+            "contact_number" => $cleanPhoneVal,
+            "vapi_e164" => $vapiPhoneVal,
+            "secondary_phone" => $phoneRes['secondary'] ?? null,
             "project_name" => $cleanProject ?: "Dubai Residential",
             "location" => $cleanLoc ?: "Dubai",
             "unit_number" => $cleanUnit ?: "N/A",
             "property_type" => $cleanType,
             "actual_size" => $cleanSize,
             "source_file" => $filename,
-            "status" => "ready"
+            "status" => $isDuplicate ? "duplicate_file" : "ready"
         ];
         
         // Dynamically add any newly invented columns the AI found
@@ -392,18 +385,18 @@ if ($endpoint === 'upload-preview') {
             }
         }
 
-        // Tier 1 Duplicate check
-        if (isset($seenPhones[$digits])) {
-            $dupFileCount++;
-            if (count($duplicatesInFile) < 500) {
-                $item['status'] = 'duplicate_file';
-                $item['reason'] = 'Duplicate within uploaded file (repeated phone number)';
-                $duplicatesInFile[] = $item;
-            }
-            continue;
+        if ($isDuplicate && count($duplicatesInFile) < 500) {
+            $duplicatesInFile[] = $item;
         }
-        $seenPhones[$digits] = true;
 
+        if (!$phoneRes['valid'] && count($invalidLeads) < 500) {
+            $invalidItem = $item;
+            $invalidItem['reason'] = $phoneRes['reason'];
+            $invalidItem['status'] = 'raw_preserved';
+            $invalidLeads[] = $invalidItem;
+        }
+
+        // KEEP ALL LEADS - NEVER DROP!
         $cleanCount++;
         $cleanCandidates[] = $item;
     }
