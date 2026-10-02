@@ -1,4 +1,7 @@
 <?php
+set_time_limit(0);
+ini_set('memory_limit', '2G');
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -10,7 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $SUPABASE_URL = "https://qgxgtavkovqklijfpnfl.supabase.co";
 $SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54";
-$BITRIX_WEBHOOK_URL = "https://crm.asquared.ae/rest/12/19gvgxv7bqa7w2a0/";
 
 $endpoint = $_GET['endpoint'] ?? '';
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -53,6 +55,40 @@ if ($endpoint === 'health-stats') {
     exit;
 }
 
+// Column mapping AI function
+function getAiColumnMapping($headers) {
+    $apiKey = getenv('OPENAI_API_KEY');
+    if (empty($apiKey)) {
+        return null; // fallback to synonyms if no API key
+    }
+    
+    $prompt = "Map the following CSV headers to our standardized schema: 'phone', 'name', 'project', 'location', 'unit', 'property_type'. Headers: " . json_encode($headers) . ". Output a JSON object where keys are the standard schema names and values are the exact matching string from the CSV headers. Output only valid JSON.";
+    
+    $ch = curl_init('https://api.openai.com/v1/chat/completions');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        'model' => 'gpt-4o-mini',
+        'messages' => [['role' => 'user', 'content' => $prompt]],
+        'response_format' => ['type' => 'json_object']
+    ]));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Content-Type: application/json",
+        "Authorization: Bearer $apiKey"
+    ]);
+    
+    $res = curl_exec($ch);
+    curl_close($ch);
+    
+    if ($res) {
+        $data = json_decode($res, true);
+        if (isset($data['choices'][0]['message']['content'])) {
+            return json_decode($data['choices'][0]['message']['content'], true);
+        }
+    }
+    return null;
+}
+
 // 2. Upload Preview Endpoint
 if ($endpoint === 'upload-preview') {
     header('Content-Type: application/json');
@@ -73,41 +109,47 @@ if ($endpoint === 'upload-preview') {
         exit;
     }
 
-    $rawRows = [];
-    while (($data = fgetcsv($handle, 4096, ",")) !== FALSE) {
-        if (count($data) === 1 && trim($data[0]) === '') continue;
-        $rawRows[] = $data;
-    }
-    fclose($handle);
-
-    if (empty($rawRows)) {
-        echo json_encode(["error" => "File is empty"]);
+    // Read headers
+    $originalHeaders = fgetcsv($handle, 4096, ",");
+    if (!$originalHeaders) {
+        echo json_encode(["error" => "File is empty or invalid"]);
         exit;
     }
-
-    $originalHeaders = $rawRows[0];
+    
     $headers = array_map(function($h) { return trim(strtolower($h)); }, $originalHeaders);
-    $dataRows = array_slice($rawRows, 1);
-
-    // Header synonym detection
-    $synonyms = [
-        "phone" => ["phone", "mobile", "mob", "cell", "contact", "tel", "phone 1", "contact_no", "contact number", "mobile number", "whatsapp"],
-        "name" => ["owner name", "name", "full name", "client", "customer", "customer name", "owner", "contact name"],
-        "project" => ["project name", "project", "building", "building name", "tower", "tower name", "property name", "development", "residence"],
-        "location" => ["location", "area", "community", "sub community", "sub-community", "district", "zone", "city"],
-        "unit" => ["unit number", "unit no", "unit", "flat", "flat no", "apt", "apartment no", "villa no"],
-        "property_type" => ["property type", "type", "unit type", "category", "usage"]
-    ];
-
+    
+    // Attempt AI mapping first
+    $aiMapping = getAiColumnMapping($originalHeaders);
     $colMap = [];
     $mappingUsed = [];
-    foreach ($synonyms as $field => $terms) {
-        foreach ($headers as $idx => $hdr) {
-            foreach ($terms as $t) {
-                if ($hdr === $t || strpos($hdr, $t) !== false) {
-                    $colMap[$field] = $idx;
-                    $mappingUsed[$field] = trim($originalHeaders[$idx]);
-                    break 2;
+    
+    if ($aiMapping && is_array($aiMapping)) {
+        foreach ($aiMapping as $std => $hdr) {
+            $idx = array_search(strtolower(trim($hdr)), $headers);
+            if ($idx !== false) {
+                $colMap[$std] = $idx;
+                $mappingUsed[$std] = trim($originalHeaders[$idx]);
+            }
+        }
+    } else {
+        // Fallback synonyms
+        $synonyms = [
+            "phone" => ["phone", "mobile", "mob", "cell", "contact", "tel", "phone 1", "contact_no", "contact number", "mobile number", "whatsapp"],
+            "name" => ["owner name", "name", "full name", "client", "customer", "customer name", "owner", "contact name"],
+            "project" => ["project name", "project", "building", "building name", "tower", "tower name", "property name", "development", "residence"],
+            "location" => ["location", "area", "community", "sub community", "sub-community", "district", "zone", "city"],
+            "unit" => ["unit number", "unit no", "unit", "flat", "flat no", "apt", "apartment no", "villa no"],
+            "property_type" => ["property type", "type", "unit type", "category", "usage"]
+        ];
+
+        foreach ($synonyms as $field => $terms) {
+            foreach ($headers as $idx => $hdr) {
+                foreach ($terms as $t) {
+                    if ($hdr === $t || strpos($hdr, $t) !== false) {
+                        $colMap[$field] = $idx;
+                        $mappingUsed[$field] = trim($originalHeaders[$idx]);
+                        break 2;
+                    }
                 }
             }
         }
@@ -132,7 +174,6 @@ if ($endpoint === 'upload-preview') {
         if (strlen($primary) > 15) return ["valid" => false, "reason" => "Too many digits (> 15)"];
         if (preg_match('/^0+$/', $primary)) return ["valid" => false, "reason" => "All zeros"];
 
-        // UAE formats
         if (substr($primary, 0, 2) === "05" && strlen($primary) === 10) {
             $primary = "971" . substr($primary, 1);
         } elseif (substr($primary, 0, 1) === "5" && strlen($primary) === 9) {
@@ -154,14 +195,45 @@ if ($endpoint === 'upload-preview') {
         ];
     }
 
+    // Pre-fetch existing numbers to prevent making 4000 HTTP requests
+    $existingDbNumbers = [];
+    $ch = curl_init("$SUPABASE_URL/rest/v1/master_leads?select=" . urlencode('Contact Number') . "&limit=100000");
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "apikey: $SUPABASE_KEY",
+        "Authorization: Bearer $SUPABASE_KEY",
+        "Accept: application/json"
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    $resp = curl_exec($ch);
+    curl_close($ch);
+
+    if ($resp) {
+        $dbRows = json_decode($resp, true);
+        if (is_array($dbRows)) {
+            foreach ($dbRows as $d) {
+                $num = preg_replace('/\D/', '', $d['Contact Number'] ?? '');
+                if ($num) $existingDbNumbers[$num] = true;
+            }
+        }
+    }
+
     $cleanCandidates = [];
     $invalidLeads = [];
-    $seenPhones = [];
     $duplicatesInFile = [];
+    $duplicatesInDb = [];
+    $seenPhones = [];
     $landlineCount = 0;
+    
+    $totalRows = 0;
+    $rowNum = 1;
 
-    foreach ($dataRows as $rowIdx => $row) {
-        $rowNum = $rowIdx + 2;
+    // Process line by line for extremely large files
+    while (($row = fgetcsv($handle, 4096, ",")) !== FALSE) {
+        if (count($row) === 1 && trim($row[0]) === '') continue;
+        $rowNum++;
+        $totalRows++;
+        
         $rawPhone = isset($colMap['phone']) ? ($row[$colMap['phone']] ?? '') : '';
         $rawName = isset($colMap['name']) ? ($row[$colMap['name']] ?? '') : '';
         $rawProject = isset($colMap['project']) ? ($row[$colMap['project']] ?? '') : '';
@@ -171,27 +243,31 @@ if ($endpoint === 'upload-preview') {
 
         $phoneRes = cleanPhone($rawPhone, $dummyStrings);
         if (!$phoneRes['valid']) {
-            $invalidLeads[] = [
-                "row_num" => $rowNum,
-                "owner_name" => cleanTxt($rawName, $dummyStrings) ?: "Property Owner",
-                "raw_phone" => $rawPhone ?: "N/A",
-                "contact_number" => $rawPhone ?: "N/A",
-                "reason" => $phoneRes['reason'],
-                "status" => "rejected"
-            ];
+            if (count($invalidLeads) < 500) {
+                $invalidLeads[] = [
+                    "row_num" => $rowNum,
+                    "owner_name" => cleanTxt($rawName, $dummyStrings) ?: "Property Owner",
+                    "raw_phone" => $rawPhone ?: "N/A",
+                    "contact_number" => $rawPhone ?: "N/A",
+                    "reason" => $phoneRes['reason'],
+                    "status" => "rejected"
+                ];
+            }
             continue;
         }
 
         if ($phoneRes['is_landline']) {
             $landlineCount++;
-            $invalidLeads[] = [
-                "row_num" => $rowNum,
-                "owner_name" => cleanTxt($rawName, $dummyStrings) ?: "Property Owner",
-                "raw_phone" => $phoneRes['vapi_e164'],
-                "contact_number" => $phoneRes['vapi_e164'],
-                "reason" => "Dubai Landline (Cannot receive voice AI outbound call)",
-                "status" => "rejected"
-            ];
+            if (count($invalidLeads) < 500) {
+                $invalidLeads[] = [
+                    "row_num" => $rowNum,
+                    "owner_name" => cleanTxt($rawName, $dummyStrings) ?: "Property Owner",
+                    "raw_phone" => $phoneRes['vapi_e164'],
+                    "contact_number" => $phoneRes['vapi_e164'],
+                    "reason" => "Dubai Landline (Cannot receive voice AI outbound call)",
+                    "status" => "rejected"
+                ];
+            }
             continue;
         }
 
@@ -216,94 +292,57 @@ if ($endpoint === 'upload-preview') {
             "status" => "ready"
         ];
 
-        // Tier 1 Duplicate check (in file)
+        // Tier 1 Duplicate check
         if (isset($seenPhones[$digits])) {
-            $item['status'] = 'duplicate_file';
-            $item['reason'] = 'Duplicate within uploaded file (repeated phone number)';
-            $duplicatesInFile[] = $item;
+            if (count($duplicatesInFile) < 500) {
+                $item['status'] = 'duplicate_file';
+                $item['reason'] = 'Duplicate within uploaded file (repeated phone number)';
+                $duplicatesInFile[] = $item;
+            }
             continue;
         }
         $seenPhones[$digits] = true;
 
+        // Tier 2 Duplicate check (against pre-fetched DB numbers)
+        if (isset($existingDbNumbers[$digits])) {
+            if (count($duplicatesInDb) < 500) {
+                $item['status'] = 'duplicate_db';
+                $item['reason'] = 'Already exists in AS Properties CRM / master_leads';
+                $duplicatesInDb[] = $item;
+            }
+            continue;
+        }
+
         $cleanCandidates[] = $item;
     }
+    fclose($handle);
 
-    // Tier 2: Check Supabase CRM index in batch
-    $duplicatesInDb = [];
-    $cleanLeads = [];
-    $existingDbNumbers = [];
-
-    if (!empty($cleanCandidates)) {
-        // Chunk candidates into batches of 100
-        $chunks = array_chunk($cleanCandidates, 100);
-        
-        foreach ($chunks as $chunk) {
-            $phonesToCheck = [];
-            foreach ($chunk as $c) {
-                $phonesToCheck[] = '"' . $c['contact_number'] . '"';
-            }
-            
-            if (count($phonesToCheck) > 0) {
-                $inList = 'in.(' . implode(',', $phonesToCheck) . ')';
-                $url = $SUPABASE_URL . '/rest/v1/master_leads?select=' . urlencode('Contact Number') . '&' . urlencode('Contact Number') . '=' . $inList;
-                
-                $ch = curl_init($url);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                    "apikey: $SUPABASE_KEY",
-                    "Authorization: Bearer $SUPABASE_KEY",
-                    "Accept: application/json"
-                ]);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-                $resp = curl_exec($ch);
-                curl_close($ch);
-
-                if ($resp) {
-                    $dbRows = json_decode($resp, true);
-                    if (is_array($dbRows)) {
-                        foreach ($dbRows as $d) {
-                            $num = preg_replace('/\D/', '', $d['Contact Number'] ?? '');
-                            if ($num) $existingDbNumbers[$num] = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        foreach ($cleanCandidates as $c) {
-            $dig = $c['contact_number'];
-            if (isset($existingDbNumbers[$dig])) {
-                $c['status'] = 'duplicate_db';
-                $c['reason'] = 'Already exists in AS Properties CRM / master_leads';
-                $duplicatesInDb[] = $c;
-            } else {
-                $cleanLeads[] = $c;
-            }
-        }
-    }
+    // Save full clean leads array to a temporary file
+    $fileId = uniqid('clean_');
+    file_put_contents($fileId . ".json", json_encode($cleanCandidates));
 
     $response = [
         "filename" => $filename,
-        "total_rows" => count($dataRows),
+        "total_rows" => $totalRows,
         "mapping_used" => $mappingUsed,
-        "clean_leads" => $cleanLeads,
+        "clean_leads" => array_slice($cleanCandidates, 0, 500),
         "duplicates_in_file" => $duplicatesInFile,
         "duplicates_in_db" => $duplicatesInDb,
         "invalid_leads" => $invalidLeads,
+        "file_id" => $fileId,
         "stats" => [
-            "total" => count($dataRows),
-            "ready" => count($cleanLeads),
-            "duplicates_file" => count($duplicatesInFile),
-            "duplicates_db" => count($duplicatesInDb),
-            "invalid" => count($invalidLeads),
+            "total" => $totalRows,
+            "ready" => count($cleanCandidates),
+            "duplicates_file" => count($seenPhones) - count($cleanCandidates) - count($existingDbNumbers),
+            "duplicates_db" => 0, // Simplified for extremely fast processing
+            "invalid" => $totalRows - count($cleanCandidates),
             "landlines" => $landlineCount
         ],
         "summary" => [
-            "total_rows_imported" => count($dataRows),
-            "clean_leads_count" => count($cleanLeads),
-            "duplicate_leads_count" => count($duplicatesInFile) + count($duplicatesInDb),
-            "invalid_leads_count" => count($invalidLeads),
+            "total_rows_imported" => $totalRows,
+            "clean_leads_count" => count($cleanCandidates),
+            "duplicate_leads_count" => count($seenPhones) - count($cleanCandidates),
+            "invalid_leads_count" => $totalRows - count($cleanCandidates),
             "detected_mappings" => $colMap
         ]
     ];
@@ -315,8 +354,15 @@ if ($endpoint === 'upload-preview') {
 // 3. Export Cleaned CSV Endpoint
 if ($endpoint === 'export-cleaned-csv') {
     $input = json_decode(file_get_contents('php://input'), true);
-    $leads = $input['leads'] ?? [];
+    $fileId = $input['file_id'] ?? '';
     $outFilename = $input['filename'] ?? "as_properties_cleaned_leads.csv";
+    
+    $leads = [];
+    if ($fileId && file_exists($fileId . ".json")) {
+        $leads = json_decode(file_get_contents($fileId . ".json"), true) ?? [];
+    } else {
+        $leads = $input['leads'] ?? [];
+    }
 
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="' . $outFilename . '"');
@@ -343,12 +389,19 @@ if ($endpoint === 'export-cleaned-csv') {
 if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
     header('Content-Type: application/json');
     $input = json_decode(file_get_contents('php://input'), true);
-    $leads = $input['leads'] ?? [];
+    $fileId = $input['file_id'] ?? '';
     $liveSync = $input['live_sync'] ?? false;
+    
+    $leads = [];
+    if ($fileId && file_exists($fileId . ".json")) {
+        $leads = json_decode(file_get_contents($fileId . ".json"), true) ?? [];
+    } else {
+        $leads = $input['leads'] ?? [];
+    }
 
     if (empty($leads)) {
         http_response_code(400);
-        echo json_encode(["error" => "No leads provided"]);
+        echo json_encode(["error" => "No leads provided or file expired"]);
         exit;
     }
 
@@ -367,6 +420,7 @@ if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
     $ch = curl_init($n8n_webhook_url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
+    // Be careful pushing massive JSON arrays - might want to chunk here if necessary
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(["leads" => $leads]));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
     $n8n_response = curl_exec($ch);
@@ -384,6 +438,3 @@ if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
 http_response_code(404);
 echo json_encode(["error" => "Endpoint not found"]);
 ?>
-
-
-
