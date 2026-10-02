@@ -269,6 +269,8 @@ if ($endpoint === 'upload-preview') {
         if (strlen($primary) < 7) return ["valid" => false, "reason" => "Too few digits (< 7)"];
         if (strlen($primary) > 15) return ["valid" => false, "reason" => "Too many digits (> 15)"];
         if (preg_match('/^0+$/', $primary)) return ["valid" => false, "reason" => "All zeros"];
+        if (preg_match('/0000+$/', $primary)) return ["valid" => false, "reason" => "Likely transaction amount"];
+        if (substr($primary, 0, 3) === '784' && strlen($primary) === 15) return ["valid" => false, "reason" => "Emirates ID"];
 
         if (substr($primary, 0, 2) === "05" && strlen($primary) === 10) {
             $primary = "971" . substr($primary, 1);
