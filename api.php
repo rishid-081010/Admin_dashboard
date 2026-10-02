@@ -125,6 +125,17 @@ if ($endpoint === 'upload-preview') {
         exit;
     }
 
+    // Check if raw Excel file (.xlsx is a ZIP archive starting with PK)
+    $magic = fread($handle, 4);
+    if (substr($magic, 0, 2) === "PK") {
+        fclose($handle);
+        echo json_encode([
+            "error" => "Excel (.xlsx) file detected directly on server. Please press Ctrl+F5 in your browser to reload the application with the Excel converter enabled, or save the file as a .csv file."
+        ]);
+        exit;
+    }
+    rewind($handle);
+
     // Broader Sheets Filtration: Find the actual header row (skip garbage/metadata at top)
     $originalHeaders = null;
     $bestMatchCount = -1;
@@ -198,16 +209,20 @@ if ($endpoint === 'upload-preview') {
         // Fallback synonyms
         $synonyms = [
             "phone" => ["phone", "mobile", "mob", "cell", "contact", "tel", "phone 1", "contact_no", "contact number", "mobile number", "whatsapp"],
-            "name" => ["owner name", "name", "full name", "client", "customer", "customer name", "owner", "contact name"],
-            "project" => ["project name", "project", "building", "building name", "tower", "tower name", "property name", "development", "residence"],
+            "name" => ["nameen", "owner name", "full name", "client name", "customer name", "contact name", "owner", "client", "customer", "name"],
+            "project" => ["master project", "project name", "project lnd", "project", "building name", "building", "tower", "tower name", "property name", "development", "residence"],
             "location" => ["location", "area", "community", "sub community", "sub-community", "district", "zone", "city"],
-            "unit" => ["unit number", "unit no", "unit", "flat", "flat no", "apt", "apartment no", "villa no"],
-            "property_type" => ["property type", "type", "unit type", "category", "usage"],
+            "unit" => ["unitnumber", "unit number", "unit no", "unit", "flat", "flat no", "apt", "apartment no", "villa no"],
+            "property_type" => ["propertytypeen", "property type", "type", "unit type", "category", "usage"],
             "size" => ["actual size", "size", "area", "sqft", "sqm", "square feet"]
         ];
 
         foreach ($synonyms as $field => $terms) {
             foreach ($headers as $idx => $hdr) {
+                // Prevent matching non-person fields for name
+                if ($field === 'name' && (strpos($hdr, 'building') !== false || strpos($hdr, 'project') !== false || strpos($hdr, 'country') !== false || strpos($hdr, 'procedure') !== false)) {
+                    continue;
+                }
                 foreach ($terms as $t) {
                     if ($hdr === $t || strpos($hdr, $t) !== false) {
                         $colMap[$field] = $idx;
@@ -424,7 +439,7 @@ if ($endpoint === 'upload-preview') {
         ]
     ];
 
-    echo json_encode($response);
+    echo json_encode($response, JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
     exit;
 }
 
