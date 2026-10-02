@@ -23,7 +23,8 @@
   border: 1px solid #00284b; 
   width: 260px;
   flex-shrink: 0;
-  display: block;
+  display: flex;
+  flex-direction: column;
   padding: 2rem 1.25rem;
 }
 
@@ -250,5 +251,8 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #1c2b42; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #27364b; }
+
+
+
 
 
