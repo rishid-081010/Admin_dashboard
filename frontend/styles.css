@@ -1,8 +1,8 @@
 ﻿body {
   margin: 0;
   padding: 1.5rem;
-  background-color: #030812; /* Deepest dark blue */
-  color: #8c9baf; /* Slate text */
+  background-color: #001a36; /* True deep navy gap */
+  color: #8c9baf; 
   font-family: 'Inter', sans-serif;
   height: 100vh;
   box-sizing: border-box;
@@ -12,15 +12,15 @@
 }
 
 .pane {
-  background-color: #071221;
-  border: 1px solid #162438;
-  border-radius: 28px;
   position: relative;
   overflow: hidden;
+  border-radius: 28px;
 }
 
 /* Sidebar styling */
 .sidebar {
+  background-color: #001e39; /* Exact sidebar color */
+  border: 1px solid #00284b; 
   width: 260px;
   flex-shrink: 0;
   display: flex;
@@ -45,7 +45,7 @@
   align-items: center;
   padding: 0.8rem 1.2rem;
   margin-bottom: 0.25rem;
-  color: #a4b4c7;
+  color: #8da4be;
   font-size: 0.85rem;
   font-weight: 600;
   border-radius: 12px;
@@ -60,14 +60,16 @@
 }
 
 .nav-link.active {
-  background: linear-gradient(180deg, #3f556d 0%, #293d53 100%);
+  background: linear-gradient(180deg, #445d77 0%, #293e54 100%);
   color: #ffffff;
-  border: 1px solid #4a617c;
-  box-shadow: inset 0px 1px 1px rgba(255, 255, 255, 0.4), 0px 4px 10px rgba(0, 0, 0, 0.3);
+  border: 1px solid #5a738c;
+  box-shadow: inset 0px 1px 2px rgba(255, 255, 255, 0.4), 0px 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 /* Main Content styling */
 .main-content {
+  background-color: #00142b; /* Exact main pane color */
+  border: 1px solid #002140;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -90,7 +92,7 @@
 }
 .page-subtitle {
   font-size: 0.8rem;
-  color: #72849a;
+  color: #697f98;
   margin: 0;
 }
 
@@ -101,8 +103,8 @@
 
 .toggle-pill {
   display: flex;
-  background-color: #040a12;
-  border: 1px solid #142031;
+  background-color: #000c1c;
+  border: 1px solid #002242;
   border-radius: 20px;
   padding: 0.25rem;
 }
@@ -149,8 +151,8 @@
 }
 
 .card {
-  background-color: #0b1525;
-  border: 1px solid #1a273b;
+  background-color: #0d1726; /* Exact inner card color */
+  border: 1px solid #1c2b42;
   border-radius: 16px;
   padding: 1.5rem;
   display: flex;
@@ -162,7 +164,7 @@
 .card-title {
   font-size: 0.65rem;
   font-weight: 700;
-  color: #8c9baf;
+  color: #8090a3;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0 0 1rem 0;
@@ -175,8 +177,8 @@
 }
 
 .dynamics-panel {
-  background-color: #0a1320;
-  border: 1px solid #162438;
+  background-color: #08111f;
+  border: 1px solid #152236;
   border-radius: 16px;
   padding: 2rem;
   margin-bottom: 2rem;
@@ -196,7 +198,7 @@
 }
 .dyn-col {
   text-align: center;
-  border-right: 1px solid #162438;
+  border-right: 1px solid #152236;
 }
 .dyn-col:last-child {
   border-right: none;
@@ -216,16 +218,16 @@
 
 /* Lead Ingestion Elements */
 .dropzone-container {
-  border: 2px dashed #24354a;
+  border: 2px dashed #1c2b42;
   border-radius: 16px;
-  background-color: rgba(11, 21, 37, 0.5);
+  background-color: rgba(13, 23, 38, 0.5);
   transition: all 0.2s;
   padding: 2rem;
   text-align: center;
 }
 .dropzone-active {
   border-color: #3f556d;
-  background-color: rgba(30, 48, 72, 0.3);
+  background-color: rgba(41, 62, 84, 0.3);
 }
 
 .tab-btn {
@@ -248,5 +250,5 @@
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1a273b; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #1c2b42; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #27364b; }
