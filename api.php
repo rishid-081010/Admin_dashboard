@@ -240,28 +240,7 @@ if ($endpoint === 'upload-preview') {
         ];
     }
 
-    // Pre-fetch existing numbers to prevent making HTTP requests
-    $existingDbNumbers = [];
-    $ch = curl_init("$SUPABASE_URL/rest/v1/master_leads?select=" . urlencode('Contact Number') . "&limit=100000");
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "apikey: $SUPABASE_KEY",
-        "Authorization: Bearer $SUPABASE_KEY",
-        "Accept: application/json"
-    ]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-    $resp = curl_exec($ch);
-    curl_close($ch);
-
-    if ($resp) {
-        $dbRows = json_decode($resp, true);
-        if (is_array($dbRows)) {
-            foreach ($dbRows as $d) {
-                $num = preg_replace('/\D/', '', $d['Contact Number'] ?? '');
-                if ($num) $existingDbNumbers[$num] = true;
-            }
-        }
-    }
+    // Supabase duplicate check deferred to push-leads endpoint
 
     $cleanCandidates = [];
     $invalidLeads = [];
@@ -269,6 +248,7 @@ if ($endpoint === 'upload-preview') {
     $duplicatesInDb = [];
     $seenPhones = [];
     
+    // Explicit counters to fix negative stats
     $totalRows = 0;
     $rowNum = 1;
     $cleanCount = 0;
@@ -365,16 +345,7 @@ if ($endpoint === 'upload-preview') {
         }
         $seenPhones[$digits] = true;
 
-        // Tier 2 Duplicate check (against pre-fetched DB numbers)
-        if (isset($existingDbNumbers[$digits])) {
-            $dupDbCount++;
-            if (count($duplicatesInDb) < 500) {
-                $item['status'] = 'duplicate_db';
-                $item['reason'] = 'Already exists in AS Properties CRM / master_leads';
-                $duplicatesInDb[] = $item;
-            }
-            continue;
-        }
+        // Tier 2 Duplicate check deferred to push-leads
 
         $cleanCount++;
         $cleanCandidates[] = $item;
@@ -391,21 +362,21 @@ if ($endpoint === 'upload-preview') {
         "mapping_used" => $mappingUsed,
         "clean_leads" => array_slice($cleanCandidates, 0, 500),
         "duplicates_in_file" => $duplicatesInFile,
-        "duplicates_in_db" => $duplicatesInDb,
+        "duplicates_in_db" => $duplicatesInDb, // Will be empty/0
         "invalid_leads" => $invalidLeads,
         "file_id" => $fileId,
         "stats" => [
             "total" => $totalRows,
             "ready" => $cleanCount,
             "duplicates_file" => $dupFileCount,
-            "duplicates_db" => $dupDbCount,
+            "duplicates_db" => 0, // Ignored at this stage
             "invalid" => $invalidCount,
             "landlines" => $landlineCount
         ],
         "summary" => [
             "total_rows_imported" => $totalRows,
             "clean_leads_count" => $cleanCount,
-            "duplicate_leads_count" => $dupFileCount + $dupDbCount,
+            "duplicate_leads_count" => $dupFileCount,
             "invalid_leads_count" => $invalidCount,
             "detected_mappings" => $colMap
         ]
@@ -469,13 +440,56 @@ if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
         exit;
     }
 
+    // Pre-fetch existing numbers from Supabase to filter duplicates before pushing
+    $existingDbNumbers = [];
+    $ch = curl_init("$SUPABASE_URL/rest/v1/master_leads?select=" . urlencode('Contact Number') . "&limit=100000");
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "apikey: $SUPABASE_KEY",
+        "Authorization: Bearer $SUPABASE_KEY",
+        "Accept: application/json"
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    $resp = curl_exec($ch);
+    curl_close($ch);
+
+    if ($resp) {
+        $dbRows = json_decode($resp, true);
+        if (is_array($dbRows)) {
+            foreach ($dbRows as $d) {
+                $num = preg_replace('/\D/', '', $d['Contact Number'] ?? '');
+                if ($num) $existingDbNumbers[$num] = true;
+            }
+        }
+    }
+
+    $finalLeadsToPush = [];
+    $skippedDuplicates = 0;
+    foreach ($leads as $l) {
+        $dig = preg_replace('/\D/', '', $l['contact_number'] ?? '');
+        if ($dig && isset($existingDbNumbers[$dig])) {
+            $skippedDuplicates++;
+        } else {
+            $finalLeadsToPush[] = $l;
+        }
+    }
+
+    if (empty($finalLeadsToPush)) {
+        echo json_encode([
+            "success" => true,
+            "pushed_count" => 0,
+            "message" => "All provided leads (" . count($leads) . ") were already in the CRM. Nothing new pushed."
+        ]);
+        exit;
+    }
+
     if (!$liveSync) {
         echo json_encode([
             "success" => true,
-            "pushed_count" => count($leads),
-            "supabase_inserted" => count($leads),
+            "pushed_count" => count($finalLeadsToPush),
+            "supabase_inserted" => count($finalLeadsToPush),
             "mode" => "sandbox_testing",
-            "message" => "[SAFEGUARD TEST MODE] Verified " . count($leads) . " clean leads. Live CRM untouched."
+            "message" => "[SAFEGUARD TEST MODE] Verified " . count($finalLeadsToPush) . " new leads (skipped $skippedDuplicates duplicates). Live CRM untouched."
         ]);
         exit;
     }
@@ -485,16 +499,17 @@ if ($endpoint === 'push-leads' || $endpoint === 'commit-batch') {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     // Be careful pushing massive JSON arrays - might want to chunk here if necessary
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(["leads" => $leads]));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(["leads" => $finalLeadsToPush]));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
     $n8n_response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
     echo json_encode([
         "success" => true,
-        "pushed_count" => count($leads),
+        "pushed_count" => count($finalLeadsToPush),
         "mode" => "sandbox_ingested",
-        "message" => "Successfully sent " . count($leads) . " leads to n8n V2 Sandbox Ingestor."
+        "message" => "Successfully sent " . count($finalLeadsToPush) . " new leads to n8n (Skipped $skippedDuplicates CRM duplicates)."
     ]);
     exit;
 }
