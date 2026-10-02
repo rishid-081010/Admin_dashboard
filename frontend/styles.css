@@ -1,45 +1,234 @@
-/* Exact styles matching Asquared AI (https://rishid-081010.github.io/transactional_dashboard/) */
-
-body {
-  background-color: #0f172a;
-  color: #f8fafc;
+﻿body {
+  margin: 0;
+  padding: 1.5rem;
+  background-color: #030812; /* Deepest dark blue */
+  color: #8c9baf; /* Slate text */
   font-family: 'Inter', sans-serif;
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  gap: 1.5rem;
+  overflow: hidden;
 }
 
-.glass-panel {
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.pane {
+  background-color: #071221;
+  border: 1px solid #162438;
+  border-radius: 28px;
+  position: relative;
+  overflow: hidden;
 }
 
-.active-tab {
-  background-color: rgba(37, 99, 235, 0.2) !important;
-  color: #60a5fa !important;
-  font-weight: 600 !important;
-  border-left: 4px solid #3b82f6 !important;
+/* Sidebar styling */
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-col;
+  padding: 2rem 1.25rem;
 }
 
+.brand-logo {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+.brand-logo svg {
+  display: block;
+  margin: 0 auto;
+  width: 120px;
+  height: auto;
+}
+
+.nav-link {
+  display: block;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 0.25rem;
+  color: #a4b4c7;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.nav-link:hover {
+  color: #ffffff;
+}
+
+.nav-link.active {
+  background: linear-gradient(180deg, #3f556d 0%, #293d53 100%);
+  color: #ffffff;
+  border: 1px solid #4a617c;
+  box-shadow: inset 0px 1px 1px rgba(255, 255, 255, 0.4), 0px 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Main Content styling */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem 3rem;
+  overflow-y: auto;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+}
+
+.page-title {
+  color: #ffffff;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+.page-subtitle {
+  font-size: 0.8rem;
+  color: #72849a;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.toggle-pill {
+  display: flex;
+  background-color: #040a12;
+  border: 1px solid #142031;
+  border-radius: 20px;
+  padding: 0.25rem;
+}
+.toggle-btn {
+  padding: 0.4rem 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 16px;
+  color: #63768e;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.toggle-btn.active {
+  background-color: #27364b;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.action-btn {
+  background-color: #172436;
+  border: 1px solid #24354a;
+  color: #a4b4c7;
+  padding: 0 1.25rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.action-btn:hover {
+  background-color: #203147;
+  color: #ffffff;
+}
+
+/* Internal Cards */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background-color: #0b1525;
+  border: 1px solid #1a273b;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #8c9baf;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 1rem 0;
+}
+.card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.dynamics-panel {
+  background-color: #0a1320;
+  border: 1px solid #162438;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+.dynamics-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #8c9baf;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
+}
+.dynamics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+.dyn-col {
+  text-align: center;
+  border-right: 1px solid #162438;
+}
+.dyn-col:last-child {
+  border-right: none;
+}
+.dyn-title {
+  font-size: 0.75rem;
+  color: #72849a;
+  margin-bottom: 0.5rem;
+}
+.dyn-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+.dyn-dash {
+  color: #3b82f6; /* Example color for the dots */
+}
+
+/* Lead Ingestion Overrides for the new Theme */
+.dropzone-container {
+  border: 2px dashed #24354a;
+  border-radius: 16px;
+  background-color: rgba(11, 21, 37, 0.5);
+  transition: all 0.2s;
+  padding: 2rem;
+  text-align: center;
+}
 .dropzone-active {
-  border-color: #3b82f6 !important;
-  background-color: rgba(37, 99, 235, 0.15) !important;
-  box-shadow: 0 0 30px rgba(59, 130, 246, 0.3) !important;
+  border-color: #3f556d;
+  background-color: rgba(30, 48, 72, 0.3);
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0f172a;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
+/* Custom scrollbar for deep dark theme */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1a273b; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #27364b; }
