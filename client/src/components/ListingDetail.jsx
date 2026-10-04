@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { 
   ArrowLeft, Download, RefreshCw, CheckCircle2, AlertTriangle, 
   Clock, Sparkles, Building2, FolderArchive, RotateCcw, X, 
@@ -27,12 +27,12 @@ const ROOM_CATEGORIES = [
 ];
 
 const QUICK_DIRECTIVES = [
-  { label: '☀️ Lift Dark Shadows', text: 'Lift deep shadows and dark corners on the floor while preserving black depth' },
-  { label: '🪟 Pull Window Glare', text: 'Compress harsh window glare to reveal the exterior skyline and balcony view' },
-  { label: '❄️ Neutralize Yellow Tint', text: 'Strip warm tungsten ceiling bulb cast to clean 3500K warm-white architectural lighting' },
-  { label: '✨ Ultra Texture Crispness', text: 'Enhance micro-contrast on marble veining, joinery, and structural details' },
-  { label: '🌅 Subtle Warm Glow', text: 'Add a subtle golden-hour ambient luxury warmth across the room' },
-  { label: '🌊 Rich Balcony Pool/Sky', text: 'Enrich natural sky blue and pool water clarity without altering architecture' },
+  { label: 'â˜€ï¸ Lift Dark Shadows', text: 'Lift deep shadows and dark corners on the floor while preserving black depth' },
+  { label: 'ðŸªŸ Pull Window Glare', text: 'Compress harsh window glare to reveal the exterior skyline and balcony view' },
+  { label: 'â„ï¸ Neutralize Yellow Tint', text: 'Strip warm tungsten ceiling bulb cast to clean 3500K warm-white architectural lighting' },
+  { label: 'âœ¨ Ultra Texture Crispness', text: 'Enhance micro-contrast on marble veining, joinery, and structural details' },
+  { label: 'ðŸŒ… Subtle Warm Glow', text: 'Add a subtle golden-hour ambient luxury warmth across the room' },
+  { label: 'ðŸŒŠ Rich Balcony Pool/Sky', text: 'Enrich natural sky blue and pool water clarity without altering architecture' },
 ];
 
 export default function ListingDetail({ listingId, onBack }) {
@@ -85,7 +85,9 @@ export default function ListingDetail({ listingId, onBack }) {
 
   const withTimestamp = (url) => {
     if (!url) return '';
-    return `${url}${url.includes('?') ? '&' : '?'}t=${cacheBuster}`;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const fullUrl = url.startsWith('/uploads') ? baseUrl + url : url;
+    return `t=`;
   };
 
   const getComparisonUrls = (img, mode = 'orig-vs-refined') => {
@@ -98,24 +100,24 @@ export default function ListingDetail({ listingId, onBack }) {
       return {
         leftUrl: baseline,
         rightUrl: refined,
-        leftLabel: '🤖 AUTO-ENHANCED',
-        rightLabel: '✨ CUSTOM REFINED',
+        leftLabel: 'ðŸ¤– AUTO-ENHANCED',
+        rightLabel: 'âœ¨ CUSTOM REFINED',
       };
     }
     if (mode === 'orig-vs-baseline') {
       return {
         leftUrl: orig,
         rightUrl: baseline,
-        leftLabel: '📸 ORIGINAL RAW',
-        rightLabel: '🤖 AUTO-ENHANCED',
+        leftLabel: 'ðŸ“¸ ORIGINAL RAW',
+        rightLabel: 'ðŸ¤– AUTO-ENHANCED',
       };
     }
     // Default: orig-vs-refined
     return {
       leftUrl: orig,
       rightUrl: refined,
-      leftLabel: '📸 ORIGINAL RAW',
-      rightLabel: img.custom_refined_location ? '✨ CUSTOM REFINED' : '✨ AUTO-ENHANCED',
+      leftLabel: 'ðŸ“¸ ORIGINAL RAW',
+      rightLabel: img.custom_refined_location ? 'âœ¨ CUSTOM REFINED' : 'âœ¨ AUTO-ENHANCED',
     };
   };
 
@@ -779,7 +781,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <h2 className="text-lg font-serif font-bold text-white">Photographic Processing Status</h2>
           </div>
           <span className="text-sm font-bold text-blue-400 font-sans">
-            {completedCount} / {totalCount} images completed ({progressPercentage}%){images.some(i => i.status === 'processing') && ' • Auto-naming in progress...'}
+            {completedCount} / {totalCount} images completed ({progressPercentage}%){images.some(i => i.status === 'processing') && ' â€¢ Auto-naming in progress...'}
           </span>
         </div>
 
@@ -932,7 +934,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 <div className="glass-pill rounded-xl p-3.5">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">
-                      SEO Portal Title (Under 80 Chars • Bayut & Property Finder)
+                      SEO Portal Title (Under 80 Chars â€¢ Bayut & Property Finder)
                     </span>
                     <button
                       onClick={() => handleCopyText(copyData.portal_title, 'Portal Title')}
@@ -1196,7 +1198,7 @@ export default function ListingDetail({ listingId, onBack }) {
             Drop new property photos here, or click to choose files
           </p>
           <p className="text-[11px] text-slate-400">
-            JPG, PNG, WEBP • Seamlessly auto-enhanced in background
+            JPG, PNG, WEBP â€¢ Seamlessly auto-enhanced in background
           </p>
         </div>
 
@@ -1264,7 +1266,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
                     idx === 0 ? 'bg-[#00284b] text-white shadow-sm' : 'glass-pill text-slate-300'
                   }`}>
-                    {idx === 0 ? '★ #01 COVER' : `#0${idx + 1}`}
+                    {idx === 0 ? 'â˜… #01 COVER' : `#0${idx + 1}`}
                   </span>
 
                   {/* Move Up/Down Order Buttons */}
@@ -1343,7 +1345,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         <span className={`absolute bottom-1.5 left-1.5 font-bold text-[10px] px-2 py-0.5 rounded shadow ${
                           img.is_generative ? 'bg-amber-400 text-white font-bold' : img.custom_refined_location ? 'bg-khaki-400 text-white' : 'bg-[#00284b] text-white'
                         }`}>
-                          {img.is_generative ? '✨ Staged' : img.custom_refined_location ? '✨ Refined' : '🤖 Enhanced'}
+                          {img.is_generative ? 'âœ¨ Staged' : img.custom_refined_location ? 'âœ¨ Refined' : 'ðŸ¤– Enhanced'}
                         </span>
                       </>
                     ) : img.status === 'processing' ? (
@@ -1542,7 +1544,7 @@ export default function ListingDetail({ listingId, onBack }) {
                             : 'text-slate-400 hover:text-white'
                         }`}
                       >
-                        📸 Raw vs ✨ Refined
+                        ðŸ“¸ Raw vs âœ¨ Refined
                       </button>
                       <button
                         type="button"
@@ -1553,7 +1555,7 @@ export default function ListingDetail({ listingId, onBack }) {
                             : 'text-slate-400 hover:text-white'
                         }`}
                       >
-                        🤖 Auto vs ✨ Refined
+                        ðŸ¤– Auto vs âœ¨ Refined
                       </button>
                       <button
                         type="button"
@@ -1564,7 +1566,7 @@ export default function ListingDetail({ listingId, onBack }) {
                             : 'text-slate-400 hover:text-white'
                         }`}
                       >
-                        📸 Raw vs 🤖 Auto
+                        ðŸ“¸ Raw vs ðŸ¤– Auto
                       </button>
                     </div>
                   </div>
@@ -1579,7 +1581,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   />
 
                   <div className="mt-3 flex items-center justify-between w-full text-xs text-slate-400 font-sans px-1">
-                    <span>💡 Drag slider handle to inspect textures & window clarity</span>
+                    <span>ðŸ’¡ Drag slider handle to inspect textures & window clarity</span>
                     <button
                       onClick={() =>
                         handleDownloadSingle(
@@ -1609,7 +1611,7 @@ export default function ListingDetail({ listingId, onBack }) {
                               : 'glass-pill text-slate-300 hover:text-white'
                           }`}
                         >
-                          <MessageSquare className="w-3.5 h-3.5" /> 📸 Optical
+                          <MessageSquare className="w-3.5 h-3.5" /> ðŸ“¸ Optical
                         </button>
                         <button
                           type="button"
@@ -1620,7 +1622,7 @@ export default function ListingDetail({ listingId, onBack }) {
                               : 'glass-pill text-amber-300/80 hover:text-amber-200 border border-amber-500/20'
                           }`}
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-amber-300" /> ✨ Virtual Staging / Edit
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" /> âœ¨ Virtual Staging / Edit
                         </button>
                         <button
                           type="button"
@@ -1631,15 +1633,15 @@ export default function ListingDetail({ listingId, onBack }) {
                               : 'glass-pill text-slate-300 hover:text-white'
                           }`}
                         >
-                          <Sliders className="w-3.5 h-3.5" /> 🎚️ Sliders
+                          <Sliders className="w-3.5 h-3.5" /> ðŸŽšï¸ Sliders
                         </button>
                       </div>
                       <span className="text-[10px] text-slate-400 font-mono">
-                        {refineStudioTab === 'generative' ? '✨ Generative AI' : '🔒 100% Optical'}
+                        {refineStudioTab === 'generative' ? 'âœ¨ Generative AI' : 'ðŸ”’ 100% Optical'}
                       </span>
                     </div>
 
-                    {/* TAB 1: 📸 Optical Darkroom Directive (100% Non-Generative) */}
+                    {/* TAB 1: ðŸ“¸ Optical Darkroom Directive (100% Non-Generative) */}
                     {refineStudioTab === 'optical' && (
                       <div>
                         {/* Directive Input Box */}
@@ -1671,7 +1673,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 1-Click Quick Tweak Preset Chips for Optical Mode */}
                         <div className="mb-4">
                           <span className="text-[11px] font-semibold text-slate-400 block mb-2">
-                            ⚡ Quick Optical Enhancements:
+                            âš¡ Quick Optical Enhancements:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
                             {QUICK_DIRECTIVES.map((chip, idx) => (
@@ -1699,7 +1701,7 @@ export default function ListingDetail({ listingId, onBack }) {
                                 <div key={idx} className="p-2.5 rounded-xl bg-black/40 border border-white/[0.05] text-[11px]">
                                   <div className="flex items-center justify-between text-blue-400 font-semibold mb-0.5">
                                     <span className="flex items-center gap-1">
-                                      {ref.is_generative ? '✨ Virtual Staging' : `Directive #${idx + 1}`}
+                                      {ref.is_generative ? 'âœ¨ Virtual Staging' : `Directive #${idx + 1}`}
                                     </span>
                                     <span className="text-[10px] text-slate-500 font-mono">
                                       {new Date(ref.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1721,7 +1723,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       </div>
                     )}
 
-                    {/* TAB 2: ✨ AI Virtual Staging & Edit (Generative) */}
+                    {/* TAB 2: âœ¨ AI Virtual Staging & Edit (Generative) */}
                     {refineStudioTab === 'generative' && (
                       <div>
                         <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 mb-3 text-xs">
@@ -1730,11 +1732,11 @@ export default function ListingDetail({ listingId, onBack }) {
                               <Sparkles className="w-4 h-4 text-amber-400" /> Virtual Staging & Decluttering Studio
                             </span>
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
-                              🔒 100% Pixel-Lock
+                              ðŸ”’ 100% Pixel-Lock
                             </span>
                           </div>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            Type your specific edit below. The AI strictly modifies <strong>only</strong> the requested object or area — 100% of surrounding room geometry, walls, flooring, lighting, and textures are mathematically locked to your raw photo.
+                            Type your specific edit below. The AI strictly modifies <strong>only</strong> the requested object or area â€” 100% of surrounding room geometry, walls, flooring, lighting, and textures are mathematically locked to your raw photo.
                           </p>
                         </div>
 
@@ -1765,7 +1767,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         </div>
 
                         <div className="text-[10px] text-slate-400 font-sans px-1 mb-3 flex items-center justify-between">
-                          <span>💡 Press <kbd className="px-1 py-0.5 glass-pill rounded font-mono text-amber-300">Ctrl + Enter</kbd> to execute</span>
+                          <span>ðŸ’¡ Press <kbd className="px-1 py-0.5 glass-pill rounded font-mono text-amber-300">Ctrl + Enter</kbd> to execute</span>
                           <span className="text-amber-300/90 font-mono">Pixel-Lock Inpainting</span>
                         </div>
 
@@ -1783,7 +1785,7 @@ export default function ListingDetail({ listingId, onBack }) {
                                 }`}>
                                   <div className="flex items-center justify-between text-blue-400 font-semibold mb-0.5">
                                     <span className={ref.is_generative ? 'text-amber-300 font-bold flex items-center gap-1' : 'text-blue-400'}>
-                                      {ref.is_generative ? '✨ Virtual Staging' : `Directive #${idx + 1}`}
+                                      {ref.is_generative ? 'âœ¨ Virtual Staging' : `Directive #${idx + 1}`}
                                     </span>
                                     <span className="text-[10px] text-slate-500 font-mono">
                                       {new Date(ref.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1811,7 +1813,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 1. Exposure / Brightness */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">☀️ Exposure & Brightness</span>
+                            <span className="text-slate-300 font-medium">â˜€ï¸ Exposure & Brightness</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {(sliderValues.brightness * 100).toFixed(0)}%
                             </span>
@@ -1830,7 +1832,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 2. Shadow Depth & Lift (Gamma) */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">🌑 Shadow Lift / Tone Curve</span>
+                            <span className="text-slate-300 font-medium">ðŸŒ‘ Shadow Lift / Tone Curve</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {sliderValues.gamma > 1.0 ? `+${((sliderValues.gamma - 1) * 100).toFixed(0)}% Lift` : `${((sliderValues.gamma - 1) * 100).toFixed(0)}% Deep`}
                             </span>
@@ -1849,7 +1851,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 3. Window Glare Pull (CLAHE) */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">🪟 Window Glare Compression (CLAHE)</span>
+                            <span className="text-slate-300 font-medium">ðŸªŸ Window Glare Compression (CLAHE)</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               Slope: {sliderValues.clahe_max_slope}
                             </span>
@@ -1868,9 +1870,9 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 4. Color Warmth / Hue Temp */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">🌡️ Kelvin / Tone Warmth</span>
+                            <span className="text-slate-300 font-medium">ðŸŒ¡ï¸ Kelvin / Tone Warmth</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
-                              {sliderValues.hue > 0 ? `+${sliderValues.hue}° Golden` : sliderValues.hue < 0 ? `${sliderValues.hue}° Cool Neutral` : '0° Balanced'}
+                              {sliderValues.hue > 0 ? `+${sliderValues.hue}Â° Golden` : sliderValues.hue < 0 ? `${sliderValues.hue}Â° Cool Neutral` : '0Â° Balanced'}
                             </span>
                           </div>
                           <input
@@ -1887,7 +1889,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 5. Vibrance / Saturation */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">🎨 Vibrance & Saturation</span>
+                            <span className="text-slate-300 font-medium">ðŸŽ¨ Vibrance & Saturation</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {(sliderValues.saturation * 100).toFixed(0)}%
                             </span>
@@ -1906,7 +1908,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 6. Structural Sharpness */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">✨ Texture Crispness & Clarity</span>
+                            <span className="text-slate-300 font-medium">âœ¨ Texture Crispness & Clarity</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {sliderValues.sharpness.toFixed(1)}x
                             </span>
@@ -1997,7 +1999,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    📸 Raw vs ✨ Refined
+                    ðŸ“¸ Raw vs âœ¨ Refined
                   </button>
                   <button
                     type="button"
@@ -2008,7 +2010,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    🤖 Auto vs ✨ Refined
+                    ðŸ¤– Auto vs âœ¨ Refined
                   </button>
                   <button
                     type="button"
@@ -2019,7 +2021,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    📸 Raw vs 🤖 Auto
+                    ðŸ“¸ Raw vs ðŸ¤– Auto
                   </button>
                 </div>
 
@@ -2072,7 +2074,7 @@ export default function ListingDetail({ listingId, onBack }) {
               {/* Modal Footer Controls */}
               <div className="p-3.5 bg-black/40 border-t border-white/[0.08] flex items-center justify-between text-xs text-slate-400">
                 <span className="hidden sm:inline font-sans">
-                  💡 Tip: Drag slider handle horizontally. Use <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">←</kbd> and <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">→</kbd> to switch photos, <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">Esc</kbd> to close.
+                  ðŸ’¡ Tip: Drag slider handle horizontally. Use <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">â†</kbd> and <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">â†’</kbd> to switch photos, <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">Esc</kbd> to close.
                 </span>
                 <button
                   onClick={() =>
@@ -2100,3 +2102,4 @@ export default function ListingDetail({ listingId, onBack }) {
     </div>
   );
 }
+
