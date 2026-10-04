@@ -85,7 +85,9 @@ export default function ListingDetail({ listingId, onBack }) {
 
   const withTimestamp = (url) => {
     if (!url) return '';
-    return `${url}${url.includes('?') ? '&' : '?'}t=${cacheBuster}`;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const fullUrl = url.startsWith('/uploads') ? baseUrl + url : url;
+    return `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}t=${cacheBuster}`;
   };
 
   const getComparisonUrls = (img, mode = 'orig-vs-refined') => {
