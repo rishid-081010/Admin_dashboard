@@ -14,7 +14,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           className="brand-logo flex flex-col items-center justify-center mb-7 mt-1 cursor-pointer group select-none"
         >
           <img 
-            src="/asquared-logo.png" 
+            src="./asquared-logo.png" 
             alt="A SQUARED REAL ESTATE" 
             className="w-36 h-auto object-contain transition-transform group-hover:scale-[1.02]"
           />
