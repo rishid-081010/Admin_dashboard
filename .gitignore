@@ -1,2 +1,5 @@
-﻿secrets.php
-*.json
+﻿node_modules/
+.env
+dist/
+build/
+secrets.php
