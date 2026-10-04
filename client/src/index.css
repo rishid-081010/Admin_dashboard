@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #001a36;
+    color: #8c9baf;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+/* Unified Sidebar-Consistent Glassmorphism Design Tokens */
+.glass-panel {
+  background: #001830;
+  border: 1px solid #00284b;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.glass-card {
+  background: #001e39;
+  border: 1px solid #00284b;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card:hover {
+  border-color: #003d73;
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-pill:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.glass-pill-active {
+  background: #00284b;
+  border: 1px solid #003d73;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.glass-input {
+  background: #001428;
+  border: 1px solid #00284b;
+  color: #ffffff;
+}
+
+.glass-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #001428;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00284b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #003d73;
+}

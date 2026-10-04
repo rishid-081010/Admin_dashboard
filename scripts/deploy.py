@@ -1,4 +1,4 @@
-import requests
+﻿import requests
 import os
 import sys
 
@@ -27,20 +27,21 @@ upload_base_url = data['url']
 auth_key = data['auth_key']
 rest_auth_key = data['rest_auth_key']
 
-# Map local repo paths to Hostinger public/dashboard paths
-files_to_upload = {
-    'frontend/index.html': 'public/dashboard/index.html',
-    'frontend/styles.css': 'public/dashboard/styles.css',
-    'frontend/app.js': 'public/dashboard/app.js',
-    'frontend/sample_unstructured_leads.csv': 'public/dashboard/sample_unstructured_leads.csv',
-    'api.php': 'public/dashboard/api.php'
-}
+dist_dir = 'client/dist'
+if not os.path.exists(dist_dir):
+    print(f"Error: {dist_dir} does not exist. Did you run npm run build?")
+    sys.exit(1)
+
+files_to_upload = {}
+for root, _, files in os.walk(dist_dir):
+    for file in files:
+        local_path = os.path.join(root, file)
+        # Convert path to posix format for URL
+        rel_path = os.path.relpath(local_path, dist_dir).replace('\\\\', '/').replace('\\', '/')
+        remote_rel_path = f"public/dashboard/{rel_path}"
+        files_to_upload[local_path] = remote_rel_path
 
 def upload_file(local_path, remote_rel_path):
-    if not os.path.exists(local_path):
-        print(f"Skipping {local_path} (not found)")
-        return False
-        
     size = os.path.getsize(local_path)
     with open(local_path, 'rb') as f:
         file_bytes = f.read()
@@ -59,6 +60,10 @@ def upload_file(local_path, remote_rel_path):
         return False
 
     loc = r_post.headers.get('Location')
+    if not loc:
+        print(f"FAILED to get Location header for {remote_rel_path}")
+        return False
+        
     real_patch_url = f"https://srv529-files.hstgr.io/rest{loc}"
     patch_headers = {
         'X-Auth': auth_key,
