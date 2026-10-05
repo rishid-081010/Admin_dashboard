@@ -57,38 +57,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition-colors" />
           </a>
 
-          {/* 4. Database Index */}
-          <a
-            href="https://supabase.com/dashboard/project/qgxgtavkovqklijfpnfl/editor/29440"
-            target="_blank"
-            rel="noreferrer"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold text-[#8da4be] hover:text-white hover:bg-white/[0.04] transition-all group"
-          >
-            <span>Database Index</span>
-            <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition-colors" />
-          </a>
 
-          {/* 5. Bitrix24 CRM Sync */}
-          <a
-            href="https://crm.asquared.ae/"
-            target="_blank"
-            rel="noreferrer"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold text-[#8da4be] hover:text-white hover:bg-white/[0.04] transition-all group"
-          >
-            <span>Bitrix24 CRM Sync</span>
-            <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition-colors" />
-          </a>
-
-          {/* 6. Voice Agent (Vapi) */}
-          <a
-            href="https://dashboard.vapi.ai/"
-            target="_blank"
-            rel="noreferrer"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold text-[#8da4be] hover:text-white hover:bg-white/[0.04] transition-all group"
-          >
-            <span>Voice Agent (Vapi)</span>
-            <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition-colors" />
-          </a>
         </nav>
       </div>
 
