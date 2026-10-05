@@ -260,7 +260,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
               {/* 1. All-in-one Master Bundle ZIP */}
               <a
                 href={`/api/listings/${generatedListing.id}/download-master-bundle-zip`}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#00284b] hover:bg-[#003666] border border-[#003d73] text-white font-bold text-xs shadow-xl shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white font-bold text-xs shadow-xl shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
                 title="Download Complete Bundle: 5-Page Dossier + NOC + Copy + Gov Docs + Enhanced Photos"
               >
                 <FolderArchive className="w-4 h-4" /> ALL-IN-ONE BUNDLE (ZIP)
@@ -341,7 +341,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                 onClick={() => deedInputRef.current?.click()}
                 className={`p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all flex flex-col items-center justify-center text-center group ${
                   titleDeedFile || titleDeedData
-                    ? 'border-[#003d73]/50 bg-[#00284b]/5 hover:bg-blue-500/10'
+                    ? 'border-white/[0.04] bg-white/[0.02] hover:bg-blue-500/10'
                     : 'border-white/[0.12] hover:border-blue-400/40 bg-white/[0.02] hover:bg-white/[0.04]'
                 }`}
               >
@@ -595,7 +595,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
               className={`w-full py-4 rounded-2xl font-bold text-sm tracking-wide shadow-xl flex items-center justify-center gap-2.5 transition-all ${
                 isSubmitting || (!titleDeedFile && !titleDeedData)
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/[0.05]'
-                  : 'bg-[#00284b] hover:bg-[#003666] border border-[#003d73] text-white hover:scale-[1.01] active:scale-[0.99] shadow-blue-950/40'
+                  : 'bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white hover:scale-[1.01] active:scale-[0.99] shadow-blue-950/40'
               }`}
             >
               {isSubmitting ? (
@@ -762,7 +762,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                         href={`/api/listings/${generatedListing.id}/dossier-pdf`}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-4 py-2 rounded-xl bg-[#00284b] text-white font-bold text-xs flex items-center gap-1.5 shadow-md hover:bg-khaki-400 transition-colors"
+                        className="px-4 py-2 rounded-xl bg-white/[0.06] text-white font-bold text-xs flex items-center gap-1.5 shadow-md hover:bg-khaki-400 transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" /> View PDF
                       </a>
@@ -837,7 +837,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                       href={`/api/listings/${generatedListing.id}/noc-pdf`}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-4 py-2 rounded-xl bg-[#00284b] text-white font-bold text-xs flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl bg-white/[0.06] text-white font-bold text-xs flex items-center gap-1.5"
                     >
                       <Download className="w-3.5 h-3.5" /> Download NOC PDF
                     </a>

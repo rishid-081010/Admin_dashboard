@@ -61,7 +61,7 @@ export default function BeforeAfterSlider({
         alt="Enhanced Real Estate"
         className="w-full h-full object-contain pointer-events-none block"
       />
-      <span className="absolute top-3.5 right-3.5 bg-[#00284b]/95 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-sm z-10 pointer-events-none tracking-wider">
+      <span className="absolute top-3.5 right-3.5 bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-sm z-10 pointer-events-none tracking-wider">
         {rightLabel}
       </span>
 
@@ -86,7 +86,7 @@ export default function BeforeAfterSlider({
         className="absolute top-0 bottom-0 w-0.5 bg-khaki-400 shadow-[0_0_12px_rgba(183,169,144,0.8)] z-20 pointer-events-none"
         style={{ left: `${sliderPosition}%` }}
       >
-        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-navy-900 text-blue-400 shadow-2xl flex items-center justify-center border-2 border-[#003d73] transition-transform hover:scale-110">
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-navy-900 text-blue-400 shadow-2xl flex items-center justify-center border-2 border-white/[0.08] transition-transform hover:scale-110">
           <svg className="w-4 h-4 fill-current text-blue-400" viewBox="0 0 24 24">
             <path d="M8.5 7l-5 5 5 5V7zm7 10l5-5-5-5v10z" />
           </svg>

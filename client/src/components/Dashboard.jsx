@@ -83,7 +83,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
         );
       default:
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#00284b] text-slate-300 border border-[#003d73] flex items-center gap-1.5 w-fit">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/[0.06] text-slate-300 border border-white/[0.08] flex items-center gap-1.5 w-fit">
             <Clock className="w-3.5 h-3.5 text-slate-400" /> Draft
           </span>
         );
@@ -133,7 +133,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
 
         <button
           onClick={onNewListingClick}
-          className="bg-[#00284b] hover:bg-[#003666] border border-[#003d73] text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
+          className="bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
         >
           <PlusCircle className="w-4 h-4 text-blue-400" />
           <span>Create New Listing</span>
@@ -141,7 +141,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="glass-card p-5 space-y-4 rounded-2xl border border-[#00284b]">
+      <div className="glass-card p-5 space-y-4 rounded-2xl border border-white/[0.05]">
         {/* Search Input */}
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -150,7 +150,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by property name, reference (#MG-2026), or type..."
-            className="w-full bg-[#001428] border border-[#00284b] rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all"
+            className="w-full bg-[#050B14] border border-white/[0.05] rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all"
           />
         </div>
 
@@ -168,7 +168,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 onClick={() => setStatusFilter(status)}
                 className={`px-3.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                   statusFilter === status
-                    ? 'bg-[#00284b] text-white border border-[#003d73] shadow-sm font-bold'
+                    ? 'bg-white/[0.06] text-white border border-white/[0.08] shadow-sm font-bold'
                     : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
@@ -189,7 +189,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 onClick={() => setTypeFilter(type)}
                 className={`px-3.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                   typeFilter === type
-                    ? 'bg-[#00284b] text-white border border-[#003d73] shadow-sm font-bold'
+                    ? 'bg-white/[0.06] text-white border border-white/[0.08] shadow-sm font-bold'
                     : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
@@ -202,7 +202,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
 
       {/* Content */}
       {loading ? (
-        <div className="glass-card p-12 text-center rounded-2xl border border-[#00284b]">
+        <div className="glass-card p-12 text-center rounded-2xl border border-white/[0.05]">
           <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
           <p className="text-slate-400 text-sm font-medium">Loading property listings from Supabase...</p>
         </div>
@@ -212,7 +212,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
           <p>{error}</p>
         </div>
       ) : filteredListings.length === 0 ? (
-        <div className="glass-card p-12 text-center rounded-2xl border border-[#00284b]">
+        <div className="glass-card p-12 text-center rounded-2xl border border-white/[0.05]">
           <Building2 className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
           <h3 className="text-lg font-serif font-bold text-white mb-1">No Listings Found</h3>
           <p className="text-slate-400 text-xs max-w-sm mx-auto mb-5">
@@ -222,7 +222,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
           </p>
           <button
             onClick={onNewListingClick}
-            className="bg-[#00284b] hover:bg-[#003666] border border-[#003d73] text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-2"
+            className="bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-2"
           >
             <PlusCircle className="w-4 h-4 text-blue-400" />
             Create Listing
@@ -234,7 +234,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
             <div
               key={listing.id}
               onClick={() => onSelectListing(listing)}
-              className="glass-card p-5 rounded-2xl border border-[#00284b] hover:border-blue-500/40 transition-all cursor-pointer group flex flex-col justify-between"
+              className="glass-card p-5 rounded-2xl border border-white/[0.05] hover:border-blue-500/40 transition-all cursor-pointer group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3">

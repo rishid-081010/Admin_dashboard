@@ -67,7 +67,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             onClick={() => setActiveTab('new')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${
               activeTab === 'new'
-                ? 'bg-[#00284b] text-white shadow-lg shadow-blue-950/40'
+                ? 'bg-white/[0.06] text-white shadow-lg shadow-blue-950/40'
                 : 'bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20'
             }`}
           >

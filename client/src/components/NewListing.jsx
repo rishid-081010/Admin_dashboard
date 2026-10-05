@@ -443,7 +443,7 @@ export default function NewListing({ onListingCreated, onBack }) {
           <button
             type="button"
             onClick={onBack}
-            className="px-4 py-2 rounded-xl bg-[#00284b] hover:bg-[#003666] border border-[#003d73] text-white text-xs font-semibold transition-all shrink-0"
+            className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white text-xs font-semibold transition-all shrink-0"
           >
             ← Back to Listings
           </button>
@@ -493,7 +493,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                 onClick={() => deedInputRef.current?.click()}
                 className={`p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all flex items-center gap-3.5 ${
                   titleDeedFile || parsedDeedData
-                    ? 'border-[#003d73]/60 bg-blue-500/10'
+                    ? 'border-white/[0.08]/60 bg-blue-500/10'
                     : 'border-white/[0.12] hover:border-blue-400/40 bg-white/[0.02] hover:bg-white/[0.04]'
                 }`}
               >
@@ -604,7 +604,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                     onClick={() => setPurpose('For Sale')}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
                       purpose === 'For Sale'
-                        ? 'bg-[#00284b] text-white shadow'
+                        ? 'bg-white/[0.06] text-white shadow'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -615,7 +615,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                     onClick={() => setPurpose('For Rent')}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
                       purpose === 'For Rent'
-                        ? 'bg-[#00284b] text-white shadow'
+                        ? 'bg-white/[0.06] text-white shadow'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -741,7 +741,7 @@ export default function NewListing({ onListingCreated, onBack }) {
             className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
               isDragging
                 ? 'border-blue-400 bg-blue-500/10 scale-[0.99]'
-                : 'border-white/[0.12] hover:border-[#003d73]/50 bg-black/20 hover:bg-black/30'
+                : 'border-white/[0.12] hover:border-white/[0.04] bg-black/20 hover:bg-black/30'
             }`}
           >
             <input
@@ -848,7 +848,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                   onClick={() => togglePreset(preset.id)}
                   className={`text-left p-3.5 rounded-xl border transition-all flex items-center justify-between ${
                     isSelected
-                      ? 'bg-blue-500/15 border-[#003d73] text-white shadow-sm'
+                      ? 'bg-blue-500/15 border-white/[0.08] text-white shadow-sm'
                       : 'glass-pill text-slate-300 hover:border-white/[0.15]'
                   }`}
                 >

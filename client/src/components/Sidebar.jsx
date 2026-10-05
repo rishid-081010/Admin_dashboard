@@ -6,7 +6,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const isLeadsActive = activeTab === 'leads';
 
   return (
-    <aside className="w-64 shrink-0 bg-[#001e39] border border-[#00284b] rounded-[28px] p-6 flex flex-col justify-between h-[calc(100vh-3rem)] sticky top-6 hidden md:flex select-none overflow-hidden">
+    <aside className="w-64 shrink-0 bg-[#0a1321] border border-[#1c2738] rounded-[28px] p-6 flex flex-col justify-between h-[calc(100vh-3rem)] sticky top-6 hidden md:flex select-none overflow-hidden">
       <div>
         {/* Brand: A SQUARED REAL ESTATE (Exact Official Logo) */}
         <div 
@@ -52,7 +52,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       </div>
 
       {/* Footer Status Badge */}
-      <div className="border-t border-[#1a273b] pt-4 flex items-center gap-2 px-2 -mx-2">
+      <div className="border-t border-[#1c2738] pt-4 flex items-center gap-2 px-2 -mx-2">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
         <div className="text-[10px] text-gray-400 leading-tight">
           <span className="font-bold text-white text-xs block">39,144 Leads</span>
@@ -62,3 +62,4 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     </aside>
   );
 }
+

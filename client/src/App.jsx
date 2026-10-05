@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import NewListing from './components/NewListing';
@@ -20,12 +20,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#001a36] text-[#8c9baf] p-4 lg:p-6 flex gap-6 box-border font-sans selection:bg-blue-500/30 selection:text-white">
+    <div className="min-h-screen bg-[#050b14] text-slate-400 p-4 lg:p-6 flex gap-6 box-border font-sans selection:bg-blue-500/30 selection:text-white">
       {/* Unified Left Sidebar */}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main Content Pane */}
-      <main className="flex-1 bg-[#001830] border border-[#00284b] rounded-[28px] p-6 lg:p-8 overflow-y-auto max-h-[calc(100vh-3rem)]">
+      <main className="flex-1 bg-[#0a1321] border border-[#1c2738] rounded-[28px] p-6 lg:p-8 overflow-y-auto max-h-[calc(100vh-3rem)]">
         {activeTab === 'leads' && (
           <LeadIngestionStudio />
         )}
@@ -64,3 +64,5 @@ export default function App() {
     </div>
   );
 }
+
+

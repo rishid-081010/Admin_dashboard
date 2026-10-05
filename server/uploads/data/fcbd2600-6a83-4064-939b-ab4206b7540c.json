@@ -1,0 +1,168 @@
+{
+  "imagesOrder": [
+    "c168d60d-8d65-49ff-884b-3c5e99483d07"
+  ],
+  "roomTypes": {
+    "c168d60d-8d65-49ff-884b-3c5e99483d07": "Foyer_Entrance"
+  },
+  "propertySpecs": {
+    "purpose": "For Sale",
+    "price": "",
+    "bedrooms": "2 Bedrooms",
+    "bathrooms": "2 Baths",
+    "size_sqft": "528.83",
+    "furnishing": "Unfurnished",
+    "rough_notes": "Building: Sobha Creek Vistas Reserve | Unit: B1610 | Community: Sobha Hartland / MBR City | Plot #: 66 | DLD Deed #: 102033/2024 | Total Gross Area: 528.83 sqft | Suite Area: 450.15 sqft | Allocated Parking: P2-128 | Mortgage: Free & Clear (Unencumbered) | Registered Owner: AKARSH RAJESH ARORA",
+    "copy_tone": "luxury"
+  },
+  "titleDeedData": {
+    "document_type": "Oqood",
+    "certificate_number": "102033/2024",
+    "deed_year": "2024",
+    "owner_name_english": "AKARSH RAJESH ARORA",
+    "owner_name_arabic": "أكاروس راجيش أرورا",
+    "ownership_share": "100% Sole Owner",
+    "building_name": "Sobha Creek Vistas Reserve",
+    "unit_number": "B1610",
+    "floor_number": "16",
+    "community_cadastral": "Al Merkadh",
+    "community": "Sobha Hartland / MBR City",
+    "plot_number": "66",
+    "municipality_number": "347 - 4775",
+    "property_type": "Apartment",
+    "suite_area_sqm": 41.82,
+    "balcony_area_sqm": 7.31,
+    "total_area_sqm": 49.13,
+    "total_area_sqft": 528.83,
+    "parking_bays": [
+      "P2-128"
+    ],
+    "mortgage_status": "Free & Clear (Unencumbered)",
+    "purchase_price": "941536",
+    "raw_notes": "Official DLD Initial Sale Certificate registered in Sobha Creek Vistas Reserve",
+    "success": true,
+    "suite_area_sqft": 450.15,
+    "balcony_area_sqft": 78.68
+  },
+  "emiratesIdData": null,
+  "kycResult": null,
+  "commercialSpecs": {
+    "broker_name": "A SQUARED Advisory Desk",
+    "broker_brn": "ORN: 28491 / BRN: 54120",
+    "broker_phone": "+971 4 000 0000",
+    "broker_email": "luxury@asquared.ae",
+    "broker_license": "RERA 28491",
+    "commission_rate": "2.0% + VAT",
+    "validity_days": 90,
+    "price": "",
+    "purpose": "For Sale"
+  },
+  "titleDeedFiles": [
+    "/uploads/original/1791131073131-294311698.pdf"
+  ],
+  "emiratesIdFiles": [],
+  "copyData": {
+    "portal_title": "2BR Apartment | Sobha Creek Vistas | Panoramic Views | Vacant on Transfer",
+    "portal_description": "✨ Discover unparalleled elegance and panoramic vistas in this 2-bedroom apartment at Sobha Creek Vistas Reserve, located in the prestigious Sobha Hartland community.\n\n🏠 **Property Specifications:**\n- Type: Apartment\n- BUA: 528.83 sq.ft\n- Bedrooms: 2\n- Bathrooms: 2 En-suites\n- Parking: 1 Allocated Space (P2-128)\n- Chiller: Free\n- Furnishing: Unfurnished\n\n🏢 **Interior Highlights & Layout:**\n- Expansive floorplan with seamless indoor-outdoor flow\n- Floor-to-ceiling glazing for sun-drenched interiors\n- Bespoke cabinetry in the kitchen\n- Generous terrace with access from living area\n\n🏊 **World-Class Building Amenities:**\n- Infinity pool\n- State-of-the-art gymnasium\n- 24/7 concierge service\n- Advanced security systems\n- Valet parking\n\n📞 **Private Viewings:**\nContact A SQUARED REAL ESTATE to schedule your exclusive viewing appointment today.",
+    "whatsapp_copy": "🌟 *Exclusive 2BR Apartment in Sobha Creek Vistas Reserve!* 🌟\n\n💰 *Price on Application*\n\n📍 *Key Specifications:*\n- 528.83 sq.ft of luxury living\n- 2 Bedrooms with en-suite bathrooms\n- Floor-to-ceiling glazing\n- Generous terrace\n- Chiller free\n\n📞 *Contact A SQUARED REAL ESTATE now to arrange a private viewing!*",
+    "instagram_copy": "🌆 Elevate your lifestyle with this exquisite 2-bedroom apartment in Sobha Creek Vistas Reserve. Experience panoramic vistas and bespoke finishes in the heart of Sobha Hartland. Swipe to explore your future home! ➡️\n\n#DubaiLuxury #SobhaCreekVistas #RealEstateInvestment #DubaiLiving #LuxuryApartment",
+    "investor_email": "Subject: Prime Investment Opportunity in Sobha Creek Vistas\n\nDear Esteemed Investor,\n\nWe present to you a remarkable investment opportunity in the prestigious Sobha Creek Vistas Reserve. This 2-bedroom apartment offers efficient floorplan design, ensuring optimal space utilization and potential for significant capital growth. With its panoramic views and turnkey condition, this property is poised to deliver excellent rental yields.\n\nSecure your viewing appointment with A SQUARED REAL ESTATE today.",
+    "arabic_summary": "شقة فاخرة من غرفتي نوم في سوبها كريك فيستاس ريزيرف، مجتمع سوبها هارتلاند الراقي. تتميز بإطلالات بانورامية وتصميم داخلي مشرق مع تشطيبات مخصصة. اتصل بـ A SQUARED REAL ESTATE لترتيب موعد مشاهدة خاص.",
+    "russian_summary": "Роскошная квартира с 2 спальнями в Sobha Creek Vistas Reserve, престижное сообщество Sobha Hartland. Панорамные виды и светлый интерьер с индивидуальной отделкой. Свяжитесь с A SQUARED REAL ESTATE, чтобы организовать частный просмотр."
+  },
+  "aiAssessment": {
+    "assessment_id": "ASQ-AI-MUU1779M",
+    "status": "VERIFIED_READY",
+    "overall_score": 100,
+    "assessor_model": "GPT-4o Document Intelligence & Compliance Guard",
+    "assessed_at": "2026-10-04T16:24:41.098Z",
+    "executive_summary": "The listing dossier for the property at Sobha Creek Vistas Reserve, Unit B1610, is complete and meets all compliance requirements, with a KYC Match Score of 100% and a clear mortgage status. It is hereby certified as ready for RERA/Trakheesi submission and landlord signature.",
+    "checks": [
+      {
+        "name": "Owner Identity & KYC Match",
+        "passed": true,
+        "score": 100,
+        "detail": "Owner identity verified (AKARSH RAJESH ARORA) against official DLD Registry records."
+      },
+      {
+        "name": "Dubai Land Department Title Deed Authenticity",
+        "passed": true,
+        "score": 100,
+        "detail": "Building: Sobha Creek Vistas Reserve, Unit: B1610, Area: 528.83 Sq.Ft verified."
+      },
+      {
+        "name": "A SQUARED Listing Form (Rental) NOC Readiness",
+        "passed": true,
+        "score": 100,
+        "detail": "All mandatory broker representation terms, checkmarks, and signature blocks auto-populated."
+      },
+      {
+        "name": "Encumbrance & Mortgage Status",
+        "passed": true,
+        "score": 100,
+        "detail": "Free & Clear (Unencumbered)"
+      }
+    ],
+    "is_ready_for_output": true
+  },
+  "qaReports": {
+    "c168d60d-8d65-49ff-884b-3c5e99483d07": {
+      "usable": true,
+      "action": "edited",
+      "issues": [],
+      "recommended_action": "Apply darkroom adjustments for optimal presentation.",
+      "suggested_order": 1,
+      "confidence": 0.98,
+      "edit_applied": true,
+      "edit_summary": "Enhanced brightness, reduced shadow depth, and neutralized color cast.",
+      "human_review_required": false,
+      "room_category": "Foyer_Entrance",
+      "color_temperature_cast": "moderate_yellow",
+      "window_glare_level": "minimal",
+      "shadow_depth": "moderate",
+      "adjustments": {
+        "brightness": 1.08,
+        "saturation": 1.04,
+        "gamma": 1.06,
+        "clahe_max_slope": 3,
+        "sharpness": 1.1,
+        "hue": -4,
+        "warmth_neutralize": true
+      }
+    }
+  },
+  "baselineImages": {
+    "c168d60d-8d65-49ff-884b-3c5e99483d07": "/uploads/generated/enhanced-c168d60d-8d65-49ff-884b-3c5e99483d07.jpg"
+  },
+  "baselineQAReports": {
+    "c168d60d-8d65-49ff-884b-3c5e99483d07": {
+      "usable": true,
+      "action": "edited",
+      "issues": [],
+      "recommended_action": "Apply darkroom adjustments for optimal presentation.",
+      "suggested_order": 1,
+      "confidence": 0.98,
+      "edit_applied": true,
+      "edit_summary": "Adjusted brightness, saturation, and sharpness to enhance image quality.",
+      "human_review_required": false,
+      "room_category": "Foyer_Entrance",
+      "color_temperature_cast": "moderate_yellow",
+      "window_glare_level": "minimal",
+      "shadow_depth": "moderate",
+      "adjustments": {
+        "brightness": 1.08,
+        "saturation": 1.04,
+        "gamma": 1.04,
+        "clahe_max_slope": 3,
+        "sharpness": 1.1,
+        "hue": -4,
+        "warmth_neutralize": true
+      }
+    }
+  },
+  "refinedImages": {},
+  "isGenerative": {},
+  "refinements": {
+    "c168d60d-8d65-49ff-884b-3c5e99483d07": []
+  }
+}

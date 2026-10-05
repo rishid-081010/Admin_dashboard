@@ -654,7 +654,7 @@ export default function ListingDetail({ listingId, onBack }) {
         <div className="relative" ref={downloadDropdownRef}>
           <button
             onClick={() => setDownloadDropdownOpen((prev) => !prev)}
-            className="px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 bg-[#00284b] hover:bg-[#003666] border border-[#003d73] text-white shadow-xl shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            className="px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white shadow-xl shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
           >
             <Download className="w-4 h-4 text-white" />
             <span>Download Packages</span>
@@ -722,7 +722,7 @@ export default function ListingDetail({ listingId, onBack }) {
               <a
                 href={`/api/listings/${listingId}/download-master-bundle-zip`}
                 onClick={() => setDownloadDropdownOpen(false)}
-                className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-white/[0.06] transition-colors group bg-[#00284b]/[0.03] cursor-pointer"
+                className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-white/[0.06] transition-colors group bg-white/[0.02] cursor-pointer"
               >
                 <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 group-hover:scale-105 transition-transform mt-0.5">
                   <FolderArchive className="w-5 h-5 text-blue-400" />
@@ -874,7 +874,7 @@ export default function ListingDetail({ listingId, onBack }) {
             onClick={() => setCopyTab('portal')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               copyTab === 'portal'
-                ? 'bg-[#00284b] text-white shadow-md shadow-blue-950/40'
+                ? 'bg-white/[0.06] text-white shadow-md shadow-blue-950/40'
                 : 'glass-pill text-slate-400 hover:text-white'
             }`}
           >
@@ -1125,7 +1125,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <button
               onClick={() => handleGenerateCopy('luxury')}
               disabled={isGeneratingCopy}
-              className="px-4 py-2 bg-[#00284b] hover:bg-khaki-400 text-white font-bold text-xs rounded-2xl inline-flex items-center gap-2 shadow-md shadow-blue-950/40"
+              className="px-4 py-2 bg-white/[0.06] hover:bg-khaki-400 text-white font-bold text-xs rounded-2xl inline-flex items-center gap-2 shadow-md shadow-blue-950/40"
             >
               <Sparkles className="w-4 h-4" />
               {isGeneratingCopy ? 'Generating...' : 'Generate Multi-Channel Marketing Copy Now'}
@@ -1188,7 +1188,7 @@ export default function ListingDetail({ listingId, onBack }) {
           className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
             isDragging
               ? 'border-blue-400 bg-blue-500/10 scale-[0.99]'
-              : 'border-white/[0.12] bg-black/20 hover:border-[#003d73]/50 hover:bg-white/[0.02]'
+              : 'border-white/[0.12] bg-black/20 hover:border-white/[0.04] hover:bg-white/[0.02]'
           }`}
         >
           <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.1] flex items-center justify-center mx-auto mb-2 text-blue-400">
@@ -1264,7 +1264,7 @@ export default function ListingDetail({ listingId, onBack }) {
               <div className="p-3 bg-black/40 border-b border-white/[0.06] flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                    idx === 0 ? 'bg-[#00284b] text-white shadow-sm' : 'glass-pill text-slate-300'
+                    idx === 0 ? 'bg-white/[0.06] text-white shadow-sm' : 'glass-pill text-slate-300'
                   }`}>
                     {idx === 0 ? '★ #01 COVER' : `#0${idx + 1}`}
                   </span>
@@ -1339,17 +1339,17 @@ export default function ListingDetail({ listingId, onBack }) {
                         <img
                           src={withTimestamp(img.generated_image_location)}
                           alt="Enhanced"
-                          className="w-full h-36 object-cover rounded-xl border border-[#003d73]/50 shadow-md shadow-blue-950/40 cursor-pointer"
+                          className="w-full h-36 object-cover rounded-xl border border-white/[0.04] shadow-md shadow-blue-950/40 cursor-pointer"
                           onClick={() => openSliderForImage(img)}
                         />
                         <span className={`absolute bottom-1.5 left-1.5 font-bold text-[10px] px-2 py-0.5 rounded shadow ${
-                          img.is_generative ? 'bg-amber-400 text-white font-bold' : img.custom_refined_location ? 'bg-khaki-400 text-white' : 'bg-[#00284b] text-white'
+                          img.is_generative ? 'bg-amber-400 text-white font-bold' : img.custom_refined_location ? 'bg-khaki-400 text-white' : 'bg-white/[0.06] text-white'
                         }`}>
                           {img.is_generative ? '✨ Staged' : img.custom_refined_location ? '✨ Refined' : '🤖 Enhanced'}
                         </span>
                       </>
                     ) : img.status === 'processing' ? (
-                      <div className="w-full h-36 rounded-xl border border-blue-500/30 bg-[#00284b]/5 flex flex-col items-center justify-center p-3 text-center">
+                      <div className="w-full h-36 rounded-xl border border-blue-500/30 bg-white/[0.02] flex flex-col items-center justify-center p-3 text-center">
                         <RefreshCw className="w-6 h-6 text-blue-400 animate-spin mb-2" />
                         <span className="text-xs text-blue-300 font-medium">Enhancing Clarity...</span>
                       </div>
@@ -1431,7 +1431,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <>
                     <button
                       onClick={() => openRefineModal(img)}
-                      className="py-2 px-3 bg-blue-500/15 hover:bg-[#00284b]/25 text-blue-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-blue-500/30 shadow-sm"
+                      className="py-2 px-3 bg-blue-500/15 hover:bg-white/[0.04] text-blue-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-blue-500/30 shadow-sm"
                       title="Direct AI or adjust sliders on this photo"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-blue-400" /> AI Refine
@@ -1540,7 +1540,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         onClick={() => setRefineMode('orig-vs-refined')}
                         className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                           refineMode === 'orig-vs-refined'
-                            ? 'bg-[#00284b] text-white font-bold shadow'
+                            ? 'bg-white/[0.06] text-white font-bold shadow'
                             : 'text-slate-400 hover:text-white'
                         }`}
                       >
@@ -1551,7 +1551,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         onClick={() => setRefineMode('baseline-vs-refined')}
                         className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                           refineMode === 'baseline-vs-refined'
-                            ? 'bg-[#00284b] text-white font-bold shadow'
+                            ? 'bg-white/[0.06] text-white font-bold shadow'
                             : 'text-slate-400 hover:text-white'
                         }`}
                       >
@@ -1562,7 +1562,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         onClick={() => setRefineMode('orig-vs-baseline')}
                         className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                           refineMode === 'orig-vs-baseline'
-                            ? 'bg-[#00284b] text-white font-bold shadow'
+                            ? 'bg-white/[0.06] text-white font-bold shadow'
                             : 'text-slate-400 hover:text-white'
                         }`}
                       >
@@ -1607,7 +1607,7 @@ export default function ListingDetail({ listingId, onBack }) {
                           onClick={() => setRefineStudioTab('optical')}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                             refineStudioTab === 'optical'
-                              ? 'bg-[#00284b] text-white shadow-md'
+                              ? 'bg-white/[0.06] text-white shadow-md'
                               : 'glass-pill text-slate-300 hover:text-white'
                           }`}
                         >
@@ -1618,7 +1618,7 @@ export default function ListingDetail({ listingId, onBack }) {
                           onClick={() => setRefineStudioTab('generative')}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                             refineStudioTab === 'generative'
-                              ? 'bg-[#00284b] hover:bg-[#003666] border border-[#003d73] text-white shadow-md font-bold'
+                              ? 'bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white shadow-md font-bold'
                               : 'glass-pill text-amber-300/80 hover:text-amber-200 border border-amber-500/20'
                           }`}
                         >
@@ -1629,7 +1629,7 @@ export default function ListingDetail({ listingId, onBack }) {
                           onClick={() => setRefineStudioTab('sliders')}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                             refineStudioTab === 'sliders'
-                              ? 'bg-[#00284b] text-white shadow-md'
+                              ? 'bg-white/[0.06] text-white shadow-md'
                               : 'glass-pill text-slate-300 hover:text-white'
                           }`}
                         >
@@ -1759,7 +1759,7 @@ export default function ListingDetail({ listingId, onBack }) {
                           <button
                             onClick={handleApplyGenerative}
                             disabled={isRefiningImage || !generativeDirective.trim()}
-                            className="absolute bottom-3 right-3 px-4 py-1.5 bg-[#00284b] hover:bg-[#003666] border border-[#003d73]  text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-950/40 disabled:opacity-40 transition-all"
+                            className="absolute bottom-3 right-3 px-4 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08]  text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-950/40 disabled:opacity-40 transition-all"
                           >
                             <Sparkles className={`w-3.5 h-3.5 ${isRefiningImage ? 'animate-spin' : ''}`} />
                             {isRefiningImage ? 'Executing Edit...' : 'Apply Targeted Edit'}
@@ -1977,7 +1977,7 @@ export default function ListingDetail({ listingId, onBack }) {
               {/* Modal Top Bar */}
               <div className="p-4 bg-black/40 border-b border-white/[0.08] flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold bg-[#00284b] text-white px-2.5 py-1 rounded-md font-sans">
+                  <span className="text-xs font-bold bg-white/[0.06] text-white px-2.5 py-1 rounded-md font-sans">
                     #{sliderIndex + 1} of {completedImages.length}
                   </span>
                   <span className="text-sm font-serif font-bold text-white">
@@ -1995,7 +1995,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     onClick={() => setSliderMode('orig-vs-refined')}
                     className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                       sliderMode === 'orig-vs-refined'
-                        ? 'bg-[#00284b] text-white font-bold shadow'
+                        ? 'bg-white/[0.06] text-white font-bold shadow'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -2006,7 +2006,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     onClick={() => setSliderMode('baseline-vs-refined')}
                     className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                       sliderMode === 'baseline-vs-refined'
-                        ? 'bg-[#00284b] text-white font-bold shadow'
+                        ? 'bg-white/[0.06] text-white font-bold shadow'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -2017,7 +2017,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     onClick={() => setSliderMode('orig-vs-baseline')}
                     className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                       sliderMode === 'orig-vs-baseline'
-                        ? 'bg-[#00284b] text-white font-bold shadow'
+                        ? 'bg-white/[0.06] text-white font-bold shadow'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -2032,7 +2032,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       setSliderModalImage(null);
                       openRefineModal(current);
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-[#00284b]/25 text-blue-300 text-xs font-semibold flex items-center gap-1.5 border border-blue-500/30 transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-white/[0.04] text-blue-300 text-xs font-semibold flex items-center gap-1.5 border border-blue-500/30 transition-colors"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-blue-400" /> AI Refine
                   </button>

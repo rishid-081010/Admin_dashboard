@@ -198,7 +198,7 @@ export default function LeadIngestionStudio() {
 
         {/* Action Badges Side by Side */}
         <div className="flex items-center gap-3 shrink-0 flex-nowrap">
-          <div className="glass-pill px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 flex items-center gap-2 whitespace-nowrap bg-[#001e39] border border-[#00284b]">
+          <div className="glass-pill px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 flex items-center gap-2 whitespace-nowrap bg-[#0B1221] border border-white/[0.05]">
             <Database className="w-3.5 h-3.5 text-blue-400" />
             <span>
               <strong className="text-white">{(Number(dbStats?.database_leads_count) || 40717).toLocaleString()}</strong> CRM Leads Indexed
@@ -209,7 +209,7 @@ export default function LeadIngestionStudio() {
             type="button"
             onClick={handleLoadSample}
             disabled={sampleLoading || loading}
-            className="px-4 py-2 rounded-xl bg-[#00284b] hover:bg-[#003666] border border-[#003d73] text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
+            className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
           >
             <Sparkles className={`w-3.5 h-3.5 text-blue-400 ${sampleLoading ? 'animate-spin' : ''}`} />
             <span>{sampleLoading ? 'Loading Sample...' : 'Load Sample Messy File'}</span>
