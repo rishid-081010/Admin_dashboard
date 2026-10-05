@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { ExternalLink } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -22,12 +22,12 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
         {/* Navigation Links */}
         <nav className="w-full space-y-[6px] px-1">
-          {/* 1. Lead Ingestion Studio */}
+          {/* 1. Data Cleaning Studio */}
           <button
             onClick={() => setActiveTab('leads')}
             className={\w-full flex items-center justify-between px-4 py-[11px] rounded-[10px] text-[14px] font-semibold tracking-wide transition-all text-left \\}
           >
-            <span>Lead Ingestion Studio</span>
+            <span>Data Cleaning Studio</span>
           </button>
 
           {/* 2. Listing Studio */}
@@ -55,4 +55,5 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     </aside>
   );
 }
+
 

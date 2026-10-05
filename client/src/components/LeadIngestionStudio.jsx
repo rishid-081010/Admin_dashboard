@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
   UploadCloud, FileText, CheckCircle2, AlertTriangle, RefreshCw,
   Download, Upload, ShieldCheck, Database, PhoneCall, Sparkles,
@@ -184,7 +184,7 @@ export default function LeadIngestionStudio() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
-              Lead Ingestion & Cleaning Studio
+              Data Cleaning Studio
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -458,7 +458,7 @@ export default function LeadIngestionStudio() {
               <div key={key} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <span className="text-[9px] font-bold uppercase text-slate-400 block">{key}</span>
                 <span className="text-xs font-mono font-medium text-emerald-400 truncate block mt-0.5">
-                  {val ? String(val) : '—'}
+                  {val ? String(val) : 'â€”'}
                 </span>
               </div>
             ))}
@@ -606,3 +606,4 @@ export default function LeadIngestionStudio() {
     </div>
   );
 }
+
