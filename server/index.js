@@ -15,6 +15,7 @@ import { generateGenerativeStaging } from './generativeRefiner.js';
 import { learnFromUserFollowUp } from './aiLearningEngine.js';
 import { parseTitleDeed, parseEmiratesId, verifyKycMatching, assessDocumentIntegrityAndNoc } from './documentIntelligence.js';
 import { generateNocPdf, generateMasterDossierPdf, generateGovAndNocCombinedPdf } from './dossierGenerator.js';
+import { uploadToSupabaseStorage } from './storageHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -233,17 +234,19 @@ app.post('/api/listings', upload.array('images', 50), async (req, res) => {
     if (listingErr) throw listingErr;
 
     // 2. Prepare image metadata rows
-    const imageRows = files.map((file) => {
-      const fileRelPath = `/uploads/original/${file.filename}`;
-      return {
+    const imageRows = [];
+    for (const file of files) {
+      const localPath = path.join(originalDir, file.filename);
+      const cloudUrl = await uploadToSupabaseStorage(localPath, 'original', file.filename);
+      imageRows.push({
         listing_id: listing.id,
         original_filename: file.originalname,
-        original_image_location: fileRelPath,
+        original_image_location: cloudUrl || `/uploads/original/${file.filename}`,
         generated_image_location: null,
         status: 'queued',
         error_message: null,
-      };
-    });
+      });
+    }
 
     const { data: insertedImages, error: imagesErr } = await supabase
       .from('real_estate_images')
@@ -468,14 +471,19 @@ app.post('/api/listings/create-with-dossier', dossierUploadFields, async (req, r
     // 5. Insert Photos if any
     let insertedImages = [];
     if (photoFiles.length > 0) {
-      const imageRows = photoFiles.map((file) => ({
-        listing_id: listing.id,
-        original_filename: file.originalname,
-        original_image_location: `/uploads/original/${file.filename}`,
-        generated_image_location: null,
-        status: 'queued',
-        error_message: null,
-      }));
+      const imageRows = [];
+      for (const file of photoFiles) {
+        const localPath = path.join(originalDir, file.filename);
+        const cloudUrl = await uploadToSupabaseStorage(localPath, 'original', file.filename);
+        imageRows.push({
+          listing_id: listing.id,
+          original_filename: file.originalname,
+          original_image_location: cloudUrl || `/uploads/original/${file.filename}`,
+          generated_image_location: null,
+          status: 'queued',
+          error_message: null,
+        });
+      }
 
       const { data: imgData, error: imgErr } = await supabase
         .from('real_estate_images')
@@ -901,17 +909,19 @@ app.post('/api/listings/:id/images', upload.array('images', 50), async (req, res
     }
 
     // Insert new image records
-    const imageRows = files.map((file) => {
-      const fileRelPath = `/uploads/original/${file.filename}`;
-      return {
+    const imageRows = [];
+    for (const file of files) {
+      const localPath = path.join(originalDir, file.filename);
+      const cloudUrl = await uploadToSupabaseStorage(localPath, 'original', file.filename);
+      imageRows.push({
         listing_id: id,
         original_filename: file.originalname,
-        original_image_location: fileRelPath,
+        original_image_location: cloudUrl || `/uploads/original/${file.filename}`,
         generated_image_location: null,
         status: 'queued',
         error_message: null,
-      };
-    });
+      });
+    }
 
     const { data: insertedImages, error: imagesErr } = await supabase
       .from('real_estate_images')

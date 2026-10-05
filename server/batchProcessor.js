@@ -1,9 +1,10 @@
-import path from 'path';
+﻿import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { supabase } from './supabase.js';
 import { processPhotoWithQA } from './qaEnhancer.js';
 import { readListingMeta, writeListingMeta } from './index.js';
+import { uploadToSupabaseStorage, downloadFile } from './storageHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,7 +80,12 @@ export async function startBatchProcessing(listingId, customPrompt = '') {
             const generatedRelPath = `/uploads/generated/${generatedFilename}`;
 
             if (!fs.existsSync(originalAbsPath)) {
-              throw new Error(`Original file not found on disk: ${originalFilename}`);
+              if (img.original_image_location.startsWith('http')) {
+                console.log('Original missing on disk, downloading from cloud...');
+                await downloadFile(img.original_image_location, originalAbsPath);
+              } else {
+                throw new Error(\Original file not found on disk: \\);
+              }
             }
 
             const position = i + chunkIdx + 1;
@@ -94,6 +100,10 @@ export async function startBatchProcessing(listingId, customPrompt = '') {
               generatedAbsPath
             );
 
+            // Upload Generated Image to Supabase Cloud
+            const cloudUrl = await uploadToSupabaseStorage(generatedAbsPath, 'generated', generatedFilename);
+            const finalGeneratedPath = cloudUrl || generatedRelPath;
+
             // Save QA results and room type into local listing metadata
             const meta = readListingMeta(listingId);
             meta.roomTypes = meta.roomTypes || {};
@@ -104,7 +114,7 @@ export async function startBatchProcessing(listingId, customPrompt = '') {
             const roomType = qaResult.room_category || 'Property_Photo';
             meta.roomTypes[img.id] = roomType;
             meta.qaReports[img.id] = qaResult;
-            meta.baselineImages[img.id] = generatedRelPath;
+            meta.baselineImages[img.id] = finalGeneratedPath;
             meta.baselineQAReports[img.id] = qaResult;
             writeListingMeta(listingId, meta);
 
@@ -113,7 +123,7 @@ export async function startBatchProcessing(listingId, customPrompt = '') {
               .from('real_estate_images')
               .update({
                 status: 'completed',
-                generated_image_location: generatedRelPath,
+                generated_image_location: finalGeneratedPath,
                 error_message: null,
               })
               .eq('id', img.id);
@@ -202,3 +212,4 @@ async function updateListingFinalStatus(listingId) {
     console.error(`Error updating final listing status for ${listingId}:`, err);
   }
 }
+
