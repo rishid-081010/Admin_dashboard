@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { ExternalLink } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -16,7 +16,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <img 
             src="./asquared-logo.png" 
             alt="A SQUARED REAL ESTATE" 
-            className="w-36 h-auto object-contain transition-transform group-hover:scale-[1.02]"
+            className="w-48 h-auto object-contain transition-transform group-hover:scale-[1.02]"
           />
         </div>
 
