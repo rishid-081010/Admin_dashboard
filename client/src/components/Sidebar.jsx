@@ -25,7 +25,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           {/* 1. Data Cleaning Studio */}
           <button
             onClick={() => setActiveTab('leads')}
-            className={\w-full flex items-center justify-between px-4 py-[11px] rounded-[10px] text-[14px] font-semibold tracking-wide transition-all text-left \\}
+            className={`w-full flex items-center justify-between px-4 py-[11px] rounded-[10px] text-[14px] font-semibold tracking-wide transition-all text-left ${
+              isLeadsActive
+                ? 'bg-white/[0.14] text-white border border-white/[0.04] shadow-sm'
+                : 'text-[#e2e8f0] hover:text-white hover:bg-white/[0.05]'
+            }`}
           >
             <span>Data Cleaning Studio</span>
           </button>
@@ -33,7 +37,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           {/* 2. Listing Studio */}
           <button
             onClick={() => setActiveTab('listing')}
-            className={\w-full flex items-center justify-between px-4 py-[11px] rounded-[10px] text-[14px] font-semibold tracking-wide transition-all text-left \\}
+            className={`w-full flex items-center justify-between px-4 py-[11px] rounded-[10px] text-[14px] font-semibold tracking-wide transition-all text-left ${
+              isListingActive
+                ? 'bg-white/[0.14] text-white border border-white/[0.04] shadow-sm'
+                : 'text-[#e2e8f0] hover:text-white hover:bg-white/[0.05]'
+            }`}
           >
             <span>Listing Studio</span>
           </button>
@@ -50,10 +58,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           </a>
         </nav>
       </div>
-
-
     </aside>
   );
 }
-
-
