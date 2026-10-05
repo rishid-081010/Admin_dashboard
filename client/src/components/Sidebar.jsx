@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { ExternalLink } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -51,14 +51,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         </nav>
       </div>
 
-      {/* Footer Status Badge */}
-      <div className="border-t border-[#1c2738] pt-4 flex items-center gap-2 px-2 -mx-2">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
-        <div className="text-[10px] text-gray-400 leading-tight">
-          <span className="font-bold text-white text-xs block">39,144 Leads</span>
-          Hostinger Cloud DB
-        </div>
-      </div>
+
     </aside>
   );
 }
