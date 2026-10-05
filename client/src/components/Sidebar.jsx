@@ -40,7 +40,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
           {/* 3. Market Analytics */}
           <a
-            href="https://rishid-081010.github.io/transactional_dashboard/"
+            href="https://transactionaldashboard.asquared.ae/"
             target="_blank"
             rel="noreferrer"
             className="w-full flex items-center justify-between px-4 py-[11px] rounded-[10px] text-[14px] font-semibold tracking-wide text-[#e2e8f0] hover:text-white hover:bg-white/[0.05] transition-all group"
