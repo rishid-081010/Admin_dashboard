@@ -140,6 +140,9 @@ export function cleanPhone(raw) {
   };
 }
 
+import OpenAI from 'openai';
+
+// ... (keep SYNONYMS around just in case AI fails, we can fallback)
 export const SYNONYMS = {
   phone: ['phone', 'mobile', 'mob', 'cell', 'contact', 'tel', 'phone 1', 'contact_no', 'contact number', 'mobile number', 'whatsapp'],
   name: ['owner name', 'name', 'nameen', 'full name', 'client', 'customer', 'customer name', 'owner', 'contact name', 'buyer', 'seller', 'first name', 'last name'],
@@ -149,7 +152,7 @@ export const SYNONYMS = {
   property_type: ['property type', 'propertytypeen', 'type', 'unit type', 'category', 'usage'],
 };
 
-export function detectColumns(headers) {
+export function detectColumnsFallback(headers) {
   const lowerHeaders = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
   const colMap = {};
   const mappingUsed = {};
@@ -169,13 +172,11 @@ export function detectColumns(headers) {
   // Pass 2: Safe substring matches for anything not found yet
   for (const [field, terms] of Object.entries(SYNONYMS)) {
     if (colMap[field] !== undefined) continue;
-    
     const strippedTerms = terms.map(t => t.toLowerCase().replace(/[^a-z0-9]/g, ''));
     for (let idx = 0; idx < lowerHeaders.length; idx++) {
       const hdr = lowerHeaders[idx];
       let matched = false;
       for (const t of strippedTerms) {
-        // Only substring match if the term is long enough to avoid false positives (e.g. 'name' inside 'procedurename')
         if (t.length > 4 && hdr.includes(t)) {
           colMap[field] = idx;
           mappingUsed[field] = headers[idx].trim();
@@ -187,7 +188,76 @@ export function detectColumns(headers) {
     }
   }
 
-  return { colMap, mappingUsed };
+  // Convert to AI-like output
+  const aiMapping = headers.map((h, idx) => {
+    let standardRole = null;
+    let normalizedHeader = h.trim() || `Column ${idx + 1}`;
+    
+    for (const [field, mappedIdx] of Object.entries(colMap)) {
+      if (mappedIdx === idx) {
+        standardRole = field;
+        if (field === 'name') normalizedHeader = 'Owner Name';
+        if (field === 'phone') normalizedHeader = 'Contact Number';
+        if (field === 'project') normalizedHeader = 'Project';
+        if (field === 'location') normalizedHeader = 'Location';
+        if (field === 'unit') normalizedHeader = 'Unit Number';
+        if (field === 'property_type') normalizedHeader = 'Property Type';
+      }
+    }
+    return { originalIndex: idx, rawHeader: h, normalizedHeader, standardRole };
+  });
+
+  return aiMapping;
+}
+
+export async function detectColumnsAI(headers, sampleRow) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.warn('OpenAI API Key is missing. Falling back to heuristic detection.');
+    return detectColumnsFallback(headers);
+  }
+  
+  const openai = new OpenAI({ apiKey });
+  const prompt = `You are an expert data engineer mapping messy real estate headers to standard columns.
+Standard required core roles: 'name', 'phone', 'project', 'location', 'unit', 'property_type'.
+Standard nice headers: 'Owner Name', 'Contact Number', 'Project', 'Location', 'Unit Number', 'Property Type'.
+
+Raw headers array: ${JSON.stringify(headers)}
+Sample data row: ${JSON.stringify(sampleRow)}
+
+Your task:
+1. Look at the raw headers and the sample data row to determine what each column ACTUALLY contains. 
+2. If a column contains the owner's name, assign it standardRole: 'name' and normalizedHeader: 'Owner Name'.
+3. If it contains a phone number, assign standardRole: 'phone' and normalizedHeader: 'Contact Number'.
+4. Do the same for 'project', 'location', 'unit', and 'property_type'.
+5. If a column DOES NOT match any of these core roles (e.g. Email, Passport, Agent Name), DO NOT drop it! Keep it, but generate a clean, human-readable normalizedHeader for it (e.g. 'client_email_addr' -> 'Client Email') and set standardRole to null.
+
+Output ONLY a JSON object with a single key "columns" containing an array of objects representing EVERY raw header in the exact same order.
+Format:
+{
+  "columns": [
+    { "originalIndex": 0, "rawHeader": "Client Name En", "normalizedHeader": "Owner Name", "standardRole": "name" },
+    { "originalIndex": 1, "rawHeader": "Mobile", "normalizedHeader": "Contact Number", "standardRole": "phone" },
+    { "originalIndex": 2, "rawHeader": "Passport Num", "normalizedHeader": "Passport Number", "standardRole": null }
+  ]
+}
+`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      temperature: 0,
+    });
+    
+    const content = response.choices[0].message.content;
+    const json = JSON.parse(content);
+    return json.columns;
+  } catch(e) {
+    console.error("AI column detection error:", e);
+    return detectColumnsFallback(headers);
+  }
 }
 
 export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartment', filename = 'file.csv') {
@@ -198,7 +268,19 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
 
   const originalHeaders = rows[0];
   const dataRows = rows.slice(1);
-  const { colMap, mappingUsed } = detectColumns(originalHeaders);
+  const sampleRow = dataRows[0] || [];
+  
+  const aiMapping = await detectColumnsAI(originalHeaders, sampleRow);
+  
+  const colMap = {};
+  const normalizedHeaderNames = [];
+  
+  aiMapping.forEach(m => {
+    normalizedHeaderNames.push(m.normalizedHeader);
+    if (m.standardRole) {
+      colMap[m.standardRole] = m.originalIndex;
+    }
+  });
 
   const cleanCandidates = [];
   const invalidLeads = [];
@@ -210,63 +292,56 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
     const rowNum = rowIdx + 2;
     const rawPhone = colMap.phone !== undefined ? row[colMap.phone] || '' : '';
     const rawName = colMap.name !== undefined ? row[colMap.name] || '' : '';
-    const rawProject = colMap.project !== undefined ? row[colMap.project] || '' : '';
-    const rawLoc = colMap.location !== undefined ? row[colMap.location] || '' : '';
-    const rawUnit = colMap.unit !== undefined ? row[colMap.unit] || '' : '';
-    const rawType = colMap.property_type !== undefined ? row[colMap.property_type] || '' : defaultPropType;
 
     const phoneRes = cleanPhone(rawPhone);
+    const rawNameClean = cleanTxt(rawName);
+    const cleanName = rawNameClean ? rawNameClean.replace(/\b\w/g, c => c.toUpperCase()) : 'Property Owner';
+    
+    // Build dynamic item to retain 100% of input data
+    const item = {
+      row_num: rowNum,
+      vapi_e164: phoneRes.vapi_e164,
+      secondary_phone: phoneRes.secondary,
+      source_file: filename,
+    };
+    
+    // Safely map all dynamic columns
+    aiMapping.forEach(m => {
+      const val = row[m.originalIndex] !== undefined ? row[m.originalIndex] : '';
+      if (m.standardRole === 'phone') {
+        item[m.normalizedHeader] = phoneRes.primary || rawPhone || 'N/A';
+      } else if (m.standardRole === 'name') {
+        item[m.normalizedHeader] = cleanName;
+      } else if (m.standardRole === 'property_type') {
+        item[m.normalizedHeader] = cleanTxt(val) || defaultPropType;
+      } else {
+        item[m.normalizedHeader] = cleanTxt(val) || val;
+      }
+    });
+
+    // Hardcoded fields for backend duplicate checks + DB push mapping
+    item.contact_number = phoneRes.primary || rawPhone;
+    item.owner_name = cleanName;
+
     if (!phoneRes.valid) {
       if (phoneRes.is_landline) {
         landlineCount++;
       }
-      invalidLeads.push({
-        row_num: rowNum,
-        owner_name: cleanTxt(rawName) || 'Property Owner',
-        raw_phone: phoneRes.vapi_e164 || rawPhone || 'N/A',
-        contact_number: phoneRes.vapi_e164 || rawPhone || 'N/A',
-        project_name: cleanTxt(rawProject) || 'Dubai Residential',
-        location: cleanTxt(rawLoc) || 'Dubai',
-        unit_number: cleanTxt(rawUnit) || 'N/A',
-        property_type: cleanTxt(rawType) || defaultPropType,
-        reason: phoneRes.reason,
-        status: 'rejected',
-      });
+      item.status = 'rejected';
+      item.reason = phoneRes.reason;
+      invalidLeads.push(item);
       return;
     }
 
-    const digits = phoneRes.primary;
-    const cleanProject = cleanTxt(rawProject);
-    const cleanLoc = cleanTxt(rawLoc);
-    const rawNameClean = cleanTxt(rawName);
-    const cleanName = rawNameClean ? rawNameClean.replace(/\b\w/g, c => c.toUpperCase()) : 'Property Owner';
-    const cleanUnit = cleanTxt(rawUnit);
-    const cleanType = cleanTxt(rawType) || defaultPropType;
-
-    const item = {
-      row_num: rowNum,
-      owner_name: cleanName,
-      contact_number: digits,
-      vapi_e164: phoneRes.vapi_e164,
-      secondary_phone: phoneRes.secondary,
-      project_name: cleanProject || 'Dubai Residential',
-      location: cleanLoc || 'Dubai',
-      unit_number: cleanUnit || 'N/A',
-      property_type: cleanType,
-      source_file: filename,
-      status: 'ready',
-    };
-
-    // Tier 1: In-file duplicate check
-    if (seenPhones.has(digits)) {
-      duplicatesInFile.push({
-        ...item,
-        status: 'duplicate_file',
-        reason: 'Duplicate within uploaded file (repeated phone number)',
-      });
+    if (seenPhones.has(phoneRes.primary)) {
+      item.status = 'duplicate_file';
+      item.reason = 'Duplicate within uploaded file (repeated phone number)';
+      duplicatesInFile.push(item);
       return;
     }
-    seenPhones.add(digits);
+    
+    seenPhones.add(phoneRes.primary);
+    item.status = 'ready';
     cleanCandidates.push(item);
   });
 
@@ -314,7 +389,7 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
   return {
     filename,
     total_rows: dataRows.length,
-    mapping_used: mappingUsed,
+    headers: normalizedHeaderNames,
     clean_leads: cleanLeads,
     duplicates_in_file: duplicatesInFile,
     duplicates_in_db: duplicatesInDb,

@@ -124,15 +124,27 @@ export default function LeadIngestionStudio() {
     // Sort by row_num so they match exactly the original input file order
     allLeads.sort((a, b) => (a.row_num || 0) - (b.row_num || 0));
 
-    const headers = ['Owner Name', 'Contact Number', 'Project', 'Location', 'Unit Number', 'Property Type', 'Cleaning Status', 'Reason'];
-    const csvRows = [headers.join(',')];
+    // Use dynamic headers from backend if available, otherwise fallback
+    const baseHeaders = previewData.headers || ['Owner Name', 'Contact Number', 'Project', 'Location', 'Unit Number', 'Property Type'];
+    const csvHeaders = [...baseHeaders, 'Cleaning Status', 'Reason'];
+    const csvRows = [csvHeaders.map(h => `"${h}"`).join(',')];
     
     allLeads.forEach(r => {
       const statusLabel = r.status === 'ready' ? 'Clean & Valid' : 
                           r.status === 'duplicate_file' ? 'Duplicate (File)' :
                           r.status === 'duplicate_db' ? 'Duplicate (CRM)' : 'Invalid';
                           
-      csvRows.push(`"${r.owner_name || ''}","${r.contact_number || ''}","${r.project_name || ''}","${r.location || 'Dubai'}","${r.unit_number || ''}","${r.property_type || defaultPropertyType}","${statusLabel}","${r.reason || ''}"`);
+      const rowVals = baseHeaders.map(h => {
+        let val = r[h] !== undefined ? r[h] : '';
+        // Stringify properly and escape quotes
+        val = String(val).replace(/"/g, '""');
+        return `"${val}"`;
+      });
+      
+      rowVals.push(`"${statusLabel}"`);
+      rowVals.push(`"${(r.reason || '').replace(/"/g, '""')}"`);
+      
+      csvRows.push(rowVals.join(','));
     });
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -518,14 +530,14 @@ export default function LeadIngestionStudio() {
                 ) : (
                   filteredRows.slice(0, 100).map((r, idx) => (
                     <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-slate-500">{idx + 1}</td>
-                      <td className="py-2.5 px-3 font-medium text-white">{r.owner_name || r.name || 'Unknown'}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-500">{r.row_num || idx + 1}</td>
+                      <td className="py-2.5 px-3 font-medium text-white">{r['Owner Name'] || r.owner_name || r.name || 'Unknown'}</td>
                       <td className={`py-2.5 px-3 font-mono font-bold ${activeTab === 'invalid' ? 'text-rose-400' : 'text-emerald-400'}`}>
-                        {r.contact_number || r.phone || r.raw_phone || '-'}
+                        {r['Contact Number'] || r.contact_number || r.phone || r.raw_phone || '-'}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-300">{r.project_name || r.project || '-'}</td>
-                      <td className="py-2.5 px-3 text-slate-400">{r.location || 'Dubai'}</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-300">{r.unit_number || r.unit || '-'}</td>
+                      <td className="py-2.5 px-3 text-slate-300">{r['Project'] || r.project_name || r.project || '-'}</td>
+                      <td className="py-2.5 px-3 text-slate-400">{r['Location'] || r.location || 'Dubai'}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-300">{r['Unit Number'] || r.unit_number || r.unit || '-'}</td>
                       <td className="py-2.5 px-3 text-right">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${
                           activeTab === 'clean'
