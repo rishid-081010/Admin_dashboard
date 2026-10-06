@@ -183,7 +183,7 @@ export default function LeadIngestionStudio() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
-            Data Cleaning Dashboard
+            Data Cleaning
           </h1>
         </div>
       </div>
