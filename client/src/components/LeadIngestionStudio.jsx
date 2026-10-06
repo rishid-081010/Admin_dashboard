@@ -290,9 +290,9 @@ export default function LeadIngestionStudio() {
         </div>
       </div>
 
-      {/* Main Drag-and-Drop Area & Settings Controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Large Dropzone (2 cols) */}
+      {/* Main Drag-and-Drop Area */}
+      <div className="w-full">
+        {/* Full-width Dropzone */}
         <div
           onClick={() => fileInputRef.current?.click()}
           onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -305,7 +305,7 @@ export default function LeadIngestionStudio() {
               handleFileUpload(e.dataTransfer.files[0]);
             }
           }}
-          className={`lg:col-span-2 glass-card p-8 rounded-3xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[220px] ${
+          className={`w-full glass-card p-10 rounded-3xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[220px] ${
             isDragging
               ? 'border-blue-400 bg-blue-500/10 scale-[1.01]'
               : 'border-white/10 hover:border-blue-500/40 hover:bg-white/[0.02]'
@@ -359,55 +359,6 @@ export default function LeadIngestionStudio() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Cleaning & Safety Controls (1 col) */}
-        <div className="glass-card p-6 rounded-3xl border border-white/[0.08] flex flex-col justify-between">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4 pb-2 border-b border-white/[0.06] flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-blue-400" /> Cleaning & Safety Controls
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                  Default Property Type (Fallback)
-                </label>
-                <select
-                  value={defaultPropertyType}
-                  onChange={(e) => setDefaultPropertyType(e.target.value)}
-                  className="w-full bg-navy-950/80 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-400"
-                >
-                  <option value="Apartment">Apartment</option>
-                  <option value="Villa">Villa</option>
-                  <option value="Townhouse">Townhouse</option>
-                  <option value="Penthouse">Penthouse</option>
-                </select>
-                <p className="text-[10px] text-slate-500 mt-1">Used only if property type column is missing.</p>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                  CRM Write Mode
-                </label>
-                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between">
-                  <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={liveSync}
-                      onChange={(e) => setLiveSync(e.target.checked)}
-                      className="rounded border-white/20 bg-navy-950 text-blue-500 focus:ring-blue-400/20"
-                    />
-                    <span>Safe Sandbox Mode</span>
-                  </label>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                    CRM PROTECTED
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1">Files are structured and downloaded without modifying live CRM.</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
