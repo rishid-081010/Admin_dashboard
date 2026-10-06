@@ -278,7 +278,17 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
   aiMapping.forEach(m => {
     normalizedHeaderNames.push(m.normalizedHeader);
     if (m.standardRole) {
-      colMap[m.standardRole] = m.originalIndex;
+      // Normalize AI role output just in case GPT hallucinated slightly
+      let role = m.standardRole.toLowerCase().trim();
+      if (role === 'owner name' || role === 'owner_name') role = 'name';
+      if (role === 'contact number' || role === 'contact_number' || role === 'mobile') role = 'phone';
+      if (role === 'project name' || role === 'project_name') role = 'project';
+      if (role === 'property type' || role === 'property_type') role = 'property_type';
+      if (role === 'unit number' || role === 'unit_number') role = 'unit';
+      
+      colMap[role] = m.originalIndex;
+      // also ensure the object has the mapped role in case we use it later
+      m.standardRole = role;
     }
   });
 
