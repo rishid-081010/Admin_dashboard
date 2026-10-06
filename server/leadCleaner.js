@@ -142,29 +142,48 @@ export function cleanPhone(raw) {
 
 export const SYNONYMS = {
   phone: ['phone', 'mobile', 'mob', 'cell', 'contact', 'tel', 'phone 1', 'contact_no', 'contact number', 'mobile number', 'whatsapp'],
-  name: ['owner name', 'name', 'full name', 'client', 'customer', 'customer name', 'owner', 'contact name'],
+  name: ['owner name', 'name', 'nameen', 'full name', 'client', 'customer', 'customer name', 'owner', 'contact name', 'buyer', 'seller', 'first name', 'last name'],
   project: ['project name', 'project', 'building', 'building name', 'tower', 'tower name', 'property name', 'development', 'residence'],
   location: ['location', 'area', 'community', 'sub community', 'sub-community', 'district', 'zone', 'city'],
   unit: ['unit number', 'unit no', 'unit', 'flat', 'flat no', 'apt', 'apartment no', 'villa no'],
-  property_type: ['property type', 'type', 'unit type', 'category', 'usage'],
+  property_type: ['property type', 'propertytypeen', 'type', 'unit type', 'category', 'usage'],
 };
 
 export function detectColumns(headers) {
-  const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+  const lowerHeaders = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
   const colMap = {};
   const mappingUsed = {};
 
+  // Pass 1: Exact matches (ignoring spaces/special chars)
   for (const [field, terms] of Object.entries(SYNONYMS)) {
+    const strippedTerms = terms.map(t => t.toLowerCase().replace(/[^a-z0-9]/g, ''));
+    for (let idx = 0; idx < lowerHeaders.length; idx++) {
+      if (strippedTerms.includes(lowerHeaders[idx])) {
+        colMap[field] = idx;
+        mappingUsed[field] = headers[idx].trim();
+        break;
+      }
+    }
+  }
+
+  // Pass 2: Safe substring matches for anything not found yet
+  for (const [field, terms] of Object.entries(SYNONYMS)) {
+    if (colMap[field] !== undefined) continue;
+    
+    const strippedTerms = terms.map(t => t.toLowerCase().replace(/[^a-z0-9]/g, ''));
     for (let idx = 0; idx < lowerHeaders.length; idx++) {
       const hdr = lowerHeaders[idx];
-      for (const t of terms) {
-        if (hdr === t || hdr.includes(t)) {
+      let matched = false;
+      for (const t of strippedTerms) {
+        // Only substring match if the term is long enough to avoid false positives (e.g. 'name' inside 'procedurename')
+        if (t.length > 4 && hdr.includes(t)) {
           colMap[field] = idx;
           mappingUsed[field] = headers[idx].trim();
+          matched = true;
           break;
         }
       }
-      if (colMap[field] !== undefined) break;
+      if (matched) break;
     }
   }
 
