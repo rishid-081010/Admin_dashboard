@@ -396,10 +396,18 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
     });
   }
 
+  const mappingUsed = {};
+  aiMapping.forEach(m => {
+    if (m.standardRole) {
+      mappingUsed[m.standardRole.toUpperCase()] = m.rawHeader;
+    }
+  });
+
   return {
     filename,
     total_rows: dataRows.length,
     headers: normalizedHeaderNames,
+    mapping_used: mappingUsed,
     clean_leads: cleanLeads,
     duplicates_in_file: duplicatesInFile,
     duplicates_in_db: duplicatesInDb,
