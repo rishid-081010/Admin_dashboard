@@ -206,6 +206,10 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
         owner_name: cleanTxt(rawName) || 'Property Owner',
         raw_phone: phoneRes.vapi_e164 || rawPhone || 'N/A',
         contact_number: phoneRes.vapi_e164 || rawPhone || 'N/A',
+        project_name: cleanTxt(rawProject) || 'Dubai Residential',
+        location: cleanTxt(rawLoc) || 'Dubai',
+        unit_number: cleanTxt(rawUnit) || 'N/A',
+        property_type: cleanTxt(rawType) || defaultPropType,
         reason: phoneRes.reason,
         status: 'rejected',
       });

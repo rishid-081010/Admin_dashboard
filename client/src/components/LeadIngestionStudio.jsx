@@ -106,21 +106,39 @@ export default function LeadIngestionStudio() {
   };
 
   const handleDownloadCleanCsv = () => {
-    const leads = previewData?.clean_leads || [];
-    if (leads.length === 0) {
-      alert('No clean leads available to download.');
+    if (!previewData) return;
+    
+    // Combine ALL processed rows to ensure 0 rows are dropped
+    const allLeads = [
+      ...(previewData.clean_leads || []),
+      ...(previewData.duplicates_in_file || []),
+      ...(previewData.duplicates_in_db || []),
+      ...(previewData.invalid_leads || [])
+    ];
+    
+    if (allLeads.length === 0) {
+      alert('No processed data available to download.');
       return;
     }
-    const headers = ['Owner Name', 'Contact Number (E.164 Clean)', 'Project', 'Location', 'Unit Number', 'Property Type'];
+
+    // Sort by row_num so they match exactly the original input file order
+    allLeads.sort((a, b) => (a.row_num || 0) - (b.row_num || 0));
+
+    const headers = ['Owner Name', 'Contact Number', 'Project', 'Location', 'Unit Number', 'Property Type', 'Cleaning Status', 'Reason'];
     const csvRows = [headers.join(',')];
-    leads.forEach(r => {
-      csvRows.push(`"${r.owner_name || ''}","${r.contact_number || ''}","${r.project_name || ''}","${r.location || 'Dubai'}","${r.unit_number || ''}","${r.property_type || defaultPropertyType}"`);
+    
+    allLeads.forEach(r => {
+      const statusLabel = r.status === 'ready' ? 'Clean & Valid' : 
+                          r.status === 'duplicate_file' ? 'Duplicate (File)' :
+                          r.status === 'duplicate_db' ? 'Duplicate (CRM)' : 'Invalid';
+                          
+      csvRows.push(`"${r.owner_name || ''}","${r.contact_number || ''}","${r.project_name || ''}","${r.location || 'Dubai'}","${r.unit_number || ''}","${r.property_type || defaultPropertyType}","${statusLabel}","${r.reason || ''}"`);
     });
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'A_SQUARED_CLEAN_LEADS.csv';
+    link.download = 'A_SQUARED_PROCESSED_LEADS.csv';
     link.click();
   };
 
@@ -449,7 +467,7 @@ export default function LeadIngestionStudio() {
                 className="px-3.5 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Export Clean CSV</span>
+                <span>Export All Rows</span>
               </button>
 
               <button
