@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   UploadCloud, FileText, CheckCircle2, AlertTriangle, RefreshCw,
   Download, Upload, ShieldCheck, Database, PhoneCall, Sparkles,
@@ -180,40 +180,15 @@ export default function LeadIngestionStudio() {
   return (
     <div className="w-full space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
-              Data Cleaning Studio
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              System Live
-            </span>
-          </div>
-          <p className="text-slate-400 mt-1 text-xs lg:text-sm font-sans">
-            Autonomous UAE phone normalizer (+971), 2-tier deduplication, and Vapi Voice AI / Bitrix CRM pipeline.
-          </p>
-        </div>
-
-        {/* Action Badges Side by Side */}
-        <div className="flex items-center gap-3 shrink-0 flex-nowrap">
-          <div className="glass-pill px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 flex items-center gap-2 whitespace-nowrap bg-[#0B1221] border border-white/[0.05]">
-            <Database className="w-3.5 h-3.5 text-blue-400" />
-            <span>
-              <strong className="text-white">{(Number(dbStats?.database_leads_count) || 40717).toLocaleString()}</strong> CRM Leads Indexed
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleLoadSample}
-            disabled={sampleLoading || loading}
-            className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
-          >
-            <Sparkles className={`w-3.5 h-3.5 text-blue-400 ${sampleLoading ? 'animate-spin' : ''}`} />
-            <span>{sampleLoading ? 'Loading Sample...' : 'Load Sample Messy File'}</span>
-          </button>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
+            Data Cleaning Studio
+          </h1>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            System Live
+          </span>
         </div>
       </div>
 
