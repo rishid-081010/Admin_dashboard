@@ -305,7 +305,7 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
 
     const phoneRes = cleanPhone(rawPhone);
     const rawNameClean = cleanTxt(rawName);
-    const cleanName = rawNameClean ? rawNameClean.replace(/\b\w/g, c => c.toUpperCase()) : 'Property Owner';
+    const cleanName = rawNameClean ? rawNameClean.replace(/\b\w/g, c => c.toUpperCase()) : 'Owner Name';
     
     // Build dynamic item to retain 100% of input data
     const item = {
