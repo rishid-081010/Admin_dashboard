@@ -124,8 +124,17 @@ export default function LeadIngestionStudio() {
     // Sort by row_num so they match exactly the original input file order
     allLeads.sort((a, b) => (a.row_num || 0) - (b.row_num || 0));
 
-    // Use dynamic headers from backend if available, otherwise fallback
-    const baseHeaders = previewData.headers || ['Owner Name', 'Contact Number', 'Project', 'Location', 'Unit Number', 'Property Type'];
+    // Dynamically extract headers from the data itself to guarantee 100% column retention
+    let baseHeaders = previewData.headers;
+    if (!baseHeaders || baseHeaders.length === 0) {
+      const sample = allLeads.find(l => Object.keys(l).length > 10) || allLeads[0] || {};
+      const internalKeys = ['row_num', 'vapi_e164', 'secondary_phone', 'source_file', 'contact_number', 'owner_name', 'status', 'reason'];
+      baseHeaders = Object.keys(sample).filter(k => !internalKeys.includes(k));
+      if (baseHeaders.length === 0) {
+        baseHeaders = ['Owner Name', 'Contact Number', 'Project', 'Location', 'Unit Number', 'Property Type'];
+      }
+    }
+
     const csvHeaders = [...baseHeaders, 'Cleaning Status', 'Reason'];
     const csvRows = [csvHeaders.map(h => `"${h}"`).join(',')];
     
