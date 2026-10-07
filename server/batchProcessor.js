@@ -1,4 +1,4 @@
-﻿import path from 'path';
+import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { supabase } from './supabase.js';
@@ -84,7 +84,7 @@ export async function startBatchProcessing(listingId, customPrompt = '') {
                 console.log('Original missing on disk, downloading from cloud...');
                 await downloadFile(img.original_image_location, originalAbsPath);
               } else {
-                throw new Error(\Original file not found on disk: \\);
+                throw new Error(`Original file not found on disk: ${originalAbsPath}`);
               }
             }
 

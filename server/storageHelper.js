@@ -1,4 +1,4 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import { supabase } from './supabase.js';
 
 /**
@@ -10,7 +10,7 @@ import { supabase } from './supabase.js';
 export async function uploadToSupabaseStorage(localPath, folder, filename) {
   try {
     const fileBuffer = fs.readFileSync(localPath);
-    const storagePath = \/\;
+    const storagePath = `${folder}/${filename}`;
     
     const { data, error } = await supabase.storage
       .from('property-images')
@@ -40,7 +40,7 @@ export async function uploadToSupabaseStorage(localPath, folder, filename) {
  */
 export async function downloadFile(url, destPath) {
   const response = await fetch(url);
-  if (!response.ok) throw new Error(\Failed to fetch \: \\);
+  if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
   const buffer = await response.arrayBuffer();
   fs.writeFileSync(destPath, Buffer.from(buffer));
 }
