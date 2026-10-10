@@ -1222,7 +1222,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {additionalPreviews.map((prev, idx) => (
                 <div key={prev.id} className="relative group rounded-xl overflow-hidden border border-white/[0.1] bg-black/40">
-                  <img src={prev.url} alt={prev.name} className="w-full h-24 object-cover" />
+                  <img onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...'; }} src={prev.url} alt={prev.name} className="w-full h-24 object-cover" />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1323,6 +1323,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   {/* Original Thumbnail */}
                   <div className="relative group">
                     <img
+onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...'; }}
                       src={withTimestamp(img.original_image_location)}
                       alt="Original"
                       className="w-full h-36 object-cover rounded-xl border border-white/[0.08]"
@@ -1337,6 +1338,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     {img.status === 'completed' && img.generated_image_location ? (
                       <>
                         <img
+onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...'; }}
                           src={withTimestamp(img.generated_image_location)}
                           alt="Enhanced"
                           className="w-full h-36 object-cover rounded-xl border border-white/[0.04] shadow-md shadow-blue-950/40 cursor-pointer"
