@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import React, { useEffect, useState, useRef } from 'react';
 import { 
   ArrowLeft, Download, RefreshCw, CheckCircle2, AlertTriangle, 
@@ -666,7 +668,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-navy-900/95 backdrop-blur-xl border border-blue-500/30 shadow-2xl shadow-black/80 z-50 p-2 divide-y divide-white/[0.06] animate-in fade-in zoom-in-95 duration-150">
               {/* Option 1: Government & NOC Files (ZIP) */}
               <a
-                href={`/api/listings/${listingId}/download-gov-zip`}
+                href="#" onClick={(e) => { e.preventDefault(); handleDownloadZip('Government & NOC Files', 'gov_docs'); }}
                 onClick={() => setDownloadDropdownOpen(false)}
                 className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-white/[0.06] transition-colors group cursor-pointer"
               >
@@ -693,7 +695,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 type="button"
                 onClick={() => {
                   setDownloadDropdownOpen(false);
-                  handleDownloadAllZip();
+                  handleDownloadZip('Marketing Photos', 'marketing_photos');
                 }}
                 disabled={completedCount === 0}
                 className={`w-full text-left flex items-start gap-3.5 p-3 rounded-xl transition-colors group cursor-pointer ${
@@ -720,7 +722,7 @@ export default function ListingDetail({ listingId, onBack }) {
 
               {/* Option 3: Complete Combined Master Package (ZIP) */}
               <a
-                href={`/api/listings/${listingId}/download-master-bundle-zip`}
+                href="#" onClick={(e) => { e.preventDefault(); handleDownloadZip('Master Bundle', 'master_bundle'); }}
                 onClick={() => setDownloadDropdownOpen(false)}
                 className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-white/[0.06] transition-colors group bg-white/[0.02] cursor-pointer"
               >

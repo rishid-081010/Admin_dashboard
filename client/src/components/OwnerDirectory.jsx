@@ -16,46 +16,75 @@ export default function OwnerDirectory() {
 
   useEffect(() => {
     const fetchOwners = async () => {
+      setLoading(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/owners`);
-        setOwners(response.data);
+        const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
+        const offset = (currentPage - 1) * itemsPerPage;
+        
+        let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=owner_id,full_name,building_name,master_area,phone_normalized,contact_number,email_normalized,verified_bedrooms,is_golden_visa_eligible,bitrix_id&limit=${itemsPerPage}&offset=${offset}`;
+        
+        if (searchTerm.length > 1) {
+          url += `&or=(full_name.ilike.*${encodeURIComponent(searchTerm)}*,phone_normalized.ilike.*${encodeURIComponent(searchTerm)}*,building_name.ilike.*${encodeURIComponent(searchTerm)}*)`;
+        }
+        
+        if (filterLoc !== 'All') {
+          url += `&master_area=eq.${encodeURIComponent(filterLoc)}`;
+        }
+        
+        if (filterCrm === 'Not in CRM') {
+          url += `&bitrix_id=is.null`;
+        } else if (filterCrm === 'In Bitrix24') {
+          url += `&bitrix_id=not.is.null`;
+        }
+        
+        const response = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
+        
+        const mapped = response.data.map(row => ({
+          id: row.owner_id,
+          name: row.full_name || 'Unknown Owner',
+          building: row.building_name || 'N/A',
+          area: row.master_area || 'Dubai',
+          phone: row.phone_normalized || row.contact_number || 'N/A',
+          email: row.email_normalized || 'N/A',
+          units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
+          source: 'System Sync',
+          bitrix_id: row.bitrix_id,
+          portfolioValue: row.is_golden_visa_eligible ? 'Golden Visa ($2M+)' : 'Standard',
+          lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
+        }));
+        setOwners(mapped);
       } catch (error) {
-        console.error("Backend unreachable, falling back to cached view", error);
-        setOwners([
-          { id: 1, name: 'Mohammed Alabbar', building: 'Burj Khalifa', area: 'Downtown Dubai', phone: '+971 50 123 4567', email: 'm.alabbar@emaar.ae', units: 3, source: 'DLD_Transfer_2023.xlsx', bitrix_id: null, portfolioValue: '$12.5M', lastContact: 'Never' },
-          { id: 2, name: 'Sarah Jane', building: 'Marina Gate 1', area: 'Dubai Marina', phone: '+971 55 987 6543', email: 'sarah.j@gmail.com', units: 1, source: 'SelectGroup_Owners.csv', bitrix_id: 'LEAD_9482', portfolioValue: '$1.2M', lastContact: '2 days ago' },
-          { id: 3, name: 'Ahmed Bin Sulayem', building: 'Almas Tower', area: 'JLT', phone: '+971 52 444 5555', email: 'ahmed.bs@dmcc.ae', units: 5, source: 'DMCC_Master.xlsx', bitrix_id: 'CONTACT_102', portfolioValue: '$8.4M', lastContact: '1 month ago' },
-        ]);
+        console.error("Supabase unreachable", error);
+        setOwners([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchOwners();
-  }, []);
+    
+    // Simple debounce
+    const timeoutId = setTimeout(() => {
+      fetchOwners();
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [currentPage, searchTerm, filterLoc, filterCrm]);
 
   const pushToBitrix = async (lead) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/push-to-bitrix`, { lead });
-      alert('Pushed to Bitrix24 successfully!');
-    } catch (err) {
-      console.error(err);
-      alert('Simulated push to Bitrix24 (Backend offline)');
+       const w_url = 'https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/crm.lead.add.json';
+       await axios.post(w_url, {
+         fields: { TITLE: lead.name + " - " + lead.building, NAME: lead.name, PHONE: [{ VALUE: lead.phone, VALUE_TYPE: "WORK" }], COMMENTS: "Pushed from A-Squared Data Portal" }
+       });
+       setPushedIds(new Set([...pushedIds, lead.id]));
+    } catch(err) {
+       console.error("Push failed", err);
+       alert("Failed to push to Bitrix");
     }
   };
 
   const locations = ['All', 'Downtown Dubai', 'Dubai Marina', 'JLT', 'Palm Jumeirah', 'Business Bay'];
   const crmStatuses = ['All', 'In Bitrix24', 'Not in CRM'];
 
-  const filtered = owners.filter(o => {
-    const matchesSearch = o.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          o.phone.includes(searchTerm) || 
-                          o.building.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLoc = locationFilter === 'All' || o.area === locationFilter;
-    const matchesCrm = crmFilter === 'All' || 
-                       (crmFilter === 'In Bitrix24' && o.bitrix_id) || 
-                       (crmFilter === 'Not in CRM' && !o.bitrix_id);
-    return matchesSearch && matchesLoc && matchesCrm;
-  });
+  const filtered = owners; // filter removed
 
   return (
     <div className="w-full flex flex-col h-full animate-fade-in relative text-white/80">
@@ -168,7 +197,7 @@ export default function OwnerDirectory() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    {owner.bitrix_id ? (
+                    {(owner.bitrix_id || pushedIds.has(owner.id)) ? (
                       <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-400 px-2.5 py-1 rounded-full text-xs font-semibold border border-green-500/20">
                         ? Synced ({owner.bitrix_id})
                       </span>
@@ -190,15 +219,26 @@ export default function OwnerDirectory() {
         </div>
         
         {/* Pagination Footer */}
-        <div className="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between text-sm text-white/60">
-          <span>Showing 1 to {filtered.length} of 2.2M entries</span>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">Previous</button>
-            <button className="px-3 py-1 bg-[#3b82f6] text-white rounded-md font-medium">1</button>
-            <button className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">2</button>
-            <button className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">Next</button>
+          <div className="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between text-sm text-white/60">
+            <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + filtered.length} of 2.23M DB entries</span>
+            <div className="flex gap-2">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30">Previous</button>
+              
+              <button onClick={() => setCurrentPage(1)} className={`px-3 py-1 rounded-md font-medium ${currentPage === 1 ? 'bg-[#3b82f6] text-white' : 'bg-white/5 border border-white/10 hover:text-white transition-colors'}`}>1</button>
+              
+              {currentPage > 3 && <span className="px-2 py-1">...</span>}
+              
+              {currentPage > 2 && <button onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">{currentPage - 1}</button>}
+              
+              {currentPage !== 1 && <button className="px-3 py-1 bg-[#3b82f6] text-white rounded-md font-medium">{currentPage}</button>}
+              
+              <button onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">{currentPage + 1}</button>
+              <button onClick={() => setCurrentPage(currentPage + 2)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">{currentPage + 2}</button>
+              
+              <span className="px-2 py-1">...</span>
+              <button onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">Next</button>
+            </div>
           </div>
-        </div>
       </div>
 
       {/* Owner 360 Sliding Drawer */}
