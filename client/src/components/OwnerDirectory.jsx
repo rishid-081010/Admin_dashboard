@@ -26,7 +26,7 @@ export default function OwnerDirectory() {
         const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
         const offset = (currentPage - 1) * itemsPerPage;
         
-        let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=owner_id,full_name,building_name,master_area,phone_normalized,contact_number,email_normalized,verified_bedrooms,is_golden_visa_eligible,bitrix_id&limit=${itemsPerPage}&offset=${offset}`;
+        let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=owner_id,full_name,building_name,master_area,phone_normalized,phone_raw,email,verified_bedrooms,bitrix_id&limit=${itemsPerPage}&offset=${offset}`;
         
         if (searchTerm.length > 1) {
           url += `&or=(full_name.ilike.*${encodeURIComponent(searchTerm)}*,phone_normalized.ilike.*${encodeURIComponent(searchTerm)}*,building_name.ilike.*${encodeURIComponent(searchTerm)}*)`;
@@ -49,12 +49,12 @@ export default function OwnerDirectory() {
           name: row.full_name || 'Unknown Owner',
           building: row.building_name || 'N/A',
           area: row.master_area || 'Dubai',
-          phone: row.phone_normalized || row.contact_number || 'N/A',
-          email: row.email_normalized || 'N/A',
+          phone: row.phone_normalized || row.phone_raw || 'N/A',
+          email: row.email || 'N/A',
           units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
           source: 'System Sync',
           bitrix_id: row.bitrix_id,
-          portfolioValue: row.is_golden_visa_eligible ? 'Golden Visa ($2M+)' : 'Standard',
+          portfolioValue: 'Standard',
           lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
         }));
         setOwners(mapped);
