@@ -83,8 +83,8 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
         );
       default:
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/[0.06] text-slate-300 border border-white/[0.08] flex items-center gap-1.5 w-fit">
-            <Clock className="w-3.5 h-3.5 text-slate-400" /> Draft
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/[0.06] text-white/80 border border-white/[0.08] flex items-center gap-1.5 w-fit">
+            <Clock className="w-3.5 h-3.5 text-white/60" /> Draft
           </span>
         );
     }
@@ -126,7 +126,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
           <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
             Listings Dashboard
           </h1>
-          <p className="text-slate-400 mt-1 text-xs lg:text-sm font-sans">
+          <p className="text-white/60 mt-1 text-xs lg:text-sm font-sans">
             Manage property photos, enhance resolution, and generate portal listings stored in Supabase.
           </p>
         </div>
@@ -144,7 +144,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       <div className="glass-card p-5 space-y-4 rounded-2xl border border-white/[0.05]">
         {/* Search Input */}
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-white/60 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
@@ -158,7 +158,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
         <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
           {/* Status Filters */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-white/60 mr-1">
               STATUS:
             </span>
             {['All Status', 'Completed', 'Processing', 'Draft'].map((status) => (
@@ -169,7 +169,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 className={`px-3.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                   statusFilter === status
                     ? 'bg-white/[0.06] text-white border border-white/[0.08] shadow-sm font-bold'
-                    : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                    : 'bg-white/[0.03] border border-white/[0.06] text-white/60 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 {status}
@@ -179,7 +179,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
 
           {/* Type Filters */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-white/60 mr-1">
               TYPE:
             </span>
             {['All Types', 'Apartment', 'Villa', 'Penthouse', 'Townhouse'].map((type) => (
@@ -190,7 +190,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 className={`px-3.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                   typeFilter === type
                     ? 'bg-white/[0.06] text-white border border-white/[0.08] shadow-sm font-bold'
-                    : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                    : 'bg-white/[0.03] border border-white/[0.06] text-white/60 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 {type}
@@ -204,7 +204,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       {loading ? (
         <div className="glass-card p-12 text-center rounded-2xl border border-white/[0.05]">
           <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
-          <p className="text-slate-400 text-sm font-medium">Loading property listings from Supabase...</p>
+          <p className="text-white/60 text-sm font-medium">Loading property listings from Supabase...</p>
         </div>
       ) : error ? (
         <div className="glass-card p-8 text-center text-rose-400 rounded-2xl border border-rose-500/20">
@@ -213,9 +213,9 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
         </div>
       ) : filteredListings.length === 0 ? (
         <div className="glass-card p-12 text-center rounded-2xl border border-white/[0.05]">
-          <Building2 className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
+          <Building2 className="w-12 h-12 text-white/40 mx-auto mb-3 opacity-60" />
           <h3 className="text-lg font-serif font-bold text-white mb-1">No Listings Found</h3>
-          <p className="text-slate-400 text-xs max-w-sm mx-auto mb-5">
+          <p className="text-white/60 text-xs max-w-sm mx-auto mb-5">
             {searchQuery || statusFilter !== 'All Status' || typeFilter !== 'All Types'
               ? 'No listings match your filter criteria.'
               : 'Create your first property listing with automated DLD Title Deed OCR and AI photo enhancement.'}
@@ -239,11 +239,11 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-white/[0.05] text-slate-300 border border-white/[0.08]">
+                    <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-white/[0.05] text-white/80 border border-white/[0.08]">
                       {listing.property_type || 'Apartment'}
                     </span>
                     {listing.reference && (
-                      <span className="text-[10px] font-mono text-slate-400">
+                      <span className="text-[10px] font-mono text-white/60">
                         {listing.reference}
                       </span>
                     )}
@@ -255,13 +255,13 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                   {listing.name || 'Untitled Luxury Listing'}
                 </h3>
 
-                <div className="flex items-center gap-4 text-xs text-slate-400 mb-4">
+                <div className="flex items-center gap-4 text-xs text-white/60 mb-4">
                   <span className="flex items-center gap-1">
-                    <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
+                    <ImageIcon className="w-3.5 h-3.5 text-white/60" />
                     {listing.images?.length || 0} Photos
                   </span>
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <Calendar className="w-3.5 h-3.5 text-white/60" />
                     {new Date(listing.created_at || Date.now()).toLocaleDateString()}
                   </span>
                 </div>
@@ -274,7 +274,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 <button
                   type="button"
                   onClick={(e) => handleDeleteListing(e, listing.id)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  className="p-1.5 rounded-lg text-white/40 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                   title="Delete Listing"
                 >
                   <Trash2 className="w-4 h-4" />

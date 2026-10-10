@@ -38,7 +38,7 @@ export default function OwnerDirectory() {
   };
 
   return (
-    <div className="w-full flex flex-col h-full animate-fade-in text-slate-300 relative">
+    <div className="w-full flex flex-col h-full animate-fade-in text-white/80 relative">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -52,27 +52,27 @@ export default function OwnerDirectory() {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-[#0f172a]/40 border border-[#1e293b] rounded-[20px] p-5 mb-8 space-y-5">
+      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-5 mb-8 space-y-5">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
           <input
             type="text"
             placeholder="Search by owner name, building, area, or phone number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#1e293b]/50 border border-[#334155] rounded-[14px] pl-12 pr-4 py-[14px] text-[15px] text-white placeholder-slate-400 focus:outline-none focus:border-[#3b82f6]/50 focus:ring-1 focus:ring-[#3b82f6]/50 transition-all"
+            className="w-full bg-white/10/50 border border-[#334155] rounded-[14px] pl-12 pr-4 py-[14px] text-[15px] text-white placeholder-slate-400 focus:outline-none focus:border-[#3b82f6]/50 focus:ring-1 focus:ring-[#3b82f6]/50 transition-all"
           />
         </div>
         
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-3">
-            <span className="text-[12px] font-bold text-slate-400 tracking-widest uppercase">Location:</span>
+            <span className="text-[12px] font-bold text-white/60 tracking-widest uppercase">Location:</span>
             <div className="flex gap-2">
               {['All Dubai', 'Downtown', 'Marina'].map(loc => (
                 <button 
                   key={loc}
                   onClick={() => setLocationFilter(loc)}
-                  className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${locationFilter === loc ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20' : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'}`}
+                  className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${locationFilter === loc ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20' : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'}`}
                 >
                   {loc}
                 </button>
@@ -81,13 +81,13 @@ export default function OwnerDirectory() {
           </div>
           <div className="w-px h-6 bg-[#334155]"></div>
           <div className="flex items-center gap-3">
-            <span className="text-[12px] font-bold text-slate-400 tracking-widest uppercase">CRM Status:</span>
+            <span className="text-[12px] font-bold text-white/60 tracking-widest uppercase">CRM Status:</span>
             <div className="flex gap-2">
               {['All', 'Cold (Uncontacted)', 'In Bitrix24'].map(status => (
                 <button 
                   key={status}
                   onClick={() => setCrmFilter(status)}
-                  className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${crmFilter === status ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20' : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'}`}
+                  className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${crmFilter === status ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20' : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'}`}
                 >
                   {status}
                 </button>
@@ -98,10 +98,10 @@ export default function OwnerDirectory() {
       </div>
 
       {/* Data Table */}
-      <div className="flex-1 overflow-hidden bg-[#0f172a]/40 border border-[#1e293b] rounded-[20px] flex flex-col relative">
+      <div className="flex-1 overflow-hidden bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden flex flex-col relative">
         <div className="overflow-auto flex-1 custom-scrollbar">
           <table className="w-full text-left text-[14px]">
-            <thead className="sticky top-0 bg-[#0f172a] border-b border-[#1e293b] text-xs uppercase tracking-wider text-slate-400 z-10">
+            <thead className="sticky top-0 bg-black/20 border-b border-white/10 text-xs uppercase tracking-wider text-white/60 z-10">
               <tr>
                 <th className="px-6 py-4 font-semibold">Owner Profile</th>
                 <th className="px-6 py-4 font-semibold">Property</th>
@@ -113,7 +113,7 @@ export default function OwnerDirectory() {
             <tbody className="divide-y divide-[#1e293b]">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan="5" className="px-6 py-12 text-center text-white/40">
                     <div className="animate-pulse flex flex-col items-center">
                       <div className="w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full animate-spin mb-4"></div>
                       Fetching massive database from Supabase...
@@ -122,7 +122,7 @@ export default function OwnerDirectory() {
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">No leads found.</td>
+                  <td colSpan="5" className="px-6 py-12 text-center text-white/40">No leads found.</td>
                 </tr>
               ) : (
                 leads.map((lead, idx) => (
@@ -136,7 +136,7 @@ export default function OwnerDirectory() {
                           <div className="font-semibold text-white group-hover:text-[#60a5fa] transition-colors">
                             {lead.full_name || 'Unknown Owner'}
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+                          <div className="flex items-center gap-1.5 text-xs text-white/60 mt-1">
                             <Phone className="w-3 h-3" />
                             {lead.phone_normalized || lead.phone_raw}
                           </div>
@@ -145,7 +145,7 @@ export default function OwnerDirectory() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-slate-200">{lead.building_name || lead.project || 'Standalone Property'}</div>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+                      <div className="flex items-center gap-1.5 text-xs text-white/60 mt-1">
                         <MapPin className="w-3 h-3" />
                         {lead.master_area || 'Dubai'} • Unit {lead.unit_number || 'TBA'}
                       </div>
@@ -159,7 +159,7 @@ export default function OwnerDirectory() {
                           </div>
                         </>
                       ) : (
-                        <span className="text-xs text-slate-500 italic">No exact DLD match</span>
+                        <span className="text-xs text-white/40 italic">No exact DLD match</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -172,7 +172,7 @@ export default function OwnerDirectory() {
                            Outreach Sent
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-white/60 border border-slate-700">
                           Cold Lead
                         </span>
                       )}
@@ -183,7 +183,7 @@ export default function OwnerDirectory() {
                           Synced
                         </button>
                       ) : (
-                        <button onClick={(e) => handlePushToCRM(e, lead)} disabled={pushing === lead.id} className="px-4 py-2 bg-white/5 hover:bg-[#3b82f6] text-slate-300 hover:text-white border border-white/10 hover:border-[#3b82f6] rounded-xl text-xs font-semibold transition-all shadow-sm disabled:opacity-50">
+                        <button onClick={(e) => handlePushToCRM(e, lead)} disabled={pushing === lead.id} className="px-4 py-2 bg-white/5 hover:bg-[#3b82f6] text-white/80 hover:text-white border border-white/10 hover:border-[#3b82f6] rounded-xl text-xs font-semibold transition-all shadow-sm disabled:opacity-50">
                           {pushing === lead.id ? 'Pushing...' : 'Push to CRM'}
                         </button>
                       )}
@@ -197,11 +197,11 @@ export default function OwnerDirectory() {
 
         {/* Owner 360 Slide-over Panel */}
         {selectedOwner && (
-          <div className="absolute top-0 right-0 h-full w-[400px] bg-[#0a1321] border-l border-[#1c2738] shadow-2xl z-20 flex flex-col animate-fade-in-right">
+          <div className="absolute top-0 right-0 h-full w-[400px] bg-black/20 border-l border-[#1c2738] shadow-2xl z-20 flex flex-col animate-fade-in-right">
             <div className="p-6 border-b border-[#1c2738] flex items-center justify-between">
               <h2 className="text-lg font-bold text-white">Owner 360° Profile</h2>
               <button onClick={() => setSelectedOwner(null)} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-slate-400" />
+                <X className="w-5 h-5 text-white/60" />
               </button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
@@ -215,26 +215,26 @@ export default function OwnerDirectory() {
                 </div>
               </div>
 
-              <div className="bg-[#0f172a]/60 border border-[#1e293b] rounded-[16px] p-5">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Property Portfolio</h4>
+              <div className="bg-black/20/60 border border-white/10 rounded-[16px] p-5">
+                <h4 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">Property Portfolio</h4>
                 <div className="flex items-start gap-3">
-                  <Building className="w-5 h-5 text-slate-400 mt-0.5" />
+                  <Building className="w-5 h-5 text-white/60 mt-0.5" />
                   <div>
                     <div className="text-white font-medium">{selectedOwner.building_name || selectedOwner.project}</div>
-                    <div className="text-sm text-slate-400">Unit {selectedOwner.unit_number} • {selectedOwner.master_area}</div>
+                    <div className="text-sm text-white/60">Unit {selectedOwner.unit_number} • {selectedOwner.master_area}</div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#0f172a]/60 border border-[#1e293b] rounded-[16px] p-5">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">CRM Intelligence</h4>
+              <div className="bg-black/20/60 border border-white/10 rounded-[16px] p-5">
+                <h4 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">CRM Intelligence</h4>
                 <div className="space-y-4">
                   <div>
-                    <div className="text-sm text-slate-400">Bitrix24 Status</div>
+                    <div className="text-sm text-white/60">Bitrix24 Status</div>
                     <div className="text-white font-medium">{selectedOwner.bitrix_id ? 'Active Lead' : 'Not in CRM'}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-slate-400">AI Voice Interactions</div>
+                    <div className="text-sm text-white/60">AI Voice Interactions</div>
                     <div className="text-white font-medium">{selectedOwner.master_leads_id ? 'Contacted via Vapi' : 'No recorded calls'}</div>
                   </div>
                 </div>

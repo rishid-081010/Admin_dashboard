@@ -41,8 +41,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
               <span className="text-[9px] font-semibold tracking-[0.28em] text-blue-500 uppercase">
                 REAL ESTATE
               </span>
-              <span className="text-[9px] text-slate-500 font-bold">•</span>
-              <span className="text-[9px] text-slate-400 tracking-wider">
+              <span className="text-[9px] text-white/40 font-bold">•</span>
+              <span className="text-[9px] text-white/60 tracking-wider">
                 DUBAI
               </span>
             </div>
@@ -56,7 +56,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
               activeTab === 'dashboard' || activeTab === 'detail'
                 ? 'glass-pill-active font-bold text-white shadow-md'
-                : 'glass-pill text-slate-300 hover:text-white'
+                : 'glass-pill text-white/80 hover:text-white'
             }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5 text-blue-400" />

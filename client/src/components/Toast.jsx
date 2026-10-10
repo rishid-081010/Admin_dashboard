@@ -34,7 +34,7 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
 
         <button
           onClick={onClose}
-          className="p-1 rounded-lg hover:bg-white/[0.1] text-slate-400 hover:text-white transition-colors ml-2"
+          className="p-1 rounded-lg hover:bg-white/[0.1] text-white/60 hover:text-white transition-colors ml-2"
         >
           <X className="w-3.5 h-3.5" />
         </button>

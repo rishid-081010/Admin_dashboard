@@ -6,7 +6,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const isLeadsActive = activeTab === 'leads';
 
   return (
-    <aside className="w-64 shrink-0 bg-[#0a1321] border border-[#1c2738] rounded-[28px] p-6 flex flex-col h-[calc(100vh-3rem)] sticky top-6 hidden md:flex select-none overflow-hidden">
+    <aside className="w-64 shrink-0 bg-transparent p-6 flex flex-col h-[calc(100vh-3rem)] sticky top-6 hidden md:flex select-none overflow-hidden">
       <div className="flex flex-col h-full">
         {/* Brand: A SQUARED REAL ESTATE (Exact Official Logo) */}
         <div 

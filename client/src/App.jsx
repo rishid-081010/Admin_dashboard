@@ -27,12 +27,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050b14] text-slate-400 p-4 lg:p-6 flex gap-6 box-border font-sans selection:bg-blue-500/30 selection:text-white">
+    <div 
+      className="min-h-screen text-white p-4 lg:p-6 flex gap-6 box-border font-sans antialiased selection:bg-blue-500/30 selection:text-white"
+      style={{
+        backgroundColor: '#001935',
+        backgroundImage: `radial-gradient(circle at 0% 40%, rgba(0, 162, 255, 0.15), transparent 40%), radial-gradient(circle at 100% 20%, rgba(0, 102, 255, 0.1), transparent 50%)`
+      }}
+    >
       {/* Unified Left Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="bg-black/20 backdrop-blur-md border border-white/[0.15] rounded-[32px] shadow-2xl flex-shrink-0">
+         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
 
       {/* Main Content Pane */}
-      <main className="flex-1 bg-[#0a1321] border border-[#1c2738] rounded-[28px] p-6 lg:p-8 overflow-hidden max-h-[calc(100vh-3rem)]">
+      <main className="flex-1 bg-black/20 backdrop-blur-md border border-white/[0.15] rounded-[32px] shadow-2xl p-6 lg:p-8 overflow-hidden max-h-[calc(100vh-3rem)]">
         {activeTab === 'overview' && <OverviewDashboard />}
         {activeTab === 'owners' && <OwnerDirectory />}
         {activeTab === 'buildings' && <Buildings />}
@@ -77,8 +85,8 @@ export default function App() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="flex flex-col items-center justify-center h-full text-slate-500 animate-fade-in">
-            <h2 className="text-2xl font-bold text-white mb-2">Account & Settings</h2>
+          <div className="flex flex-col items-center justify-center h-full text-white/60 animate-fade-in">
+            <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Account & Settings</h2>
             <p>Configure webhooks, API keys, and notification preferences.</p>
           </div>
         )}

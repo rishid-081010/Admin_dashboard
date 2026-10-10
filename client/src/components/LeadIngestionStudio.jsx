@@ -245,19 +245,19 @@ export default function LeadIngestionStudio() {
           <div className="text-3xl font-bold font-mono text-emerald-300">
             {stats.ready.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">100% E.164 Validated (UAE & Global)</p>
+          <p className="text-[10px] text-white/60 mt-1">100% E.164 Validated (UAE & Global)</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
         </div>
 
         {/* Card 2: Total Processed */}
         <div className="glass-card p-5 border-white/[0.08] bg-white/[0.02] rounded-2xl relative overflow-hidden">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-slate-400" /> Total Processed
+          <p className="text-[11px] font-bold uppercase tracking-wider text-white/60 mb-1 flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-white/60" /> Total Processed
           </p>
           <div className="text-3xl font-bold font-mono text-white">
             {stats.total.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Raw Imported Rows</p>
+          <p className="text-[10px] text-white/60 mt-1">Raw Imported Rows</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-600" />
         </div>
 
@@ -269,7 +269,7 @@ export default function LeadIngestionStudio() {
           <div className="text-3xl font-bold font-mono text-amber-300">
             {stats.duplicates_file.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Repeated In Spreadsheet</p>
+          <p className="text-[10px] text-white/60 mt-1">Repeated In Spreadsheet</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-500" />
         </div>
 
@@ -281,7 +281,7 @@ export default function LeadIngestionStudio() {
           <div className="text-3xl font-bold font-mono text-cyan-300">
             {stats.duplicates_db.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Matched Supabase DB</p>
+          <p className="text-[10px] text-white/60 mt-1">Matched Supabase DB</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-cyan-500" />
         </div>
 
@@ -293,37 +293,37 @@ export default function LeadIngestionStudio() {
           <div className="text-3xl font-bold font-mono text-rose-300">
             {stats.invalid.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Bad formats filtered</p>
+          <p className="text-[10px] text-white/60 mt-1">Bad formats filtered</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-rose-500" />
         </div>
       </div>
 
       {/* Processing Dynamics Pipeline Bar */}
       <div className="glass-card p-5 rounded-2xl border border-white/[0.08]">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3 flex items-center gap-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-white/80 mb-3 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-blue-400" /> Data Processing Dynamics & Pipeline
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Raw File Input</span>
+            <span className="text-[10px] uppercase font-bold text-white/60 block">Raw File Input</span>
             <span className="text-xs font-bold text-slate-200 mt-0.5 block">
               {previewData ? 'File Loaded' : 'Waiting For Upload'}
             </span>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Phone Normalizer</span>
+            <span className="text-[10px] uppercase font-bold text-white/60 block">Phone Normalizer</span>
             <span className="text-xs font-bold text-emerald-400 mt-0.5 block">E.164 (UAE + Intl)</span>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Deduplication</span>
+            <span className="text-[10px] uppercase font-bold text-white/60 block">Deduplication</span>
             <span className="text-xs font-bold text-cyan-400 mt-0.5 block">2-Tier Index Match</span>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Target CRM</span>
+            <span className="text-[10px] uppercase font-bold text-white/60 block">Target CRM</span>
             <span className="text-xs font-bold text-yellow-400 mt-0.5 block">Bitrix24 (Entity 1100)</span>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Voice Agent Sync</span>
+            <span className="text-[10px] uppercase font-bold text-white/60 block">Voice Agent Sync</span>
             <span className="text-xs font-bold text-purple-400 mt-0.5 block">Vapi Outbound Ready</span>
           </div>
         </div>
@@ -373,27 +373,27 @@ export default function LeadIngestionStudio() {
                 <Check className="w-6 h-6" />
               </div>
               <p className="text-sm font-bold text-white">File Processed Successfully ({stats.total} total rows)</p>
-              <p className="text-xs text-slate-400">Click or drop another file to process fresh leads</p>
+              <p className="text-xs text-white/60">Click or drop another file to process fresh leads</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 group-hover:text-blue-400 group-hover:scale-105 transition-all shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white/60 group-hover:text-blue-400 group-hover:scale-105 transition-all shadow-xl">
                 <UploadCloud className="w-7 h-7" />
               </div>
               <div>
                 <p className="text-base font-bold text-white">
                   Drag & drop raw developer Excel (.xlsx, .xls) or CSV here
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-white/60 mt-1">
                   Supports Excel (.xlsx, .xls), CSV, Princess Tower, Damac Hills, Emaar, DLD exports, and clipboard paste.
                 </p>
               </div>
               <div className="flex items-center gap-3 mt-1">
-                <span className="px-3 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[11px] text-slate-300 font-mono">
+                <span className="px-3 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[11px] text-white/80 font-mono">
                   Browse (.xlsx, .xls, .csv)
                 </span>
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <Clipboard className="w-3 h-3 text-slate-400" /> Press <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-white/10 text-[10px] font-mono">Ctrl + V</kbd> to paste
+                <span className="text-xs text-white/40 flex items-center gap-1">
+                  <Clipboard className="w-3 h-3 text-white/60" /> Press <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-white/10 text-[10px] font-mono">Ctrl + V</kbd> to paste
                 </span>
               </div>
             </div>
@@ -417,7 +417,7 @@ export default function LeadIngestionStudio() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {Object.entries(mapping).map(([key, val]) => (
               <div key={key} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <span className="text-[9px] font-bold uppercase text-slate-400 block">{key}</span>
+                <span className="text-[9px] font-bold uppercase text-white/60 block">{key}</span>
                 <span className="text-xs font-mono font-medium text-emerald-400 truncate block mt-0.5">
                   {val ? String(val) : 'â€”'}
                 </span>
@@ -439,7 +439,7 @@ export default function LeadIngestionStudio() {
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
                   activeTab === 'clean'
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                    : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 Clean ({stats.ready})
@@ -450,7 +450,7 @@ export default function LeadIngestionStudio() {
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
                   activeTab === 'dup_file'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                    : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 In-File Duplicates ({stats.duplicates_file})
@@ -461,7 +461,7 @@ export default function LeadIngestionStudio() {
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
                   activeTab === 'dup_db'
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                    : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 Already In CRM ({stats.duplicates_db})
@@ -472,7 +472,7 @@ export default function LeadIngestionStudio() {
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
                   activeTab === 'invalid'
                     ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                    : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 Invalid ({stats.invalid})
@@ -505,7 +505,7 @@ export default function LeadIngestionStudio() {
 
           {/* Search Box */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={tableSearch}
@@ -517,8 +517,8 @@ export default function LeadIngestionStudio() {
 
           {/* Table */}
           <div className="overflow-x-auto max-h-[420px] overflow-y-auto rounded-2xl border border-white/[0.06]">
-            <table className="w-full text-left text-xs text-slate-300 border-collapse">
-              <thead className="text-[10px] uppercase bg-navy-950/90 text-slate-400 sticky top-0 z-10 backdrop-blur-md">
+            <table className="w-full text-left text-xs text-white/80 border-collapse">
+              <thead className="text-[10px] uppercase bg-navy-950/90 text-white/60 sticky top-0 z-10 backdrop-blur-md">
                 <tr>
                   <th className="py-3 px-3 border-b border-white/[0.06]">#</th>
                   <th className="py-3 px-3 border-b border-white/[0.06]">Owner Name</th>
@@ -532,21 +532,21 @@ export default function LeadIngestionStudio() {
               <tbody className="divide-y divide-white/[0.04]">
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
+                    <td colSpan={7} className="py-8 text-center text-white/40 text-xs">
                       No records in this tab matching your search.
                     </td>
                   </tr>
                 ) : (
                   filteredRows.slice(0, 100).map((r, idx) => (
                     <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-slate-500">{r.row_num || idx + 1}</td>
+                      <td className="py-2.5 px-3 font-mono text-white/40">{r.row_num || idx + 1}</td>
                       <td className="py-2.5 px-3 font-medium text-white">{r['Owner Name'] || r.owner_name || r.name || 'Unknown'}</td>
                       <td className={`py-2.5 px-3 font-mono font-bold ${activeTab === 'invalid' ? 'text-rose-400' : 'text-emerald-400'}`}>
                         {r['Contact Number'] || r.contact_number || r.phone || r.raw_phone || '-'}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-300">{r['Project'] || r.project_name || r.project || '-'}</td>
-                      <td className="py-2.5 px-3 text-slate-400">{r['Location'] || r.location || 'Dubai'}</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-300">{r['Unit Number'] || r.unit_number || r.unit || '-'}</td>
+                      <td className="py-2.5 px-3 text-white/80">{r['Project'] || r.project_name || r.project || '-'}</td>
+                      <td className="py-2.5 px-3 text-white/60">{r['Location'] || r.location || 'Dubai'}</td>
+                      <td className="py-2.5 px-3 font-mono text-white/80">{r['Unit Number'] || r.unit_number || r.unit || '-'}</td>
                       <td className="py-2.5 px-3 text-right">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${
                           activeTab === 'clean'

@@ -435,7 +435,7 @@ export default function NewListing({ onListingCreated, onBack }) {
           <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
             Create Property Listing & AI Package
           </h1>
-          <p className="text-slate-400 mt-1 text-xs lg:text-sm font-sans">
+          <p className="text-white/60 mt-1 text-xs lg:text-sm font-sans">
             Select photo presets, enter property details, and drag & drop or paste photos from clipboard.
           </p>
         </div>
@@ -468,7 +468,7 @@ export default function NewListing({ onListingCreated, onBack }) {
               <h2 className="text-lg font-serif font-bold text-white flex items-center gap-2">
                 <FileBadge2 className="w-5 h-5 text-blue-400" /> Auto-Fill Listing from Title Deed & Emirates ID
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-white/60">
                 Drop the Title Deed (سند ملكية) and Emirates ID below. Neural OCR will instantly extract all metrics and populate the listing form below automatically.
               </p>
             </div>
@@ -504,7 +504,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                   <p className="text-xs font-bold text-white truncate">
                     {titleDeedFile?.name || (parsedDeedData ? `${parsedDeedData.building_name} (Deed #${parsedDeedData.certificate_number})` : '1. Upload Title Deed / Oqood (سند ملكية)')}
                   </p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-white/60">
                     {parsedDeedData ? `✓ ${parsedDeedData.total_area_sqft || parsedDeedData.suite_area_sqft} sqft • ${parsedDeedData.community || 'Dubai'}` : 'Click or drop PDF / image scan to auto-fill specs'}
                   </p>
                 </div>
@@ -541,7 +541,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                   <p className="text-xs font-bold text-white truncate">
                     {parsedEidData?.full_name_english || (emiratesIdFiles.length > 0 ? `${emiratesIdFiles.length} Emirates ID File(s)` : '2. Upload Emirates ID (Front & Back)')}
                   </p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-white/60">
                     {parsedEidData ? `✓ EID: ${parsedEidData.eid_number || 'Valid'} (${parsedEidData.nationality})` : 'Click or drop ID card to auto-verify KYC'}
                   </p>
                 </div>
@@ -605,7 +605,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
                       purpose === 'For Sale'
                         ? 'bg-white/[0.06] text-white shadow'
-                        : 'text-slate-400 hover:text-white'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     For Sale
@@ -616,7 +616,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
                       purpose === 'For Rent'
                         ? 'bg-white/[0.06] text-white shadow'
-                        : 'text-slate-400 hover:text-white'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     For Rent
@@ -639,7 +639,7 @@ export default function NewListing({ onListingCreated, onBack }) {
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
-                  <Home className="w-3.5 h-3.5 text-slate-400" /> PROPERTY TYPE
+                  <Home className="w-3.5 h-3.5 text-white/60" /> PROPERTY TYPE
                 </label>
                 <select
                   value={propertyType}
@@ -659,7 +659,7 @@ export default function NewListing({ onListingCreated, onBack }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
-                  <BedDouble className="w-3.5 h-3.5 text-slate-400" /> BEDROOMS
+                  <BedDouble className="w-3.5 h-3.5 text-white/60" /> BEDROOMS
                 </label>
                 <select
                   value={bedrooms}
@@ -677,7 +677,7 @@ export default function NewListing({ onListingCreated, onBack }) {
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
-                  <Bath className="w-3.5 h-3.5 text-slate-400" /> BATHROOMS
+                  <Bath className="w-3.5 h-3.5 text-white/60" /> BATHROOMS
                 </label>
                 <select
                   value={bathrooms}
@@ -693,7 +693,7 @@ export default function NewListing({ onListingCreated, onBack }) {
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
-                  <Maximize2 className="w-3.5 h-3.5 text-slate-400" /> SIZE (SQ. FT.)
+                  <Maximize2 className="w-3.5 h-3.5 text-white/60" /> SIZE (SQ. FT.)
                 </label>
                 <input
                   type="text"
@@ -760,7 +760,7 @@ export default function NewListing({ onListingCreated, onBack }) {
             <p className="text-sm font-semibold text-white">
               Drag & drop property images, or <span className="text-blue-400 underline decoration-khaki-400/50 underline-offset-4">browse files</span>
             </p>
-            <p className="text-xs text-slate-400 mt-2 flex items-center justify-center gap-1 flex-wrap font-sans">
+            <p className="text-xs text-white/60 mt-2 flex items-center justify-center gap-1 flex-wrap font-sans">
               <span>✨ Direct Clipboard Paste supported:</span>
               <span>Press</span>
               <kbd className="px-1.5 py-0.5 glass-pill rounded text-[11px] font-mono text-blue-400">Ctrl + V</kbd>
@@ -827,7 +827,7 @@ export default function NewListing({ onListingCreated, onBack }) {
               <h2 className="text-base font-serif font-bold text-white flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-blue-500" /> STEP 3 — Real Estate Photo QA & Enhancement Preset
               </h2>
-              <p className="text-xs text-slate-400 mt-1 font-sans">
+              <p className="text-xs text-white/60 mt-1 font-sans">
                 Non-destructive conservative enhancement. Zero structural alterations or hallucinations.
               </p>
             </div>
@@ -849,11 +849,11 @@ export default function NewListing({ onListingCreated, onBack }) {
                   className={`text-left p-3.5 rounded-xl border transition-all flex items-center justify-between ${
                     isSelected
                       ? 'bg-blue-500/15 border-white/[0.08] text-white shadow-sm'
-                      : 'glass-pill text-slate-300 hover:border-white/[0.15]'
+                      : 'glass-pill text-white/80 hover:border-white/[0.15]'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
-                    <IconComp className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-blue-400' : 'text-slate-400'}`} />
+                    <IconComp className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-blue-400' : 'text-white/60'}`} />
                     <span className={`text-xs font-semibold truncate ${isSelected ? 'text-blue-300' : 'text-slate-200'}`}>
                       {preset.label}
                     </span>
@@ -870,7 +870,7 @@ export default function NewListing({ onListingCreated, onBack }) {
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center justify-between">
               <span>ACTIVE QA & ENHANCEMENT PROMPT (EDITABLE)</span>
-              <span className="text-[10px] text-slate-400 font-normal">Strict Real Estate Protocol</span>
+              <span className="text-[10px] text-white/60 font-normal">Strict Real Estate Protocol</span>
             </label>
             <textarea
               rows={8}
@@ -889,7 +889,7 @@ export default function NewListing({ onListingCreated, onBack }) {
             disabled={isSubmitting || selectedFiles.length === 0}
             className={`px-8 py-4 rounded-2xl font-bold text-white text-base flex items-center gap-3 transition-all shadow-xl ${
               isSubmitting || selectedFiles.length === 0
-                ? 'bg-navy-800 text-slate-500 cursor-not-allowed border border-white/[0.08]'
+                ? 'bg-navy-800 text-white/40 cursor-not-allowed border border-white/[0.08]'
                 : 'bg-gradient-to-r from-[#00284b] to-[#003d73] hover:from-[#003666] hover:to-[#004b8c] shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98]'
             }`}
           >

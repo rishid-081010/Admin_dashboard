@@ -610,7 +610,7 @@ export default function ListingDetail({ listingId, onBack }) {
     return (
       <div className="max-w-7xl mx-auto py-12 px-4 text-center">
         <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
-        <p className="text-slate-400 text-sm font-sans">Loading property listing details...</p>
+        <p className="text-white/60 text-sm font-sans">Loading property listing details...</p>
       </div>
     );
   }
@@ -645,7 +645,7 @@ export default function ListingDetail({ listingId, onBack }) {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-serif font-bold text-white tracking-tight">{listing.name}</h1>
           </div>
-          <p className="text-slate-400 text-sm mt-1 font-sans">
+          <p className="text-white/60 text-sm mt-1 font-sans">
             Property Type: <span className="text-blue-400 font-semibold">{listing.property_type}</span>
           </p>
         </div>
@@ -682,7 +682,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       ZIP
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                  <p className="text-[11px] text-white/60 mt-0.5 leading-snug">
                     Title Deed, Emirates ID & 1:1 Autofilled Listing Form (NOC) in one ZIP archive.
                   </p>
                 </div>
@@ -712,7 +712,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       {completedCount} Photos
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                  <p className="text-[11px] text-white/60 mt-0.5 leading-snug">
                     All enhanced architectural photos named by room category in full quality.
                   </p>
                 </div>
@@ -736,7 +736,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       All-in-One
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                  <p className="text-[11px] text-white/60 mt-0.5 leading-snug">
                     Full master package with Government docs, NOC, copy & all enhanced images.
                   </p>
                 </div>
@@ -797,28 +797,28 @@ export default function ListingDetail({ listingId, onBack }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           <div className="glass-pill rounded-xl p-3.5 text-center">
             <span className="text-2xl font-bold text-emerald-400 block">{completedCount}</span>
-            <span className="text-xs text-slate-400 font-medium flex items-center justify-center gap-1 mt-0.5">
+            <span className="text-xs text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Completed
             </span>
           </div>
 
           <div className="glass-pill rounded-xl p-3.5 text-center">
             <span className="text-2xl font-bold text-blue-400 block">{processingCount}</span>
-            <span className="text-xs text-slate-400 font-medium flex items-center justify-center gap-1 mt-0.5">
+            <span className="text-xs text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
               <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" /> Processing
             </span>
           </div>
 
           <div className="glass-pill rounded-xl p-3.5 text-center">
             <span className="text-2xl font-bold text-bone-200 block">{queuedCount}</span>
-            <span className="text-xs text-slate-400 font-medium flex items-center justify-center gap-1 mt-0.5">
-              <Clock className="w-3.5 h-3.5 text-slate-400" /> Queued
+            <span className="text-xs text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
+              <Clock className="w-3.5 h-3.5 text-white/60" /> Queued
             </span>
           </div>
 
           <div className="glass-pill rounded-xl p-3.5 text-center">
             <span className="text-2xl font-bold text-red-400 block">{failedCount}</span>
-            <span className="text-xs text-slate-400 font-medium flex items-center justify-center gap-1 mt-0.5">
+            <span className="text-xs text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
               <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Failed
             </span>
           </div>
@@ -832,7 +832,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <FileText className="w-5 h-5 text-blue-400" />
             <div>
               <h2 className="text-lg font-serif font-bold text-white">Multi-Channel Marketing Copywriter Suite</h2>
-              <p className="text-xs text-slate-400 font-sans">1-Click generation for Portals, WhatsApp Broadcasts, Instagram, Investor Emails & Translations.</p>
+              <p className="text-xs text-white/60 font-sans">1-Click generation for Portals, WhatsApp Broadcasts, Instagram, Investor Emails & Translations.</p>
             </div>
           </div>
 
@@ -875,7 +875,7 @@ export default function ListingDetail({ listingId, onBack }) {
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               copyTab === 'portal'
                 ? 'bg-white/[0.06] text-white shadow-md shadow-blue-950/40'
-                : 'glass-pill text-slate-400 hover:text-white'
+                : 'glass-pill text-white/60 hover:text-white'
             }`}
           >
             <Building2 className="w-3.5 h-3.5" /> Bayut & Property Finder
@@ -886,7 +886,7 @@ export default function ListingDetail({ listingId, onBack }) {
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               copyTab === 'whatsapp'
                 ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
-                : 'glass-pill text-slate-400 hover:text-white'
+                : 'glass-pill text-white/60 hover:text-white'
             }`}
           >
             <Share2 className="w-3.5 h-3.5" /> WhatsApp Broadcast
@@ -897,7 +897,7 @@ export default function ListingDetail({ listingId, onBack }) {
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               copyTab === 'instagram'
                 ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md shadow-pink-500/20'
-                : 'glass-pill text-slate-400 hover:text-white'
+                : 'glass-pill text-white/60 hover:text-white'
             }`}
           >
             <Instagram className="w-3.5 h-3.5" /> Instagram & Social
@@ -908,7 +908,7 @@ export default function ListingDetail({ listingId, onBack }) {
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               copyTab === 'investor'
                 ? 'bg-amber-500 text-white shadow-md shadow-blue-950/40'
-                : 'glass-pill text-slate-400 hover:text-white'
+                : 'glass-pill text-white/60 hover:text-white'
             }`}
           >
             <Mail className="w-3.5 h-3.5" /> VIP Investor Email
@@ -919,7 +919,7 @@ export default function ListingDetail({ listingId, onBack }) {
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               copyTab === 'translations'
                 ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                : 'glass-pill text-slate-400 hover:text-white'
+                : 'glass-pill text-white/60 hover:text-white'
             }`}
           >
             <Globe className="w-3.5 h-3.5" /> Arabic & Russian
@@ -1121,7 +1121,7 @@ export default function ListingDetail({ listingId, onBack }) {
           </div>
         ) : (
           <div className="text-center py-6 glass-pill rounded-xl border-dashed">
-            <p className="text-xs text-slate-400 mb-2 font-sans">Multi-channel copy is generating or can be created anytime.</p>
+            <p className="text-xs text-white/60 mb-2 font-sans">Multi-channel copy is generating or can be created anytime.</p>
             <button
               onClick={() => handleGenerateCopy('luxury')}
               disabled={isGeneratingCopy}
@@ -1141,7 +1141,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <Upload className="w-5 h-5 text-blue-400" />
             <div>
               <h3 className="text-base font-serif font-bold text-white">Add More Photos to This Listing</h3>
-              <p className="text-xs text-slate-400 font-sans">
+              <p className="text-xs text-white/60 font-sans">
                 Drag and drop, browse, or paste (<kbd className="px-1.5 py-0.5 bg-navy-950 border border-navy-700 rounded text-[10px] font-mono text-blue-400">Ctrl + V</kbd>) additional photos anytime.
               </p>
             </div>
@@ -1197,7 +1197,7 @@ export default function ListingDetail({ listingId, onBack }) {
           <p className="text-xs font-semibold text-white mb-0.5">
             Drop new property photos here, or click to choose files
           </p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-white/60">
             JPG, PNG, WEBP • Seamlessly auto-enhanced in background
           </p>
         </div>
@@ -1233,7 +1233,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
-                  <div className="p-1.5 bg-black/80 text-[10px] text-slate-300 truncate font-mono">
+                  <div className="p-1.5 bg-black/80 text-[10px] text-white/80 truncate font-mono">
                     {prev.name}
                   </div>
                 </div>
@@ -1249,7 +1249,7 @@ export default function ListingDetail({ listingId, onBack }) {
           <h2 className="text-xl font-serif font-bold text-white flex items-center gap-2">
             Image Results Gallery ({images.length} Photos)
           </h2>
-          <span className="text-xs text-slate-400 font-sans">
+          <span className="text-xs text-white/60 font-sans">
             Priority order determines portal cover photo (#01 = Main Cover)
           </span>
         </div>
@@ -1264,7 +1264,7 @@ export default function ListingDetail({ listingId, onBack }) {
               <div className="p-3 bg-black/40 border-b border-white/[0.06] flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                    idx === 0 ? 'bg-white/[0.06] text-white shadow-sm' : 'glass-pill text-slate-300'
+                    idx === 0 ? 'bg-white/[0.06] text-white shadow-sm' : 'glass-pill text-white/80'
                   }`}>
                     {idx === 0 ? '★ #01 COVER' : `#0${idx + 1}`}
                   </span>
@@ -1273,7 +1273,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <button
                     onClick={() => handleMoveImage(idx, -1)}
                     disabled={idx === 0}
-                    className="w-6 h-6 rounded-lg glass-pill hover:bg-white/[0.1] text-slate-300 disabled:opacity-30 flex items-center justify-center"
+                    className="w-6 h-6 rounded-lg glass-pill hover:bg-white/[0.1] text-white/80 disabled:opacity-30 flex items-center justify-center"
                     title="Move earlier"
                   >
                     <ChevronUp className="w-3.5 h-3.5" />
@@ -1281,7 +1281,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <button
                     onClick={() => handleMoveImage(idx, 1)}
                     disabled={idx === images.length - 1}
-                    className="w-6 h-6 rounded-lg glass-pill hover:bg-white/[0.1] text-slate-300 disabled:opacity-30 flex items-center justify-center"
+                    className="w-6 h-6 rounded-lg glass-pill hover:bg-white/[0.1] text-white/80 disabled:opacity-30 flex items-center justify-center"
                     title="Move later"
                   >
                     <ChevronDown className="w-3.5 h-3.5" />
@@ -1309,7 +1309,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <button
                     onClick={() => handleDeleteImage(img.id, img.original_filename)}
                     disabled={isDeletingImage[img.id]}
-                    className="w-7 h-7 rounded-lg glass-pill hover:bg-red-500/20 text-slate-400 hover:text-red-400 flex items-center justify-center transition-colors"
+                    className="w-7 h-7 rounded-lg glass-pill hover:bg-red-500/20 text-white/60 hover:text-red-400 flex items-center justify-center transition-colors"
                     title="Delete photo from listing"
                   >
                     <Trash2 className={`w-3.5 h-3.5 ${isDeletingImage[img.id] ? 'animate-spin' : ''}`} />
@@ -1327,7 +1327,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       alt="Original"
                       className="w-full h-36 object-cover rounded-xl border border-white/[0.08]"
                     />
-                    <span className="absolute bottom-1.5 left-1.5 bg-black/80 text-[10px] text-slate-300 font-bold px-2 py-0.5 rounded backdrop-blur-sm">
+                    <span className="absolute bottom-1.5 left-1.5 bg-black/80 text-[10px] text-white/80 font-bold px-2 py-0.5 rounded backdrop-blur-sm">
                       Original
                     </span>
                   </div>
@@ -1360,15 +1360,15 @@ export default function ListingDetail({ listingId, onBack }) {
                       </div>
                     ) : (
                       <div className="w-full h-36 rounded-xl border border-white/[0.08] bg-black/40 flex flex-col items-center justify-center text-center">
-                        <Clock className="w-6 h-6 text-slate-500 mb-1" />
-                        <span className="text-xs text-slate-400 font-medium">Queued</span>
+                        <Clock className="w-6 h-6 text-white/40 mb-1" />
+                        <span className="text-xs text-white/60 font-medium">Queued</span>
                       </div>
                     )}
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs font-semibold text-slate-300 truncate max-w-[180px]">
+                  <span className="text-xs font-semibold text-white/80 truncate max-w-[180px]">
                     {img.original_filename}
                   </span>
 
@@ -1393,7 +1393,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     </span>
                   )}
                   {img.status === 'queued' && (
-                    <span className="text-[10px] font-bold uppercase text-slate-400 glass-pill px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold uppercase text-white/60 glass-pill px-2 py-0.5 rounded-full">
                       Queued
                     </span>
                   )}
@@ -1406,12 +1406,12 @@ export default function ListingDetail({ listingId, onBack }) {
                       <span className="text-blue-400 font-semibold flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-blue-400" /> QA Verified
                       </span>
-                      <span className="text-slate-400 font-mono">
+                      <span className="text-white/60 font-mono">
                         {img.qa_report.action === 'use_as_is' ? 'Ready As-Is' : 'Conservative Edit'}
                       </span>
                     </div>
                     {img.qa_report.edit_summary && (
-                      <p className="text-slate-400 text-[10px] line-clamp-1 italic">
+                      <p className="text-white/60 text-[10px] line-clamp-1 italic">
                         {img.qa_report.edit_summary}
                       </p>
                     )}
@@ -1441,7 +1441,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       onClick={() => openSliderForImage(img)}
                       className="flex-1 py-2 px-3 glass-pill hover:bg-white/[0.1] text-bone-100 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <Sliders className="w-3.5 h-3.5 text-slate-400" /> Compare
+                      <Sliders className="w-3.5 h-3.5 text-white/60" /> Compare
                     </button>
 
                     <button
@@ -1454,7 +1454,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       className="py-2 px-2.5 glass-pill hover:bg-white/[0.1] text-bone-100 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors"
                       title="Download single photo"
                     >
-                      <Download className="w-3.5 h-3.5 text-slate-400" />
+                      <Download className="w-3.5 h-3.5 text-white/60" />
                     </button>
                   </>
                 ) : img.status === 'failed' ? (
@@ -1467,7 +1467,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     {isRetrying[img.id] ? 'Retrying...' : 'Retry Enhancement'}
                   </button>
                 ) : (
-                  <span className="text-xs text-slate-500 italic py-1.5 text-center w-full font-sans">
+                  <span className="text-xs text-white/40 italic py-1.5 text-center w-full font-sans">
                     Awaiting photographic processing...
                   </span>
                 )}
@@ -1498,7 +1498,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {(refineModalImage.room_type || 'Property Photo').replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 font-sans">
+                    <p className="text-xs text-white/60 font-sans">
                       Targeted optical directives & precision sliders with real-time 3-way version comparison.
                     </p>
                   </div>
@@ -1508,7 +1508,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <button
                     onClick={() => handleResetRefinement(refineModalImage.id)}
                     disabled={isResettingRefine || isRefiningImage}
-                    className="px-3 py-1.5 rounded-xl glass-pill hover:bg-white/[0.1] text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
+                    className="px-3 py-1.5 rounded-xl glass-pill hover:bg-white/[0.1] text-xs font-semibold text-white/80 hover:text-white flex items-center gap-1.5 transition-colors"
                     title="Reset back to initial baseline AI enhancement"
                   >
                     <RotateCcw className={`w-3.5 h-3.5 ${isResettingRefine ? 'animate-spin' : ''}`} />
@@ -1531,7 +1531,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 <div className="lg:col-span-7 p-4 sm:p-6 flex flex-col items-center justify-between border-b lg:border-b-0 lg:border-r border-white/[0.08] bg-black/20">
                   {/* 3-Way Comparison Switcher Bar */}
                   <div className="w-full mb-3 flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1">
+                    <span className="text-[11px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1">
                       <Sliders className="w-3.5 h-3.5 text-blue-400" /> Compare Mode:
                     </span>
                     <div className="flex items-center gap-1 bg-black/60 p-1 rounded-xl border border-white/[0.08]">
@@ -1541,7 +1541,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                           refineMode === 'orig-vs-refined'
                             ? 'bg-white/[0.06] text-white font-bold shadow'
-                            : 'text-slate-400 hover:text-white'
+                            : 'text-white/60 hover:text-white'
                         }`}
                       >
                         📸 Raw vs ✨ Refined
@@ -1552,7 +1552,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                           refineMode === 'baseline-vs-refined'
                             ? 'bg-white/[0.06] text-white font-bold shadow'
-                            : 'text-slate-400 hover:text-white'
+                            : 'text-white/60 hover:text-white'
                         }`}
                       >
                         🤖 Auto vs ✨ Refined
@@ -1563,7 +1563,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                           refineMode === 'orig-vs-baseline'
                             ? 'bg-white/[0.06] text-white font-bold shadow'
-                            : 'text-slate-400 hover:text-white'
+                            : 'text-white/60 hover:text-white'
                         }`}
                       >
                         📸 Raw vs 🤖 Auto
@@ -1580,7 +1580,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     className="w-full h-[45vh] lg:h-[52vh] max-h-[500px]"
                   />
 
-                  <div className="mt-3 flex items-center justify-between w-full text-xs text-slate-400 font-sans px-1">
+                  <div className="mt-3 flex items-center justify-between w-full text-xs text-white/60 font-sans px-1">
                     <span>💡 Drag slider handle to inspect textures & window clarity</span>
                     <button
                       onClick={() =>
@@ -1608,7 +1608,7 @@ export default function ListingDetail({ listingId, onBack }) {
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                             refineStudioTab === 'optical'
                               ? 'bg-white/[0.06] text-white shadow-md'
-                              : 'glass-pill text-slate-300 hover:text-white'
+                              : 'glass-pill text-white/80 hover:text-white'
                           }`}
                         >
                           <MessageSquare className="w-3.5 h-3.5" /> 📸 Optical
@@ -1630,13 +1630,13 @@ export default function ListingDetail({ listingId, onBack }) {
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                             refineStudioTab === 'sliders'
                               ? 'bg-white/[0.06] text-white shadow-md'
-                              : 'glass-pill text-slate-300 hover:text-white'
+                              : 'glass-pill text-white/80 hover:text-white'
                           }`}
                         >
                           <Sliders className="w-3.5 h-3.5" /> 🎚️ Sliders
                         </button>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-mono">
+                      <span className="text-[10px] text-white/60 font-mono">
                         {refineStudioTab === 'generative' ? '✨ Generative AI' : '🔒 100% Optical'}
                       </span>
                     </div>
@@ -1672,7 +1672,7 @@ export default function ListingDetail({ listingId, onBack }) {
 
                         {/* 1-Click Quick Tweak Preset Chips for Optical Mode */}
                         <div className="mb-4">
-                          <span className="text-[11px] font-semibold text-slate-400 block mb-2">
+                          <span className="text-[11px] font-semibold text-white/60 block mb-2">
                             ⚡ Quick Optical Enhancements:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
@@ -1681,7 +1681,7 @@ export default function ListingDetail({ listingId, onBack }) {
                                 key={idx}
                                 disabled={isRefiningImage}
                                 onClick={() => handleApplyDirective(chip.text)}
-                                className="px-2.5 py-1.5 rounded-xl glass-pill hover:bg-white/[0.1] text-[11px] text-slate-300 hover:text-white transition-all text-left flex items-center gap-1 border border-white/[0.08]"
+                                className="px-2.5 py-1.5 rounded-xl glass-pill hover:bg-white/[0.1] text-[11px] text-white/80 hover:text-white transition-all text-left flex items-center gap-1 border border-white/[0.08]"
                               >
                                 {chip.label}
                               </button>
@@ -1691,7 +1691,7 @@ export default function ListingDetail({ listingId, onBack }) {
 
                         {/* Refinement History Timeline */}
                         <div className="border-t border-white/[0.08] pt-3">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-white/60 flex items-center gap-1.5 mb-2">
                             <History className="w-3.5 h-3.5" /> Refinement History on This Photo
                           </span>
 
@@ -1703,19 +1703,19 @@ export default function ListingDetail({ listingId, onBack }) {
                                     <span className="flex items-center gap-1">
                                       {ref.is_generative ? '✨ Virtual Staging' : `Directive #${idx + 1}`}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 font-mono">
+                                    <span className="text-[10px] text-white/40 font-mono">
                                       {new Date(ref.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                   </div>
                                   <p className="text-white font-medium italic mb-1">"{ref.directive}"</p>
                                   {ref.summary && (
-                                    <p className="text-slate-400 text-[10px]">{ref.summary}</p>
+                                    <p className="text-white/60 text-[10px]">{ref.summary}</p>
                                   )}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className="text-center py-3 bg-black/20 rounded-xl border border-white/[0.04] text-[11px] text-slate-500 font-sans">
+                            <div className="text-center py-3 bg-black/20 rounded-xl border border-white/[0.04] text-[11px] text-white/40 font-sans">
                               No custom directives applied yet. Initial AI enhancement active.
                             </div>
                           )}
@@ -1735,7 +1735,7 @@ export default function ListingDetail({ listingId, onBack }) {
                               🔒 100% Pixel-Lock
                             </span>
                           </div>
-                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                          <p className="text-white/80 leading-relaxed text-[11px]">
                             Type your specific edit below. The AI strictly modifies <strong>only</strong> the requested object or area — 100% of surrounding room geometry, walls, flooring, lighting, and textures are mathematically locked to your raw photo.
                           </p>
                         </div>
@@ -1766,14 +1766,14 @@ export default function ListingDetail({ listingId, onBack }) {
                           </button>
                         </div>
 
-                        <div className="text-[10px] text-slate-400 font-sans px-1 mb-3 flex items-center justify-between">
+                        <div className="text-[10px] text-white/60 font-sans px-1 mb-3 flex items-center justify-between">
                           <span>💡 Press <kbd className="px-1 py-0.5 glass-pill rounded font-mono text-amber-300">Ctrl + Enter</kbd> to execute</span>
                           <span className="text-amber-300/90 font-mono">Pixel-Lock Inpainting</span>
                         </div>
 
                         {/* History Timeline */}
                         <div className="border-t border-white/[0.08] pt-3">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-white/60 flex items-center gap-1.5 mb-2">
                             <History className="w-3.5 h-3.5" /> Staging & Refinement History
                           </span>
 
@@ -1787,19 +1787,19 @@ export default function ListingDetail({ listingId, onBack }) {
                                     <span className={ref.is_generative ? 'text-amber-300 font-bold flex items-center gap-1' : 'text-blue-400'}>
                                       {ref.is_generative ? '✨ Virtual Staging' : `Directive #${idx + 1}`}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 font-mono">
+                                    <span className="text-[10px] text-white/40 font-mono">
                                       {new Date(ref.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                   </div>
                                   <p className="text-white font-medium italic mb-1">"{ref.directive}"</p>
                                   {ref.summary && (
-                                    <p className="text-slate-400 text-[10px]">{ref.summary}</p>
+                                    <p className="text-white/60 text-[10px]">{ref.summary}</p>
                                   )}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className="text-center py-3 bg-black/20 rounded-xl border border-white/[0.04] text-[11px] text-slate-500 font-sans">
+                            <div className="text-center py-3 bg-black/20 rounded-xl border border-white/[0.04] text-[11px] text-white/40 font-sans">
                               No virtual staging applied yet.
                             </div>
                           )}
@@ -1813,7 +1813,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 1. Exposure / Brightness */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">☀️ Exposure & Brightness</span>
+                            <span className="text-white/80 font-medium">☀️ Exposure & Brightness</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {(sliderValues.brightness * 100).toFixed(0)}%
                             </span>
@@ -1832,7 +1832,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 2. Shadow Depth & Lift (Gamma) */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">🌑 Shadow Lift / Tone Curve</span>
+                            <span className="text-white/80 font-medium">🌑 Shadow Lift / Tone Curve</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {sliderValues.gamma > 1.0 ? `+${((sliderValues.gamma - 1) * 100).toFixed(0)}% Lift` : `${((sliderValues.gamma - 1) * 100).toFixed(0)}% Deep`}
                             </span>
@@ -1851,7 +1851,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 3. Window Glare Pull (CLAHE) */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">🪟 Window Glare Compression (CLAHE)</span>
+                            <span className="text-white/80 font-medium">🪟 Window Glare Compression (CLAHE)</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               Slope: {sliderValues.clahe_max_slope}
                             </span>
@@ -1870,7 +1870,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 4. Color Warmth / Hue Temp */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">🌡️ Kelvin / Tone Warmth</span>
+                            <span className="text-white/80 font-medium">🌡️ Kelvin / Tone Warmth</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {sliderValues.hue > 0 ? `+${sliderValues.hue}° Golden` : sliderValues.hue < 0 ? `${sliderValues.hue}° Cool Neutral` : '0° Balanced'}
                             </span>
@@ -1889,7 +1889,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 5. Vibrance / Saturation */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">🎨 Vibrance & Saturation</span>
+                            <span className="text-white/80 font-medium">🎨 Vibrance & Saturation</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {(sliderValues.saturation * 100).toFixed(0)}%
                             </span>
@@ -1908,7 +1908,7 @@ export default function ListingDetail({ listingId, onBack }) {
                         {/* 6. Structural Sharpness */}
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-300 font-medium">✨ Texture Crispness & Clarity</span>
+                            <span className="text-white/80 font-medium">✨ Texture Crispness & Clarity</span>
                             <span className="text-blue-400 font-mono text-xs font-bold">
                               {sliderValues.sharpness.toFixed(1)}x
                             </span>
@@ -1938,7 +1938,7 @@ export default function ListingDetail({ listingId, onBack }) {
                                 sharpness: 1.0,
                               })
                             }
-                            className="px-3 py-2 rounded-xl glass-pill hover:bg-white/[0.1] text-xs font-semibold text-slate-300"
+                            className="px-3 py-2 rounded-xl glass-pill hover:bg-white/[0.1] text-xs font-semibold text-white/80"
                           >
                             Reset Defaults
                           </button>
@@ -1957,7 +1957,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   </div>
 
                   {/* Footer status notice */}
-                  <div className="mt-4 pt-3 border-t border-white/[0.06] text-[10px] text-slate-500 flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-white/[0.06] text-[10px] text-white/40 flex items-center justify-between">
                     <span>{refineStudioTab === 'chat' ? 'Press Ctrl + Enter to apply directive' : 'Fine-grained non-destructive curves'}</span>
                     <span>100% Authentic Geometry</span>
                   </div>
@@ -1983,7 +1983,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <span className="text-sm font-serif font-bold text-white">
                     {(sliderModalImage.room_type || 'Property Photo').replace(/_/g, ' ')}
                   </span>
-                  <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+                  <span className="text-xs text-white/60 font-mono hidden sm:inline">
                     {sliderModalImage.original_filename}
                   </span>
                 </div>
@@ -1996,7 +1996,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                       sliderMode === 'orig-vs-refined'
                         ? 'bg-white/[0.06] text-white font-bold shadow'
-                        : 'text-slate-400 hover:text-white'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     📸 Raw vs ✨ Refined
@@ -2007,7 +2007,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                       sliderMode === 'baseline-vs-refined'
                         ? 'bg-white/[0.06] text-white font-bold shadow'
-                        : 'text-slate-400 hover:text-white'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     🤖 Auto vs ✨ Refined
@@ -2018,7 +2018,7 @@ export default function ListingDetail({ listingId, onBack }) {
                     className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
                       sliderMode === 'orig-vs-baseline'
                         ? 'bg-white/[0.06] text-white font-bold shadow'
-                        : 'text-slate-400 hover:text-white'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     📸 Raw vs 🤖 Auto
@@ -2072,7 +2072,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </div>
 
               {/* Modal Footer Controls */}
-              <div className="p-3.5 bg-black/40 border-t border-white/[0.08] flex items-center justify-between text-xs text-slate-400">
+              <div className="p-3.5 bg-black/40 border-t border-white/[0.08] flex items-center justify-between text-xs text-white/60">
                 <span className="hidden sm:inline font-sans">
                   💡 Tip: Drag slider handle horizontally. Use <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">←</kbd> and <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">→</kbd> to switch photos, <kbd className="px-1.5 py-0.5 glass-pill rounded font-mono text-blue-400">Esc</kbd> to close.
                 </span>
