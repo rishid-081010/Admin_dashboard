@@ -44,20 +44,25 @@ export default function OwnerDirectory() {
         
         const response = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
         
-        const mapped = response.data.map(row => ({
-          id: row.owner_id,
-          name: row.full_name || 'Unknown Owner',
-          building: row.building_name || 'N/A',
-          area: row.master_area || 'Dubai',
-          phone: row.phone_normalized || row.phone_raw || 'N/A',
-          email: row.email || 'N/A',
-          units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
-          source: 'System Sync',
-          bitrix_id: row.bitrix_id,
-          portfolioValue: 'Standard',
-          lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
-        }));
-        setOwners(mapped);
+        if (Array.isArray(response.data)) {
+          const mapped = response.data.map(row => ({
+            id: row.owner_id ? String(row.owner_id) : 'UnknownID',
+            name: row.full_name ? String(row.full_name) : 'Unknown Owner',
+            building: row.building_name ? String(row.building_name) : 'N/A',
+            area: row.master_area ? String(row.master_area) : 'Dubai',
+            phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
+            email: row.email ? String(row.email) : 'N/A',
+            units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
+            source: 'System Sync',
+            bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
+            portfolioValue: 'Standard',
+            lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
+          }));
+          setOwners(mapped);
+        } else {
+          console.error("Supabase returned non-array data:", response.data);
+          setOwners([]);
+        }
       } catch (error) {
         console.error("Supabase unreachable", error);
         setOwners([]);
@@ -177,11 +182,11 @@ export default function OwnerDirectory() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/80 font-bold border border-white/20">
-                        {owner.name.charAt(0)}
+                        {String(owner.name).charAt(0)}
                       </div>
                       <div>
                         <div className="font-bold text-white group-hover:text-[#3b82f6] transition-colors">{owner.name}</div>
-                        <div className="text-[12px] text-white/40">ID: {owner.id.substring ? owner.id.substring(0,8) : owner.id} • {owner.units} Properties</div>
+                        <div className="text-[12px] text-white/40">ID: {String(owner.id).substring(0,8)} • {owner.units} Properties</div>
                       </div>
                     </div>
                   </td>
@@ -257,7 +262,7 @@ export default function OwnerDirectory() {
             
             <div className="flex items-center gap-4 mb-8 bg-white/5 p-4 rounded-2xl border border-white/10">
               <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-2xl font-bold border border-blue-500/30">
-                {selectedOwner.name.charAt(0)}
+                {String(selectedOwner.name).charAt(0)}
               </div>
               <div>
                 <div className="text-xl font-bold text-white">{selectedOwner.name}</div>
