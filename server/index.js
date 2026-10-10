@@ -2035,3 +2035,19 @@ if (fs.existsSync(clientDistDir)) {
 app.listen(PORT, () => {
   console.log(`🚀 Real Estate Enhancer Server running on http://localhost:${PORT}`);
 });
+
+// --- NEW OWNER DIRECTORY API ---
+app.get('/api/owners', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('owner_intelligence_leads')
+      .select('*')
+      .limit(100);
+      
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error('Failed to fetch owners:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
