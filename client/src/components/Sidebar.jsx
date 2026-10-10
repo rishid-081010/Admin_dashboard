@@ -6,12 +6,12 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const isLeadsActive = activeTab === 'leads';
 
   return (
-    <aside className="w-64 shrink-0 bg-[#0a1321] border border-[#1c2738] rounded-[28px] p-6 flex flex-col justify-between h-[calc(100vh-3rem)] sticky top-6 hidden md:flex select-none overflow-hidden">
-      <div>
+    <aside className="w-64 shrink-0 bg-[#0a1321] border border-[#1c2738] rounded-[28px] p-6 flex flex-col h-[calc(100vh-3rem)] sticky top-6 hidden md:flex select-none overflow-hidden">
+      <div className="flex flex-col h-full">
         {/* Brand: A SQUARED REAL ESTATE (Exact Official Logo) */}
         <div 
           onClick={() => setActiveTab('listing')}
-          className="brand-logo flex flex-col items-center justify-center pt-1 pb-3 border-b border-[#ffffff0a] -mx-6 px-6 mb-3 cursor-pointer group select-none"
+          className="brand-logo flex flex-col items-center justify-center pt-1 pb-3 border-b border-[#ffffff0a] -mx-6 px-6 mb-3 cursor-pointer group select-none shrink-0"
         >
           <img 
             src="./asquared-logo.png" 
@@ -21,7 +21,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         </div>
 
         {/* Navigation Links */}
-        <nav className="w-full space-y-[2px] px-1">
+        <nav className="w-full flex flex-col flex-1 justify-between px-1 pb-2">
           {/* 1. Dashboard */}
           <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center px-4 py-[8px] rounded-[10px] text-[13px] font-semibold tracking-wide transition-all text-left ${activeTab === 'overview' ? 'bg-white/[0.14] text-white border border-white/[0.04] shadow-sm' : 'text-[#e2e8f0] hover:text-white hover:bg-white/[0.05]'}`}>
             <span>Overview Dashboard</span>
@@ -73,7 +73,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             <span>Account & Settings</span>
           </button>
 
-          <a href="https://transactionaldashboard.asquared.ae/" target="_blank" rel="noreferrer" className="w-full flex items-center justify-between px-4 py-[8px] rounded-[10px] text-[13px] font-semibold tracking-wide text-[#e2e8f0] hover:text-white hover:bg-white/[0.05] transition-all group mt-2 border-t border-white/5 pt-3">
+          <a href="https://transactionaldashboard.asquared.ae/" target="_blank" rel="noreferrer" className="w-full flex items-center justify-between px-4 py-[8px] rounded-[10px] text-[13px] font-semibold tracking-wide text-[#e2e8f0] hover:text-white hover:bg-white/[0.05] transition-all group border-t border-white/5 pt-3">
             <span>Market Analytics</span>
             <ExternalLink className="w-3.5 h-3.5 text-white/40 group-hover:text-white/80 transition-colors" />
           </a>
