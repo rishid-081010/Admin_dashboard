@@ -50,7 +50,7 @@ export default function TeamManagement() {
           <h3 className="font-bold text-white">Agent Roster & Performance</h3>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
-            <input type="text" placeholder="Search agents..." className="bg-white/10/50 border border-[#334155] rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-[#3b82f6]/50 transition-all" />
+            <input type="text" placeholder="Search agents..." className="bg-white/10 border border-[#334155] rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-[#3b82f6]/50 transition-all" />
           </div>
         </div>
         <div className="overflow-auto flex-1 custom-scrollbar">

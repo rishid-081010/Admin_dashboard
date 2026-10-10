@@ -40,7 +40,7 @@ export default function OmniSearch() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="w-full bg-black/20/80 border-2 border-white/10 focus:border-[#3b82f6] rounded-[24px] pl-20 pr-6 py-6 text-xl text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/20 transition-all shadow-2xl"
+            className="w-full bg-black/20 border-2 border-white/10 focus:border-[#3b82f6] rounded-[24px] pl-20 pr-6 py-6 text-xl text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/20 transition-all shadow-2xl"
           />
           <button onClick={handleSearch} className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#3b82f6] hover:bg-[#2563eb] text-white p-3 rounded-[16px] transition-colors">
             <ArrowRight className="w-6 h-6" />
@@ -66,7 +66,7 @@ export default function OmniSearch() {
         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pb-8">
             {loading && <div className="text-center text-white/40 py-10">Searching 2.23M rows...</div>}
             {!loading && results.length > 0 && results.map((r, i) => (
-                <div key={i} className="bg-black/20/60 border border-white/10 rounded-[16px] p-5 flex items-center justify-between hover:border-[#3b82f6]/50 transition-all cursor-pointer">
+                <div key={i} className="bg-black/20 border border-white/10 rounded-[16px] p-5 flex items-center justify-between hover:border-[#3b82f6]/50 transition-all cursor-pointer">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white/80">
                             <User className="w-6 h-6" />
