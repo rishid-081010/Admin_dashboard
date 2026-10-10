@@ -13,6 +13,11 @@ export default function OwnerDirectory() {
 
   // Slider State
   const [selectedOwner, setSelectedOwner] = useState(null);
+  
+  // Pagination & Push State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+  const [pushedIds, setPushedIds] = useState(new Set());
 
   useEffect(() => {
     const fetchOwners = async () => {
@@ -27,13 +32,13 @@ export default function OwnerDirectory() {
           url += `&or=(full_name.ilike.*${encodeURIComponent(searchTerm)}*,phone_normalized.ilike.*${encodeURIComponent(searchTerm)}*,building_name.ilike.*${encodeURIComponent(searchTerm)}*)`;
         }
         
-        if (filterLoc !== 'All') {
-          url += `&master_area=eq.${encodeURIComponent(filterLoc)}`;
+        if (locationFilter !== 'All') {
+          url += `&master_area=eq.${encodeURIComponent(locationFilter)}`;
         }
         
-        if (filterCrm === 'Not in CRM') {
+        if (crmFilter === 'Not in CRM') {
           url += `&bitrix_id=is.null`;
-        } else if (filterCrm === 'In Bitrix24') {
+        } else if (crmFilter === 'In Bitrix24') {
           url += `&bitrix_id=not.is.null`;
         }
         
@@ -66,7 +71,7 @@ export default function OwnerDirectory() {
       fetchOwners();
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [currentPage, searchTerm, filterLoc, filterCrm]);
+  }, [currentPage, searchTerm, locationFilter, crmFilter]);
 
   const pushToBitrix = async (lead) => {
     try {
