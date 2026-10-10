@@ -44,20 +44,20 @@ export default function Buildings() {
         </div>
       </div>
 
-      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-5 mb-8">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
+      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-4 mb-6">
+        <div className="flex items-center bg-black/20 border border-white/10 rounded-[14px] px-4 py-3 transition-all focus-within:border-[#3b82f6]/50">
+          <Search className="w-5 h-5 text-white/60 mr-3 flex-shrink-0" />
           <input
             type="text"
             placeholder="Search building name or community..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-black/20 border border-white/10 rounded-[14px] pl-12 pr-4 py-[14px] text-[15px] text-white placeholder-white/60 focus:outline-none focus:border-[#3b82f6]/50 transition-all"
+            className="w-full bg-transparent text-[15px] text-white placeholder-white/60 focus:outline-none"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-12 pr-2 custom-scrollbar">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-12 pr-2 custom-scrollbar">
         {loading ? (
            <div className="text-white/40 col-span-full">Loading all database buildings...</div>
         ) : filtered.map((b, i) => (

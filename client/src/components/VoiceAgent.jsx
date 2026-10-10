@@ -80,7 +80,7 @@ export default function VoiceAgent() {
         </div>
       </div>
 
-      <div className="flex-1 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col p-6 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col p-6 overflow-y-auto custom-scrollbar">
         <h3 className="font-bold text-white mb-6">Agent Persona Comparison</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-4">
           {agents.map((agent) => (

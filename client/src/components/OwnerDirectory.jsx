@@ -120,8 +120,8 @@ export default function OwnerDirectory() {
       </div>
 
       {/* Main Table Area */}
-      <div className="flex-1 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col overflow-hidden">
-        <div className="overflow-x-auto flex-1 custom-scrollbar">
+      <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col overflow-hidden">
+        <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
           <table className="w-full text-left border-collapse text-[14px]">
             <thead className="bg-black/20 border-b border-white/10 text-xs uppercase tracking-wider text-white/60 sticky top-0 z-10 backdrop-blur-md">
               <tr>
