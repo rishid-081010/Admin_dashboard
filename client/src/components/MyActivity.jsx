@@ -2,20 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, List, Search, MoreHorizontal, User } from 'lucide-react';
 import axios from 'axios';
 
-export default function MyActivity() {
+export default function MyActivity({ globalAgent }) {
   const [view, setView] = useState('board');
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  const [selectedAgent, setSelectedAgent] = useState('6'); 
-  
-  const agents = [
-    { id: '6', name: 'Melanie Simsiman (Admin)' },
-    { id: '7', name: 'Akarsh Arora' },
-    { id: '186', name: 'NIDAF KHAN' },
-    { id: '75', name: 'Mayannk Agarwal' },
-    { id: '11', name: 'Mridul Sethi' }
-  ];
 
   useEffect(() => {
     const fetchLeads = async () => {
@@ -23,7 +14,7 @@ export default function MyActivity() {
       try {
         // Bypass Render backend completely and hit Bitrix direct from Hostinger
         const res = await axios.post('https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/crm.lead.list.json', {
-          filter: { "ASSIGNED_BY_ID": selectedAgent },
+          filter: { "ASSIGNED_BY_ID": globalAgent },
           select: ["ID", "TITLE", "OPPORTUNITY", "DATE_CREATE", "STATUS_ID"]
         });
         
@@ -59,7 +50,7 @@ export default function MyActivity() {
       setLoading(false);
     };
     fetchLeads();
-  }, [selectedAgent]);
+  }, [globalAgent]);
 
   return (
     <div className="w-full flex flex-col h-full animate-fade-in text-white/80">
@@ -73,17 +64,7 @@ export default function MyActivity() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-xl px-4 py-2">
-             <User className="w-4 h-4 text-white/60" />
-             <span className="text-sm font-semibold text-white/60">View As:</span>
-             <select 
-               value={selectedAgent} 
-               onChange={(e) => setSelectedAgent(e.target.value)}
-               className="bg-transparent text-white font-bold outline-none cursor-pointer"
-             >
-               {agents.map(a => <option key={a.id} value={a.id} className="bg-black/20">{a.name}</option>)}
-             </select>
-          </div>
+
           <div className="flex gap-2 bg-black/40 backdrop-blur-md border border-white/10 p-1 rounded-xl">
             <button onClick={() => setView('board')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${view === 'board' ? 'bg-white/10 text-white' : 'text-white/60'}`}><LayoutDashboard className="w-4 h-4" /> Board</button>
             <button onClick={() => setView('list')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${view === 'list' ? 'bg-white/10 text-white' : 'text-white/60'}`}><List className="w-4 h-4" /> List</button>

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { User } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import NewListing from './components/NewListing';
@@ -15,6 +17,27 @@ import VoiceAgent from './components/VoiceAgent';
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview'); // default to overview
   const [selectedListingId, setSelectedListingId] = useState(null);
+  const [globalAgent, setGlobalAgent] = useState('6'); // Default Melanie Admin
+  const [agentsList, setAgentsList] = useState([
+    { id: '6', name: 'Melanie Simsiman (Admin)' },
+    { id: '7', name: 'Akarsh Arora' },
+    { id: '186', name: 'NIDAF KHAN' }
+  ]);
+
+  useEffect(() => {
+    // Fetch live agents for global dropdown
+    axios.post('https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/user.get.json', { filter: { ACTIVE: true } })
+      .then(res => {
+        const bitrixUsers = res.data.result || [];
+        const mapped = bitrixUsers.map(u => ({
+          id: u.ID,
+          name: `${u.NAME || ''} ${u.LAST_NAME || ''}`.trim() || u.EMAIL,
+          role: u.WORK_POSITION || (u.ID === '6' ? 'Admin' : 'Agent')
+        })).filter(u => u.name && u.name.length > 2);
+        if(mapped.length > 0) setAgentsList(mapped);
+      })
+      .catch(e => console.error("Could not fetch global agents", e));
+  }, []);
 
   const handleListingCreated = (newListing) => {
     setSelectedListingId(newListing.id);
@@ -40,12 +63,26 @@ export default function App() {
       </div>
 
       {/* Main Content Pane */}
-      <main className="flex-1 bg-black/20 backdrop-blur-md border border-white/[0.15] rounded-[32px] shadow-2xl p-6 lg:p-8 overflow-hidden max-h-[calc(100vh-3rem)]">
-        {activeTab === 'overview' && <OverviewDashboard />}
+      <main className="flex-1 bg-black/20 backdrop-blur-md border border-white/[0.15] rounded-[32px] shadow-2xl p-6 lg:p-8 overflow-hidden max-h-[calc(100vh-3rem)] relative flex flex-col">
+        
+        {/* Global View As Switcher */}
+        <div className="absolute top-6 lg:top-8 right-6 lg:right-8 z-50 flex items-center gap-2 bg-black/40 backdrop-blur-md border border-white/20 shadow-xl rounded-xl px-4 py-2">
+           <User className="w-4 h-4 text-white/60" />
+           <span className="text-sm font-semibold text-white/60">View As:</span>
+           <select 
+             value={globalAgent} 
+             onChange={(e) => setGlobalAgent(e.target.value)}
+             className="bg-transparent text-white font-bold outline-none cursor-pointer text-sm"
+           >
+             {agentsList.map(a => <option key={a.id} value={a.id} className="bg-black text-white">{a.name} {a.role && `(${a.role})`}</option>)}
+           </select>
+        </div>
+
+        {activeTab === 'overview' && <OverviewDashboard globalAgent={globalAgent} />}
         {activeTab === 'owners' && <OwnerDirectory />}
         {activeTab === 'buildings' && <Buildings />}
         {activeTab === 'search' && <OmniSearch />}
-        {activeTab === 'activity' && <MyActivity />}
+        {activeTab === 'activity' && <MyActivity globalAgent={globalAgent} />}
         {activeTab === 'voice' && <VoiceAgent />}
         {activeTab === 'team' && <TeamManagement />}
 
