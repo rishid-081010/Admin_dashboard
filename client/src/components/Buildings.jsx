@@ -71,7 +71,7 @@ export default function Buildings() {
                   <span className={b.cover > 70 ? 'text-[#10b981]' : 'text-[#f59e0b]'}>{b.cover}%</span>
                 </div>
                 <div className="w-full bg-[#1e293b] rounded-full h-1.5">
-                  <div className={`h-1.5 rounded-full ${b.cover > 70 ? 'bg-[#10b981]' : 'bg-[#f59e0b]'}`} style={{ width: \`\${b.cover}%\` }}></div>
+                  <div className={`h-1.5 rounded-full ${b.cover > 70 ? 'bg-[#10b981]' : 'bg-[#f59e0b]'}`} style={{ width: `${b.cover}%` }}></div>
                 </div>
                 <div className="text-[11px] text-slate-500 text-right mt-1">{b.contacts} callable</div>
               </div>
