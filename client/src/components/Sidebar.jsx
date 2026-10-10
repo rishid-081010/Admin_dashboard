@@ -24,7 +24,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         <nav className="w-full flex flex-col flex-1 justify-between px-1 pb-2">
           {/* 1. Dashboard */}
           <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center px-4 py-[8px] rounded-[10px] text-[13px] font-semibold tracking-wide transition-all text-left ${activeTab === 'overview' ? 'bg-white/[0.14] text-white border border-white/[0.04] shadow-sm' : 'text-[#e2e8f0] hover:text-white hover:bg-white/[0.05]'}`}>
-            <span>Overview Dashboard</span>
+            <span>Overview</span>
           </button>
           
           {/* 2. Owners Directory */}
