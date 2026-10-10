@@ -4,6 +4,8 @@ import axios from 'axios';
 
 export default function OwnerDirectory() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [locationFilter, setLocationFilter] = useState('All Dubai');
+  const [crmFilter, setCrmFilter] = useState('All');
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOwner, setSelectedOwner] = useState(null);
@@ -66,18 +68,30 @@ export default function OwnerDirectory() {
           <div className="flex items-center gap-3">
             <span className="text-[12px] font-bold text-slate-400 tracking-widest uppercase">Location:</span>
             <div className="flex gap-2">
-              <button className="px-4 py-1.5 rounded-full text-[13px] font-medium bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20 transition-all">All Dubai</button>
-              <button className="px-4 py-1.5 rounded-full text-[13px] font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">Downtown</button>
-              <button className="px-4 py-1.5 rounded-full text-[13px] font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">Marina</button>
+              {['All Dubai', 'Downtown', 'Marina'].map(loc => (
+                <button 
+                  key={loc}
+                  onClick={() => setLocationFilter(loc)}
+                  className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${locationFilter === loc ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20' : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'}`}
+                >
+                  {loc}
+                </button>
+              ))}
             </div>
           </div>
           <div className="w-px h-6 bg-[#334155]"></div>
           <div className="flex items-center gap-3">
             <span className="text-[12px] font-bold text-slate-400 tracking-widest uppercase">CRM Status:</span>
             <div className="flex gap-2">
-              <button className="px-4 py-1.5 rounded-full text-[13px] font-medium bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20 transition-all">All</button>
-              <button className="px-4 py-1.5 rounded-full text-[13px] font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">Cold (Uncontacted)</button>
-              <button className="px-4 py-1.5 rounded-full text-[13px] font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">In Bitrix24</button>
+              {['All', 'Cold (Uncontacted)', 'In Bitrix24'].map(status => (
+                <button 
+                  key={status}
+                  onClick={() => setCrmFilter(status)}
+                  className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${crmFilter === status ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20' : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'}`}
+                >
+                  {status}
+                </button>
+              ))}
             </div>
           </div>
         </div>

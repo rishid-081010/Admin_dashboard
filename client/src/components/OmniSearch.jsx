@@ -3,6 +3,7 @@ import { Search, Building2, User, Phone, MapPin, ArrowRight, Filter } from 'luci
 
 export default function OmniSearch() {
   const [query, setQuery] = useState('');
+  const [filterType, setFilterType] = useState('Everything');
 
   return (
     <div className="w-full flex flex-col h-full animate-fade-in text-slate-300">
@@ -34,10 +35,15 @@ export default function OmniSearch() {
           <Filter className="w-5 h-5 text-slate-400" />
           <span className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Search Filters:</span>
           <div className="flex gap-2">
-            <button className="px-4 py-2 rounded-full text-sm font-medium bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20">Everything</button>
-            <button className="px-4 py-2 rounded-full text-sm font-medium bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition-colors">Owners Only</button>
-            <button className="px-4 py-2 rounded-full text-sm font-medium bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition-colors">Buildings Only</button>
-            <button className="px-4 py-2 rounded-full text-sm font-medium bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition-colors">Phone Numbers</button>
+            {['Everything', 'Owners Only', 'Buildings Only', 'Phone Numbers'].map(f => (
+              <button 
+                key={f}
+                onClick={() => setFilterType(f)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${filterType === f ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20' : 'bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10'}`}
+              >
+                {f}
+              </button>
+            ))}
           </div>
         </div>
 
