@@ -9,13 +9,17 @@ export default function OmniSearch() {
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async () => {
-    if (query.length < 3) return;
+    if (query.length < 2) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/search?q=${query}`);
-      setResults(res.data);
+      const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
+      const endpoint = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=owner_id,full_name,phone_normalized,building_name&limit=50&or=(full_name.ilike.*${encodeURIComponent(query)}*,phone_normalized.ilike.*${encodeURIComponent(query)}*,building_name.ilike.*${encodeURIComponent(query)}*)`;
+      
+      const res = await axios.get(endpoint, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
+      setResults(res.data || []);
     } catch(err) {
       console.error(err);
+      setResults([]);
     }
     setLoading(false);
   };
