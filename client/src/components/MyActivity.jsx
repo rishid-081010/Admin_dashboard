@@ -10,7 +10,6 @@ export default function MyActivity() {
   const [selectedAgent, setSelectedAgent] = useState('6'); 
   
   const agents = [
-    { id: 'all', name: 'All Company Leads' },
     { id: '6', name: 'Melanie Simsiman (Admin)' },
     { id: '7', name: 'Akarsh Arora' },
     { id: '186', name: 'NIDAF KHAN' },
@@ -22,15 +21,39 @@ export default function MyActivity() {
     const fetchLeads = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/bitrix-leads?agent_id=${selectedAgent}`);
-        setColumns(res.data);
-      } catch(err) {
-        console.error("Backend unreachable, falling back to cached view", err);
+        // Bypass Render backend completely and hit Bitrix direct from Hostinger
+        const res = await axios.post('https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/crm.lead.list.json', {
+          filter: { "ASSIGNED_BY_ID": selectedAgent },
+          select: ["ID", "TITLE", "OPPORTUNITY", "DATE_CREATE", "STATUS_ID"]
+        });
+        
+        const leads = res.data.result || [];
+        
+        // Group leads by status
+        const newLeads = leads.filter(l => l.STATUS_ID === 'NEW' || !l.STATUS_ID);
+        const inProcess = leads.filter(l => l.STATUS_ID === 'IN_PROCESS');
+        const processed = leads.filter(l => l.STATUS_ID === 'PROCESSED');
+        const converted = leads.filter(l => l.STATUS_ID === 'CONVERTED');
+        
+        const mapLead = l => ({
+          title: l.TITLE || `Lead #${l.ID}`,
+          value: l.OPPORTUNITY ? `AED ${l.OPPORTUNITY}` : 'TBD',
+          date: new Date(l.DATE_CREATE).toLocaleDateString()
+        });
+
         setColumns([
-          { id: 'new', title: 'New Leads', count: 3, items: [{title: 'Mohammed Ali - Downtown', value: '$2M', date: 'Today'}, {title: 'Sarah Jane - Marina', value: '$1.5M', date: 'Today'}, {title: 'Ahmed - JLT', value: 'TBD', date: 'Yesterday'}] },
-          { id: 'in_process', title: 'In Progress', count: 2, items: [{title: 'James Smith - Palm', value: '$5M', date: '2 days ago'}, {title: 'Emma - Business Bay', value: '$1.2M', date: '3 days ago'}] },
-          { id: 'processed', title: 'Follow Up', count: 1, items: [{title: 'Omar - DIFC', value: '$3.4M', date: '4 days ago'}] },
-          { id: 'converted', title: 'Converted / Deals', count: 1, items: [{title: 'Lila - Creek Harbour', value: '$800k', date: '1 week ago'}] }
+          { id: 'new', title: 'New Leads', count: newLeads.length, items: newLeads.map(mapLead) },
+          { id: 'in_process', title: 'In Progress', count: inProcess.length, items: inProcess.map(mapLead) },
+          { id: 'processed', title: 'Follow Up', count: processed.length, items: processed.map(mapLead) },
+          { id: 'converted', title: 'Converted / Deals', count: converted.length, items: converted.map(mapLead) }
+        ]);
+      } catch(err) {
+        console.error("Direct Bitrix fetch failed", err);
+        setColumns([
+          { id: 'new', title: 'New Leads', count: 0, items: [] },
+          { id: 'in_process', title: 'In Progress', count: 0, items: [] },
+          { id: 'processed', title: 'Follow Up', count: 0, items: [] },
+          { id: 'converted', title: 'Converted / Deals', count: 0, items: [] }
         ]);
       }
       setLoading(false);
