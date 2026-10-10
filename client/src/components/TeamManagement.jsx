@@ -1,7 +1,10 @@
-import React from 'react';
-import { Users, Shield, TrendingUp, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Shield, TrendingUp, Search, CheckCircle2 } from 'lucide-react';
 
 export default function TeamManagement() {
+  const [invited, setInvited] = useState(false);
+  const [managing, setManaging] = useState(null);
+
   const agents = [
     { name: 'Sarah O\'Connor', role: 'Senior Agent', leads: 145, closed: 12, performance: '94%' },
     { name: 'Mohammed Ali', role: 'Agent', leads: 89, closed: 5, performance: '82%' },
@@ -19,8 +22,11 @@ export default function TeamManagement() {
             Manage agent roles, lead distribution, and performance metrics.
           </p>
         </div>
-        <button className="px-5 py-2.5 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-[12px] font-semibold transition-colors">
-          + Invite Agent
+        <button 
+          onClick={() => setInvited(true)}
+          className={`px-5 py-2.5 rounded-[12px] font-semibold transition-all flex items-center gap-2 ${invited ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-[#3b82f6] hover:bg-[#2563eb] text-white'}`}
+        >
+          {invited ? <><CheckCircle2 className="w-4 h-4" /> Invitation Sent</> : '+ Invite Agent'}
         </button>
       </div>
 
@@ -44,7 +50,7 @@ export default function TeamManagement() {
           <h3 className="font-bold text-white">Agent Roster & Performance</h3>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input type="text" placeholder="Search agents..." className="bg-[#1e293b]/50 border border-[#334155] rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none" />
+            <input type="text" placeholder="Search agents..." className="bg-[#1e293b]/50 border border-[#334155] rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-[#3b82f6]/50 transition-all" />
           </div>
         </div>
         <div className="overflow-auto flex-1 custom-scrollbar">
@@ -73,7 +79,12 @@ export default function TeamManagement() {
                   <td className="px-6 py-4 text-slate-300">{agent.closed}</td>
                   <td className="px-6 py-4 text-green-400 font-semibold">{agent.performance}</td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-slate-400 hover:text-white font-medium text-sm">Manage</button>
+                    <button 
+                      onClick={() => setManaging(i)}
+                      className={`font-medium text-sm transition-colors ${managing === i ? 'text-[#3b82f6]' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      {managing === i ? 'Settings Opened' : 'Manage'}
+                    </button>
                   </td>
                 </tr>
               ))}
