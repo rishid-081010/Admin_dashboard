@@ -1,14 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mic, Activity, PhoneOff, PhoneOutgoing, Clock } from 'lucide-react';
+import axios from 'axios';
 
 export default function VoiceAgent() {
   const [timeFilter, setTimeFilter] = useState('All Time');
+  const [agents, setAgents] = useState([]);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/vapi-agents');
+        setAgents(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchAgents();
+  }, []);
 
   const data = {
-    'Daily': { calls: '1,240', drops: '420', leads: '185', duration: '1m 12s', sarah: '840', james: '400' },
-    'Weekly': { calls: '8,450', drops: '3,100', leads: '1,420', duration: '1m 25s', sarah: '5,100', james: '3,350' },
-    'Monthly': { calls: '32,100', drops: '14,200', leads: '5,800', duration: '1m 35s', sarah: '18,400', james: '13,700' },
-    'All Time': { calls: '79,903', drops: '41,200', leads: '14,290', duration: '1m 42s', sarah: '45,102', james: '34,801' }
+    'Daily': { calls: '1,240', drops: '420', leads: '185', duration: '1m 12s' },
+    'Weekly': { calls: '8,450', drops: '3,100', leads: '1,420', duration: '1m 25s' },
+    'Monthly': { calls: '32,100', drops: '14,200', leads: '5,800', duration: '1m 35s' },
+    'All Time': { calls: '79,903', drops: '41,200', leads: '14,290', duration: '1m 42s' }
   };
 
   const currentData = data[timeFilter];
@@ -60,41 +74,27 @@ export default function VoiceAgent() {
         </div>
       </div>
 
-      <div className="flex-1 bg-[#0f172a]/40 border border-[#1e293b] rounded-[20px] flex flex-col p-6">
+      <div className="flex-1 bg-[#0f172a]/40 border border-[#1e293b] rounded-[20px] flex flex-col p-6 overflow-y-auto custom-scrollbar">
         <h3 className="font-bold text-white mb-6">Agent Persona Comparison</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="border border-[#1e293b] rounded-xl p-5 bg-[#0a1321]">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center"><Mic className="w-5 h-5 text-blue-400" /></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-4">
+          {agents.map((agent) => (
+            <div key={agent.id} className="border border-[#1e293b] rounded-xl p-5 bg-[#0a1321] hover:bg-[#0f172a]/80 transition-colors">
+              <div className="flex flex-col items-start gap-4 mb-5">
+                <div className={`w-12 h-12 rounded-full bg-${agent.color}-500/20 flex items-center justify-center`}>
+                    <Mic className={`w-6 h-6 text-${agent.color}-400`} />
+                </div>
                 <div>
-                  <h4 className="text-white font-bold">"Sarah" - British Accent</h4>
-                  <span className="text-xs text-green-400 font-semibold bg-green-400/10 px-2 py-0.5 rounded-full">Active</span>
+                  <h4 className="text-white font-bold leading-tight">{agent.name}</h4>
+                  <span className="text-xs text-green-400 font-semibold bg-green-400/10 px-2 py-0.5 rounded-full mt-2 inline-block">Active</span>
                 </div>
               </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Calls Handled:</span> <span className="text-white transition-all">{currentData.sarah}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Conversion Rate:</span> <span className="text-white">18.4%</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Cost per Lead:</span> <span className="text-white">$1.12</span></div>
-            </div>
-          </div>
-          <div className="border border-[#1e293b] rounded-xl p-5 bg-[#0a1321]">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center"><Mic className="w-5 h-5 text-purple-400" /></div>
-                <div>
-                  <h4 className="text-white font-bold">"James" - American Accent</h4>
-                  <span className="text-xs text-green-400 font-semibold bg-green-400/10 px-2 py-0.5 rounded-full">Active</span>
-                </div>
+              <div className="space-y-3 pt-4 border-t border-[#1e293b]">
+                <div className="flex justify-between text-sm"><span className="text-slate-400">Calls Handled:</span> <span className="text-white font-semibold">{agent.calls}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-400">Conversion Rate:</span> <span className="text-white font-semibold">{agent.cvr}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-400">Cost per Lead:</span> <span className="text-white font-semibold">{agent.cost}</span></div>
               </div>
             </div>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Calls Handled:</span> <span className="text-white transition-all">{currentData.james}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Conversion Rate:</span> <span className="text-white">16.1%</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Cost per Lead:</span> <span className="text-white">$1.45</span></div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
