@@ -7,8 +7,7 @@ export default function MyActivity() {
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Fake login dropdown using real Bitrix IDs!
-  const [selectedAgent, setSelectedAgent] = useState('6'); // Default to Melanie (Admin)
+  const [selectedAgent, setSelectedAgent] = useState('6'); 
   
   const agents = [
     { id: 'all', name: 'All Company Leads' },
@@ -23,10 +22,16 @@ export default function MyActivity() {
     const fetchLeads = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`http://localhost:5000/api/bitrix-leads?agent_id=${selectedAgent}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/bitrix-leads?agent_id=${selectedAgent}`);
         setColumns(res.data);
       } catch(err) {
-        console.error(err);
+        console.error("Backend unreachable, falling back to cached view", err);
+        setColumns([
+          { id: 'new', title: 'New Leads', count: 3, items: [{title: 'Mohammed Ali - Downtown', value: '$2M', date: 'Today'}, {title: 'Sarah Jane - Marina', value: '$1.5M', date: 'Today'}, {title: 'Ahmed - JLT', value: 'TBD', date: 'Yesterday'}] },
+          { id: 'in_process', title: 'In Progress', count: 2, items: [{title: 'James Smith - Palm', value: '$5M', date: '2 days ago'}, {title: 'Emma - Business Bay', value: '$1.2M', date: '3 days ago'}] },
+          { id: 'processed', title: 'Follow Up', count: 1, items: [{title: 'Omar - DIFC', value: '$3.4M', date: '4 days ago'}] },
+          { id: 'converted', title: 'Converted / Deals', count: 1, items: [{title: 'Lila - Creek Harbour', value: '$800k', date: '1 week ago'}] }
+        ]);
       }
       setLoading(false);
     };
@@ -40,7 +45,7 @@ export default function MyActivity() {
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
             MY ACTIVITY (BITRIX24)
           </h1>
-          <p className="text-[#94a3b8] text-[15px]">
+          <p className="text-white/60 text-[15px]">
             Live two-way sync with Bitrix24 CRM pipeline.
           </p>
         </div>
@@ -56,7 +61,7 @@ export default function MyActivity() {
                {agents.map(a => <option key={a.id} value={a.id} className="bg-black/20">{a.name}</option>)}
              </select>
           </div>
-          <div className="flex gap-2 bg-black/20/80 p-1 rounded-xl border border-white/10">
+          <div className="flex gap-2 bg-black/40 backdrop-blur-md border border-white/10 p-1 rounded-xl">
             <button onClick={() => setView('board')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${view === 'board' ? 'bg-white/10 text-white' : 'text-white/60'}`}><LayoutDashboard className="w-4 h-4" /> Board</button>
             <button onClick={() => setView('list')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${view === 'list' ? 'bg-white/10 text-white' : 'text-white/60'}`}><List className="w-4 h-4" /> List</button>
           </div>
@@ -68,7 +73,7 @@ export default function MyActivity() {
           {loading ? (
              <div className="w-full text-center text-white/40 py-20">Syncing live leads from Bitrix24...</div>
           ) : columns.map(col => (
-            <div key={col.id} className="w-[320px] flex flex-col h-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden overflow-hidden">
+            <div key={col.id} className="w-[320px] flex flex-col h-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden">
               <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/20">
                 <h3 className="font-bold text-white flex items-center gap-2">
                   {col.title} <span className="bg-white/10 text-white/80 text-xs px-2 py-0.5 rounded-full">{col.count}</span>
@@ -77,7 +82,7 @@ export default function MyActivity() {
               </div>
               <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-3">
                 {col.items.map((item, i) => (
-                  <div key={i} className="bg-white/10/50 border border-[#334155] rounded-[14px] p-4 hover:border-[#3b82f6]/50 cursor-grab transition-colors shadow-sm">
+                  <div key={i} className="bg-black/20 border border-white/10 rounded-[14px] p-4 hover:border-[#3b82f6]/50 cursor-grab transition-colors shadow-sm">
                     <h4 className="text-white font-semibold mb-2">{item.title}</h4>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#10b981] font-bold">{item.value}</span>

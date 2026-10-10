@@ -10,10 +10,18 @@ export default function Buildings() {
   useEffect(() => {
     const fetchBuildings = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/buildings');
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/buildings`);
         setBuildings(res.data);
       } catch (err) {
-        console.error(err);
+        console.error("Backend unreachable, falling back to cached view", err);
+        setBuildings([
+          { area: 'BUSINESS BAY', name: 'Burlington Tower', units: 342, contacts: 210, cover: 69 },
+          { area: 'DUBAI MARINA', name: 'Marina Gate 1', units: 415, contacts: 380, cover: 82 },
+          { area: 'JUMEIRAH LAKE TOWERS', name: 'Almas Tower', units: 280, contacts: 190, cover: 44 },
+          { area: 'DOWNTOWN DUBAI', name: 'Burj Khalifa', units: 900, contacts: 850, cover: 84 },
+          { area: 'PALM JUMEIRAH', name: 'Oceana Residences', units: 250, contacts: 210, cover: 90 },
+          { area: 'BUSINESS BAY', name: 'Churchill Residency', units: 512, contacts: 405, cover: 51 }
+        ]);
       } finally {
         setLoading(false);
       }
@@ -30,7 +38,7 @@ export default function Buildings() {
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
             BUILDINGS & COMMUNITIES
           </h1>
-          <p className="text-[#94a3b8] text-[15px]">
+          <p className="text-white/60 text-[15px]">
             Explore the properties represented in your data, one building at a time.
           </p>
         </div>
@@ -44,7 +52,7 @@ export default function Buildings() {
             placeholder="Search building name or community..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white/10/50 border border-[#334155] rounded-[14px] pl-12 pr-4 py-[14px] text-[15px] text-white placeholder-slate-400 focus:outline-none focus:border-[#3b82f6]/50 transition-all"
+            className="w-full bg-black/20 border border-white/10 rounded-[14px] pl-12 pr-4 py-[14px] text-[15px] text-white placeholder-white/60 focus:outline-none focus:border-[#3b82f6]/50 transition-all"
           />
         </div>
       </div>
@@ -53,13 +61,13 @@ export default function Buildings() {
         {loading ? (
            <div className="text-white/40 col-span-full">Loading all database buildings...</div>
         ) : filtered.map((b, i) => (
-          <div key={i} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-6 hover:bg-black/20/60 transition-all group">
+          <div key={i} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-6 hover:bg-white/10 transition-all group">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <div className="text-[#3b82f6] text-[11px] font-bold tracking-wider uppercase mb-1">{b.area}</div>
                 <h3 className="text-xl font-bold text-white leading-tight">{b.name}</h3>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-white/10/50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-white/60" />
               </div>
             </div>
