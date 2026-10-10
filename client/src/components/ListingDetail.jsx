@@ -668,8 +668,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-navy-900/95 backdrop-blur-xl border border-blue-500/30 shadow-2xl shadow-black/80 z-50 p-2 divide-y divide-white/[0.06] animate-in fade-in zoom-in-95 duration-150">
               {/* Option 1: Government & NOC Files (ZIP) */}
               <a
-                href="#" onClick={(e) => { e.preventDefault(); handleDownloadZip('Government & NOC Files', 'gov_docs'); }}
-                onClick={() => setDownloadDropdownOpen(false)}
+                href="#" onClick={(e) => { e.preventDefault(); handleDownloadZip('Government & NOC Files', 'gov_docs'); setDownloadDropdownOpen(false); }}
                 className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-white/[0.06] transition-colors group cursor-pointer"
               >
                 <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 group-hover:scale-105 transition-transform mt-0.5">
@@ -722,8 +721,7 @@ export default function ListingDetail({ listingId, onBack }) {
 
               {/* Option 3: Complete Combined Master Package (ZIP) */}
               <a
-                href="#" onClick={(e) => { e.preventDefault(); handleDownloadZip('Master Bundle', 'master_bundle'); }}
-                onClick={() => setDownloadDropdownOpen(false)}
+                href="#" onClick={(e) => { e.preventDefault(); handleDownloadZip('Master Bundle', 'master_bundle'); setDownloadDropdownOpen(false); }}
                 className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-white/[0.06] transition-colors group bg-white/[0.02] cursor-pointer"
               >
                 <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-300 group-hover:scale-105 transition-transform mt-0.5">
