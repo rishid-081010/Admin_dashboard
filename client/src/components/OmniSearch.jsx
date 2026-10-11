@@ -410,8 +410,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
     try {
       const headers = { 
         apikey: SUPABASE_API_KEY, 
-        Authorization: `Bearer ${SUPABASE_API_KEY}`,
-        Prefer: 'count=exact'
+        Authorization: `Bearer ${SUPABASE_API_KEY}` 
       };
       const cleanTerm = (building.rawName || building.name).replace(/'/g, "''");
       const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(cleanTerm)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,bitrix_id,bitrix_status&limit=250`;
@@ -438,19 +437,10 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         const unitsSet = new Set(mapped.map(m => m.unit).filter(u => u && u !== 'N/A'));
         const phonesCount = mapped.filter(m => m.phone && m.phone !== 'N/A').length;
 
-        // Exact total in Supabase from Content-Range header
-        const cr = res.headers ? (res.headers['content-range'] || (res.headers.get && res.headers.get('content-range'))) : null;
-        let totalCount = mapped.length;
-        if (cr && cr.includes('/')) {
-          const parsed = parseInt(cr.split('/')[1], 10);
-          if (!isNaN(parsed) && parsed > 0) totalCount = parsed;
-        }
-
         setSelectedBuilding(prev => ({
           ...prev,
           unitsCount: unitsSet.size > 0 ? unitsSet.size : mapped.length,
-          ownersCount: totalCount,
-          fetchedCount: mapped.length,
+          ownersCount: mapped.length,
           contactsCount: phonesCount
         }));
       } else {
@@ -1060,13 +1050,13 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               <div className="text-lg font-extrabold text-white">{selectedBuilding.unitsCount}</div>
             </div>
             <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Total in DB</div>
-              <div className="text-lg font-extrabold text-white">{selectedBuilding.ownersCount.toLocaleString()}</div>
+              <div className="text-[10px] text-white/40 uppercase font-mono">Verified Owners</div>
+              <div className="text-lg font-extrabold text-white">{selectedBuilding.ownersCount}</div>
             </div>
             <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
               <div className="text-[10px] text-white/40 uppercase font-mono">With Phone</div>
               <div className="text-lg font-extrabold text-emerald-400">
-                {selectedBuilding.contactsCount} / {selectedBuilding.fetchedCount || selectedBuilding.ownersCount}
+                {selectedBuilding.contactsCount} / {selectedBuilding.ownersCount}
               </div>
             </div>
           </div>
@@ -1155,7 +1145,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
           <div className="p-3 border-t border-white/10 bg-[#010814] flex items-center justify-between text-xs text-white/40 shrink-0">
             <span>
-              Showing {filteredDrawerOwners.length} verified owner records {selectedBuilding.ownersCount > filteredDrawerOwners.length ? `(out of ${selectedBuilding.ownersCount.toLocaleString()} total in database)` : ''}
+              Showing {filteredDrawerOwners.length} verified owner records in {selectedBuilding.name}
             </span>
             <button 
               onClick={() => setSelectedBuilding(null)}

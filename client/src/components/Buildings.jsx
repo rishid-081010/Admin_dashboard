@@ -114,14 +114,10 @@ export default function Buildings() {
       setIsSearchingServer(true);
       try {
         const apikey = SUPABASE_API_KEY;
-        const headers = { 
-          apikey, 
-          Authorization: `Bearer ${apikey}`,
-          Prefer: 'count=exact'
-        };
+        const headers = { apikey, Authorization: `Bearer ${apikey}` };
         const q = encodeURIComponent(searchTerm.trim());
         const res = await axios.get(
-          `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=building_name,master_area,phone_normalized,reported_property_type,unit_number,full_name,owner_id,lead_id&limit=500`,
+          `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=building_name,master_area,phone_normalized,reported_property_type,unit_number,full_name,owner_id,lead_id&limit=200`,
           { headers }
         );
 
@@ -156,18 +152,9 @@ export default function Buildings() {
             }
           });
 
-          // Check if total count is available from header
-          const cr = res.headers ? (res.headers['content-range'] || (res.headers.get && res.headers.get('content-range'))) : null;
-          let headerTotal = 0;
-          if (cr && cr.includes('/')) {
-            const p = parseInt(cr.split('/')[1], 10);
-            if (!isNaN(p)) headerTotal = p;
-          }
-
           const foundList = Object.values(bMap).map(b => ({
             ...b,
             unitsCount: b.unitsSet.size > 0 ? b.unitsSet.size : b.ownersCount,
-            ownersCount: (Object.keys(bMap).length === 1 && headerTotal > b.ownersCount) ? headerTotal : b.ownersCount,
             contactCoverage: b.ownersCount > 0 ? Math.round((b.contactsCount / b.ownersCount) * 100) : 0
           }));
           setServerBuildings(foundList);
@@ -274,14 +261,10 @@ export default function Buildings() {
     setLoadingBuildingOwners(true);
     try {
       const apikey = SUPABASE_API_KEY;
-      const headers = { 
-        apikey, 
-        Authorization: `Bearer ${apikey}`,
-        Prefer: 'count=exact'
-      };
+      const headers = { apikey, Authorization: `Bearer ${apikey}` };
       const q = encodeURIComponent(building.rawName);
       const res = await axios.get(
-        `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=owner_id,lead_id,full_name,unit_number,phone_normalized,reported_property_type,master_area,property_category,bitrix_id&limit=300`,
+        `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=owner_id,lead_id,full_name,unit_number,phone_normalized,reported_property_type,master_area,property_category,bitrix_id&limit=250`,
         { headers }
       );
       if (res.data && res.data.length > 0) {
@@ -302,19 +285,10 @@ export default function Buildings() {
         const unitsSet = new Set(mapped.map(m => m.unit).filter(u => u && u !== 'N/A'));
         const phonesCount = mapped.filter(m => m.phone && m.phone !== 'N/A').length;
 
-        // Exact total in Supabase from Content-Range header (e.g. "0-299/2218")
-        const cr = res.headers ? (res.headers['content-range'] || (res.headers.get && res.headers.get('content-range'))) : null;
-        let totalCount = mapped.length;
-        if (cr && cr.includes('/')) {
-          const parsed = parseInt(cr.split('/')[1], 10);
-          if (!isNaN(parsed) && parsed > 0) totalCount = parsed;
-        }
-
         setSelectedBuilding(prev => ({
           ...prev,
           unitsCount: unitsSet.size > 0 ? unitsSet.size : mapped.length,
-          ownersCount: totalCount,
-          fetchedCount: mapped.length,
+          ownersCount: mapped.length,
           contactsCount: phonesCount,
           contactCoverage: mapped.length > 0 ? Math.round((phonesCount / mapped.length) * 100) : 0
         }));
@@ -712,15 +686,15 @@ export default function Buildings() {
                 </div>
               </div>
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Total Owners in DB</div>
+                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Verified Owners</div>
                 <div className="text-xl font-bold font-serif text-white mt-0.5">
-                  {selectedBuilding.ownersCount.toLocaleString()}
+                  {selectedBuilding.ownersCount}
                 </div>
               </div>
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center">
                 <div className="text-[11px] text-white/40 uppercase font-mono font-medium">With Phone</div>
                 <div className="text-xl font-bold font-serif text-emerald-400 mt-0.5">
-                  {selectedBuilding.contactsCount} / {selectedBuilding.fetchedCount || selectedBuilding.ownersCount}
+                  {selectedBuilding.contactsCount} / {selectedBuilding.ownersCount}
                 </div>
               </div>
             </div>
@@ -829,7 +803,7 @@ export default function Buildings() {
             {/* Drawer Footer */}
             <div className="p-4 border-t border-white/10 bg-[#03152d]/90 flex items-center justify-between text-xs text-white/50">
               <span>
-                Showing {filteredDrawerOwners.length} verified owner records {selectedBuilding.ownersCount > filteredDrawerOwners.length ? `(out of ${selectedBuilding.ownersCount.toLocaleString()} total in database)` : ''}
+                Showing {filteredDrawerOwners.length} verified owner records in {selectedBuilding.name}
               </span>
               <button
                 onClick={() => setSelectedBuilding(null)}
