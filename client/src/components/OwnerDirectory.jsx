@@ -47,8 +47,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         const cleanDigits = queryTerm.replace(/[^0-9]/g, '');
         
         if (queryTerm.startsWith('+') || (cleanDigits.length >= 7 && /^[+0-9\s-]+$/.test(queryTerm))) {
-          const pExact = queryTerm.startsWith('+') ? queryTerm : `+${queryTerm}`;
-          url += `&or=(phone_normalized.eq.${encodeURIComponent(pExact)},phone_normalized.ilike.*${encodeURIComponent(cleanDigits)}*,bitrix_id.eq.${encodeURIComponent(cleanDigits)},lead_id.ilike.*${encodeURIComponent(queryTerm)}*)`;
+          const pExact = queryTerm.startsWith('+') ? queryTerm : `+${cleanDigits}`;
+          url += `&or=(phone_normalized.eq.${encodeURIComponent(pExact)},bitrix_id.eq.${encodeURIComponent(cleanDigits)},lead_id.eq.${encodeURIComponent(queryTerm)})`;
         } else if (queryTerm.toUpperCase().startsWith('LEAD-')) {
           url += `&lead_id.ilike.*${encodeURIComponent(queryTerm)}*`;
         } else if (cleanDigits.length > 0 && queryTerm.length < 8 && !/[a-zA-Z]/.test(queryTerm)) {
