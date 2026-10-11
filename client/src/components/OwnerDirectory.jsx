@@ -43,8 +43,20 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=lead_id,owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,vendor_source_file,bitrix_id,assigned_agent,assigned_agent_id&limit=${itemsPerPage}&offset=${offset}&order=owner_id.asc`;
       
       if (searchTerm.trim().length > 1) {
-        const enc = encodeURIComponent(searchTerm.trim());
-        url += `&or=(lead_id.ilike.*${enc}*,full_name.ilike.*${enc}*,phone_normalized.ilike.*${enc}*,building_name.ilike.*${enc}*,unit_number.ilike.*${enc}*,bitrix_id.ilike.*${enc}*,assigned_agent.ilike.*${enc}*)`;
+        const queryTerm = searchTerm.trim();
+        const cleanDigits = queryTerm.replace(/[^0-9]/g, '');
+        
+        if (queryTerm.startsWith('+') || (cleanDigits.length >= 7 && /^[+0-9\s-]+$/.test(queryTerm))) {
+          const pExact = queryTerm.startsWith('+') ? queryTerm : `+${queryTerm}`;
+          url += `&or=(phone_normalized.eq.${encodeURIComponent(pExact)},phone_normalized.ilike.*${encodeURIComponent(cleanDigits)}*,bitrix_id.eq.${encodeURIComponent(cleanDigits)},lead_id.ilike.*${encodeURIComponent(queryTerm)}*)`;
+        } else if (queryTerm.toUpperCase().startsWith('LEAD-')) {
+          url += `&lead_id.ilike.*${encodeURIComponent(queryTerm)}*`;
+        } else if (cleanDigits.length > 0 && queryTerm.length < 8 && !/[a-zA-Z]/.test(queryTerm)) {
+          url += `&or=(bitrix_id.eq.${encodeURIComponent(cleanDigits)},lead_id.ilike.*${encodeURIComponent(queryTerm)}*,unit_number.eq.${encodeURIComponent(queryTerm)})`;
+        } else {
+          const enc = encodeURIComponent(queryTerm);
+          url += `&or=(full_name.ilike.*${enc}*,building_name.ilike.*${enc}*,lead_id.ilike.*${enc}*,assigned_agent.ilike.*${enc}*)`;
+        }
       }
       
       if (locationFilter !== 'All') {
