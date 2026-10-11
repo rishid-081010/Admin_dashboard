@@ -40,9 +40,10 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     setLoading(true);
     try {
       const offset = (currentPage - 1) * itemsPerPage;
-      let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=lead_id,owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,vendor_source_file,bitrix_id,assigned_agent,assigned_agent_id&limit=${itemsPerPage}&offset=${offset}&order=owner_id.asc`;
+      const isSearching = searchTerm.trim().length > 1;
+      let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=lead_id,owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,vendor_source_file,bitrix_id,assigned_agent,assigned_agent_id&limit=${itemsPerPage}&offset=${offset}${isSearching ? '' : '&order=owner_id.asc'}`;
       
-      if (searchTerm.trim().length > 1) {
+      if (isSearching) {
         const queryTerm = searchTerm.trim();
         const cleanDigits = queryTerm.replace(/[^0-9]/g, '');
         
