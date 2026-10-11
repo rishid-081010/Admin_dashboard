@@ -414,6 +414,19 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     }
   };
 
+  // If an owner is selected, open the Owner 360 Profile as a dedicated full page
+  if (selectedOwner) {
+    return (
+      <Owner360Detail 
+        owner={selectedOwner} 
+        onBack={() => setSelectedOwner(null)}
+        onPushToBitrix={() => pushToBitrix(selectedOwner)}
+        isPushed={!!selectedOwner.bitrix_id || pushedIds.has(selectedOwner.id)}
+        globalAgentName={globalAgentName}
+      />
+    );
+  }
+
   return (
     <div className="w-full flex flex-col h-full animate-fade-in relative text-white/80 overflow-y-auto custom-scrollbar pr-1">
       {/* Page Header */}
@@ -1254,15 +1267,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         </div>
       )}
 
-      {/* ─── Owner 360 Detail View Slider Modal ────────────────────────────── */}
-      {selectedOwner && (
-        <Owner360Detail 
-          owner={selectedOwner} 
-          onClose={() => setSelectedOwner(null)}
-          onAssignAgent={(agent) => handleAssignAgent(null, selectedOwner, agent)}
-          onPushToBitrix={() => pushToBitrix(selectedOwner)}
-        />
-      )}
     </div>
   );
 }
