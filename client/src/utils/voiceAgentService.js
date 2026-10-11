@@ -61,20 +61,32 @@ export const AGENT_IDS = Object.keys(AGENTS_CONFIG);
 export function isQualifiedLead(call) {
   const vStatus = (call.voice_call_status || '').toLowerCase();
   const summary = (call.summary || '').toLowerCase();
+  const dur = Number(call.duration_seconds) || 0;
+  const status = (call.status || '').toLowerCase();
+
   if (vStatus.includes('awaiting availability') || vStatus.includes('interested') || vStatus.includes('appointment')) {
     return true;
   }
   if (summary.includes('interested') || summary.includes('sell') || summary.includes('rent') || summary.includes('available')) {
     return true;
   }
+  // If human spoke for 25+ seconds
+  if ((status === 'customer-ended-call' || status === 'assistant-ended-call') && dur >= 25) {
+    return true;
+  }
   return false;
 }
 
-// Helper to check if a call was answered
+// Helper to check if a call was answered by a human
 export function isCallAnswered(call) {
-  const dur = Number(call.duration_seconds) || 0;
   const status = (call.status || '').toLowerCase();
-  if (status === 'voicemail' || status === 'customer-did-not-answer' || status === 'customer-busy' || status.includes('error')) {
+  const dur = Number(call.duration_seconds) || 0;
+  
+  // Explicit human conversation endings
+  if (status === 'customer-ended-call' || status === 'assistant-ended-call') {
+    return true;
+  }
+  if (status === 'voicemail' || status === 'customer-did-not-answer' || status === 'customer-busy' || status.includes('error') || status.includes('failed')) {
     return false;
   }
   return dur > 0;
@@ -82,11 +94,22 @@ export function isCallAnswered(call) {
 
 // Helper to check if dropped / voicemail / unanswered
 export function isCallDropOrVoicemail(call) {
-  const dur = Number(call.duration_seconds) || 0;
   const status = (call.status || '').toLowerCase();
-  if (status === 'voicemail' || status === 'customer-did-not-answer' || status === 'customer-busy' || status.includes('failed') || status.includes('error')) {
+  if (status === 'customer-ended-call' || status === 'assistant-ended-call') {
+    return false;
+  }
+  if (
+    status === 'voicemail' || 
+    status === 'customer-did-not-answer' || 
+    status === 'customer-busy' || 
+    status.includes('failed') || 
+    status.includes('error') || 
+    status.includes('timeout') ||
+    status === 'silence-timed-out'
+  ) {
     return true;
   }
+  const dur = Number(call.duration_seconds) || 0;
   return dur === 0;
 }
 
