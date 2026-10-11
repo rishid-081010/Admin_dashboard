@@ -91,63 +91,43 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
         </div>
       </div>
 
-      {/* ─── Profile Header ─────────────────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 mb-6 shadow-xl relative overflow-hidden backdrop-blur-xl">
+            {/* --- Profile Header Widget (Clean Display Only) --- */}
+      <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 sm:p-5 mb-6 shadow-xl relative overflow-hidden backdrop-blur-xl flex items-center gap-4">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
-        <div className="flex items-center gap-5">
-          {/* Avatar with Initials */}
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600/30 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center text-blue-300 text-2xl font-bold shadow-inner">
-            {getInitials(owner.name)}
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2.5 mb-1">
-              <span className="text-[11px] font-mono tracking-widest uppercase text-blue-400/90 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md">
-                OWNER 360 · {owner.id ? owner.id.replace('OWN_', '').slice(0, 6).toUpperCase() : '027'}
-              </span>
-              {owner.dld_matched && (
-                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" /> DLD Verified
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-              {owner.name}
-            </h1>
-
-            <p className="text-xs text-white/50 mt-1 flex items-center gap-2">
-              <span>Person</span>
-              <span>•</span>
-              <span>{owner.area || 'Dubai'}</span>
-              <span>•</span>
-              <span className="text-white/40">Source-reported relationships</span>
-            </p>
-          </div>
+        {/* Avatar with Initials */}
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-600/30 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center text-blue-300 text-lg sm:text-xl font-bold shadow-inner flex-shrink-0">
+          {getInitials(owner.name)}
         </div>
 
-        {/* Top Header Actions */}
-        <div className="flex flex-wrap items-center gap-3">
-          <button 
-            onClick={() => setShowAskModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white text-sm font-semibold transition-all hover:scale-[1.02] shadow-sm"
-          >
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            Ask about owner
-          </button>
+        {/* Owner Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[10px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md">
+              OWNER 360 - {owner.id ? owner.id.replace('OWN_', '').slice(0, 6).toUpperCase() : '027'}
+            </span>
+            {owner.dld_matched && (
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" /> DLD Verified
+              </span>
+            )}
+          </div>
 
-          <button 
-            onClick={() => setShowFollowupModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-bold shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02]"
-          >
-            <Send className="w-4 h-4" />
-            + Add follow-up
-          </button>
+          <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-snug break-words">
+            {owner.name}
+          </h1>
+
+          <p className="text-xs text-white/50 mt-1 flex items-center gap-1.5 flex-wrap">
+            <span>Person</span>
+            <span>&bull;</span>
+            <span>{owner.area || 'Dubai'}</span>
+            <span>&bull;</span>
+            <span className="text-white/40">Source-reported relationships</span>
+          </p>
         </div>
       </div>
 
-      {/* ─── 4 Metric Cards (Image 2 Match) ─────────────────────────────── */}
+{/* ─── 4 Metric Cards (Image 2 Match) ─────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         
         {/* Card 1: Linked Properties */}
