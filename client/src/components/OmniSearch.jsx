@@ -446,6 +446,17 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
   const openAreaExplorer = async (area) => {
     setSelectedArea(area);
     setAreaDrawerSearch('');
+    // Instant pre-population from already aggregated search data
+    if (area.sampleBuildings && area.sampleBuildings.length > 0) {
+      setAreaBuildingsList(area.sampleBuildings.map(bName => ({
+        rawName: bName,
+        name: bName,
+        unitsCount: Math.max(1, Math.round(area.totalUnits / area.sampleBuildings.length)),
+        ownersCount: Math.max(1, Math.round(area.totalOwners / area.sampleBuildings.length))
+      })));
+    } else {
+      setAreaBuildingsList([]);
+    }
     setLoadingAreaDetails(true);
 
     try {
@@ -454,7 +465,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         Authorization: `Bearer ${SUPABASE_API_KEY}` 
       };
       const cleanArea = (area.rawName || area.name).replace(/'/g, "''");
-      const endpoint = `${SUPABASE_BASE_URL}/owners_data?master_area=eq.${encodeURIComponent(cleanArea)}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,property_category,bitrix_id&limit=250`;
+      const endpoint = `${SUPABASE_BASE_URL}/owners_data?master_area=ilike.*${encodeURIComponent(cleanArea)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,property_category,bitrix_id&limit=250`;
       const res = await axios.get(endpoint, { headers });
       
       if (res.data && res.data.length > 0) {
