@@ -62,21 +62,25 @@ export default function App() {
          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
 
-      {/* Main Content Pane */}
-      <main className="flex-1 bg-black/20 backdrop-blur-md border border-white/[0.15] rounded-[32px] shadow-2xl p-6 lg:p-8 overflow-hidden max-h-[calc(100vh-3rem)] relative flex flex-col">
-        
-        {/* Global View As Switcher */}
-        <div className="absolute top-6 lg:top-8 right-6 lg:right-8 z-50 flex items-center gap-2 bg-black/40 backdrop-blur-md border border-white/20 shadow-xl rounded-xl px-4 py-2">
-           <User className="w-4 h-4 text-white/60" />
-           <span className="text-sm font-semibold text-white/60">View As:</span>
-           <select 
-             value={globalAgent} 
-             onChange={(e) => setGlobalAgent(e.target.value)}
-             className="bg-transparent text-white font-bold outline-none cursor-pointer text-sm"
-           >
-             {agentsList.map(a => <option key={a.id} value={a.id} className="bg-black text-white">{a.name} {a.role && `(${a.role})`}</option>)}
-           </select>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)]">
+        {/* Global View As Switcher - Placed cleanly up top outside the content container */}
+        <div className="flex justify-end items-center pb-2.5 px-2 shrink-0">
+          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md border border-white/20 shadow-xl rounded-xl px-4 py-1.5 hover:border-white/30 transition-all">
+             <User className="w-4 h-4 text-white/60" />
+             <span className="text-sm font-semibold text-white/60">View As:</span>
+             <select 
+               value={globalAgent} 
+               onChange={(e) => setGlobalAgent(e.target.value)}
+               className="bg-transparent text-white font-bold outline-none cursor-pointer text-sm"
+             >
+               {agentsList.map(a => <option key={a.id} value={a.id} className="bg-black text-white">{a.name} {a.role && `(${a.role})`}</option>)}
+             </select>
+          </div>
         </div>
+
+        {/* Main Content Pane */}
+        <main className="flex-1 bg-black/20 backdrop-blur-md border border-white/[0.15] rounded-[32px] shadow-2xl p-6 lg:p-8 overflow-hidden relative flex flex-col min-h-0">
 
         {activeTab === 'overview' && <OverviewDashboard globalAgent={globalAgent} />}
         {activeTab === 'owners' && (
@@ -132,6 +136,7 @@ export default function App() {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }
