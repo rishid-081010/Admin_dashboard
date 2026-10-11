@@ -9,7 +9,7 @@ import { fetchVoiceOverview } from '../utils/voiceAgentService';
 
 export default function VoiceAgent() {
   const [timeFilter, setTimeFilter] = useState('Daily');
-  const [selectedDate, setSelectedDate] = useState('2026-10-10'); // Default to latest recorded calls
+  const [selectedDate, setSelectedDate] = useState('2026-10-11'); // Default to today's live calls
   const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedMonth, setSelectedMonth] = useState(10);
   const [selectedWeek, setSelectedWeek] = useState(1);
@@ -68,7 +68,7 @@ export default function VoiceAgent() {
               <ShieldCheck className="w-3 h-3" /> Live Telephony Intelligence
             </span>
             <span className="text-[10px] text-white/40 font-mono">
-              Supabase Cluster (79,993 calls)
+              Supabase Cluster (81,597 calls)
             </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-white" style={{ fontFamily: "Georgia, serif" }}>

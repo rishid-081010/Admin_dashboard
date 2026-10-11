@@ -19,7 +19,7 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Spearheads high-priority residential villa & luxury apartment owner qualification.',
-    allTimeTotal: 25870,
+    allTimeTotal: 26478,
   },
   '91732d4e-3b60-4950-8aa6-4060c0803119': {
     id: '91732d4e-3b60-4950-8aa6-4060c0803119',
@@ -35,7 +35,7 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Executes high-velocity campaigns across prime developer towers & repeat investors.',
-    allTimeTotal: 39588,
+    allTimeTotal: 40008,
   },
   'f99e8e9a-48b1-411f-806e-6cb7d1dde58b': {
     id: 'f99e8e9a-48b1-411f-806e-6cb7d1dde58b',
@@ -51,7 +51,7 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Specializes in prime areas (Palm Jumeirah, Downtown, Jumeirah Islands) and owner valuation queries.',
-    allTimeTotal: 14535,
+    allTimeTotal: 15110,
   }
 };
 
@@ -109,11 +109,11 @@ export function formatCurrency(amount) {
 // Build ISO Date Range from filter parameters
 export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek }) {
   if (timeFilter === 'All Time') {
-    return { start: null, end: null, label: 'All Time (79,993 Historical Calls)' };
+    return { start: null, end: null, label: 'All Time (81,597 Historical Calls)' };
   }
 
   if (timeFilter === 'Daily') {
-    const dStr = selectedDate || '2026-10-10'; // default to latest activity
+    const dStr = selectedDate || '2026-10-11'; // default to today's live activity
     const start = `${dStr}T00:00:00.000Z`;
     // Next day
     const d = new Date(dStr);

@@ -121,6 +121,16 @@ export default function VoiceDateFilter({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] font-mono text-white/40 uppercase tracking-wider mr-1">Quick Select:</span>
               <button
+                onClick={() => setSelectedDate('2026-10-11')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
+                  selectedDate === '2026-10-11'
+                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
+                    : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
+                }`}
+              >
+                ⚡ Today (Oct 11, 2026)
+              </button>
+              <button
                 onClick={() => setSelectedDate('2026-10-10')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
                   selectedDate === '2026-10-10'
@@ -128,17 +138,7 @@ export default function VoiceDateFilter({
                     : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
                 }`}
               >
-                ⚡ Latest (Oct 10, 2026)
-              </button>
-              <button
-                onClick={() => setSelectedDate('2026-10-09')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
-                  selectedDate === '2026-10-09'
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
-                    : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
-                }`}
-              >
-                Oct 9, 2026
+                Yesterday (Oct 10)
               </button>
               <button
                 onClick={() => setSelectedDate('2026-09-27')}
@@ -148,7 +148,7 @@ export default function VoiceDateFilter({
                     : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
                 }`}
               >
-                High-Volume Dial Day (Sep 27)
+                Sep 27 High-Dial
               </button>
             </div>
 
@@ -211,7 +211,7 @@ export default function VoiceDateFilter({
                 const isSelected = dayNum === calDay;
                 // Highlight days that have known calls
                 const isKnownDataDay = 
-                  (calYear === 2026 && calMonth === 9 && (dayNum === 10 || dayNum === 9 || dayNum === 8 || dayNum === 7 || dayNum === 6)) ||
+                  (calYear === 2026 && calMonth === 9 && (dayNum === 11 || dayNum === 10 || dayNum === 9 || dayNum === 8 || dayNum === 7 || dayNum === 6)) ||
                   (calYear === 2026 && calMonth === 8 && dayNum >= 20);
 
                 return (
