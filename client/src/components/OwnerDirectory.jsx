@@ -622,17 +622,17 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
         {/* ─── Simple & Minimalist Filters Subtab (Matches User's Mockup) ───── */}
         {showFiltersBox && (
-          <div className="mt-4 border-t border-white/10 bg-[#040e21]/95 backdrop-blur-xl rounded-2xl shadow-2xl animate-fade-in flex flex-col max-h-[60vh] overflow-hidden">
+          <div className="mt-4 border-t border-white/10 bg-[#040e21]/95 backdrop-blur-xl rounded-2xl shadow-2xl animate-fade-in flex flex-col max-h-[75vh] overflow-hidden">
             
             {/* Scrollable Form Body */}
-            <div className="overflow-y-auto custom-scrollbar p-5 sm:p-7 space-y-6 flex-1">
+            <div className="overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-5 flex-1">
               {/* Section 1: Location & property */}
               <div>
-                <h3 className="text-base font-bold text-white tracking-tight mb-4">
+                <h3 className="text-base font-bold text-white tracking-tight mb-3">
                   Location &amp; property
                 </h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
                 
                 {/* Area */}
                 <div>
@@ -762,11 +762,11 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
             {/* Section 2: People & assignment */}
             <div className="pt-4 border-t border-white/10">
-              <h3 className="text-base font-bold text-white tracking-tight mb-4">
+              <h3 className="text-base font-bold text-white tracking-tight mb-3">
                 People &amp; assignment
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
                 
                 {/* Present in CRM */}
                 <div>
