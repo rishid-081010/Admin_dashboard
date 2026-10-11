@@ -779,23 +779,23 @@ export default function LeadIngestionStudio() {
                 </tbody>
               </table>
             ) : (
-              /* All Original Columns Preserved View with Sticky Identity Columns */
+              /* All Original Columns Preserved View - Smooth Horizontal Scroll */
               <table 
                 className="text-left text-xs text-white/80 border-collapse table-auto"
                 style={{ minWidth: `${Math.max(1400, (originalHeaders.length + 5) * 165)}px` }}
               >
                 <thead className="text-[10px] uppercase bg-[#051833] text-white/70 sticky top-0 z-20 shadow-md shadow-black/40 border-b border-white/[0.08]">
                   <tr>
-                    {/* Sticky Column 1: Row # */}
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] sticky left-0 z-30 w-12 text-center shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                    {/* Column 1: Row # */}
+                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] w-12 text-center">
                       #
                     </th>
-                    {/* Sticky Column 2: Status */}
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] sticky left-12 z-30 w-24 text-center shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                    {/* Column 2: Status */}
+                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] w-28 text-center">
                       Status
                     </th>
-                    {/* Sticky Column 3: Owner Name */}
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] sticky left-36 z-30 min-w-[200px] shadow-[2px_0_5px_rgba(0,0,0,0.3)] border-r border-white/10">
+                    {/* Column 3: Owner Name */}
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[200px]">
                       Owner Name
                     </th>
 
@@ -828,12 +828,12 @@ export default function LeadIngestionStudio() {
                   ) : (
                     filteredRows.slice(0, 150).map((r, idx) => (
                       <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                        {/* Sticky Column 1: Row # */}
-                        <td className="py-2.5 px-3 font-mono text-white/40 sticky left-0 bg-[#021024] text-center shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                        {/* Column 1: Row # */}
+                        <td className="py-2.5 px-3 font-mono text-white/40 text-center">
                           {r.row_num || idx + 1}
                         </td>
-                        {/* Sticky Column 2: Status */}
-                        <td className="py-2.5 px-3 sticky left-12 bg-[#021024] whitespace-nowrap text-center shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                        {/* Column 2: Status */}
+                        <td className="py-2.5 px-3 whitespace-nowrap text-center">
                           <span className={`px-2 py-0.5 rounded text-[9px] font-mono ${
                             r.status === 'ready'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
@@ -846,8 +846,8 @@ export default function LeadIngestionStudio() {
                             {r.status === 'ready' ? 'Valid' : (r.reason || 'Filtered')}
                           </span>
                         </td>
-                        {/* Sticky Column 3: Owner Name */}
-                        <td className="py-2.5 px-3.5 sticky left-36 bg-[#021024] whitespace-nowrap font-medium text-white shadow-[2px_0_5px_rgba(0,0,0,0.3)] border-r border-white/10">
+                        {/* Column 3: Owner Name */}
+                        <td className="py-2.5 px-3.5 whitespace-nowrap font-medium text-white">
                           {r.owner_name || r['Owner Name'] || r.name || 'Property Owner'}
                         </td>
 
