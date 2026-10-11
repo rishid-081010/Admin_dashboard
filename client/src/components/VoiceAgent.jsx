@@ -65,7 +65,7 @@ export default function VoiceAgent() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
-            VOICE OUTREACH
+            VOICE AGENT CENTRE
           </h1>
           <p className="text-white/60 text-[15px]">
             Outbound calling analytics and lead conversion metrics.

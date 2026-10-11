@@ -154,16 +154,16 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span className="bg-[#ef4444] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
         </button>
 
-        {/* 12. Voice Outreach (Calling Agent) */}
+        {/* 12. Voice Agent Centre */}
         <button 
           onClick={() => setActiveTab('voice')} 
-          className={`w-full flex items-center px-4 py-2 rounded-full border-[1.5px] transition-all text-left font-bold text-[13.5px] tracking-wide shadow-md ${
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
             activeTab === 'voice' 
-              ? 'bg-white/20 text-white border-white shadow-lg' 
-              : 'text-white border-white/80 hover:bg-white/10 hover:border-white'
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Voice Outreach</span>
+          <span>Voice Agent Centre</span>
         </button>
       </nav>
     </aside>
