@@ -413,7 +413,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         Authorization: `Bearer ${SUPABASE_API_KEY}` 
       };
       const cleanTerm = (building.rawName || building.name).replace(/'/g, "''");
-      const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(cleanTerm)}*&select=*&limit=300`;
+      const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(cleanTerm)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,bitrix_id,bitrix_status&limit=250`;
       const res = await axios.get(endpoint, { headers });
       
       if (res.data && res.data.length > 0) {
@@ -454,7 +454,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         Authorization: `Bearer ${SUPABASE_API_KEY}` 
       };
       const cleanArea = (area.rawName || area.name).replace(/'/g, "''");
-      const endpoint = `${SUPABASE_BASE_URL}/owners_data?master_area=ilike.*${encodeURIComponent(cleanArea)}*&select=*&limit=300`;
+      const endpoint = `${SUPABASE_BASE_URL}/owners_data?master_area=eq.${encodeURIComponent(cleanArea)}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,property_category,bitrix_id&limit=250`;
       const res = await axios.get(endpoint, { headers });
       
       if (res.data && res.data.length > 0) {
