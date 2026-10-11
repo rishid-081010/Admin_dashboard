@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, MoreHorizontal, User, Phone, Mail, Building2, MapPin, Database } from 'lucide-react';
 import axios from 'axios';
+import Owner360Detail from './Owner360Detail';
 
-export default function OwnerDirectory() {
+export default function OwnerDirectory({ globalAgentName }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +27,7 @@ export default function OwnerDirectory() {
         const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
         const offset = (currentPage - 1) * itemsPerPage;
         
-        let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=owner_id,full_name,building_name,master_area,phone_normalized,phone_raw,email,verified_bedrooms,bitrix_id&limit=${itemsPerPage}&offset=${offset}`;
+        let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,dld_matched,match_confidence,vendor_source_file,bitrix_id&limit=${itemsPerPage}&offset=${offset}`;
         
         if (searchTerm.length > 1) {
           url += `&or=(full_name.ilike.*${encodeURIComponent(searchTerm)}*,phone_normalized.ilike.*${encodeURIComponent(searchTerm)}*,building_name.ilike.*${encodeURIComponent(searchTerm)}*)`;
@@ -53,9 +54,20 @@ export default function OwnerDirectory() {
             phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
             email: row.email ? String(row.email) : 'N/A',
             units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
+            unit_number: row.unit_number ? String(row.unit_number) : null,
+            property_type: row.reported_property_type || null,
+            nationality: row.nationality || null,
+            emirates_id: row.emirates_id || null,
+            passport_expiry: row.passport_expiry || null,
+            verified_purchase_price: row.verified_purchase_price || null,
+            verified_purchase_date: row.verified_purchase_date || null,
+            verified_size_sqft: row.verified_size_sqft || null,
+            dld_matched: !!row.dld_matched,
+            match_confidence: row.match_confidence || null,
+            vendor_source_file: row.vendor_source_file || null,
             source: 'System Sync',
             bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
-            portfolioValue: 'Standard',
+            portfolioValue: row.verified_purchase_price ? `AED ${(parseFloat(row.verified_purchase_price) / 1000000).toFixed(1)}M` : 'Standard',
             lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
           }));
           setOwners(mapped);
@@ -95,6 +107,18 @@ export default function OwnerDirectory() {
   const crmStatuses = ['All', 'In Bitrix24', 'Not in CRM'];
 
   const filtered = owners; // filter removed
+
+  if (selectedOwner) {
+    return (
+      <Owner360Detail
+        owner={selectedOwner}
+        onBack={() => setSelectedOwner(null)}
+        onPushToBitrix={pushToBitrix}
+        isPushed={pushedIds.has(selectedOwner.id) || !!selectedOwner.bitrix_id}
+        globalAgentName={globalAgentName}
+      />
+    );
+  }
 
   return (
     <div className="w-full flex flex-col h-full animate-fade-in relative text-white/80">
@@ -186,7 +210,7 @@ export default function OwnerDirectory() {
                       </div>
                       <div>
                         <div className="font-bold text-white group-hover:text-[#3b82f6] transition-colors">{owner.name}</div>
-                        <div className="text-[12px] text-white/40">ID: {String(owner.id).substring(0,8)} • {owner.units} Properties</div>
+                        <div className="text-[12px] text-white/40">ID: {String(owner.id).substring(0,8)}  {owner.units} Properties</div>
                       </div>
                     </div>
                   </td>
@@ -249,73 +273,6 @@ export default function OwnerDirectory() {
               <button onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">Next</button>
             </div>
           </div>
-      </div>
-
-      {/* Owner 360 Sliding Drawer */}
-      <div className={`absolute top-0 right-0 h-full w-[400px] bg-black/40 backdrop-blur-xl border-l border-white/20 shadow-2xl transform transition-transform duration-300 ease-in-out z-20 ${selectedOwner ? 'translate-x-0' : 'translate-x-full'}`}>
-        {selectedOwner && (
-          <div className="p-6 h-full flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white tracking-tight">Owner 360° Profile</h2>
-              <button onClick={() => setSelectedOwner(null)} className="text-white/40 hover:text-white p-2">?</button>
-            </div>
-            
-            <div className="flex items-center gap-4 mb-8 bg-white/5 p-4 rounded-2xl border border-white/10">
-              <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-2xl font-bold border border-blue-500/30">
-                {String(selectedOwner.name).charAt(0)}
-              </div>
-              <div>
-                <div className="text-xl font-bold text-white">{selectedOwner.name}</div>
-                <div className="text-sm text-white/60">Portfolio Est: <span className="text-[#10b981] font-bold">{selectedOwner.portfolioValue}</span></div>
-              </div>
-            </div>
-
-            <div className="space-y-6 flex-1">
-              <div>
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">Contact Details</h3>
-                <div className="space-y-3 bg-black/20 p-4 rounded-xl border border-white/10">
-                  <div className="flex justify-between items-center text-sm"><span className="text-white/60">Phone:</span> <span className="font-medium text-white">{selectedOwner.phone}</span></div>
-                  <div className="flex justify-between items-center text-sm"><span className="text-white/60">Email:</span> <span className="font-medium text-white">{selectedOwner.email}</span></div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">Known Assets ({selectedOwner.units})</h3>
-                <div className="space-y-2">
-                  <div className="p-3 bg-black/20 border border-white/10 rounded-xl flex items-center gap-3">
-                    <Building2 className="w-8 h-8 text-blue-400 bg-blue-400/10 p-1.5 rounded-lg" />
-                    <div>
-                      <div className="font-semibold text-white text-sm">{selectedOwner.building}</div>
-                      <div className="text-xs text-white/60">{selectedOwner.area}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">CRM Intelligence</h3>
-                <div className="bg-black/20 p-4 rounded-xl border border-white/10 text-sm space-y-3">
-                  <div className="flex justify-between items-center"><span className="text-white/60">Bitrix24 Status:</span> 
-                    {selectedOwner.bitrix_id ? <span className="text-green-400 font-semibold">{selectedOwner.bitrix_id}</span> : <span className="text-white/40">Not Synced</span>}
-                  </div>
-                  <div className="flex justify-between items-center"><span className="text-white/60">Last Contact:</span> <span className="text-white font-medium">{selectedOwner.lastContact}</span></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-auto pt-6 flex gap-3">
-              <button 
-                onClick={() => pushToBitrix(selectedOwner)}
-                className="flex-1 bg-[#3b82f6] hover:bg-[#2563eb] text-white py-3 rounded-xl font-bold transition-all shadow-lg"
-              >
-                Push to CRM
-              </button>
-              <button className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white py-3 rounded-xl font-bold transition-all">
-                Send to Vapi
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
