@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
+import SearchableCombobox from './SearchableCombobox';
 import ownerFiltersMetadata from '../data/ownerFiltersMetadata.json';
 
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
@@ -653,44 +654,24 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
                 
                 {/* Area */}
-                <div>
-                  <label className="text-xs font-semibold text-white/70 block mb-1.5">
-                    Area
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={areaFilter}
-                      onChange={(e) => { setAreaFilter(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm font-medium text-white outline-none cursor-pointer transition-all appearance-none"
-                    >
-                      <option value="Any" className="bg-slate-900 text-white">Any</option>
-                      {areasList.map(a => (
-                        <option key={a} value={a} className="bg-slate-900 text-white">{a}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
-                  </div>
-                </div>
+                <SearchableCombobox
+                  label="Area"
+                  value={areaFilter}
+                  onChange={(val) => { setAreaFilter(val); setCurrentPage(1); }}
+                  options={areasList}
+                  placeholder="Search area (e.g. Downtown, Marina)..."
+                  allLabel="Any"
+                />
 
                 {/* Building */}
-                <div>
-                  <label className="text-xs font-semibold text-white/70 block mb-1.5">
-                    Building
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={buildingFilter}
-                      onChange={(e) => { setBuildingFilter(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm font-medium text-white outline-none cursor-pointer transition-all appearance-none"
-                    >
-                      <option value="Any" className="bg-slate-900 text-white">Any</option>
-                      {allBuildings.map(b => (
-                        <option key={b} value={b} className="bg-slate-900 text-white">{b}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
-                  </div>
-                </div>
+                <SearchableCombobox
+                  label="Building"
+                  value={buildingFilter}
+                  onChange={(val) => { setBuildingFilter(val); setCurrentPage(1); }}
+                  options={allBuildings}
+                  placeholder="Search building (e.g. Burj Khalifa, Marina Gate)..."
+                  allLabel="Any"
+                />
 
                 {/* Type */}
                 <div>

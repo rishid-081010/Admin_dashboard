@@ -61,13 +61,16 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         {/* 4. Search Engine */}
         <button 
           onClick={() => setActiveTab('search')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
             activeTab === 'search' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
           <span>Search Engine</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50 border border-white/10 font-mono tracking-tight">
+            ^F6
+          </span>
         </button>
 
         {/* 5. Team Management */}

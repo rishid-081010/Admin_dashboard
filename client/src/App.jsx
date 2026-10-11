@@ -20,11 +20,26 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview'); // default to overview
   const [selectedListingId, setSelectedListingId] = useState(null);
   const [globalAgent, setGlobalAgent] = useState('6'); // Default Melanie Admin
+  const [isOmniSearchModalOpen, setIsOmniSearchModalOpen] = useState(false);
   const [agentsList, setAgentsList] = useState([
     { id: '6', name: 'Melanie Simsiman (Admin)' },
     { id: '7', name: 'Akarsh Arora' },
     { id: '186', name: 'NIDAF KHAN' }
   ]);
+
+  // Global Keyboard Shortcut: Ctrl + F6 or Cmd + F6 (and Ctrl + K / Cmd + K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'F6' || e.code === 'F6' || e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setIsOmniSearchModalOpen(prev => !prev);
+      } else if (e.key === 'Escape' && isOmniSearchModalOpen) {
+        setIsOmniSearchModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOmniSearchModalOpen]);
 
   useEffect(() => {
     // Fetch live agents for global dropdown
@@ -134,6 +149,24 @@ export default function App() {
         {activeTab === 'settings' && <AccountSettings />}
       </main>
       </div>
+
+      {/* Global Omni Search Modal (Summoned via Ctrl + F6 or Cmd + F6) */}
+      {isOmniSearchModalOpen && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
+          onClick={() => setIsOmniSearchModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-5xl h-[88vh] bg-[#001428] border border-blue-500/40 rounded-2xl shadow-2xl flex flex-col relative overflow-hidden p-4 sm:p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <OmniSearch 
+              isModal={true} 
+              onClose={() => setIsOmniSearchModalOpen(false)} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
