@@ -227,7 +227,18 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setIdResults([]);
         setOwnerResults([]);
         const cleanTerm = q.trim();
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?lead_id=ilike.*${encodeURIComponent(cleanTerm)}*&select=*&limit=50`;
+        const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
+        const variants = [cleanTerm, cleanTerm.toUpperCase()];
+        if (rawDigits) {
+          variants.push(rawDigits);
+          variants.push(`LEAD-${rawDigits}`);
+          if (rawDigits.length < 7) {
+            variants.push(`LEAD-${rawDigits.padStart(7, '0')}`);
+          }
+        }
+        const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
+        const orClause = uniqueVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`).join(',');
+        const endpoint = `${SUPABASE_BASE_URL}/owners_data?or=(${orClause})&select=*&limit=50`;
         const res = await axios.get(endpoint, { headers });
         setIdResults(res.data || []);
       } else if (currentFilter === 'Bitrix ID') {
@@ -236,7 +247,8 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setAreaResults([]);
         setIdResults([]);
         setOwnerResults([]);
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`;
+        const cleanTerm = q.replace(/[^0-9]/g, '') || q.trim();
+        const endpoint = `${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(cleanTerm)}&select=*&limit=50`;
         const res = await axios.get(endpoint, { headers });
         setIdResults(res.data || []);
       } else if (currentFilter === 'Supabase ID') {
@@ -245,7 +257,19 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setAreaResults([]);
         setIdResults([]);
         setOwnerResults([]);
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?owner_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`;
+        const cleanTerm = q.trim();
+        const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
+        const variants = [cleanTerm, cleanTerm.toUpperCase()];
+        if (rawDigits) {
+          variants.push(rawDigits);
+          variants.push(`OWN-${rawDigits}`);
+          if (rawDigits.length < 7) {
+            variants.push(`OWN-${rawDigits.padStart(7, '0')}`);
+          }
+        }
+        const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
+        const orClause = uniqueVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`).join(',');
+        const endpoint = `${SUPABASE_BASE_URL}/owners_data?or=(${orClause})&select=*&limit=50`;
         const res = await axios.get(endpoint, { headers });
         setIdResults(res.data || []);
       } else if (currentFilter === 'Owners') {
