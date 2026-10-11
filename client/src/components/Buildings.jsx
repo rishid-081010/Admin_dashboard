@@ -10,7 +10,7 @@ export default function Buildings() {
   useEffect(() => {
     const fetchBuildings = async () => {
       try {
-        const url = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=building_name,master_area&limit=10000&building_name=not.is.null';
+        const url = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=building_name,master_area&limit=10000&building_name=not.is.null';
         const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
         
         const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });

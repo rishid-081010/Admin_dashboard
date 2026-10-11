@@ -14,6 +14,7 @@ import SourcesDirectory from './components/SourcesDirectory';
 import MyActivity from './components/MyActivity';
 import TeamManagement from './components/TeamManagement';
 import VoiceAgent from './components/VoiceAgent';
+import DataHealth from './components/DataHealth';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview'); // default to overview
@@ -52,36 +53,33 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen text-white p-4 lg:p-6 flex gap-6 box-border font-sans antialiased selection:bg-blue-500/30 selection:text-white"
+      className="h-screen w-screen text-white p-2 sm:p-2.5 flex gap-2 sm:gap-2.5 box-border font-sans antialiased overflow-hidden selection:bg-blue-500/30 selection:text-white"
       style={{
-        backgroundColor: '#001935',
-        backgroundImage: `radial-gradient(circle at 0% 40%, rgba(0, 162, 255, 0.15), transparent 40%), radial-gradient(circle at 100% 20%, rgba(0, 102, 255, 0.1), transparent 50%)`
+        backgroundColor: '#001428',
+        backgroundImage: `radial-gradient(circle at 10% 30%, rgba(0, 162, 255, 0.12), transparent 45%), radial-gradient(circle at 90% 20%, rgba(0, 102, 255, 0.08), transparent 50%), radial-gradient(circle at 50% 90%, rgba(15, 23, 42, 0.6), transparent 60%)`
       }}
     >
-      {/* Unified Left Sidebar */}
-      <div className="bg-black/20 backdrop-blur-md border border-white/[0.15] rounded-[32px] shadow-2xl flex-shrink-0">
-         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      </div>
+      {/* Sleek Left Sidebar (Close to edge, not attached, matching Image 2) */}
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)]">
-        {/* Global View As Switcher - Placed cleanly up top outside the content container */}
-        <div className="flex justify-end items-center pb-2.5 px-2 shrink-0">
-          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md border border-white/20 shadow-xl rounded-xl px-4 py-1.5 hover:border-white/30 transition-all">
-             <User className="w-4 h-4 text-white/60" />
-             <span className="text-sm font-semibold text-white/60">View As:</span>
-             <select 
-               value={globalAgent} 
-               onChange={(e) => setGlobalAgent(e.target.value)}
-               className="bg-transparent text-white font-bold outline-none cursor-pointer text-sm"
-             >
-               {agentsList.map(a => <option key={a.id} value={a.id} className="bg-black text-white">{a.name} {a.role && `(${a.role})`}</option>)}
-             </select>
+      {/* Main Content Area - Full Screen Coverage (Matching Image 4) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        {/* Main Glassmorphic Widget Container */}
+        <main className="flex-1 bg-[#021024]/60 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl p-4 lg:p-5 overflow-hidden relative flex flex-col min-h-0">
+          {/* Global View As Switcher - Neatly integrated in top-right */}
+          <div className="absolute top-3.5 right-4 z-20">
+            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/15 shadow-xl rounded-xl px-3 py-1 hover:border-white/25 transition-all text-xs">
+              <User className="w-3.5 h-3.5 text-white/60" />
+              <span className="font-semibold text-white/60">View As:</span>
+              <select 
+                value={globalAgent} 
+                onChange={(e) => setGlobalAgent(e.target.value)}
+                className="bg-transparent text-white font-bold outline-none cursor-pointer text-xs"
+              >
+                {agentsList.map(a => <option key={a.id} value={a.id} className="bg-slate-900 text-white">{a.name} {a.role && `(${a.role})`}</option>)}
+              </select>
+            </div>
           </div>
-        </div>
-
-        {/* Main Content Pane */}
-        <main className="flex-1 bg-black/20 backdrop-blur-md border border-white/[0.15] rounded-[32px] shadow-2xl p-6 lg:p-8 overflow-hidden relative flex flex-col min-h-0">
 
         {activeTab === 'overview' && <OverviewDashboard globalAgent={globalAgent} />}
         {activeTab === 'owners' && (
@@ -95,6 +93,7 @@ export default function App() {
         {activeTab === 'activity' && <MyActivity globalAgent={globalAgent} />}
         {activeTab === 'voice' && <VoiceAgent />}
         {activeTab === 'team' && <TeamManagement />}
+        {activeTab === 'data-health' && <DataHealth />}
 
         {activeTab === 'leads' && (
           <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><LeadIngestionStudio /></div>

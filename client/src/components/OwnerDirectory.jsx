@@ -27,10 +27,10 @@ export default function OwnerDirectory({ globalAgentName }) {
         const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
         const offset = (currentPage - 1) * itemsPerPage;
         
-        let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,dld_matched,match_confidence,vendor_source_file,bitrix_id&limit=${itemsPerPage}&offset=${offset}`;
+        let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=lead_id,owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,vendor_source_file,bitrix_id&limit=${itemsPerPage}&offset=${offset}`;
         
         if (searchTerm.length > 1) {
-          url += `&or=(full_name.ilike.*${encodeURIComponent(searchTerm)}*,phone_normalized.ilike.*${encodeURIComponent(searchTerm)}*,building_name.ilike.*${encodeURIComponent(searchTerm)}*)`;
+          url += `&or=(lead_id.ilike.*${encodeURIComponent(searchTerm)}*,full_name.ilike.*${encodeURIComponent(searchTerm)}*,phone_normalized.ilike.*${encodeURIComponent(searchTerm)}*,building_name.ilike.*${encodeURIComponent(searchTerm)}*,unit_number.ilike.*${encodeURIComponent(searchTerm)}*)`;
         }
         
         if (locationFilter !== 'All') {
@@ -48,6 +48,7 @@ export default function OwnerDirectory({ globalAgentName }) {
         if (Array.isArray(response.data)) {
           const mapped = response.data.map(row => ({
             id: row.owner_id ? String(row.owner_id) : 'UnknownID',
+            lead_id: row.lead_id ? String(row.lead_id) : (row.owner_id ? String(row.owner_id) : 'LEAD-0000000'),
             name: row.full_name ? String(row.full_name) : 'Unknown Owner',
             building: row.building_name ? String(row.building_name) : 'N/A',
             area: row.master_area ? String(row.master_area) : 'Dubai',
@@ -62,8 +63,6 @@ export default function OwnerDirectory({ globalAgentName }) {
             verified_purchase_price: row.verified_purchase_price || null,
             verified_purchase_date: row.verified_purchase_date || null,
             verified_size_sqft: row.verified_size_sqft || null,
-            dld_matched: !!row.dld_matched,
-            match_confidence: row.match_confidence || null,
             vendor_source_file: row.vendor_source_file || null,
             source: 'System Sync',
             bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
@@ -129,7 +128,7 @@ export default function OwnerDirectory({ globalAgentName }) {
             OWNERS DIRECTORY
           </h1>
           <p className="text-white/60 text-[15px]">
-            Master view of 2,234,192 unified property owners across Dubai.
+            Master view of 3,042,722 verified property owners & transactions across Dubai.
           </p>
         </div>
       </div>
@@ -141,7 +140,7 @@ export default function OwnerDirectory({ globalAgentName }) {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
             <input
               type="text"
-              placeholder="Search by Name, Phone, Email, or Building..."
+              placeholder="Search by Lead ID, Name, Phone, Building, or Unit Number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-black/20 border border-white/10 rounded-[14px] pl-12 pr-4 py-3 text-[15px] text-white placeholder-white/60 focus:outline-none focus:border-[#3b82f6]/50 transition-all"
@@ -198,19 +197,34 @@ export default function OwnerDirectory({ globalAgentName }) {
             </thead>
             <tbody className="divide-y divide-white/10">
               {loading ? (
-                <tr><td colSpan="6" className="text-center py-12 text-white/40">Loading 2.2M Golden Rows...</td></tr>
+                <tr><td colSpan="6" className="text-center py-12 text-white/40">Loading 3.0M Verified Owner Leads...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan="6" className="text-center py-12 text-white/40">No owners found matching filters.</td></tr>
               ) : filtered.map((owner) => (
                 <tr key={owner.id} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => setSelectedOwner(owner)}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/80 font-bold border border-white/20">
+                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/80 font-bold border border-white/20 shrink-0">
                         {String(owner.name).charAt(0)}
                       </div>
                       <div>
-                        <div className="font-bold text-white group-hover:text-[#3b82f6] transition-colors">{owner.name}</div>
-                        <div className="text-[12px] text-white/40">ID: {String(owner.id).substring(0,8)}  {owner.units} Properties</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white group-hover:text-[#3b82f6] transition-colors">{owner.name}</span>
+                          {owner.property_type && (
+                            <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${
+                              owner.property_type === 'BUYER' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                              owner.property_type === 'SELLER' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                              'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                            }`}>
+                              {owner.property_type}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] font-mono font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                            {owner.lead_id}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -221,7 +235,14 @@ export default function OwnerDirectory({ globalAgentName }) {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="font-medium text-white/80 flex items-center gap-1.5"><Building2 className="w-4 h-4 text-blue-400"/> {owner.building}</div>
+                    <div className="font-medium text-white/80 flex items-center gap-2 flex-wrap">
+                      <span className="flex items-center gap-1.5"><Building2 className="w-4 h-4 text-blue-400 shrink-0"/> {owner.building}</span>
+                      {owner.unit_number && (
+                        <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded-md font-mono font-bold border border-blue-500/30">
+                          Unit {owner.unit_number}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[12px] text-white/40 flex items-center gap-1.5 mt-0.5"><MapPin className="w-3.5 h-3.5"/> {owner.area}</div>
                   </td>
                   <td className="px-6 py-4">
@@ -233,7 +254,7 @@ export default function OwnerDirectory({ globalAgentName }) {
                   <td className="px-6 py-4">
                     {(owner.bitrix_id || pushedIds.has(owner.id)) ? (
                       <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-400 px-2.5 py-1 rounded-full text-xs font-semibold border border-green-500/20">
-                        ? Synced ({owner.bitrix_id})
+                        ✓ Synced ({owner.bitrix_id})
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 bg-white/5 text-white/40 px-2.5 py-1 rounded-full text-xs font-semibold border border-white/10">
@@ -254,7 +275,7 @@ export default function OwnerDirectory({ globalAgentName }) {
         
         {/* Pagination Footer */}
           <div className="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between text-sm text-white/60">
-            <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + filtered.length} of 2.23M DB entries</span>
+            <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + filtered.length} of 3.04M DB entries</span>
             <div className="flex gap-2">
               <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30">Previous</button>
               

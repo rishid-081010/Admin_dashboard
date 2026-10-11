@@ -2040,7 +2040,7 @@ app.listen(PORT, () => {
 app.get('/api/owners', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('owner_intelligence_leads')
+      .from('owners_data')
       .select('*')
       .limit(100);
       
@@ -2049,6 +2049,7 @@ app.get('/api/owners', async (req, res) => {
     // Map to what the frontend expects
     const mapped = data.map(row => ({
       id: row.owner_id,
+      lead_id: row.lead_id || row.owner_id,
       name: row.full_name || 'Unknown Owner',
       building: row.building_name || 'N/A',
       area: row.master_area || 'N/A',
@@ -2072,7 +2073,7 @@ app.get('/api/owners', async (req, res) => {
 app.get('/api/buildings', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('owner_intelligence_leads')
+      .from('owners_data')
       .select('building_name, master_area, verified_bedrooms')
       .not('building_name', 'is', null)
       .limit(1000);
@@ -2122,7 +2123,7 @@ app.post('/api/push-to-bitrix', async (req, res) => {
     // 2. Save back to Supabase
     if (newLeadId) {
       await supabase
-        .from('owner_intelligence_leads')
+        .from('owners_data')
         .update({ bitrix_id: \LEAD_\\ })
         .eq('id', lead.id);
     }
@@ -2140,7 +2141,7 @@ app.get('/api/search', async (req, res) => {
     if (!q || q.length < 3) return res.json([]);
 
     const { data, error } = await supabase
-      .from('owner_intelligence_leads')
+      .from('owners_data')
       .select('owner_id, full_name, phone_normalized, building_name')
       .or(`full_name.ilike.%${q}%,phone_normalized.ilike.%${q}%,building_name.ilike.%${q}%`)
       .limit(20);
@@ -2221,7 +2222,7 @@ app.get('/api/vapi-agents', async (req, res) => {
 app.get('/api/kpis', async (req, res) => {
   try {
     const kpis = {
-      totalOwners: '2,234,192',
+      totalOwners: '3,042,722',
       crmLeads: '42,147',
       vapiCalls: '79,903',
       pipelineValue: '$14.2M',

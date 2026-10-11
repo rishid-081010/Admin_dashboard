@@ -24,7 +24,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       setLoadingProps(true);
       try {
         const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
-        const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?owner_id=eq.${encodeURIComponent(owner.id)}&select=*&limit=50`;
+        const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?owner_id=eq.${encodeURIComponent(owner.id)}&select=*&limit=50`;
         const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
         if (Array.isArray(res.data) && res.data.length > 0) {
           setRelatedProperties(res.data);
@@ -104,13 +104,11 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-[10px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md">
-              OWNER 360 - {owner.id ? owner.id.replace('OWN_', '').slice(0, 6).toUpperCase() : '027'}
+              {owner.lead_id || owner.id || 'LEAD-0000000'}
             </span>
-            {owner.dld_matched && (
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" /> DLD Verified
-              </span>
-            )}
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" /> Verified Owner
+            </span>
           </div>
 
           <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-snug break-words">
@@ -364,12 +362,8 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
 
                         {/* Data Quality */}
                         <td className="py-4 text-right">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
-                            prop.dld_matched 
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                              : 'bg-blue-500/10 text-blue-300 border-blue-500/20'
-                          }`}>
-                            {prop.dld_matched ? 'DLD Verified' : 'Source Verified'}
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border bg-blue-500/10 text-blue-300 border-blue-500/20">
+                            Verified Lead
                           </span>
                         </td>
                       </tr>

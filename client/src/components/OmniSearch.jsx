@@ -13,7 +13,7 @@ export default function OmniSearch() {
     setLoading(true);
     try {
       const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
-      const endpoint = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owner_intelligence_leads?select=owner_id,full_name,phone_normalized,building_name&limit=50&or=(full_name.ilike.*${encodeURIComponent(query)}*,phone_normalized.ilike.*${encodeURIComponent(query)}*,building_name.ilike.*${encodeURIComponent(query)}*)`;
+      const endpoint = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=lead_id,owner_id,full_name,phone_normalized,building_name,unit_number&limit=50&or=(lead_id.ilike.*${encodeURIComponent(query)}*,full_name.ilike.*${encodeURIComponent(query)}*,phone_normalized.ilike.*${encodeURIComponent(query)}*,building_name.ilike.*${encodeURIComponent(query)}*,unit_number.ilike.*${encodeURIComponent(query)}*)`;
       
       const res = await axios.get(endpoint, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
       setResults(res.data || []);
@@ -31,7 +31,7 @@ export default function OmniSearch() {
           GLOBAL OMNI-SEARCH
         </h1>
         <p className="text-[#94a3b8] text-[16px] max-w-xl text-center">
-          Query the entire 2.2 million row database instantly. Press <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">Ctrl</kbd> + <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">F6</kbd> anywhere to trigger.
+          Query the entire 3.04 million row database instantly. Press <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">Ctrl</kbd> + <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">F6</kbd> anywhere to trigger.
         </p>
       </div>
 
@@ -40,7 +40,7 @@ export default function OmniSearch() {
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-8 h-8 text-[#3b82f6]" />
           <input
             type="text"
-            placeholder="Search for an Owner Name, Phone Number, or Building..."
+            placeholder="Search for an Owner Name, Phone Number, Building, or Unit Number..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -68,7 +68,7 @@ export default function OmniSearch() {
         </div>
         
         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pb-8">
-            {loading && <div className="text-center text-white/40 py-10">Searching 2.23M rows...</div>}
+            {loading && <div className="text-center text-white/40 py-10">Searching 3.04M rows...</div>}
             {!loading && results.length > 0 && results.map((r, i) => (
                 <div key={i} className="bg-black/20 border border-white/10 rounded-[16px] p-5 flex items-center justify-between hover:border-[#3b82f6]/50 transition-all cursor-pointer">
                     <div className="flex items-center gap-4">
@@ -76,9 +76,21 @@ export default function OmniSearch() {
                             <User className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="text-white font-bold text-lg">{r.full_name || 'Unknown'}</h3>
-                            <div className="flex items-center gap-4 text-sm text-white/60 mt-1">
-                                <span className="flex items-center gap-1"><Building2 className="w-4 h-4"/> {r.building_name || 'No building'}</span>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-white font-bold text-lg">{r.full_name || 'Unknown'}</h3>
+                                {r.lead_id && (
+                                    <span className="text-[11px] font-mono font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                                        {r.lead_id}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-white/60 mt-1 flex-wrap">
+                                <span className="flex items-center gap-1"><Building2 className="w-4 h-4 text-blue-400"/> {r.building_name || 'No building'}</span>
+                                {r.unit_number && (
+                                  <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded-md font-mono font-bold border border-blue-500/30">
+                                    Unit {r.unit_number}
+                                  </span>
+                                )}
                                 <span className="flex items-center gap-1"><Phone className="w-4 h-4"/> {r.phone_normalized || 'No phone'}</span>
                             </div>
                         </div>
