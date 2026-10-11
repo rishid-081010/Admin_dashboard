@@ -27,12 +27,9 @@ export default function OmniSearch() {
   return (
     <div className="w-full flex flex-col h-full animate-fade-in text-white/80">
       <div className="flex flex-col items-center justify-center mt-6 mb-8">
-        <h1 className="text-4xl font-bold tracking-tight text-white mb-4" style={{ fontFamily: "Georgia, serif" }}>
+        <h1 className="text-4xl font-bold tracking-tight text-white" style={{ fontFamily: "Georgia, serif" }}>
           SEARCH DATABASE
         </h1>
-        <p className="text-[#94a3b8] text-[16px] max-w-xl text-center">
-          Search all 3.04 million property owners, phone numbers, and units across Dubai. Press <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">Ctrl</kbd> + <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">F6</kbd> anywhere to trigger.
-        </p>
       </div>
 
       <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col">
