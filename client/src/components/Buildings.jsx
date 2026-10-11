@@ -82,6 +82,9 @@ export default function Buildings() {
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  const [serverBuildings, setServerBuildings] = useState([]);
+  const [isSearchingServer, setIsSearchingServer] = useState(false);
+  
   // Drawer / Detail state
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [buildingOwners, setBuildingOwners] = useState([]);
@@ -99,6 +102,87 @@ export default function Buildings() {
   useEffect(() => {
     fetchBuildingsData();
   }, []);
+
+  // Server-side debounced search for any building across all 3M+ records
+  useEffect(() => {
+    if (!searchTerm || searchTerm.trim().length < 2) {
+      setServerBuildings([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingServer(true);
+      try {
+        const apikey = SUPABASE_API_KEY;
+        const headers = { 
+          apikey, 
+          Authorization: `Bearer ${apikey}`,
+          Prefer: 'count=exact'
+        };
+        const q = encodeURIComponent(searchTerm.trim());
+        const res = await axios.get(
+          `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=building_name,master_area,phone_normalized,reported_property_type,unit_number,full_name,owner_id,lead_id&limit=500`,
+          { headers }
+        );
+
+        if (res.data && res.data.length > 0) {
+          const bMap = {};
+          res.data.forEach(row => {
+            const rawBn = (row.building_name || '').trim();
+            if (!rawBn || DUMMY_BUILDINGS.has(rawBn.toLowerCase())) return;
+
+            const displayName = formatBuildingName(rawBn);
+            const normKey = displayName.toLowerCase();
+
+            if (!bMap[normKey]) {
+              bMap[normKey] = {
+                rawName: rawBn,
+                name: displayName,
+                area: getBuildingCommunity(rawBn, row.master_area),
+                propertyType: getBuildingType(rawBn, row.reported_property_type),
+                unitsSet: new Set(),
+                ownersCount: 0,
+                contactsCount: 0,
+                sampleOwners: []
+              };
+            }
+
+            bMap[normKey].ownersCount += 1;
+            if (row.unit_number && String(row.unit_number).trim()) {
+              bMap[normKey].unitsSet.add(String(row.unit_number).trim());
+            }
+            if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) {
+              bMap[normKey].contactsCount += 1;
+            }
+          });
+
+          // Check if total count is available from header
+          const cr = res.headers ? (res.headers['content-range'] || (res.headers.get && res.headers.get('content-range'))) : null;
+          let headerTotal = 0;
+          if (cr && cr.includes('/')) {
+            const p = parseInt(cr.split('/')[1], 10);
+            if (!isNaN(p)) headerTotal = p;
+          }
+
+          const foundList = Object.values(bMap).map(b => ({
+            ...b,
+            unitsCount: b.unitsSet.size > 0 ? b.unitsSet.size : b.ownersCount,
+            ownersCount: (Object.keys(bMap).length === 1 && headerTotal > b.ownersCount) ? headerTotal : b.ownersCount,
+            contactCoverage: b.ownersCount > 0 ? Math.round((b.contactsCount / b.ownersCount) * 100) : 0
+          }));
+          setServerBuildings(foundList);
+        } else {
+          setServerBuildings([]);
+        }
+      } catch (e) {
+        console.error('Server search buildings error:', e);
+      } finally {
+        setIsSearchingServer(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const fetchBuildingsData = async () => {
     setLoading(true);
@@ -177,45 +261,7 @@ export default function Buildings() {
       setBuildings(list);
     } catch (err) {
       console.error('Error fetching buildings from Supabase:', err);
-      // Fallback with Burlington and prominent towers
-      setBuildings([
-        {
-          rawName: 'Burlington',
-          name: 'Burlington',
-          area: 'BUSINESS BAY',
-          propertyType: 'Office',
-          unitsCount: 5,
-          ownersCount: 5,
-          contactsCount: 3,
-          contactCoverage: 60,
-          sampleOwners: [
-            { id: 'OWN-BURL-01', lead_id: 'LEAD-88412', name: 'Mohammad Farshchian', unit: '2414', phone: '+971 50 492 1882', area: 'BUSINESS BAY', building: 'Burlington', type: 'Office' },
-            { id: 'OWN-BURL-02', lead_id: 'LEAD-88413', name: 'Al Hashemi Investments', unit: '1802', phone: '+971 52 910 4421', area: 'BUSINESS BAY', building: 'Burlington', type: 'Office' }
-          ]
-        },
-        {
-          rawName: 'Burj Khalifa',
-          name: 'Burj Khalifa',
-          area: 'DOWNTOWN DUBAI',
-          propertyType: 'Residential',
-          unitsCount: 117,
-          ownersCount: 153,
-          contactsCount: 153,
-          contactCoverage: 100,
-          sampleOwners: []
-        },
-        {
-          rawName: 'Marina Gate 1',
-          name: 'Marina Gate 1',
-          area: 'DUBAI MARINA',
-          propertyType: 'Residential',
-          unitsCount: 42,
-          ownersCount: 45,
-          contactsCount: 38,
-          contactCoverage: 84,
-          sampleOwners: []
-        }
-      ]);
+      setBuildings([]);
     } finally {
       setLoading(false);
     }
@@ -228,7 +274,11 @@ export default function Buildings() {
     setLoadingBuildingOwners(true);
     try {
       const apikey = SUPABASE_API_KEY;
-      const headers = { apikey, Authorization: `Bearer ${apikey}` };
+      const headers = { 
+        apikey, 
+        Authorization: `Bearer ${apikey}`,
+        Prefer: 'count=exact'
+      };
       const q = encodeURIComponent(building.rawName);
       const res = await axios.get(
         `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=owner_id,lead_id,full_name,unit_number,phone_normalized,reported_property_type,master_area,property_category,bitrix_id&limit=300`,
@@ -251,11 +301,22 @@ export default function Buildings() {
         // Dynamically recalculate metrics from the actual live fetched records
         const unitsSet = new Set(mapped.map(m => m.unit).filter(u => u && u !== 'N/A'));
         const phonesCount = mapped.filter(m => m.phone && m.phone !== 'N/A').length;
+
+        // Exact total in Supabase from Content-Range header (e.g. "0-299/2218")
+        const cr = res.headers ? (res.headers['content-range'] || (res.headers.get && res.headers.get('content-range'))) : null;
+        let totalCount = mapped.length;
+        if (cr && cr.includes('/')) {
+          const parsed = parseInt(cr.split('/')[1], 10);
+          if (!isNaN(parsed) && parsed > 0) totalCount = parsed;
+        }
+
         setSelectedBuilding(prev => ({
           ...prev,
           unitsCount: unitsSet.size > 0 ? unitsSet.size : mapped.length,
-          ownersCount: mapped.length,
-          contactsCount: phonesCount
+          ownersCount: totalCount,
+          fetchedCount: mapped.length,
+          contactsCount: phonesCount,
+          contactCoverage: mapped.length > 0 ? Math.round((phonesCount / mapped.length) * 100) : 0
         }));
       } else {
         setBuildingOwners([]);
@@ -277,9 +338,24 @@ export default function Buildings() {
     setTimeout(() => setCopiedPhone(null), 1800);
   };
 
+  // Active buildings pool: prioritizes live server search results when user searches
+  const activeBuildingsPool = useMemo(() => {
+    if (searchTerm.trim().length >= 2 && serverBuildings.length > 0) {
+      const mergedMap = new Map();
+      serverBuildings.forEach(b => mergedMap.set(b.name.toLowerCase(), b));
+      buildings.forEach(b => {
+        if (!mergedMap.has(b.name.toLowerCase())) {
+          mergedMap.set(b.name.toLowerCase(), b);
+        }
+      });
+      return Array.from(mergedMap.values());
+    }
+    return buildings;
+  }, [buildings, serverBuildings, searchTerm]);
+
   // Filter and Sort Buildings
   const filteredBuildings = useMemo(() => {
-    return buildings
+    return activeBuildingsPool
       .filter(b => {
         const matchesSearch = 
           b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -299,7 +375,7 @@ export default function Buildings() {
         if (sortBy === 'name') return a.name.localeCompare(b.name);
         return 0;
       });
-  }, [buildings, searchTerm, selectedCommunity, sortBy]);
+  }, [activeBuildingsPool, searchTerm, selectedCommunity, sortBy]);
 
   // Communities list for filter
   const communitiesList = useMemo(() => {
@@ -630,21 +706,21 @@ export default function Buildings() {
             {/* Quick Metrics Bar inside Drawer */}
             <div className="grid grid-cols-3 gap-3 p-4 bg-black/20 border-b border-white/10">
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Units</div>
+                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Verified Units</div>
                 <div className="text-xl font-bold font-serif text-white mt-0.5">
                   {selectedBuilding.unitsCount}
                 </div>
               </div>
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Profiles</div>
+                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Total Owners in DB</div>
                 <div className="text-xl font-bold font-serif text-white mt-0.5">
-                  {selectedBuilding.ownersCount}
+                  {selectedBuilding.ownersCount.toLocaleString()}
                 </div>
               </div>
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Contacts</div>
+                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">With Phone</div>
                 <div className="text-xl font-bold font-serif text-emerald-400 mt-0.5">
-                  {selectedBuilding.contactsCount} / {selectedBuilding.ownersCount}
+                  {selectedBuilding.contactsCount} / {selectedBuilding.fetchedCount || selectedBuilding.ownersCount}
                 </div>
               </div>
             </div>
@@ -752,7 +828,9 @@ export default function Buildings() {
 
             {/* Drawer Footer */}
             <div className="p-4 border-t border-white/10 bg-[#03152d]/90 flex items-center justify-between text-xs text-white/50">
-              <span>Showing {filteredDrawerOwners.length} owners in {selectedBuilding.name}</span>
+              <span>
+                Showing {filteredDrawerOwners.length} verified owner records {selectedBuilding.ownersCount > filteredDrawerOwners.length ? `(out of ${selectedBuilding.ownersCount.toLocaleString()} total in database)` : ''}
+              </span>
               <button
                 onClick={() => setSelectedBuilding(null)}
                 className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white font-medium transition-all"

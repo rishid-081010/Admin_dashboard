@@ -410,7 +410,8 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
     try {
       const headers = { 
         apikey: SUPABASE_API_KEY, 
-        Authorization: `Bearer ${SUPABASE_API_KEY}` 
+        Authorization: `Bearer ${SUPABASE_API_KEY}`,
+        Prefer: 'count=exact'
       };
       const cleanTerm = (building.rawName || building.name).replace(/'/g, "''");
       const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(cleanTerm)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,bitrix_id,bitrix_status&limit=250`;
@@ -436,10 +437,20 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         // Dynamically synchronize metrics to match exact live fetched records
         const unitsSet = new Set(mapped.map(m => m.unit).filter(u => u && u !== 'N/A'));
         const phonesCount = mapped.filter(m => m.phone && m.phone !== 'N/A').length;
+
+        // Exact total in Supabase from Content-Range header
+        const cr = res.headers ? (res.headers['content-range'] || (res.headers.get && res.headers.get('content-range'))) : null;
+        let totalCount = mapped.length;
+        if (cr && cr.includes('/')) {
+          const parsed = parseInt(cr.split('/')[1], 10);
+          if (!isNaN(parsed) && parsed > 0) totalCount = parsed;
+        }
+
         setSelectedBuilding(prev => ({
           ...prev,
           unitsCount: unitsSet.size > 0 ? unitsSet.size : mapped.length,
-          ownersCount: mapped.length,
+          ownersCount: totalCount,
+          fetchedCount: mapped.length,
           contactsCount: phonesCount
         }));
       } else {
@@ -1045,17 +1056,17 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
           <div className="p-4 grid grid-cols-3 gap-3 border-b border-white/5 bg-white/[0.02] shrink-0">
             <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Units in DB</div>
+              <div className="text-[10px] text-white/40 uppercase font-mono">Verified Units</div>
               <div className="text-lg font-extrabold text-white">{selectedBuilding.unitsCount}</div>
             </div>
             <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Profiles</div>
-              <div className="text-lg font-extrabold text-white">{selectedBuilding.ownersCount}</div>
+              <div className="text-[10px] text-white/40 uppercase font-mono">Total in DB</div>
+              <div className="text-lg font-extrabold text-white">{selectedBuilding.ownersCount.toLocaleString()}</div>
             </div>
             <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Phones</div>
+              <div className="text-[10px] text-white/40 uppercase font-mono">With Phone</div>
               <div className="text-lg font-extrabold text-emerald-400">
-                {selectedBuilding.contactsCount} / {selectedBuilding.ownersCount}
+                {selectedBuilding.contactsCount} / {selectedBuilding.fetchedCount || selectedBuilding.ownersCount}
               </div>
             </div>
           </div>
@@ -1143,7 +1154,9 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           </div>
 
           <div className="p-3 border-t border-white/10 bg-[#010814] flex items-center justify-between text-xs text-white/40 shrink-0">
-            <span>Showing {filteredDrawerOwners.length} owners in {selectedBuilding.name}</span>
+            <span>
+              Showing {filteredDrawerOwners.length} verified owner records {selectedBuilding.ownersCount > filteredDrawerOwners.length ? `(out of ${selectedBuilding.ownersCount.toLocaleString()} total in database)` : ''}
+            </span>
             <button 
               onClick={() => setSelectedBuilding(null)}
               className="text-white/60 hover:text-white px-3 py-1 rounded bg-white/5 hover:bg-white/10 font-semibold"
