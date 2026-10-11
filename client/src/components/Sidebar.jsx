@@ -7,16 +7,16 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
   return (
     <aside className="w-[215px] shrink-0 bg-[#021024]/80 backdrop-blur-2xl border border-white/[0.1] rounded-2xl p-2.5 flex flex-col h-full shadow-2xl select-none overflow-hidden transition-all hidden md:flex">
-      {/* Brand Header matching Image 2: A² A SQUARED REAL ESTATE */}
+      {/* Brand Header: Original Official Logo (Image 1) */}
       <div 
         onClick={() => setActiveTab('overview')}
-        className="flex items-center gap-2.5 px-2.5 py-2 cursor-pointer select-none group border-b border-white/[0.06] pb-3 mb-2 shrink-0"
+        className="brand-logo flex flex-col items-center justify-center pt-1.5 pb-3 px-2 cursor-pointer select-none group border-b border-white/[0.06] mb-2 shrink-0"
       >
-        <span className="text-3xl font-serif text-white tracking-tight leading-none group-hover:scale-105 transition-transform">A²</span>
-        <div className="flex flex-col leading-tight">
-          <span className="text-[12.5px] font-bold tracking-wider text-white">A SQUARED</span>
-          <span className="text-[9px] tracking-[0.2em] text-white/50 uppercase font-medium">Real Estate</span>
-        </div>
+        <img 
+          src="./asquared-logo.png" 
+          alt="A SQUARED REAL ESTATE" 
+          className="w-36 h-auto object-contain transition-transform group-hover:scale-[1.03]"
+        />
       </div>
 
       {/* Section Subheader */}
