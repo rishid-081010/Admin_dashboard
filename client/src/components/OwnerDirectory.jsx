@@ -414,61 +414,46 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </div>
                     </td>
 
-                    {/* 4. Assigned Agent (Interactive Select) */}
-                    <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                    {/* 4. Assigned Agent (Read-only status) */}
+                    <td className="px-5 py-4">
                       <div className="flex items-center gap-1.5">
-                        <UserCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                        <select
-                          value={owner.assigned_agent_id || ''}
-                          onChange={(e) => {
-                            const found = availableAgents.find(a => String(a.id) === String(e.target.value));
-                            if (found) {
-                              handleAssignAgent(e, owner, found);
-                            }
-                          }}
-                          className={`text-xs rounded-lg px-2.5 py-1.5 outline-none font-medium transition-colors border ${
-                            owner.assigned_agent 
-                              ? 'bg-purple-500/10 text-purple-200 border-purple-500/30' 
-                              : 'bg-black/30 text-white/50 border-white/10 hover:border-white/20'
-                          }`}
-                        >
-                          <option value="" className="bg-slate-900 text-white/50">Unassigned</option>
-                          {availableAgents.map(ag => (
-                            <option key={ag.id} value={ag.id} className="bg-slate-900 text-white">
-                              {ag.name}
-                            </option>
-                          ))}
-                        </select>
+                        <UserCheck className={`w-3.5 h-3.5 ${owner.assigned_agent ? 'text-purple-400' : 'text-white/40'} shrink-0`} />
+                        <span className={`text-xs px-2.5 py-1 rounded-lg border font-medium ${
+                          owner.assigned_agent 
+                            ? 'bg-purple-500/10 text-purple-200 border-purple-500/30' 
+                            : 'bg-black/20 text-white/50 border-white/10'
+                        }`}>
+                          {owner.assigned_agent || 'Unassigned'}
+                        </span>
                       </div>
                     </td>
 
-                    {/* 5. Bitrix ID / CRM Status */}
-                    <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                    {/* 5. Bitrix ID / CRM Status (Read-only status) */}
+                    <td className="px-5 py-4">
                       {isSynced ? (
-                        <a
-                          href={`https://crm.asquared.ae/crm/lead/details/${owner.bitrix_id}/`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-500/25 transition-all group"
-                          title="View lead in Bitrix24 CRM"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Bitrix #{owner.bitrix_id}</span>
-                          <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
-                        </a>
+                        owner.bitrix_id ? (
+                          <a
+                            href={`https://crm.asquared.ae/crm/lead/details/${owner.bitrix_id}/`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-500/25 transition-all group"
+                            title="View lead in Bitrix24 CRM"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Bitrix #{owner.bitrix_id}</span>
+                            <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Synced to CRM</span>
+                          </span>
+                        )
                       ) : (
-                        <button
-                          onClick={() => pushToBitrix(owner)}
-                          disabled={isSyncing}
-                          className="inline-flex items-center gap-1.5 bg-blue-500/15 text-blue-300 border border-blue-500/30 hover:bg-blue-500/25 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-[1.02] disabled:opacity-50"
-                        >
-                          {isSyncing ? (
-                            <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
-                          ) : (
-                            <Share2 className="w-3.5 h-3.5 text-blue-400" />
-                          )}
-                          <span>{isSyncing ? 'Syncing...' : 'Push to Bitrix'}</span>
-                        </button>
+                        <span className="inline-flex items-center gap-1.5 bg-white/5 text-white/40 border border-white/10 px-2.5 py-1.5 rounded-lg text-xs font-semibold">
+                          Not in CRM
+                        </span>
                       )}
                     </td>
 
