@@ -195,7 +195,11 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
       // 4. Type
       if (propertyTypeFilter !== 'Any') {
-        url += `&reported_property_type=ilike.*${encodeURIComponent(propertyTypeFilter)}*`;
+        if (propertyTypeFilter === 'Residential' || propertyTypeFilter === 'Commercial') {
+          url += `&property_category=eq.${encodeURIComponent(propertyTypeFilter)}`;
+        } else {
+          url += `&reported_property_type=ilike.*${encodeURIComponent(propertyTypeFilter)}*`;
+        }
       }
 
       // 5. Bedrooms
@@ -285,6 +289,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
           unit_number: row.unit_number ? String(row.unit_number) : null,
           property_type: row.reported_property_type || null,
+          property_category: row.property_category || (row.reported_property_type && /commercial|office|shop|warehouse|industrial|hotel|showroom|store|workshop|factory/i.test(row.reported_property_type) ? 'Commercial' : 'Residential'),
           nationality: row.nationality || null,
           emirates_id: row.emirates_id || null,
           passport_expiry: row.passport_expiry || null,
@@ -916,7 +921,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   <th className="px-5 py-4 font-semibold bg-[#051833]">Property &amp; Unit</th>
                   <th className="px-5 py-4 font-semibold bg-[#051833]">Assigned Agent</th>
                   <th className="px-5 py-4 font-semibold bg-[#051833]">Bitrix ID / Status</th>
-                  <th className="px-5 py-4 font-semibold text-right bg-[#051833]">Actions</th>
+                  <th className="px-5 py-4 font-semibold text-right bg-[#051833]">Residential / Commercial</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
@@ -1047,18 +1052,15 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                         )}
                       </td>
 
-                      {/* 6. Actions */}
+                      {/* 6. Residential / Commercial */}
                       <td className="px-5 py-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedOwner(owner);
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-                          title="Open 360 View"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                          owner.property_category === 'Commercial'
+                            ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
+                            : 'bg-blue-500/15 border border-blue-500/30 text-blue-300'
+                        }`}>
+                          {owner.property_category || 'Residential'}
+                        </span>
                       </td>
                     </tr>
                   );
