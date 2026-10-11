@@ -65,10 +65,10 @@ export default function VoiceAgent() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
-            AI VOICE AGENT CENTRE
+            VOICE OUTREACH
           </h1>
           <p className="text-white/60 text-[15px]">
-            Connected to Vapi.ai and Supabase (79,903 call logs).
+            Outbound calling analytics and lead conversion metrics.
           </p>
         </div>
         <div className="flex gap-2 bg-black/40 backdrop-blur-md border border-white/10 p-1 rounded-xl">
@@ -87,28 +87,28 @@ export default function VoiceAgent() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-6">
           <PhoneOutgoing className="w-6 h-6 text-blue-400 mb-3" />
-          <div className="text-sm font-medium text-white/60 mb-1">Total Calls Dialed</div>
+          <div className="text-sm font-medium text-white/60 mb-1">Calls Placed</div>
           <div className="text-3xl font-bold text-white transition-all">{currentData.calls}</div>
         </div>
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-6">
           <PhoneOff className="w-6 h-6 text-red-400 mb-3" />
-          <div className="text-sm font-medium text-white/60 mb-1">Voicemails/Drops</div>
+          <div className="text-sm font-medium text-white/60 mb-1">Voicemails &amp; Unanswered</div>
           <div className="text-3xl font-bold text-white transition-all">{currentData.drops}</div>
         </div>
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-6">
           <Activity className="w-6 h-6 text-green-400 mb-3" />
-          <div className="text-sm font-medium text-white/60 mb-1">Hot Leads Generated</div>
+          <div className="text-sm font-medium text-white/60 mb-1">Qualified Leads</div>
           <div className="text-3xl font-bold text-white transition-all">{currentData.leads}</div>
         </div>
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-6">
           <Clock className="w-6 h-6 text-purple-400 mb-3" />
-          <div className="text-sm font-medium text-white/60 mb-1">Avg Call Duration</div>
+          <div className="text-sm font-medium text-white/60 mb-1">Average Call Duration</div>
           <div className="text-3xl font-bold text-white transition-all">{currentData.duration}</div>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col p-6 overflow-y-auto custom-scrollbar">
-        <h3 className="font-bold text-white mb-6">Agent Persona Comparison</h3>
+        <h3 className="font-bold text-white mb-6">Calling Line Performance</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-4">
           {agents.map((agent) => (
             <div key={agent.id} className="border border-white/10 rounded-xl p-5 bg-black/20 hover:bg-black/40 backdrop-blur-md transition-colors">

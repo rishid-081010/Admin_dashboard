@@ -105,10 +105,10 @@ export default function SourcesDirectory() {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[11px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md flex items-center gap-1.5">
               <FolderArchive className="w-3.5 h-3.5 text-blue-400" />
-              Raw Source Files Repository
+              Source Files Archive
             </span>
             <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> 1,382 Authentic Files
+              <ShieldCheck className="w-3 h-3" /> 1,382 Verified Files
             </span>
           </div>
 
@@ -116,11 +116,11 @@ export default function SourcesDirectory() {
             DATA SOURCES
           </h1>
           <p className="text-white/60 text-sm max-w-2xl">
-            Direct access to all 1,382 original vendor spreadsheets (2.16 GB) cataloged directly from local disk. Click any row or download button to download the authentic file.
+            Download or inspect original owner and transaction spreadsheets.
           </p>
         </div>
 
-        {/* Action Button: Download Compressed Parquet Catalog */}
+        {/* Action Button: Download Catalog */}
         <div className="flex items-center gap-3">
           <a
             href={PARQUET_URL}
@@ -130,18 +130,18 @@ export default function SourcesDirectory() {
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-600/30 hover:scale-[1.02]"
           >
             <Download className="w-4 h-4" />
-            Download Parquet Catalog (56.5 KB)
+            Download Catalog (56.5 KB)
           </a>
         </div>
       </div>
 
-      {/* ─── 4 Top KPI Cards (100% Real Metadata) ────────────────────────── */}
+      {/* ─── 4 Top KPI Cards ────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         
         {/* Card 1: Total Source Files */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Total Physical Files</span>
+            <span>Total Files</span>
             <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
@@ -154,10 +154,10 @@ export default function SourcesDirectory() {
           </div>
         </div>
 
-        {/* Card 2: Raw Volume */}
+        {/* Card 2: Total File Size */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Uncompressed Data Volume</span>
+            <span>Total File Size</span>
             <HardDrive className="w-4 h-4 text-blue-400" />
           </div>
           <div>
@@ -170,10 +170,10 @@ export default function SourcesDirectory() {
           </div>
         </div>
 
-        {/* Card 3: Local Archive Size */}
+        {/* Card 3: Archive Size */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Compressed Archive Size</span>
+            <span>Archive Size</span>
             <Database className="w-4 h-4 text-purple-400" />
           </div>
           <div>
@@ -186,10 +186,10 @@ export default function SourcesDirectory() {
           </div>
         </div>
 
-        {/* Card 4: Compressed Parquet Size */}
+        {/* Card 4: Catalog File Size */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Parquet Catalog Size</span>
+            <span>Catalog File Size</span>
             <FolderArchive className="w-4 h-4 text-amber-400" />
           </div>
           <div>
@@ -197,7 +197,7 @@ export default function SourcesDirectory() {
               56.5 KB
             </div>
             <div className="text-[11px] text-white/40 mt-1">
-              Snappy-compressed metadata in Supabase
+              Indexed database catalog
             </div>
           </div>
         </div>

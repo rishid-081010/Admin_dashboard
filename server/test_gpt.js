@@ -1,4 +1,4 @@
-﻿import OpenAI from 'openai';
+import OpenAI from 'openai';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -7,12 +7,12 @@ const sampleRow = ['28-Mar-2024', '5000000', 'Jumeirah Islands', 'TOWNHOUSES AT 
 
 async function testAI() {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const prompt = \You are an expert data engineer mapping messy real estate headers to standard columns.
+  const prompt = `You are an expert data engineer mapping messy real estate headers to standard columns.
 Standard required core roles: 'name', 'phone', 'project', 'location', 'unit', 'property_type'.
 Standard nice headers: 'Owner Name', 'Contact Number', 'Project', 'Location', 'Unit Number', 'Property Type'.
 
-Raw headers array: \
-Sample data row: \
+Raw headers array: ${JSON.stringify(headers)}
+Sample data row: ${JSON.stringify(sampleRow)}
 
 Your task:
 1. Look at the raw headers and the sample data row to determine what each column ACTUALLY contains. 
@@ -22,7 +22,7 @@ Your task:
 5. If a column DOES NOT match any of these core roles (e.g. Email, Passport, Agent Name), DO NOT drop it! Keep it, but generate a clean, human-readable normalizedHeader for it (e.g. 'client_email_addr' -> 'Client Email') and set standardRole to null.
 
 Output ONLY a JSON object with a single key "columns" containing an array of objects representing EVERY raw header in the exact same order.
-\;
+`;
 
   try {
     const response = await openai.chat.completions.create({

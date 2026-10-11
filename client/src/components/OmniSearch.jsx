@@ -28,10 +28,10 @@ export default function OmniSearch() {
     <div className="w-full flex flex-col h-full animate-fade-in text-white/80">
       <div className="flex flex-col items-center justify-center mt-6 mb-8">
         <h1 className="text-4xl font-bold tracking-tight text-white mb-4" style={{ fontFamily: "Georgia, serif" }}>
-          GLOBAL OMNI-SEARCH
+          SEARCH DATABASE
         </h1>
         <p className="text-[#94a3b8] text-[16px] max-w-xl text-center">
-          Query the entire 3.04 million row database instantly. Press <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">Ctrl</kbd> + <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">F6</kbd> anywhere to trigger.
+          Search all 3.04 million property owners, phone numbers, and units across Dubai. Press <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">Ctrl</kbd> + <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs font-mono mx-1 border border-white/20">F6</kbd> anywhere to trigger.
         </p>
       </div>
 
@@ -55,7 +55,7 @@ export default function OmniSearch() {
           <Filter className="w-5 h-5 text-white/60" />
           <span className="text-sm font-semibold text-white/60 uppercase tracking-wider">Search Filters:</span>
           <div className="flex gap-2">
-            {['Everything', 'Owners Only', 'Buildings Only', 'Phone Numbers'].map(f => (
+            {['All', 'Owners', 'Buildings', 'Phone Numbers'].map(f => (
               <button 
                 key={f}
                 onClick={() => setFilterType(f)}
@@ -68,7 +68,7 @@ export default function OmniSearch() {
         </div>
         
         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pb-8">
-            {loading && <div className="text-center text-white/40 py-10">Searching 3.04M rows...</div>}
+            {loading && <div className="text-center text-white/40 py-10">Searching database records...</div>}
             {!loading && results.length > 0 && results.map((r, i) => (
                 <div key={i} className="bg-black/20 border border-white/10 rounded-[16px] p-5 flex items-center justify-between hover:border-[#3b82f6]/50 transition-all cursor-pointer">
                     <div className="flex items-center gap-4">

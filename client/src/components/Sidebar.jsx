@@ -33,7 +33,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Overview</span>
         </button>
 
-        {/* 2. Reported unit owners */}
+        {/* 2. Owners Data (formerly Reported unit owners) */}
         <button 
           onClick={() => setActiveTab('owners')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -42,10 +42,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Reported unit owners</span>
+          <span>Owners Data</span>
         </button>
 
-        {/* 3. Prospects & contacts */}
+        {/* 3. Leads & Contacts */}
         <button 
           onClick={() => setActiveTab('leads')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -54,7 +54,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Prospects &amp; contacts</span>
+          <span>Leads &amp; Contacts</span>
         </button>
 
         {/* 4. Properties */}
@@ -69,7 +69,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Properties</span>
         </button>
 
-        {/* 5. Buildings & areas */}
+        {/* 5. Buildings & Areas */}
         <button 
           onClick={() => setActiveTab('buildings')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -78,10 +78,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Buildings &amp; areas</span>
+          <span>Buildings &amp; Areas</span>
         </button>
 
-        {/* 6. Sources */}
+        {/* 6. Data Sources */}
         <button 
           onClick={() => setActiveTab('sources')} 
           className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -90,11 +90,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Sources</span>
+          <span>Data Sources</span>
           <span className="bg-[#1e3a5f] text-[#60a5fa] border border-[#3b82f6]/30 text-[9.5px] font-bold px-2 py-0.5 rounded-full">1.38k</span>
         </button>
 
-        {/* 7. Review queue */}
+        {/* 7. Search & Review */}
         <button 
           onClick={() => setActiveTab('search')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -103,7 +103,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Review queue</span>
+          <span>Search &amp; Review</span>
         </button>
 
         {/* 8. Transactions */}
@@ -117,7 +117,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <ExternalLink className="w-3.5 h-3.5 text-white/50" />
         </a>
 
-        {/* 9. Official open data */}
+        {/* 9. Market Registry */}
         <button 
           onClick={() => setActiveTab('open-data')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -126,10 +126,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Official open data</span>
+          <span>Market Registry</span>
         </button>
 
-        {/* 10. Data health */}
+        {/* 10. Data Quality */}
         <button 
           onClick={() => setActiveTab('data-health')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -138,10 +138,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Data health</span>
+          <span>Data Quality</span>
         </button>
 
-        {/* 11. My Day */}
+        {/* 11. My Tasks */}
         <button 
           onClick={() => setActiveTab('activity')} 
           className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -150,11 +150,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>My Day</span>
+          <span>My Tasks</span>
           <span className="bg-[#ef4444] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
         </button>
 
-        {/* 12. Smart agent (Prominent pill button at bottom matching reference) */}
+        {/* 12. Voice Outreach (Calling Agent) */}
         <button 
           onClick={() => setActiveTab('voice')} 
           className={`w-full flex items-center px-4 py-2 rounded-full border-[1.5px] transition-all text-left font-bold text-[13.5px] tracking-wide shadow-md ${
@@ -163,7 +163,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-white border-white/80 hover:bg-white/10 hover:border-white'
           }`}
         >
-          <span>Smart agent</span>
+          <span>Voice Outreach</span>
         </button>
       </nav>
     </aside>

@@ -2110,25 +2110,25 @@ app.post('/api/push-to-bitrix', async (req, res) => {
     const BITRIX24_WEBHOOK = 'https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/';
     const bxPayload = {
       fields: {
-        TITLE: lead.full_name ? \Lead: \\ : 'New Dashboard Lead',
+        TITLE: lead.full_name ? `Lead: ${lead.full_name}` : 'New Dashboard Lead',
         NAME: lead.full_name || 'Unknown',
         PHONE: [{ VALUE: lead.phone_normalized || lead.phone_raw, VALUE_TYPE: 'WORK' }],
-        COMMENTS: \Property: \ - Unit \\
+        COMMENTS: `Property: ${lead.building_name || 'N/A'} - Unit ${lead.unit_number || 'N/A'}`
       }
     };
     
-    const bxResponse = await axios.post(\\crm.lead.add.json\, bxPayload);
+    const bxResponse = await axios.post(`${BITRIX24_WEBHOOK}crm.lead.add.json`, bxPayload);
     const newLeadId = bxResponse.data.result;
     
     // 2. Save back to Supabase
     if (newLeadId) {
       await supabase
         .from('owners_data')
-        .update({ bitrix_id: \LEAD_\\ })
+        .update({ bitrix_id: `LEAD_${newLeadId}` })
         .eq('id', lead.id);
     }
     
-    res.json({ success: true, bitrix_id: \LEAD_\\ });
+    res.json({ success: true, bitrix_id: `LEAD_${newLeadId}` });
   } catch (error) {
     console.error('Failed to push to Bitrix24:', error);
     res.status(500).json({ error: error.message });

@@ -36,10 +36,10 @@ export default function OverviewDashboard() {
       <div className="flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1 drop-shadow-md" style={{ fontFamily: "Georgia, serif" }}>
-            EXECUTIVE OVERVIEW
+            OVERVIEW
           </h1>
           <p className="text-white/60 text-xs sm:text-sm font-medium">
-            High-level metrics and KPIs are currently syncing with Bitrix24.
+            Key performance metrics synced with Bitrix24 CRM.
           </p>
         </div>
       </div>
@@ -58,7 +58,7 @@ export default function OverviewDashboard() {
             {/* KPI 1 */}
             <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden group hover:border-white/25 hover:bg-[#061d3d]/90 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10.5px] text-white/60 uppercase tracking-widest font-bold">Total Unified Rows</span>
+                <span className="text-[10.5px] text-white/60 uppercase tracking-widest font-bold">Total Properties</span>
                 <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-400/25 flex items-center justify-center">
                   <Database className="w-4 h-4 text-blue-300" />
                 </div>
@@ -69,7 +69,7 @@ export default function OverviewDashboard() {
               <div>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[11px] border border-emerald-500/30 font-semibold inline-flex items-center gap-1.5 shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  ✓ 100% Synced
+                  ✓ Database Synced
                 </span>
               </div>
             </div>
@@ -77,7 +77,7 @@ export default function OverviewDashboard() {
             {/* KPI 2 */}
             <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden group hover:border-white/25 hover:bg-[#061d3d]/90 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10.5px] text-white/60 uppercase tracking-widest font-bold">Active CRM Leads</span>
+                <span className="text-[10.5px] text-white/60 uppercase tracking-widest font-bold">Active Leads</span>
                 <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-400/25 flex items-center justify-center">
                   <Users className="w-4 h-4 text-purple-300" />
                 </div>
@@ -88,7 +88,7 @@ export default function OverviewDashboard() {
               <div>
                 <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-[11px] border border-blue-500/30 font-semibold inline-flex items-center gap-1.5 shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                  ✓ via Bitrix24
+                  ✓ Bitrix24
                 </span>
               </div>
             </div>
@@ -96,7 +96,7 @@ export default function OverviewDashboard() {
             {/* KPI 3 */}
             <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden group hover:border-white/25 hover:bg-[#061d3d]/90 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10.5px] text-white/60 uppercase tracking-widest font-bold">Vapi Calls Executed</span>
+                <span className="text-[10.5px] text-white/60 uppercase tracking-widest font-bold">Calls Made</span>
                 <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-400/25 flex items-center justify-center">
                   <Phone className="w-4 h-4 text-amber-300" />
                 </div>
@@ -107,7 +107,7 @@ export default function OverviewDashboard() {
               <div>
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[11px] border border-amber-500/30 font-semibold inline-flex items-center gap-1.5 shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                  ✓ 4 Active Personas
+                  ✓ 4 Agent Lines
                 </span>
               </div>
             </div>
@@ -134,10 +134,10 @@ export default function OverviewDashboard() {
 
           {/* Bottom Two Large Glassmorphic Widgets - Stretch to fill viewport height */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 flex-1 min-h-0">
-             {/* Left Large Widget: Pipeline Conversion Trajectory */}
+             {/* Left Large Widget: Sales Pipeline */}
              <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 flex flex-col shadow-2xl min-h-0 overflow-hidden group hover:border-white/20 transition-all">
                 <h3 className="text-base sm:text-lg font-bold text-white tracking-tight mb-3 flex items-center gap-2 shrink-0" style={{ fontFamily: "Georgia, serif" }}>
-                  <Target className="w-5 h-5 text-blue-400" /> Pipeline Conversion Trajectory
+                  <Target className="w-5 h-5 text-blue-400" /> Sales Pipeline
                 </h3>
                 <div className="flex-1 border border-white/10 rounded-xl bg-black/25 flex items-center justify-center relative overflow-hidden min-h-0">
                    <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
@@ -145,16 +145,16 @@ export default function OverviewDashboard() {
                       <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-400/20 flex items-center justify-center mb-3">
                         <TrendingUp className="w-7 h-7 text-blue-400 opacity-80" />
                       </div>
-                      <p className="text-white/75 font-semibold text-sm max-w-sm">Real-time conversion curves will render upon sufficient lead velocity.</p>
-                      <span className="text-xs text-white/40 mt-1.5 font-medium">Monitoring 3,042,722 verified Dubai property owners & leads</span>
+                      <p className="text-white/75 font-semibold text-sm max-w-sm">Deals and pipeline stages will update as leads progress in Bitrix24 CRM.</p>
+                      <span className="text-xs text-white/40 mt-1.5 font-medium">Tracking 3,042,722 verified properties across Dubai</span>
                    </div>
                 </div>
              </div>
 
-             {/* Right Large Widget: Recent System Activity */}
+             {/* Right Large Widget: Recent Activity */}
              <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 flex flex-col shadow-2xl min-h-0 overflow-hidden group hover:border-white/20 transition-all">
                 <h3 className="text-base sm:text-lg font-bold text-white tracking-tight mb-3 flex items-center gap-2 shrink-0" style={{ fontFamily: "Georgia, serif" }}>
-                  <Activity className="w-5 h-5 text-purple-400" /> Recent System Activity
+                  <Activity className="w-5 h-5 text-purple-400" /> Recent Activity
                 </h3>
                 <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1 min-h-0">
                   {kpis.recentActivity.map((act, i) => (

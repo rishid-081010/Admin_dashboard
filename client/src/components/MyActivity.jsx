@@ -57,10 +57,10 @@ export default function MyActivity({ globalAgent }) {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
-            MY ACTIVITY (BITRIX24)
+            MY TASKS &amp; DEALS
           </h1>
           <p className="text-white/60 text-[15px]">
-            Live two-way sync with Bitrix24 CRM pipeline.
+            Active leads and deals synced with Bitrix24 CRM.
           </p>
         </div>
         <div className="flex items-center gap-4">

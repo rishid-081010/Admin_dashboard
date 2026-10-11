@@ -64,7 +64,7 @@ export default function OwnerDirectory({ globalAgentName }) {
             verified_purchase_date: row.verified_purchase_date || null,
             verified_size_sqft: row.verified_size_sqft || null,
             vendor_source_file: row.vendor_source_file || null,
-            source: 'System Sync',
+            source: 'Verified',
             bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
             portfolioValue: row.verified_purchase_price ? `AED ${(parseFloat(row.verified_purchase_price) / 1000000).toFixed(1)}M` : 'Standard',
             lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
@@ -125,15 +125,15 @@ export default function OwnerDirectory({ globalAgentName }) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
-            OWNERS DIRECTORY
+            OWNERS DATA
           </h1>
           <p className="text-white/60 text-[15px]">
-            Master view of 3,042,722 verified property owners & transactions across Dubai.
+            Directory of 3,042,722 verified property owners across Dubai.
           </p>
         </div>
       </div>
 
-      {/* Smart Filter Bar */}
+      {/* Filter Bar */}
       <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-5 mb-6">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1">
@@ -164,7 +164,7 @@ export default function OwnerDirectory({ globalAgentName }) {
             </div>
             
             <div className="flex flex-col">
-              <span className="text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1">CRM Sync</span>
+              <span className="text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1">CRM Status</span>
               <div className="flex gap-2">
                 {crmStatuses.map(stat => (
                   <button 
@@ -187,17 +187,17 @@ export default function OwnerDirectory({ globalAgentName }) {
           <table className="w-full text-left border-collapse text-[14px]">
             <thead className="bg-black/20 border-b border-white/10 text-xs uppercase tracking-wider text-white/60 sticky top-0 z-10 backdrop-blur-md">
               <tr>
-                <th className="px-6 py-4 font-semibold">Owner Profile</th>
-                <th className="px-6 py-4 font-semibold">Contact Info</th>
-                <th className="px-6 py-4 font-semibold">Primary Asset</th>
-                <th className="px-6 py-4 font-semibold">Data Source</th>
-                <th className="px-6 py-4 font-semibold">Bitrix24 Status</th>
+                <th className="px-6 py-4 font-semibold">Owner Name</th>
+                <th className="px-6 py-4 font-semibold">Phone & Email</th>
+                <th className="px-6 py-4 font-semibold">Property & Unit</th>
+                <th className="px-6 py-4 font-semibold">Source File</th>
+                <th className="px-6 py-4 font-semibold">CRM Status</th>
                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
               {loading ? (
-                <tr><td colSpan="6" className="text-center py-12 text-white/40">Loading 3.0M Verified Owner Leads...</td></tr>
+                <tr><td colSpan="6" className="text-center py-12 text-white/40">Loading owner records...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan="6" className="text-center py-12 text-white/40">No owners found matching filters.</td></tr>
               ) : filtered.map((owner) => (
@@ -275,7 +275,7 @@ export default function OwnerDirectory({ globalAgentName }) {
         
         {/* Pagination Footer */}
           <div className="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between text-sm text-white/60">
-            <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + filtered.length} of 3.04M DB entries</span>
+            <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + filtered.length} of 3.04M owner records</span>
             <div className="flex gap-2">
               <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30">Previous</button>
               

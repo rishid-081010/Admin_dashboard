@@ -79,14 +79,14 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           </button>
           <span className="text-white/20">/</span>
           <span className="text-xs text-white/50 uppercase tracking-wider font-mono">
-            Workspace / Owners &amp; contacts
+            Directory / Owner Profile
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Live Intelligence
+            Live Sync
           </span>
         </div>
       </div>
@@ -120,18 +120,18 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             <span>&bull;</span>
             <span>{owner.area || 'Dubai'}</span>
             <span>&bull;</span>
-            <span className="text-white/40">Source-reported relationships</span>
+            <span className="text-white/40">Verified Ownership Records</span>
           </p>
         </div>
       </div>
 
-{/* ─── 4 Metric Cards (Image 2 Match) ─────────────────────────────── */}
+{/* ─── 4 Metric Cards ─────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         
-        {/* Card 1: Linked Properties */}
+        {/* Card 1: Properties Owned */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Linked properties</span>
+            <span>Properties Owned</span>
             <Building2 className="w-4 h-4 text-blue-400" />
           </div>
           <div>
@@ -139,15 +139,15 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
               {propertiesCount}
             </div>
             <div className="text-[11px] text-white/40 mt-1">
-              Includes transaction participation
+              Registered properties &amp; units
             </div>
           </div>
         </div>
 
-        {/* Card 2: Contact Status */}
+        {/* Card 2: Phone Status */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Contact status</span>
+            <span>Phone Status</span>
             <Users className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
@@ -155,15 +155,15 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
               {isAvailablePhone ? 'Available' : 'Unverified'}
             </div>
             <div className="text-[11px] text-white/40 mt-1">
-              {isAvailablePhone ? 'Mobile verified in source' : 'Not independently verified'}
+              {isAvailablePhone ? 'Mobile number verified' : 'Unverified phone'}
             </div>
           </div>
         </div>
 
-        {/* Card 3: Assigned Agent */}
+        {/* Card 3: Assigned Broker */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Assigned agent</span>
+            <span>Assigned Broker</span>
             <UserCheck className="w-4 h-4 text-purple-400" />
           </div>
           <div>
@@ -171,15 +171,15 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
               {assignedAgent}
             </div>
             <div className="text-[11px] text-white/40 mt-1">
-              One relationship owner
+              Primary broker assigned
             </div>
           </div>
         </div>
 
-        {/* Card 4: Source Observations */}
+        {/* Card 4: Source Records */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Source observations</span>
+            <span>Source Records</span>
             <FileText className="w-4 h-4 text-amber-400" />
           </div>
           <div>
@@ -187,7 +187,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
               {propertiesCount}
             </div>
             <div className="text-[11px] text-white/40 mt-1">
-              File, sheet and row linked
+              Linked registry files
             </div>
           </div>
         </div>
@@ -232,13 +232,13 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             Print profile
           </button>
 
-          {/* Build Follow-up Draft */}
+          {/* Draft Message */}
           <button 
             onClick={() => setShowFollowupModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.04] hover:bg-white/[0.08] text-white/70 hover:text-white border border-white/10 transition-all"
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            Build follow-up draft
+            Draft Message
           </button>
         </div>
 
@@ -259,13 +259,13 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
         </div>
       </div>
 
-      {/* ─── Navigation Tabs (Image 2 Match) ────────────────────────────── */}
+      {/* ─── Navigation Tabs ────────────────────────────── */}
       <div className="flex border-b border-white/[0.08] mb-6 gap-8">
         {[
           { id: 'portfolio', label: 'Portfolio' },
-          { id: 'contacts', label: 'Contacts & profile' },
-          { id: 'activity', label: 'Activity & follow-ups' },
-          { id: 'evidence', label: 'Source evidence' },
+          { id: 'contacts', label: 'Contact Info' },
+          { id: 'activity', label: 'Activity & Tasks' },
+          { id: 'evidence', label: 'Source Documents' },
         ].map(tab => (
           <button
             key={tab.id}
@@ -294,8 +294,8 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           {activeTab === 'portfolio' && (
             <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6 shadow-xl">
               <div className="mb-4">
-                <h2 className="text-lg font-bold text-white tracking-tight">Property relationships</h2>
-                <p className="text-xs text-white/50">Reported owners and transaction parties are shown separately.</p>
+                <h2 className="text-lg font-bold text-white tracking-tight">Registered Properties</h2>
+                <p className="text-xs text-white/50">Registered owner details and property records.</p>
               </div>
 
               <div className="overflow-x-auto">
@@ -303,10 +303,10 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
                   <thead className="border-b border-white/[0.08] text-white/40 uppercase font-mono tracking-wider">
                     <tr>
                       <th className="pb-3 font-semibold">PROPERTY</th>
-                      <th className="pb-3 font-semibold">OWNER / PARTY</th>
-                      <th className="pb-3 font-semibold">DETAILS</th>
-                      <th className="pb-3 font-semibold">RELATIONSHIP</th>
-                      <th className="pb-3 font-semibold text-right">DATA QUALITY</th>
+                      <th className="pb-3 font-semibold">OWNER NAME</th>
+                      <th className="pb-3 font-semibold">PROPERTY DETAILS</th>
+                      <th className="pb-3 font-semibold">OWNERSHIP TYPE</th>
+                      <th className="pb-3 font-semibold text-right">VERIFICATION STATUS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.04]">
@@ -356,14 +356,14 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
                         {/* Relationship */}
                         <td className="py-4 pr-3">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                            Owner (Reported)
+                            Property Owner
                           </span>
                         </td>
 
                         {/* Data Quality */}
                         <td className="py-4 text-right">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border bg-blue-500/10 text-blue-300 border-blue-500/20">
-                            Verified Lead
+                            Verified
                           </span>
                         </td>
                       </tr>
@@ -438,7 +438,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
 
               {/* Personal Identification Details */}
               <div className="md:col-span-2 p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08]">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4">Official Verification Specs</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4">Identity &amp; Passport Details</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                   <div className="bg-black/20 p-3 rounded-xl border border-white/10">
                     <div className="text-white/40 mb-1">Nationality</div>
@@ -461,19 +461,19 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             </div>
           )}
 
-          {/* TAB 3: ACTIVITY & FOLLOW-UPS */}
+          {/* TAB 3: ACTIVITY & TASKS */}
           {activeTab === 'activity' && (
             <div className="space-y-4">
               <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08]">
-                <h3 className="text-sm font-bold text-white mb-2">Automated Engagement Pipeline</h3>
-                <p className="text-xs text-white/50 mb-4">Live status across Voice AI, WhatsApp and Bitrix24 CRM.</p>
+                <h3 className="text-sm font-bold text-white mb-2">Follow-ups &amp; CRM Status</h3>
+                <p className="text-xs text-white/50 mb-4">Status across Bitrix24 CRM and direct outreach channels.</p>
 
                 <div className="space-y-3 text-xs">
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/30 border border-white/10">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">CRM</div>
                       <div>
-                        <div className="font-semibold text-white">Bitrix24 Synchronization</div>
+                        <div className="font-semibold text-white">Bitrix24 CRM Record</div>
                         <div className="text-[11px] text-white/40">{owner.bitrix_id ? `Assigned to Lead ID #${owner.bitrix_id}` : 'Pending sync to broker pipeline'}</div>
                       </div>
                     </div>
@@ -484,10 +484,10 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
 
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/30 border border-white/10">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">AI</div>
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">CALL</div>
                       <div>
-                        <div className="font-semibold text-white">Voice Agent Outbound Call (Vapi)</div>
-                        <div className="text-[11px] text-white/40">Automated portfolio discovery script ready</div>
+                        <div className="font-semibold text-white">Outbound Call</div>
+                        <div className="text-[11px] text-white/40">Call script ready</div>
                       </div>
                     </div>
                     <button 
@@ -502,27 +502,27 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             </div>
           )}
 
-          {/* TAB 4: SOURCE EVIDENCE */}
+          {/* TAB 4: SOURCE DOCUMENTS */}
           {activeTab === 'evidence' && (
             <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-4 text-xs">
               <div>
-                <h3 className="text-sm font-bold text-white mb-1">Data Lineage &amp; Ingestion Audit</h3>
-                <p className="text-xs text-white/50">Cryptographic mapping between vendor import sheets and verified registry rows.</p>
+                <h3 className="text-sm font-bold text-white mb-1">Data Source &amp; Import History</h3>
+                <p className="text-xs text-white/50">Mapping from vendor data files to verified database records.</p>
               </div>
 
               <div className="space-y-3 font-mono">
                 <div className="p-3 bg-black/30 rounded-xl border border-white/10">
-                  <div className="text-white/40 mb-1">Source Vendor File</div>
+                  <div className="text-white/40 mb-1">Source Data File</div>
                   <div className="text-white font-bold">{owner.vendor_source_file || 'MASTER DUBAI NEW TRANSACTIONS.xlsx'}</div>
                 </div>
 
                 <div className="p-3 bg-black/30 rounded-xl border border-white/10">
-                  <div className="text-white/40 mb-1">Unique Global Lead Hash</div>
-                  <div className="text-blue-400">{owner.id}</div>
+                  <div className="text-white/40 mb-1">Lead ID</div>
+                  <div className="text-blue-400">{owner.lead_id || owner.id}</div>
                 </div>
 
                 <div className="p-3 bg-black/30 rounded-xl border border-white/10">
-                  <div className="text-white/40 mb-1">DLD Deterministic Fingerprint</div>
+                  <div className="text-white/40 mb-1">Land Registry Match</div>
                   <div className="text-emerald-400">
                     {owner.match_confidence || (owner.dld_matched ? 'FINGERPRINT_VERIFIED' : 'UNMATCHED_LEAD')}
                   </div>
@@ -532,15 +532,15 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           )}
         </div>
 
-        {/* Right Column (1/3 Width) - At A Glance Briefing (Image 2 Match) */}
+        {/* Right Column (1/3 Width) - Overview */}
         <div className="space-y-6">
           <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 shadow-xl relative backdrop-blur-xl">
             
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-white tracking-tight">At a glance</h2>
+              <h2 className="text-base font-bold text-white tracking-tight">Overview</h2>
               <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2.5 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
                 <Sparkles className="w-3 h-3" />
-                Rule-Based Briefing
+                Profile Summary
               </span>
             </div>
 
@@ -603,7 +603,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
                 className="w-full py-3 rounded-xl font-bold text-xs bg-white/[0.05] hover:bg-white/[0.1] text-white border border-white/10 flex items-center justify-center gap-2 transition-all"
               >
                 <Sparkles className="w-4 h-4 text-purple-400" />
-                Generate Follow-Up Script
+                Create Follow-Up Message
               </button>
             </div>
           </div>
@@ -617,14 +617,14 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-400" />
-                <h3 className="font-bold text-lg text-white">AI Briefing on {owner.name}</h3>
+                <h3 className="font-bold text-lg text-white">Profile Summary: {owner.name}</h3>
               </div>
               <button onClick={() => setShowAskModal(false)} className="text-white/40 hover:text-white p-1 text-lg">✕</button>
             </div>
 
             <div className="space-y-3 text-xs text-white/80 mb-6 bg-white/[0.03] p-4 rounded-xl border border-white/10 leading-relaxed">
               <p>
-                <strong>Investment Persona:</strong> Likely high-net-worth individual or institutional buyer holding properties in <strong>{owner.area || 'Dubai'}</strong>.
+                <strong>Investor Profile:</strong> Likely high-net-worth individual or institutional buyer holding properties in <strong>{owner.area || 'Dubai'}</strong>.
               </p>
               <p>
                 <strong>Outreach Strategy:</strong> Recommended to approach via WhatsApp first referencing their unit in <strong>{owner.building || 'their development'}</strong> with recent comparative sales analysis.
@@ -659,14 +659,14 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <Send className="w-5 h-5 text-blue-400" />
-                <h3 className="font-bold text-lg text-white">Automated Follow-Up Message</h3>
+                <h3 className="font-bold text-lg text-white">Follow-Up Message Draft</h3>
               </div>
               <button onClick={() => setShowFollowupModal(false)} className="text-white/40 hover:text-white p-1 text-lg">✕</button>
             </div>
 
             <div className="space-y-4 text-xs mb-6">
               <div>
-                <label className="text-white/50 block mb-1.5 font-medium">Pre-Drafted WhatsApp Message (Personalized)</label>
+                <label className="text-white/50 block mb-1.5 font-medium">WhatsApp Message Draft</label>
                 <textarea
                   readOnly
                   rows={5}

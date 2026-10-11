@@ -51,8 +51,21 @@ export default function LeadIngestionStudio() {
         try {
           const data = await file.arrayBuffer();
           const workbook = window.XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
+          let bestSheetName = workbook.SheetNames[0];
+          let maxRows = 0;
+          for (const sName of workbook.SheetNames) {
+            const sheet = workbook.Sheets[sName];
+            const ref = sheet ? sheet['!ref'] : null;
+            if (ref) {
+              const range = window.XLSX.utils.decode_range(ref);
+              const rowCount = range.e.r - range.s.r + 1;
+              if (rowCount > maxRows) {
+                maxRows = rowCount;
+                bestSheetName = sName;
+              }
+            }
+          }
+          const worksheet = workbook.Sheets[bestSheetName];
           const csvContent = window.XLSX.utils.sheet_to_csv(worksheet);
           const csvBlob = new Blob([csvContent], { type: 'text/csv' });
           processedFile = new File([csvBlob], file.name.replace(/\.xlsx?$/, '.csv'), { type: 'text/csv' });
@@ -257,7 +270,7 @@ export default function LeadIngestionStudio() {
           <div className="text-3xl font-bold font-mono text-white">
             {stats.total.toLocaleString()}
           </div>
-          <p className="text-[10px] text-white/60 mt-1">Raw Imported Rows</p>
+          <p className="text-[10px] text-white/60 mt-1">Imported Rows</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-600" />
         </div>
 
@@ -269,7 +282,7 @@ export default function LeadIngestionStudio() {
           <div className="text-3xl font-bold font-mono text-amber-300">
             {stats.duplicates_file.toLocaleString()}
           </div>
-          <p className="text-[10px] text-white/60 mt-1">Repeated In Spreadsheet</p>
+          <p className="text-[10px] text-white/60 mt-1">Duplicates In File</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-500" />
         </div>
 
@@ -281,7 +294,7 @@ export default function LeadIngestionStudio() {
           <div className="text-3xl font-bold font-mono text-cyan-300">
             {stats.duplicates_db.toLocaleString()}
           </div>
-          <p className="text-[10px] text-white/60 mt-1">Matched Supabase DB</p>
+          <p className="text-[10px] text-white/60 mt-1">Already In Database</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-cyan-500" />
         </div>
 
@@ -298,33 +311,33 @@ export default function LeadIngestionStudio() {
         </div>
       </div>
 
-      {/* Processing Dynamics Pipeline Bar */}
+      {/* Processing Steps Bar */}
       <div className="glass-card p-5 rounded-2xl border border-white/[0.08]">
         <h3 className="text-xs font-bold uppercase tracking-wider text-white/80 mb-3 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-blue-400" /> Data Processing Dynamics & Pipeline
+          <ShieldCheck className="w-4 h-4 text-blue-400" /> Import &amp; Verification Steps
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] uppercase font-bold text-white/60 block">Raw File Input</span>
+            <span className="text-[10px] uppercase font-bold text-white/60 block">Input File</span>
             <span className="text-xs font-bold text-slate-200 mt-0.5 block">
               {previewData ? 'File Loaded' : 'Waiting For Upload'}
             </span>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] uppercase font-bold text-white/60 block">Phone Normalizer</span>
+            <span className="text-[10px] uppercase font-bold text-white/60 block">Phone Formatter</span>
             <span className="text-xs font-bold text-emerald-400 mt-0.5 block">E.164 (UAE + Intl)</span>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <span className="text-[10px] uppercase font-bold text-white/60 block">Deduplication</span>
-            <span className="text-xs font-bold text-cyan-400 mt-0.5 block">2-Tier Index Match</span>
+            <span className="text-xs font-bold text-cyan-400 mt-0.5 block">File &amp; Database Check</span>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <span className="text-[10px] uppercase font-bold text-white/60 block">Target CRM</span>
             <span className="text-xs font-bold text-yellow-400 mt-0.5 block">Bitrix24 (Entity 1100)</span>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] uppercase font-bold text-white/60 block">Voice Agent Sync</span>
-            <span className="text-xs font-bold text-purple-400 mt-0.5 block">Vapi Outbound Ready</span>
+            <span className="text-[10px] uppercase font-bold text-white/60 block">Calling List Sync</span>
+            <span className="text-xs font-bold text-purple-400 mt-0.5 block">Outbound Ready</span>
           </div>
         </div>
       </div>
