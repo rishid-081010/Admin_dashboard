@@ -1202,7 +1202,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2.5 min-h-0">
-            {loadingAreaDetails ? (
+            {loadingAreaDetails && filteredAreaBuildings.length === 0 ? (
               <div className="py-16 text-center text-white/40 flex flex-col items-center">
                 <RefreshCw className="w-6 h-6 animate-spin text-amber-400 mb-2" />
                 <p className="text-xs">Loading towers &amp; owners in {selectedArea.name}...</p>
