@@ -42,6 +42,12 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             <span>Omni-Search</span>
           </button>
 
+          {/* 5. Sources */}
+          <button onClick={() => setActiveTab('sources')} className={`w-full flex items-center justify-between px-4 py-[8px] rounded-[10px] text-[13px] font-semibold tracking-wide transition-all text-left ${activeTab === 'sources' ? 'bg-white/[0.14] text-white border border-white/[0.04] shadow-sm' : 'text-[#e2e8f0] hover:text-white hover:bg-white/[0.05]'}`}>
+            <span>Sources</span>
+            <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded-full">1.38k</span>
+          </button>
+
           {/* 5. My Activity */}
           <button onClick={() => setActiveTab('activity')} className={`w-full flex items-center justify-between px-4 py-[8px] rounded-[10px] text-[13px] font-semibold tracking-wide transition-all text-left ${activeTab === 'activity' ? 'bg-white/[0.14] text-white border border-white/[0.04] shadow-sm' : 'text-[#e2e8f0] hover:text-white hover:bg-white/[0.05]'}`}>
             <span>My Activity (Bitrix24)</span>

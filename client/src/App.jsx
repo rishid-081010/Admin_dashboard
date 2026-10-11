@@ -10,6 +10,7 @@ import OwnerDirectory from './components/OwnerDirectory';
 import OverviewDashboard from './components/OverviewDashboard';
 import Buildings from './components/Buildings';
 import OmniSearch from './components/OmniSearch';
+import SourcesDirectory from './components/SourcesDirectory';
 import MyActivity from './components/MyActivity';
 import TeamManagement from './components/TeamManagement';
 import VoiceAgent from './components/VoiceAgent';
@@ -90,6 +91,7 @@ export default function App() {
         )}
         {activeTab === 'buildings' && <Buildings />}
         {activeTab === 'search' && <OmniSearch />}
+        {activeTab === 'sources' && <SourcesDirectory />}
         {activeTab === 'activity' && <MyActivity globalAgent={globalAgent} />}
         {activeTab === 'voice' && <VoiceAgent />}
         {activeTab === 'team' && <TeamManagement />}
