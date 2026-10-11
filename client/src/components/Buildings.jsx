@@ -166,25 +166,7 @@ export default function Buildings() {
         }
       });
 
-      // Ensure Burlington is present with authentic metrics if not matched
-      if (!bMap['burlington']) {
-        bMap['burlington'] = {
-          rawName: 'Burlington',
-          name: 'Burlington',
-          area: 'BUSINESS BAY',
-          propertyType: 'Office',
-          unitsSet: new Set(['101', '204', '310', '405', '512']),
-          ownersCount: 5,
-          contactsCount: 3,
-          sampleOwners: [
-            { id: 'OWN-BURL-01', lead_id: 'LEAD-88412', name: 'Mohammad Farshchian', unit: '2414', phone: '+971 50 492 1882', area: 'BUSINESS BAY', building: 'Burlington', type: 'Office' },
-            { id: 'OWN-BURL-02', lead_id: 'LEAD-88413', name: 'Al Hashemi Investments', unit: '1802', phone: '+971 52 910 4421', area: 'BUSINESS BAY', building: 'Burlington', type: 'Office' },
-            { id: 'OWN-BURL-03', lead_id: 'LEAD-88414', name: 'Tariq Mansoor Al Qasimi', unit: '1205', phone: '+971 55 601 3918', area: 'BUSINESS BAY', building: 'Burlington', type: 'Office' },
-            { id: 'OWN-BURL-04', lead_id: 'LEAD-88415', name: 'Zaidan Al Barazi', unit: '0904', phone: 'N/A', area: 'BUSINESS BAY', building: 'Burlington', type: 'Office' },
-            { id: 'OWN-BURL-05', lead_id: 'LEAD-88416', name: 'Apex Gulf Holdings', unit: '0512', phone: 'N/A', area: 'BUSINESS BAY', building: 'Burlington', type: 'Office' }
-          ]
-        };
-      }
+
 
       const list = Object.values(bMap).map(b => ({
         ...b,
@@ -239,7 +221,7 @@ export default function Buildings() {
     }
   };
 
-  // Open building explore drawer and load all specific owners
+  // Open building explore drawer and load all specific owners directly from Supabase
   const handleExploreBuilding = async (building) => {
     setSelectedBuilding(building);
     setDrawerSearch('');
@@ -249,27 +231,38 @@ export default function Buildings() {
       const headers = { apikey, Authorization: `Bearer ${apikey}` };
       const q = encodeURIComponent(building.rawName);
       const res = await axios.get(
-        `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=*&limit=100`,
+        `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=owner_id,lead_id,full_name,unit_number,phone_normalized,reported_property_type,master_area,property_category,bitrix_id&limit=300`,
         { headers }
       );
       if (res.data && res.data.length > 0) {
-        setBuildingOwners(res.data.map((r, i) => ({
-          id: r.owner_id || r.lead_id || `OWN-${r.id || i}`,
-          lead_id: r.lead_id || `LEAD-${String(r.id || 1000 + i).padStart(5, '0')}`,
+        const mapped = res.data.map((r, i) => ({
+          id: r.owner_id || r.lead_id || `OWN-${i}`,
+          lead_id: r.lead_id || `LEAD-${r.owner_id || i}`,
           name: r.full_name || 'Property Owner',
           unit: r.unit_number || 'N/A',
           phone: r.phone_normalized || 'N/A',
-          area: building.area,
+          area: r.master_area || building.area,
           building: building.name,
-          type: building.propertyType,
+          type: r.property_category || building.propertyType,
           crmStatus: r.phone_normalized ? 'Synced' : 'Draft'
-        })));
+        }));
+        setBuildingOwners(mapped);
+
+        // Dynamically recalculate metrics from the actual live fetched records
+        const unitsSet = new Set(mapped.map(m => m.unit).filter(u => u && u !== 'N/A'));
+        const phonesCount = mapped.filter(m => m.phone && m.phone !== 'N/A').length;
+        setSelectedBuilding(prev => ({
+          ...prev,
+          unitsCount: unitsSet.size > 0 ? unitsSet.size : mapped.length,
+          ownersCount: mapped.length,
+          contactsCount: phonesCount
+        }));
       } else {
-        setBuildingOwners(building.sampleOwners || []);
+        setBuildingOwners([]);
       }
     } catch (e) {
       console.error('Error fetching building owners:', e);
-      setBuildingOwners(building.sampleOwners || []);
+      setBuildingOwners([]);
     } finally {
       setLoadingBuildingOwners(false);
     }

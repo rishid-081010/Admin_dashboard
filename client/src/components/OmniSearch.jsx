@@ -417,7 +417,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       const res = await axios.get(endpoint, { headers });
       
       if (res.data && res.data.length > 0) {
-        setBuildingOwners(res.data.map(r => ({
+        const mapped = res.data.map(r => ({
           id: r.owner_id || r.lead_id,
           lead_id: r.lead_id || `LEAD-${r.owner_id}`,
           name: r.full_name || 'Property Owner',
@@ -430,13 +430,24 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           property_category: r.property_category || building.propertyType,
           bitrix_id: r.bitrix_id,
           bitrix_status: r.bitrix_status
-        })));
+        }));
+        setBuildingOwners(mapped);
+
+        // Dynamically synchronize metrics to match exact live fetched records
+        const unitsSet = new Set(mapped.map(m => m.unit).filter(u => u && u !== 'N/A'));
+        const phonesCount = mapped.filter(m => m.phone && m.phone !== 'N/A').length;
+        setSelectedBuilding(prev => ({
+          ...prev,
+          unitsCount: unitsSet.size > 0 ? unitsSet.size : mapped.length,
+          ownersCount: mapped.length,
+          contactsCount: phonesCount
+        }));
       } else {
-        setBuildingOwners(building.sampleOwners || []);
+        setBuildingOwners([]);
       }
     } catch (e) {
       console.error('Error fetching building owners:', e);
-      setBuildingOwners(building.sampleOwners || []);
+      setBuildingOwners([]);
     } finally {
       setLoadingBuildingOwners(false);
     }
