@@ -2001,7 +2001,7 @@ app.post('/api/leads/export-cleaned-csv', (req, res) => {
       return res.status(400).json({ error: 'Invalid leads array.' });
     }
 
-    const cleanCsv = generateCleanCSV(leads);
+    const cleanCsv = generateCleanCSV(leads, req.body.original_headers);
     const outFilename = filename || 'as_properties_cleaned_leads.csv';
 
     res.setHeader('Content-Type', 'text/csv');

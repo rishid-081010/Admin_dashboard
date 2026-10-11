@@ -3,6 +3,8 @@ import axios from 'axios';
 const SUPABASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
+export const DUMMY_STRINGS = ['null', 'n/a', 'na', 'none', '-', '--', '0', 'undefined', 'nil', 'unknown', '.', 'n.a', 'not available'];
+
 export const NEGATIVE_NAME_TERMS = [
   'building', 'project', 'procedure', 'type', 'community', 'tower',
   'location', 'plot', 'amount', 'size', 'beds', 'status', 'usage',
@@ -17,10 +19,20 @@ export const NAME_TIER_1 = [
   'lead name', 'contact name', 'buyer', 'seller', 'owner', 'name'
 ];
 
+export const UNIT_TERMS = [
+  'propertynumber', 'propertyno', 'property',
+  'unitnumber', 'unitno', 'unit',
+  'flatnumber', 'flatno', 'flat',
+  'villanumber', 'villano', 'villa',
+  'apartmentnumber', 'apartmentno', 'aptno', 'apt',
+  'suiteno', 'suite', 'doorno', 'premiseno', 'premisesno'
+];
+
 export function cleanTxt(txt) {
   if (txt === null || txt === undefined) return '';
   let t = String(txt).trim();
-  const DUMMY_STRINGS = ['null', 'n/a', 'na', 'none', '-', '0', 'undefined', 'nil', 'unknown', '.', 'n.a', 'not available'];
+  // Normalize Arabic numerals to standard Latin digits
+  t = t.replace(/[٠-٩]/g, d => '٠١٢٣٥٦٧٨٩'.indexOf(d).toString());
   if (DUMMY_STRINGS.includes(t.toLowerCase())) return '';
   return t;
 }
@@ -29,13 +41,14 @@ export function cleanPhone(raw) {
   if (!raw) return { valid: false, reason: 'Missing phone' };
   let str = String(raw).trim();
 
-  // Handle UAE prefix with pipe or slash delimiters: 971|50-4336247 -> 971504336247
+  // Normalize UAE & vendor prefixes (e.g. 971|50-4336247, 971/50..., +971|50...)
   str = str.replace(/^(?:\+?971|00971)[\s|/\\-]+/g, '971');
+  str = str.replace(/^0(\d{2})[\s|/\\-]+/g, '0$1');
 
   // Split multiple phone delimiters
   const parts = str.split(/[,;\n\r/]+/).map(p => p.trim()).filter(Boolean);
-  let primary = (parts[0] || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/\D/g, '');
-  const secondary = parts[1] ? parts[1].replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/\D/g, '') : null;
+  let primary = (parts[0] || '').replace(/[٠-٩]/g, d => '٠١٢٣٥٦٧٨٩'.indexOf(d).toString()).replace(/\D/g, '');
+  const secondary = parts[1] ? parts[1].replace(/[٠-٩]/g, d => '٠١٢٣٥٦٧٨٩'.indexOf(d).toString()).replace(/\D/g, '') : null;
 
   if (primary.length < 7) return { valid: false, reason: 'Too few digits (< 7)' };
   if (primary.length > 15) return { valid: false, reason: 'Too many digits (> 15)' };
@@ -111,8 +124,8 @@ export function detectColumns(headers, sampleRows = []) {
       let dataBonus = 0;
       for (const r of sampleRows) {
         const val = cleanTxt(r[idx]);
-        if (val && /[a-zA-Z]/.test(val) && val.length > 2) {
-          dataBonus += 10;
+        if (val && /[a-zA-Z]/.test(val) && val.length > 2 && !DUMMY_STRINGS.includes(val.toLowerCase())) {
+          dataBonus += 15;
         }
       }
       nameCandidates.push({ idx, header: h.trim(), score: score + dataBonus });
@@ -143,8 +156,8 @@ export function detectColumns(headers, sampleRows = []) {
       let dataBonus = 0;
       for (const r of sampleRows) {
         const val = cleanTxt(r[idx]);
-        if (val && /\d{6,}/.test(val.replace(/\D/g, ''))) {
-          dataBonus += 10;
+        if (val && /\d{6,}/.test(val.replace(/\D/g, '')) && !DUMMY_STRINGS.includes(val.toLowerCase())) {
+          dataBonus += 15;
         }
       }
       phoneCandidates.push({ idx, header: h.trim(), score: score + dataBonus });
@@ -157,7 +170,46 @@ export function detectColumns(headers, sampleRows = []) {
     mappingUsed['phone'] = phoneCandidates[0].header;
   }
 
-  // 3. Project
+  // 3. Detect Unit Column (DATA-DRIVEN SCORING: Prefers columns that actually contain data like property_number)
+  const unitCandidates = [];
+  headers.forEach((h, idx) => {
+    if (!h) return;
+    const clean = lowerHeaders[idx];
+    // Protected non-unit keywords
+    if (['propertytype', 'propertyusage', 'transaction', 'amount', 'size', 'plotsize', 'builtup', 'date', 'price', 'value', 'fee', 'status', 'bed', 'beds'].some(neg => clean.includes(neg))) {
+      return;
+    }
+
+    let score = 0;
+    if (['propertynumber', 'propertyno', 'unitnumber', 'unitno', 'flatno', 'villano'].includes(clean)) {
+      score = 100;
+    } else if (clean.includes('propertynumber') || clean.includes('unitnumber') || clean.includes('propertyno') || clean.includes('unitno')) {
+      score = 90;
+    } else if (clean === 'unit' || clean === 'flat' || clean === 'villa' || clean === 'property') {
+      score = 70;
+    } else if (clean.includes('unit') || clean.includes('flat') || clean.includes('villa') || clean.includes('suite') || clean.includes('door')) {
+      score = 50;
+    }
+
+    if (score > 0) {
+      let dataBonus = 0;
+      for (const r of sampleRows) {
+        const val = cleanTxt(r[idx]);
+        if (val && !DUMMY_STRINGS.includes(val.toLowerCase())) {
+          dataBonus += 15; // Strong bonus for real populated data
+        }
+      }
+      unitCandidates.push({ idx, header: h.trim(), score: score + dataBonus });
+    }
+  });
+  unitCandidates.sort((a, b) => b.score - a.score);
+  if (unitCandidates.length > 0) {
+    colMap['unit'] = unitCandidates[0].idx;
+    mappingUsed['UNIT'] = unitCandidates[0].header;
+    mappingUsed['unit'] = unitCandidates[0].header;
+  }
+
+  // 4. Detect Project Column
   const projectTerms = ['masterproject', 'project', 'projectname', 'mastercommunity', 'development', 'community', 'buildingnameen', 'buildingname', 'building1', 'building', 'tower'];
   for (const pTerm of projectTerms) {
     const idx = lowerHeaders.findIndex(h => h === pTerm);
@@ -169,19 +221,7 @@ export function detectColumns(headers, sampleRows = []) {
     }
   }
 
-  // 4. Unit
-  const unitTerms = ['unitnumber', 'unitno', 'unit', 'flat', 'flatno', 'villano', 'apt', 'apartmentno', 'suite'];
-  for (const uTerm of unitTerms) {
-    const idx = lowerHeaders.findIndex(h => h === uTerm);
-    if (idx !== -1 && colMap['unit'] === undefined) {
-      colMap['unit'] = idx;
-      mappingUsed['UNIT'] = headers[idx].trim();
-      mappingUsed['unit'] = headers[idx].trim();
-      break;
-    }
-  }
-
-  // 5. Property Type
+  // 5. Detect Property Type
   const propTerms = ['propertytypeen', 'propertytype', 'unittype', 'subtype', 'usage', 'type'];
   for (const ptTerm of propTerms) {
     const idx = lowerHeaders.findIndex(h => h === ptTerm);
@@ -193,7 +233,7 @@ export function detectColumns(headers, sampleRows = []) {
     }
   }
 
-  // 6. Location
+  // 6. Detect Location
   const locTerms = ['masterlocation', 'location', 'area', 'subcommunity', 'district', 'city'];
   for (const lTerm of locTerms) {
     const idx = lowerHeaders.findIndex(h => h === lTerm);
@@ -205,26 +245,7 @@ export function detectColumns(headers, sampleRows = []) {
     }
   }
 
-  const aiMapping = headers.map((h, idx) => {
-    let standardRole = null;
-    let normalizedHeader = (h || '').trim() || `Column ${idx + 1}`;
-    
-    if (colMap['name'] === idx) { standardRole = 'name'; normalizedHeader = 'Owner Name'; }
-    else if (colMap['phone'] === idx) { standardRole = 'phone'; normalizedHeader = 'Contact Number'; }
-    else if (colMap['project'] === idx) { standardRole = 'project'; normalizedHeader = 'Project'; }
-    else if (colMap['location'] === idx) { standardRole = 'location'; normalizedHeader = 'Location'; }
-    else if (colMap['unit'] === idx) { standardRole = 'unit'; normalizedHeader = 'Unit Number'; }
-    else if (colMap['property_type'] === idx) { standardRole = 'property_type'; normalizedHeader = 'Property Type'; }
-
-    return {
-      originalIndex: idx,
-      rawHeader: h || `Column ${idx + 1}`,
-      normalizedHeader,
-      standardRole,
-    };
-  });
-
-  return { colMap, mappingUsed, aiMapping };
+  return { colMap, mappingUsed };
 }
 
 export async function processLeadsClientSide(matrix, defaultPropType = 'Apartment', filename = 'file.xlsx') {
@@ -232,22 +253,38 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
     throw new Error('Spreadsheet has no data rows.');
   }
 
-  const headers = matrix[0];
+  const rawHeaders = matrix[0].map(h => (h !== null && h !== undefined ? String(h).trim() : ''));
   const dataRows = matrix.slice(1);
   const sampleRows = dataRows.slice(0, 15);
 
-  const { colMap, mappingUsed, aiMapping } = detectColumns(headers, sampleRows);
+  const { colMap, mappingUsed } = detectColumns(rawHeaders, sampleRows);
+  const lowerHeaders = rawHeaders.map(h => (h || '').toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
 
-  // Alternative fallback indices
+  // Collect candidate fallback indices across all columns
   const allPhoneIndices = [];
   const allNameIndices = [];
-  headers.forEach((h, idx) => {
-    const hl = (h || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const allUnitIndices = [];
+  const allProjectIndices = [];
+  const allLocationIndices = [];
+
+  rawHeaders.forEach((h, idx) => {
+    const hl = lowerHeaders[idx];
     if (['mobile', 'mobile1', 'mobile2', 'phone', 'phone1', 'phone2', 'secondarymobile', 'contact', 'tel', 'whatsapp'].some(t => hl.includes(t))) {
       allPhoneIndices.push(idx);
     }
-    if (!NEGATIVE_NAME_TERMS.some(neg => hl.includes(neg)) && NAME_TIER_1.some(t => hl.includes(t.replace(/[^a-z0-9]/g, '')))) {
+    if (!NEGATIVE_NAME_TERMS.some(neg => hl.includes(neg)) && (NAME_TIER_1.some(t => hl.includes(t.replace(/[^a-z0-9]/g, ''))) || hl.includes('name'))) {
       allNameIndices.push(idx);
+    }
+    if (!['propertytype', 'transaction', 'amount', 'size', 'plotsize', 'builtup', 'date', 'price', 'status', 'bed', 'beds'].some(neg => hl.includes(neg))) {
+      if (UNIT_TERMS.some(t => hl.includes(t)) || hl.includes('unit') || hl.includes('villa') || hl.includes('property') || hl.includes('flat')) {
+        allUnitIndices.push(idx);
+      }
+    }
+    if (hl.includes('project') || hl.includes('building') || hl.includes('community')) {
+      allProjectIndices.push(idx);
+    }
+    if (hl.includes('location') || hl.includes('area') || hl.includes('city')) {
+      allLocationIndices.push(idx);
     }
   });
 
@@ -260,7 +297,7 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
   dataRows.forEach((row, rowIdx) => {
     const rowNum = rowIdx + 2;
 
-    // 1. Phone extraction
+    // 1. Phone extraction with alternative column fallback
     let rawPhone = colMap.phone !== undefined ? row[colMap.phone] || '' : '';
     if (!cleanTxt(rawPhone)) {
       for (const pIdx of allPhoneIndices) {
@@ -271,21 +308,55 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
       }
     }
 
-    // 2. Name extraction with multi-column fallback
+    // 2. Name extraction with alternative column fallback (NEVER default to Property Owner if name exists in any column)
     let rawName = colMap.name !== undefined ? row[colMap.name] || '' : '';
     if (!cleanTxt(rawName)) {
       for (const nIdx of allNameIndices) {
-        if (cleanTxt(row[nIdx])) {
-          rawName = row[nIdx];
+        const cand = cleanTxt(row[nIdx]);
+        if (cand && !NEGATIVE_NAME_TERMS.some(neg => cand.toLowerCase().includes(neg))) {
+          rawName = cand;
           break;
         }
       }
     }
 
+    // 3. Unit extraction with alternative column fallback (Checks property_number, unit_number, etc.)
+    let rawUnit = colMap.unit !== undefined ? cleanTxt(row[colMap.unit]) : '';
+    if (!rawUnit || DUMMY_STRINGS.includes(rawUnit.toLowerCase())) {
+      for (const uIdx of allUnitIndices) {
+        const cand = cleanTxt(row[uIdx]);
+        if (cand && !DUMMY_STRINGS.includes(cand.toLowerCase())) {
+          rawUnit = cand;
+          break;
+        }
+      }
+    }
+
+    // 4. Project extraction with fallback
+    let rawProject = colMap.project !== undefined ? cleanTxt(row[colMap.project]) : '';
+    if (!rawProject) {
+      for (const prIdx of allProjectIndices) {
+        const cand = cleanTxt(row[prIdx]);
+        if (cand) { rawProject = cand; break; }
+      }
+    }
+
+    // 5. Location extraction with fallback
+    let rawLocation = colMap.location !== undefined ? cleanTxt(row[colMap.location]) : '';
+    if (!rawLocation) {
+      for (const lIdx of allLocationIndices) {
+        const cand = cleanTxt(row[lIdx]);
+        if (cand) { rawLocation = cand; break; }
+      }
+    }
+
+    const rawPropType = colMap.property_type !== undefined ? cleanTxt(row[colMap.property_type]) : '';
+
     const phoneRes = cleanPhone(rawPhone);
     const rawNameClean = cleanTxt(rawName);
     const cleanName = rawNameClean ? rawNameClean.replace(/\b\w/g, c => c.toUpperCase()) : 'Property Owner';
 
+    // ─── Build Lead Item: PRESERVE 100% OF ALL ORIGINAL COLUMNS ───
     const item = {
       row_num: rowNum,
       vapi_e164: phoneRes.vapi_e164,
@@ -293,23 +364,27 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
       source_file: filename,
     };
 
-    aiMapping.forEach(m => {
-      const val = row[m.originalIndex] !== undefined ? row[m.originalIndex] : '';
-      if (m.standardRole === 'phone') {
-        item[m.normalizedHeader] = phoneRes.primary || rawPhone || 'N/A';
-      } else if (m.standardRole === 'name') {
-        item[m.normalizedHeader] = cleanName;
-      } else if (m.standardRole === 'property_type') {
-        item[m.normalizedHeader] = cleanTxt(val) || defaultPropType;
-      } else {
-        item[m.normalizedHeader] = cleanTxt(val) || val;
-      }
+    // Store EVERY single original raw column with its original header name
+    rawHeaders.forEach((h, idx) => {
+      item[h] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '';
     });
 
-    item.contact_number = phoneRes.primary || rawPhone;
+    // Attach standardized clean fields for direct consumption
     item.owner_name = cleanName;
+    item.contact_number = phoneRes.primary || rawPhone;
+    item.unit_number = rawUnit || '';
+    item.project_name = rawProject || '';
+    item.location = rawLocation || '';
+    item.property_type = rawPropType || defaultPropType;
+
     item['Owner Name'] = cleanName;
     item['Contact Number'] = phoneRes.primary || rawPhone;
+    item['Unit Number'] = rawUnit || '';
+    item['Project'] = rawProject || '';
+    item['Location'] = rawLocation || '';
+    item['Property Type'] = rawPropType || defaultPropType;
+    item['Cleaned Unit Number'] = rawUnit || '';
+    item['Cleaned Phone (E.164)'] = phoneRes.vapi_e164 || (phoneRes.primary ? `+${phoneRes.primary}` : '');
 
     if (!phoneRes.valid) {
       if (phoneRes.is_landline) {
@@ -344,7 +419,6 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
 
     for (let i = 0; i < Math.min(phonesToCheck.length, 500); i += BATCH_SIZE) {
       const chunk = phonesToCheck.slice(i, i + BATCH_SIZE);
-      const queryList = chunk.map(p => `"${p}"`).join(',');
       const res = await axios.get(
         `${SUPABASE_URL}/rest/v1/owners_data?select=phone_normalized&phone_normalized=in.(${encodeURIComponent(chunk.join(','))})&limit=100`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
@@ -370,10 +444,10 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
     readyLeads = cleanCandidates;
   }
 
-  const finalHeaders = aiMapping.map(m => m.normalizedHeader);
-
   return {
-    headers: finalHeaders,
+    headers: rawHeaders,
+    original_headers: rawHeaders,
+    total_columns: rawHeaders.length,
     mapping_used: mappingUsed,
     stats: {
       total: dataRows.length,
