@@ -26,7 +26,9 @@ export const UNIT_TERMS = [
   'flatnumber', 'flatno', 'flat',
   'villanumber', 'villano', 'villa',
   'apartmentnumber', 'apartmentno', 'aptno', 'apt',
-  'suiteno', 'suite', 'doorno', 'premiseno', 'premisesno'
+  'suiteno', 'suite', 'doorno', 'premiseno', 'premisesno',
+  'plotpreregno', 'plotprereg', 'plotno', 'plotnumber', 'plot',
+  'buildingno', 'buildingnumber'
 ];
 
 // Robust RFC 4180 CSV parser
@@ -267,13 +269,13 @@ export function detectColumnsFallback(headers, sampleRows = []) {
     }
 
     let score = 0;
-    if (['propertynumber', 'propertyno', 'unitnumber', 'unitno', 'flatno', 'villano'].includes(clean)) {
+    if (['propertynumber', 'propertyno', 'unitnumber', 'unitno', 'flatno', 'villano', 'plotpreregno', 'plotno', 'plotnumber', 'buildingno', 'buildingnumber'].includes(clean)) {
       score = 100;
-    } else if (clean.includes('propertynumber') || clean.includes('unitnumber') || clean.includes('propertyno') || clean.includes('unitno')) {
+    } else if (clean.includes('propertynumber') || clean.includes('unitnumber') || clean.includes('propertyno') || clean.includes('unitno') || clean.includes('plotprereg') || clean.includes('buildingno')) {
       score = 90;
-    } else if (clean === 'unit' || clean === 'flat' || clean === 'villa' || clean === 'property') {
+    } else if (['unit', 'flat', 'villa', 'property', 'plot'].includes(clean)) {
       score = 70;
-    } else if (clean.includes('unit') || clean.includes('flat') || clean.includes('villa') || clean.includes('suite') || clean.includes('door')) {
+    } else if (UNIT_TERMS.some(t => clean.includes(t)) || clean.includes('unit') || clean.includes('flat') || clean.includes('villa') || clean.includes('suite') || clean.includes('door') || clean.includes('plot')) {
       score = 50;
     }
 

@@ -91,3 +91,25 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #003d73;
 }
+
+/* High-Visibility Horizontal Scrollbar for Data Tables */
+.horizontal-data-scroll::-webkit-scrollbar {
+  height: 12px;
+  width: 8px;
+}
+
+.horizontal-data-scroll::-webkit-scrollbar-track {
+  background: #011227;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+
+.horizontal-data-scroll::-webkit-scrollbar-thumb {
+  background: #2563eb;
+  border: 2px solid #011227;
+  border-radius: 6px;
+}
+
+.horizontal-data-scroll::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}

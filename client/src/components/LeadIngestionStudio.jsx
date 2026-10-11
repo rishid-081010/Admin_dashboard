@@ -3,7 +3,7 @@ import {
   UploadCloud, FileText, CheckCircle2, AlertTriangle, RefreshCw,
   Download, Upload, ShieldCheck, Database, PhoneCall, Sparkles,
   Layers, Filter, Search, Check, AlertCircle, ArrowRight, ExternalLink, Clipboard, Loader2,
-  Table, Eye, CheckCheck
+  Table, Eye, CheckCheck, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoveHorizontal, Grab
 } from 'lucide-react';
 import axios from 'axios';
 import { processLeadsClientSide } from '../utils/leadCleanerClient';
@@ -11,7 +11,7 @@ import { processLeadsClientSide } from '../utils/leadCleanerClient';
 export default function LeadIngestionStudio() {
   const [previewData, setPreviewData] = useState(null);
   const [activeTab, setActiveTab] = useState('clean');
-  const [viewMode, setViewMode] = useState('standard'); // 'standard' or 'all_columns'
+  const [viewMode, setViewMode] = useState('all_columns'); // default to 'all_columns' for full transparency
   const [loading, setLoading] = useState(false);
   const [sampleLoading, setSampleLoading] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -24,6 +24,46 @@ export default function LeadIngestionStudio() {
   const [dbStats, setDbStats] = useState({ database_leads_count: 40717, status: 'online' });
 
   const fileInputRef = useRef(null);
+  const tableContainerRef = useRef(null);
+  const [isDraggingTable, setIsDraggingTable] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragScrollLeft, setDragScrollLeft] = useState(0);
+
+  const handleTableMouseDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button, input, select, a')) return;
+    setIsDraggingTable(true);
+    setDragStartX(e.pageX - (tableContainerRef.current?.offsetLeft || 0));
+    setDragScrollLeft(tableContainerRef.current?.scrollLeft || 0);
+  };
+
+  const handleTableMouseMove = (e) => {
+    if (!isDraggingTable || !tableContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - (tableContainerRef.current.offsetLeft || 0);
+    const walk = (x - dragStartX) * 1.5;
+    tableContainerRef.current.scrollLeft = dragScrollLeft - walk;
+  };
+
+  const handleTableMouseUp = () => {
+    setIsDraggingTable(false);
+  };
+
+  const scrollTableBy = (delta) => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+    }
+  };
+
+  const scrollTableTo = (position) => {
+    if (tableContainerRef.current) {
+      if (position === 'start') {
+        tableContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        tableContainerRef.current.scrollTo({ left: tableContainerRef.current.scrollWidth, behavior: 'smooth' });
+      }
+    }
+  };
 
   // Fetch live CRM / Supabase stats
   const fetchHealthStats = async () => {
@@ -221,7 +261,7 @@ export default function LeadIngestionStudio() {
         let val = '';
         if (h === 'Cleaned Owner Name') val = r.owner_name || r['Owner Name'] || '';
         else if (h === 'Cleaned Phone (E.164)') val = r.vapi_e164 || (r.contact_number ? '+' + r.contact_number : (r['Contact Number'] || ''));
-        else if (h === 'Cleaned Unit Number') val = r.unit_number || r['Unit Number'] || r['property_number'] || '';
+        else if (h === 'Cleaned Unit Number') val = r.unit_number || r['Unit Number'] || r['property_number'] || r['Plot Pre Reg No'] || r['Building No'] || '';
         else if (h === 'Cleaning Status') val = statusLabel;
         else if (h === 'Validation Reason') val = r.reason || '';
         else if (r[h] !== undefined && r[h] !== null) val = r[h];
@@ -612,20 +652,84 @@ export default function LeadIngestionStudio() {
             />
           </div>
 
-          {/* Table Container */}
-          <div className="overflow-x-auto max-h-[450px] overflow-y-auto rounded-2xl border border-white/[0.06] custom-scrollbar">
+          {/* Horizontal Scroll Navigation Toolbar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-black/40 border border-white/10 rounded-2xl p-3">
+            <div className="flex items-center gap-2 text-xs text-white/80">
+              <MoveHorizontal className="w-4 h-4 text-blue-400" />
+              <span className="font-semibold text-white">
+                {viewMode === 'all_columns' ? `All ${totalColumnsCount} File Columns View` : 'Standard 7 Core Columns View'}
+              </span>
+              <span className="text-[11px] text-white/40 hidden md:inline">
+                • Drag table or use buttons to scroll columns horizontally
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => scrollTableTo('start')}
+                className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-white/70 hover:text-white transition-all flex items-center gap-1"
+                title="Scroll to beginning"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Start</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollTableBy(-380)}
+                className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-xs font-semibold text-blue-300 hover:text-white transition-all flex items-center gap-1.5 shadow-sm"
+                title="Scroll columns left"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Scroll Left</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollTableBy(380)}
+                className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-xs font-semibold text-blue-300 hover:text-white transition-all flex items-center gap-1.5 shadow-sm"
+                title="Scroll columns right"
+              >
+                <span>Scroll Right</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollTableTo('end')}
+                className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-white/70 hover:text-white transition-all flex items-center gap-1"
+                title="Scroll to end"
+              >
+                <span className="hidden sm:inline">End</span>
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Table Container with High-Visibility Horizontal Scrollbar and Drag-To-Scroll */}
+          <div 
+            ref={tableContainerRef}
+            onMouseDown={handleTableMouseDown}
+            onMouseMove={handleTableMouseMove}
+            onMouseUp={handleTableMouseUp}
+            onMouseLeave={handleTableMouseUp}
+            className={`overflow-x-auto max-h-[500px] overflow-y-auto rounded-2xl border border-white/[0.08] horizontal-data-scroll select-none ${
+              isDraggingTable ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+          >
             {viewMode === 'standard' ? (
               /* Standard 7 Core Columns View */
-              <table className="w-full text-left text-xs text-white/80 border-collapse">
+              <table className="w-full text-left text-xs text-white/80 border-collapse" style={{ minWidth: '950px' }}>
                 <thead className="text-[10px] uppercase bg-[#051833] text-white/70 sticky top-0 z-20 shadow-md shadow-black/40 border-b border-white/[0.08]">
                   <tr>
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">#</th>
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Owner Name</th>
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Phone (E.164 Clean)</th>
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Project</th>
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Location</th>
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Unit (Property #)</th>
-                    <th className="py-3 px-3 border-b border-white/[0.06] text-right bg-[#051833]">Status</th>
+                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] w-12 text-center">#</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[180px]">Owner Name</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[160px]">Phone (E.164 Clean)</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[150px]">Project</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[140px]">Location</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[140px]">Unit (Property #)</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] text-right bg-[#051833] w-28">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
@@ -636,27 +740,27 @@ export default function LeadIngestionStudio() {
                       </td>
                     </tr>
                   ) : (
-                    filteredRows.slice(0, 100).map((r, idx) => (
+                    filteredRows.slice(0, 150).map((r, idx) => (
                       <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-2.5 px-3 font-mono text-white/40">{r.row_num || idx + 1}</td>
-                        <td className="py-2.5 px-3 font-medium text-white">
+                        <td className="py-2.5 px-3 font-mono text-white/40 text-center">{r.row_num || idx + 1}</td>
+                        <td className="py-2.5 px-3.5 font-medium text-white whitespace-nowrap">
                           {r.owner_name || r['Owner Name'] || r.name || 'Property Owner'}
                         </td>
-                        <td className={`py-2.5 px-3 font-mono font-bold ${activeTab === 'invalid' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        <td className={`py-2.5 px-3.5 font-mono font-bold whitespace-nowrap ${activeTab === 'invalid' ? 'text-rose-400' : 'text-emerald-400'}`}>
                           {r.vapi_e164 || (r.contact_number ? `+${r.contact_number}` : (r['Contact Number'] || '-'))}
                         </td>
-                        <td className="py-2.5 px-3 text-white/80">
+                        <td className="py-2.5 px-3.5 text-white/80 whitespace-nowrap">
                           {r.project_name || r['Project'] || r['Building 1'] || r['Master Project'] || '-'}
                         </td>
-                        <td className="py-2.5 px-3 text-white/60">
+                        <td className="py-2.5 px-3.5 text-white/60 whitespace-nowrap">
                           {r.location || r['Location'] || r['Master Location'] || 'Dubai'}
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-white/90">
+                        <td className="py-2.5 px-3.5 font-mono text-white/90 whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold">
-                            {r.unit_number || r['Unit Number'] || r['property_number'] || r['property_no'] || '—'}
+                            {r.unit_number || r['Unit Number'] || r['property_number'] || r['Plot Pre Reg No'] || r['Building No'] || '—'}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right">
+                        <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${
                             activeTab === 'clean'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
@@ -675,14 +779,40 @@ export default function LeadIngestionStudio() {
                 </tbody>
               </table>
             ) : (
-              /* All Original Columns Preserved View */
-              <table className="w-full text-left text-xs text-white/80 border-collapse">
+              /* All Original Columns Preserved View with Sticky Identity Columns */
+              <table 
+                className="text-left text-xs text-white/80 border-collapse table-auto"
+                style={{ minWidth: `${Math.max(1400, (originalHeaders.length + 5) * 165)}px` }}
+              >
                 <thead className="text-[10px] uppercase bg-[#051833] text-white/70 sticky top-0 z-20 shadow-md shadow-black/40 border-b border-white/[0.08]">
                   <tr>
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] sticky left-0 z-30">#</th>
-                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] sticky left-10 z-30">Status</th>
+                    {/* Sticky Column 1: Row # */}
+                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] sticky left-0 z-30 w-12 text-center shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                      #
+                    </th>
+                    {/* Sticky Column 2: Status */}
+                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] sticky left-12 z-30 w-24 text-center shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                      Status
+                    </th>
+                    {/* Sticky Column 3: Owner Name */}
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] sticky left-36 z-30 min-w-[200px] shadow-[2px_0_5px_rgba(0,0,0,0.3)] border-r border-white/10">
+                      Owner Name
+                    </th>
+
+                    {/* Standard Cleaned Quick-Access Columns */}
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#032042] text-emerald-300 font-bold whitespace-nowrap min-w-[170px]">
+                      Phone (E.164 Clean)
+                    </th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#032042] text-blue-300 font-bold whitespace-nowrap min-w-[150px]">
+                      Unit / Property #
+                    </th>
+
+                    {/* All Raw Original Headers */}
                     {originalHeaders.map((h, i) => (
-                      <th key={i} className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] whitespace-nowrap font-mono">
+                      <th 
+                        key={i} 
+                        className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] whitespace-nowrap font-mono min-w-[160px] text-white/70"
+                      >
                         {h}
                       </th>
                     ))}
@@ -691,32 +821,56 @@ export default function LeadIngestionStudio() {
                 <tbody className="divide-y divide-white/[0.04]">
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={originalHeaders.length + 2} className="py-8 text-center text-white/40 text-xs">
+                      <td colSpan={originalHeaders.length + 5} className="py-8 text-center text-white/40 text-xs">
                         No records in this tab matching your search.
                       </td>
                     </tr>
                   ) : (
-                    filteredRows.slice(0, 100).map((r, idx) => (
+                    filteredRows.slice(0, 150).map((r, idx) => (
                       <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-2 px-3 font-mono text-white/40 sticky left-0 bg-[#021024]">
+                        {/* Sticky Column 1: Row # */}
+                        <td className="py-2.5 px-3 font-mono text-white/40 sticky left-0 bg-[#021024] text-center shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
                           {r.row_num || idx + 1}
                         </td>
-                        <td className="py-2 px-3 sticky left-10 bg-[#021024] whitespace-nowrap">
+                        {/* Sticky Column 2: Status */}
+                        <td className="py-2.5 px-3 sticky left-12 bg-[#021024] whitespace-nowrap text-center shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
                           <span className={`px-2 py-0.5 rounded text-[9px] font-mono ${
                             r.status === 'ready'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : r.status === 'duplicate_file'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : r.status === 'duplicate_db'
+                              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                               : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                           }`}>
                             {r.status === 'ready' ? 'Valid' : (r.reason || 'Filtered')}
                           </span>
                         </td>
+                        {/* Sticky Column 3: Owner Name */}
+                        <td className="py-2.5 px-3.5 sticky left-36 bg-[#021024] whitespace-nowrap font-medium text-white shadow-[2px_0_5px_rgba(0,0,0,0.3)] border-r border-white/10">
+                          {r.owner_name || r['Owner Name'] || r.name || 'Property Owner'}
+                        </td>
+
+                        {/* Standard Cleaned Quick-Access Columns */}
+                        <td className={`py-2.5 px-3.5 font-mono font-bold whitespace-nowrap bg-[#021329] ${
+                          r.status === 'ready' ? 'text-emerald-400' : 'text-rose-400'
+                        }`}>
+                          {r.vapi_e164 || (r.contact_number ? `+${r.contact_number}` : (r['Contact Number'] || '—'))}
+                        </td>
+                        <td className="py-2.5 px-3.5 font-mono whitespace-nowrap bg-[#021329]">
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold">
+                            {r.unit_number || r['Unit Number'] || r['property_number'] || r['Plot Pre Reg No'] || r['Building No'] || '—'}
+                          </span>
+                        </td>
+
+                        {/* All Original Raw File Columns */}
                         {originalHeaders.map((h, i) => {
                           const val = r[h] !== undefined && r[h] !== null ? String(r[h]) : '';
-                          const isUnitCol = h.toLowerCase().includes('property_number') || h.toLowerCase().includes('unit');
+                          const isUnitCol = h.toLowerCase().includes('property_number') || h.toLowerCase().includes('unit') || h.toLowerCase().includes('plot');
                           return (
                             <td 
                               key={i} 
-                              className={`py-2 px-3 whitespace-nowrap ${
+                              className={`py-2.5 px-3.5 whitespace-nowrap ${
                                 isUnitCol ? 'font-mono text-blue-300 font-semibold' : 'text-white/80'
                               }`}
                             >
@@ -730,6 +884,17 @@ export default function LeadIngestionStudio() {
                 </tbody>
               </table>
             )}
+          </div>
+
+          {/* Bottom Table Indicator */}
+          <div className="flex items-center justify-between text-[11px] text-white/50 pt-1 px-1">
+            <span>
+              Showing {filteredRows.slice(0, 150).length} of {filteredRows.length} records in this tab
+            </span>
+            <span className="flex items-center gap-1.5 text-blue-400/80">
+              <MoveHorizontal className="w-3.5 h-3.5" />
+              <span>Scroll horizontally or drag table to view all {totalColumnsCount} file columns</span>
+            </span>
           </div>
         </div>
       )}
