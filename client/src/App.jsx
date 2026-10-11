@@ -14,7 +14,7 @@ import SourcesDirectory from './components/SourcesDirectory';
 import MyActivity from './components/MyActivity';
 import TeamManagement from './components/TeamManagement';
 import VoiceAgent from './components/VoiceAgent';
-import DataHealth from './components/DataHealth';
+import AccountSettings from './components/AccountSettings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview'); // default to overview
@@ -88,13 +88,11 @@ export default function App() {
           />
         )}
         {activeTab === 'buildings' && <Buildings />}
-        {activeTab === 'open-data' && <Buildings />}
         {activeTab === 'search' && <OmniSearch />}
         {activeTab === 'sources' && <SourcesDirectory />}
         {activeTab === 'activity' && <MyActivity globalAgent={globalAgent} />}
         {activeTab === 'voice' && <VoiceAgent />}
         {activeTab === 'team' && <TeamManagement />}
-        {activeTab === 'data-health' && <DataHealth />}
 
         {activeTab === 'leads' && (
           <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><LeadIngestionStudio /></div>
@@ -131,12 +129,7 @@ export default function App() {
           )}</div>
         )}
 
-        {activeTab === 'settings' && (
-          <div className="flex flex-col items-center justify-center h-full text-white/60 animate-fade-in">
-            <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Account & Settings</h2>
-            <p>Configure webhooks, API keys, and notification preferences.</p>
-          </div>
-        )}
+        {activeTab === 'settings' && <AccountSettings />}
       </main>
       </div>
     </div>

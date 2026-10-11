@@ -33,7 +33,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Overview</span>
         </button>
 
-        {/* 2. Owners Data (formerly Reported unit owners) */}
+        {/* 2. Owners Data */}
         <button 
           onClick={() => setActiveTab('owners')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -45,7 +45,44 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Owners Data</span>
         </button>
 
-        {/* 3. Data Cleaning */}
+        {/* 3. My Activity */}
+        <button 
+          onClick={() => setActiveTab('activity')} 
+          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'activity' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>My Activity</span>
+          <span className="bg-[#ef4444] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
+        </button>
+
+        {/* 4. Search Engine */}
+        <button 
+          onClick={() => setActiveTab('search')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'search' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>Search Engine</span>
+        </button>
+
+        {/* 5. Team Management */}
+        <button 
+          onClick={() => setActiveTab('team')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'team' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>Team Management</span>
+        </button>
+
+        {/* 6. Data Cleaning */}
         <button 
           onClick={() => setActiveTab('leads')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -57,7 +94,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Data Cleaning</span>
         </button>
 
-        {/* 4. Listing Dashboard */}
+        {/* 7. Listing Studio */}
         <button 
           onClick={() => setActiveTab('listing')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -66,10 +103,22 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Listing Dashboard</span>
+          <span>Listing Studio</span>
         </button>
 
-        {/* 5. Buildings & Areas */}
+        {/* 8. Voice Agent Centre */}
+        <button 
+          onClick={() => setActiveTab('voice')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'voice' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>Voice Agent Centre</span>
+        </button>
+
+        {/* 9. Buildings */}
         <button 
           onClick={() => setActiveTab('buildings')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -78,10 +127,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Buildings &amp; Areas</span>
+          <span>Buildings</span>
         </button>
 
-        {/* 6. Data Sources */}
+        {/* 10. Data Source */}
         <button 
           onClick={() => setActiveTab('sources')} 
           className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -90,23 +139,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Data Sources</span>
+          <span>Data Source</span>
           <span className="bg-[#1e3a5f] text-[#60a5fa] border border-[#3b82f6]/30 text-[9.5px] font-bold px-2 py-0.5 rounded-full">1.38k</span>
         </button>
 
-        {/* 7. Search & Review */}
-        <button 
-          onClick={() => setActiveTab('search')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'search' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Search &amp; Review</span>
-        </button>
-
-        {/* 8. Transactions */}
+        {/* 11. Transactions */}
         <a 
           href="https://transactionaldashboard.asquared.ae/" 
           target="_blank" 
@@ -117,53 +154,16 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <ExternalLink className="w-3.5 h-3.5 text-white/50" />
         </a>
 
-        {/* 9. Market Registry */}
+        {/* 12. Account and settings */}
         <button 
-          onClick={() => setActiveTab('open-data')} 
+          onClick={() => setActiveTab('settings')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'open-data' 
+            activeTab === 'settings' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Market Registry</span>
-        </button>
-
-        {/* 10. Data Quality */}
-        <button 
-          onClick={() => setActiveTab('data-health')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'data-health' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Data Quality</span>
-        </button>
-
-        {/* 11. My Tasks */}
-        <button 
-          onClick={() => setActiveTab('activity')} 
-          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'activity' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>My Tasks</span>
-          <span className="bg-[#ef4444] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
-        </button>
-
-        {/* 12. Voice Agent Centre */}
-        <button 
-          onClick={() => setActiveTab('voice')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'voice' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Voice Agent Centre</span>
+          <span>Account and settings</span>
         </button>
       </nav>
     </aside>
