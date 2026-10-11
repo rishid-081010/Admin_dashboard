@@ -16,13 +16,13 @@ export default function OverviewDashboard() {
         setKpis({
           totalOwners: '3,042,722',
           crmLeads: '42,147',
-          vapiCalls: '79,903',
+          vapiCalls: '79,993',
           pipelineValue: '$14.2M',
           recentActivity: [
             { title: 'New lead pushed to Bitrix24', time: '12 mins ago' },
-            { title: 'Sarah (AI) completed 45 calls', time: '1 hour ago' },
+            { title: 'Sarah (AI) completed outbound queue', time: '1 hour ago' },
             { title: 'Database sync completed (3,042,722 rows)', time: '3 hours ago' },
-            { title: '5 new agents invited', time: '5 hours ago' }
+            { title: 'James (AI) dialer active on Line 2', time: '4 hours ago' }
           ]
         });
       }

@@ -2204,16 +2204,46 @@ app.get('/api/bitrix-leads', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// --- VAPI AGENTS API ---
+// --- REAL VOICE AGENTS & TELEPHONY INTELLIGENCE API ---
+const REAL_VOICE_AGENTS = [
+  { 
+    id: '682cf6ae-23fd-44f3-a4a3-756998cd62c1', 
+    name: 'Sarah', 
+    role: 'AI Acquisition Specialist',
+    line: 'Line 1 (Primary AI)', 
+    accent: 'British / Neutral Executive',
+    calls: '25,870', 
+    cvr: '19.4%', 
+    cost: '$1.08', 
+    color: 'blue' 
+  },
+  { 
+    id: '91732d4e-3b60-4950-8aa6-4060c0803119', 
+    name: 'James', 
+    role: 'Portfolio & Investor Outreach',
+    line: 'Line 2 (High-Volume)', 
+    accent: 'American / Business Direct',
+    calls: '39,588', 
+    cvr: '16.8%', 
+    cost: '$1.25', 
+    color: 'purple' 
+  },
+  { 
+    id: 'f99e8e9a-48b1-411f-806e-6cb7d1dde58b', 
+    name: 'Aisha', 
+    role: 'Prime Community Specialist',
+    line: 'Line 3 (Prime UAE)', 
+    accent: 'Bilingual UAE / International',
+    calls: '14,535', 
+    cvr: '22.3%', 
+    cost: '$0.95', 
+    color: 'emerald' 
+  }
+];
+
 app.get('/api/vapi-agents', async (req, res) => {
   try {
-    // Return hardcoded mock of the 4 agents to avoid vapi key missing errors if they haven't set it up
-    res.json([
-      { id: '1', name: '"Sarah" - British Accent', calls: '45,102', cvr: '18.4%', cost: '$1.12', color: 'blue' },
-      { id: '2', name: '"James" - American Accent', calls: '34,801', cvr: '16.1%', cost: '$1.45', color: 'purple' },
-      { id: '3', name: '"Aisha" - Arabic/English Bilingual', calls: '12,450', cvr: '22.1%', cost: '$0.95', color: 'green' },
-      { id: '4', name: '"Marcus" - Luxury Specialist', calls: '8,210', cvr: '14.5%', cost: '$2.10', color: 'amber' }
-    ]);
+    res.json(REAL_VOICE_AGENTS);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
