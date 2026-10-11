@@ -5,6 +5,7 @@ import {
   Layers, Filter, Search, Check, AlertCircle, ArrowRight, ExternalLink, Clipboard, Loader2
 } from 'lucide-react';
 import axios from 'axios';
+import { processLeadsClientSide } from '../utils/leadCleanerClient';
 
 export default function LeadIngestionStudio() {
   const [previewData, setPreviewData] = useState(null);
@@ -44,6 +45,7 @@ export default function LeadIngestionStudio() {
     setError(null);
 
     let processedFile = file;
+    let localMatrix = null;
 
     // Excel conversion using SheetJS if present
     if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
@@ -66,6 +68,7 @@ export default function LeadIngestionStudio() {
             }
           }
           const worksheet = workbook.Sheets[bestSheetName];
+          localMatrix = window.XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           const csvContent = window.XLSX.utils.sheet_to_csv(worksheet);
           const csvBlob = new Blob([csvContent], { type: 'text/csv' });
           processedFile = new File([csvBlob], file.name.replace(/\.xlsx?$/, '.csv'), { type: 'text/csv' });
@@ -73,8 +76,51 @@ export default function LeadIngestionStudio() {
           console.warn('Local Excel parse fallback to backend:', e);
         }
       }
+    } else if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+      try {
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        localMatrix = lines.map(line => {
+          const row = [];
+          let insideQuotes = false;
+          let entry = '';
+          for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (c === '"') {
+              if (insideQuotes && line[i + 1] === '"') {
+                entry += '"';
+                i++;
+              } else {
+                insideQuotes = !insideQuotes;
+              }
+            } else if (c === ',' && !insideQuotes) {
+              row.push(entry);
+              entry = '';
+            } else {
+              entry += c;
+            }
+          }
+          row.push(entry);
+          return row;
+        });
+      } catch (e) {
+        console.warn('Local CSV parse error:', e);
+      }
     }
 
+    // 1. Instant client-side clean & preview with authentic column detection
+    if (localMatrix && localMatrix.length > 1) {
+      try {
+        const clientResult = await processLeadsClientSide(localMatrix, defaultPropertyType, file.name);
+        setPreviewData(clientResult);
+        setActiveTab('clean');
+        setLoading(false);
+      } catch (e) {
+        console.warn('Client-side processing fallback to backend:', e);
+      }
+    }
+
+    // 2. Synchronize with backend API in background or fallback
     const formData = new FormData();
     formData.append('file', processedFile);
     formData.append('default_property_type', defaultPropertyType);
@@ -85,13 +131,23 @@ export default function LeadIngestionStudio() {
       });
 
       if (res.data) {
-        setPreviewData(res.data);
-        setActiveTab('clean');
+        // Validate backend response: If backend used BuildingNameEn or returned 'Property Owner' fallback, keep authentic client names!
+        const bName = res.data.mapping_used?.name || res.data.mapping_used?.NAME || '';
+        const isBadBackendMapping = /building|project|procedure/i.test(bName);
+        const sampleLead = res.data.clean_leads?.[0];
+        const isDefaultFallback = sampleLead && sampleLead.owner_name === 'Property Owner';
+
+        if (!isBadBackendMapping && !isDefaultFallback) {
+          setPreviewData(res.data);
+          setActiveTab('clean');
+        }
       }
     } catch (err) {
-      console.error('Upload error:', err);
-      const errMsg = err.response?.data?.error || err.message || 'Failed to process lead file.';
-      setError(errMsg);
+      console.warn('Backend upload notice:', err.message);
+      if (!localMatrix || localMatrix.length <= 1) {
+        const errMsg = err.response?.data?.error || err.message || 'Failed to process lead file.';
+        setError(errMsg);
+      }
     } finally {
       setLoading(false);
     }
