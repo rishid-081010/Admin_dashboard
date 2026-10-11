@@ -84,7 +84,9 @@ export default function App() {
         {activeTab === 'overview' && <OverviewDashboard globalAgent={globalAgent} />}
         {activeTab === 'owners' && (
           <OwnerDirectory 
-            globalAgentName={agentsList.find(a => a.id === globalAgent)?.name?.replace(/\s*\(Admin\)/i, '') || 'Mayank'} 
+            globalAgentId={globalAgent}
+            globalAgentName={agentsList.find(a => a.id === globalAgent)?.name?.replace(/\s*\(Admin\)/i, '') || 'Melanie Simsiman'} 
+            agentsList={agentsList}
           />
         )}
         {activeTab === 'buildings' && <Buildings />}
