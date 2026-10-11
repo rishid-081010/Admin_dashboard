@@ -415,7 +415,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   };
 
   return (
-    <div className="w-full flex flex-col h-full animate-fade-in relative text-white/80">
+    <div className="w-full flex flex-col h-full animate-fade-in relative text-white/80 overflow-y-auto custom-scrollbar pr-1">
       {/* Page Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -622,13 +622,15 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
         {/* ─── Simple & Minimalist Filters Subtab (Matches User's Mockup) ───── */}
         {showFiltersBox && (
-          <div className="mt-4 pt-5 border-t border-white/10 bg-[#040e21]/95 backdrop-blur-xl rounded-2xl p-5 sm:p-7 shadow-2xl animate-fade-in space-y-6">
+          <div className="mt-4 border-t border-white/10 bg-[#040e21]/95 backdrop-blur-xl rounded-2xl shadow-2xl animate-fade-in flex flex-col max-h-[60vh] overflow-hidden">
             
-            {/* Section 1: Location & property */}
-            <div>
-              <h3 className="text-base font-bold text-white tracking-tight mb-4">
-                Location &amp; property
-              </h3>
+            {/* Scrollable Form Body */}
+            <div className="overflow-y-auto custom-scrollbar p-5 sm:p-7 space-y-6 flex-1">
+              {/* Section 1: Location & property */}
+              <div>
+                <h3 className="text-base font-bold text-white tracking-tight mb-4">
+                  Location &amp; property
+                </h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 
@@ -865,23 +867,24 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
               </div>
             </div>
+          </div>
 
-            {/* Footer Buttons (Exact match to Image 1) */}
-            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
-              >
-                Clear filters
-              </button>
+          {/* Sticky Footer Buttons (Exact match to Image 1) */}
+          <div className="p-4 sm:px-7 border-t border-white/10 bg-[#030d1d] flex items-center justify-between z-10 shrink-0 shadow-2xl">
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            >
+              Clear filters
+            </button>
 
-              <button
-                onClick={() => setShowFiltersBox(false)}
-                className="px-6 py-2.5 rounded-xl bg-[#0b2447] hover:bg-[#0e3061] text-white border border-blue-500/40 text-xs font-bold transition-all shadow-lg shadow-black/40 cursor-pointer"
-              >
-                Show results
-              </button>
-            </div>
+            <button
+              onClick={() => setShowFiltersBox(false)}
+              className="px-6 py-2.5 rounded-xl bg-[#0b2447] hover:bg-[#0e3061] text-white border border-blue-500/40 text-xs font-bold transition-all shadow-lg shadow-black/40 cursor-pointer"
+            >
+              Show results
+            </button>
+          </div>
 
           </div>
         )}
