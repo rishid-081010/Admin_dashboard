@@ -88,14 +88,14 @@ export default function TeamManagement() {
         </div>
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-[14px]">
-            <thead className="bg-black/40 border-b border-white/10 text-xs font-semibold text-white/40 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-md">
+            <thead className="bg-[#051833] border-b border-white/15 text-xs font-semibold text-white/70 uppercase tracking-wider sticky top-0 z-20 shadow-md shadow-black/40">
               <tr>
-                <th className="px-6 py-4">Agent</th>
-                <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Active Leads</th>
-                <th className="px-6 py-4">Closed Deals</th>
-                <th className="px-6 py-4">Conversion Rate</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-4 bg-[#051833]">Agent</th>
+                <th className="px-6 py-4 bg-[#051833]">Role</th>
+                <th className="px-6 py-4 bg-[#051833]">Active Leads</th>
+                <th className="px-6 py-4 bg-[#051833]">Closed Deals</th>
+                <th className="px-6 py-4 bg-[#051833]">Conversion Rate</th>
+                <th className="px-6 py-4 text-right bg-[#051833]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">

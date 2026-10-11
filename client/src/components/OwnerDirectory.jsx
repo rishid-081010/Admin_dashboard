@@ -185,14 +185,14 @@ export default function OwnerDirectory({ globalAgentName }) {
       <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col overflow-hidden">
         <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
           <table className="w-full text-left border-collapse text-[14px]">
-            <thead className="bg-black/20 border-b border-white/10 text-xs uppercase tracking-wider text-white/60 sticky top-0 z-10 backdrop-blur-md">
+            <thead className="bg-[#051833] border-b border-white/15 text-xs uppercase tracking-wider text-white/70 sticky top-0 z-20 shadow-md shadow-black/40">
               <tr>
-                <th className="px-6 py-4 font-semibold">Owner Name</th>
-                <th className="px-6 py-4 font-semibold">Phone & Email</th>
-                <th className="px-6 py-4 font-semibold">Property & Unit</th>
-                <th className="px-6 py-4 font-semibold">Source File</th>
-                <th className="px-6 py-4 font-semibold">CRM Status</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                <th className="px-6 py-4 font-semibold bg-[#051833]">Owner Name</th>
+                <th className="px-6 py-4 font-semibold bg-[#051833]">Phone & Email</th>
+                <th className="px-6 py-4 font-semibold bg-[#051833]">Property & Unit</th>
+                <th className="px-6 py-4 font-semibold bg-[#051833]">Source File</th>
+                <th className="px-6 py-4 font-semibold bg-[#051833]">CRM Status</th>
+                <th className="px-6 py-4 font-semibold text-right bg-[#051833]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">

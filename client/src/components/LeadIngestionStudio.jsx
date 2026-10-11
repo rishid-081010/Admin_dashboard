@@ -587,15 +587,15 @@ export default function LeadIngestionStudio() {
           {/* Table */}
           <div className="overflow-x-auto max-h-[420px] overflow-y-auto rounded-2xl border border-white/[0.06]">
             <table className="w-full text-left text-xs text-white/80 border-collapse">
-              <thead className="text-[10px] uppercase bg-navy-950/90 text-white/60 sticky top-0 z-10 backdrop-blur-md">
+              <thead className="text-[10px] uppercase bg-[#051833] text-white/70 sticky top-0 z-20 shadow-md shadow-black/40 border-b border-white/[0.08]">
                 <tr>
-                  <th className="py-3 px-3 border-b border-white/[0.06]">#</th>
-                  <th className="py-3 px-3 border-b border-white/[0.06]">Owner Name</th>
-                  <th className="py-3 px-3 border-b border-white/[0.06]">Phone (E.164 Clean)</th>
-                  <th className="py-3 px-3 border-b border-white/[0.06]">Project</th>
-                  <th className="py-3 px-3 border-b border-white/[0.06]">Location</th>
-                  <th className="py-3 px-3 border-b border-white/[0.06]">Unit</th>
-                  <th className="py-3 px-3 border-b border-white/[0.06] text-right">Status</th>
+                  <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">#</th>
+                  <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Owner Name</th>
+                  <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Phone (E.164 Clean)</th>
+                  <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Project</th>
+                  <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Location</th>
+                  <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833]">Unit</th>
+                  <th className="py-3 px-3 border-b border-white/[0.06] text-right bg-[#051833]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">

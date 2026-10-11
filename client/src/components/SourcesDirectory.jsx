@@ -288,14 +288,14 @@ export default function SourcesDirectory() {
       <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-xl overflow-hidden flex-1 flex flex-col">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-white/[0.08] bg-black/20 text-white/40 uppercase font-mono tracking-wider">
+            <thead className="border-b border-white/[0.08] bg-[#051833] text-white/60 uppercase font-mono tracking-wider sticky top-0 z-20 shadow-md shadow-black/40">
               <tr>
-                <th className="py-3.5 px-4 font-semibold w-14">#</th>
-                <th className="py-3.5 px-4 font-semibold">FILE NAME</th>
-                <th className="py-3.5 px-4 font-semibold w-28">FORMAT</th>
-                <th className="py-3.5 px-4 font-semibold w-36">FILE SIZE</th>
-                <th className="py-3.5 px-4 font-semibold w-44">MODIFIED DATE</th>
-                <th className="py-3.5 px-4 font-semibold text-right w-36">DOWNLOAD</th>
+                <th className="py-3.5 px-4 font-semibold w-14 bg-[#051833]">#</th>
+                <th className="py-3.5 px-4 font-semibold bg-[#051833]">FILE NAME</th>
+                <th className="py-3.5 px-4 font-semibold w-28 bg-[#051833]">FORMAT</th>
+                <th className="py-3.5 px-4 font-semibold w-36 bg-[#051833]">FILE SIZE</th>
+                <th className="py-3.5 px-4 font-semibold w-44 bg-[#051833]">MODIFIED DATE</th>
+                <th className="py-3.5 px-4 font-semibold text-right w-36 bg-[#051833]">DOWNLOAD</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
