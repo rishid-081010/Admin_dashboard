@@ -49,7 +49,7 @@ export default function TeamManagement() {
             TEAM MANAGEMENT
           </h1>
           <p className="text-white/60 text-[15px]">
-            Manage agent roles, lead distribution, and performance metrics (Live from Bitrix24).
+            Team members, roles, and deal performance synced with Bitrix24 CRM.
           </p>
         </div>
         <button 
@@ -80,7 +80,7 @@ export default function TeamManagement() {
 
       <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl flex flex-col shadow-lg overflow-hidden">
         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-black/20">
-          <h2 className="text-lg font-bold text-white tracking-tight">Agent Roster & Performance</h2>
+          <h2 className="text-lg font-bold text-white tracking-tight">Brokers &amp; Team Members</h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
             <input type="text" placeholder="Search agents..." className="bg-white/10 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#3b82f6]/50 transition-all shadow-inner" />
@@ -94,7 +94,7 @@ export default function TeamManagement() {
                 <th className="px-6 py-4">Role</th>
                 <th className="px-6 py-4">Active Leads</th>
                 <th className="px-6 py-4">Closed Deals</th>
-                <th className="px-6 py-4">KPI Score</th>
+                <th className="px-6 py-4">Conversion Rate</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
