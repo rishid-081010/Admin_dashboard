@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Sparkles } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const isListingActive = activeTab === 'listing' || activeTab === 'dashboard' || activeTab === 'new' || activeTab === 'detail';
@@ -7,10 +7,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
   return (
     <aside className="w-[215px] shrink-0 bg-[#021024]/80 backdrop-blur-2xl border border-white/[0.1] rounded-2xl p-2.5 flex flex-col h-full shadow-2xl select-none overflow-hidden transition-all hidden md:flex">
-      {/* Brand Header: Original Official Logo (Image 1) */}
+      {/* Brand Header: Original Official Logo */}
       <div 
         onClick={() => setActiveTab('overview')}
-        className="brand-logo flex flex-col items-center justify-center pt-1.5 pb-3 px-2 cursor-pointer select-none group border-b border-white/[0.06] mb-2 shrink-0"
+        className="brand-logo flex flex-col items-center justify-center pt-1.5 pb-2.5 px-2 cursor-pointer select-none group border-b border-white/[0.06] shrink-0"
       >
         <img 
           src="./asquared-logo.png" 
@@ -19,13 +19,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         />
       </div>
 
-      {/* Section Subheader */}
-      <div className="px-2.5 pt-1 pb-1 text-[9.5px] font-bold tracking-widest text-[#94a3b8]/70 uppercase font-mono shrink-0">
-        Owners Intelligence
-      </div>
-
-      {/* Navigation Links matching Image 2 */}
-      <nav className="w-full flex flex-col flex-1 gap-0.5 overflow-y-auto custom-scrollbar pr-0.5 min-h-0">
+      {/* Navigation Links evenly distributed across the entire vertical widget height */}
+      <nav className="w-full flex-1 flex flex-col justify-between py-2 min-h-0">
         {/* 1. Overview */}
         <button 
           onClick={() => setActiveTab('overview')} 
@@ -96,7 +91,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           }`}
         >
           <span>Sources</span>
-          <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[9px] font-bold px-1.5 py-0.2 rounded-full">1.38k</span>
+          <span className="bg-[#1e3a5f] text-[#60a5fa] border border-[#3b82f6]/30 text-[9.5px] font-bold px-2 py-0.5 rounded-full">1.38k</span>
         </button>
 
         {/* 7. Review queue */}
@@ -119,7 +114,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left text-[#94a3b8] hover:text-white hover:bg-white/[0.04]"
         >
           <span>Transactions</span>
-          <ExternalLink className="w-3 h-3 text-white/40" />
+          <ExternalLink className="w-3.5 h-3.5 text-white/50" />
         </a>
 
         {/* 9. Official open data */}
@@ -134,7 +129,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Official open data</span>
         </button>
 
-        {/* 10. Data health (Matching Image 4) */}
+        {/* 10. Data health */}
         <button 
           onClick={() => setActiveTab('data-health')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -156,35 +151,21 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           }`}
         >
           <span>My Day</span>
-          <span className="bg-[#ef4444] text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full">3</span>
+          <span className="bg-[#ef4444] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
         </button>
 
-        {/* 12. Smart agent */}
+        {/* 12. Smart agent (Prominent pill button at bottom matching reference) */}
         <button 
           onClick={() => setActiveTab('voice')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+          className={`w-full flex items-center px-4 py-2 rounded-full border-[1.5px] transition-all text-left font-bold text-[13.5px] tracking-wide shadow-md ${
             activeTab === 'voice' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+              ? 'bg-white/20 text-white border-white shadow-lg' 
+              : 'text-white border-white/80 hover:bg-white/10 hover:border-white'
           }`}
         >
           <span>Smart agent</span>
         </button>
       </nav>
-
-      {/* Bottom Section: INTELLIGENCE */}
-      <div className="pt-2 border-t border-white/[0.06] mt-1 space-y-0.5 shrink-0">
-        <div className="px-2.5 pt-1 text-[9.5px] font-bold tracking-widest text-[#94a3b8]/60 uppercase font-mono">
-          Intelligence
-        </div>
-        <button 
-          onClick={() => setActiveTab('voice')}
-          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12.5px] text-[#94a3b8] hover:text-white hover:bg-white/[0.04] transition-all text-left"
-        >
-          <span className="text-blue-400">✧</span>
-          <span>Assistant</span>
-        </button>
-      </div>
     </aside>
   );
 }

@@ -88,6 +88,7 @@ export default function App() {
           />
         )}
         {activeTab === 'buildings' && <Buildings />}
+        {activeTab === 'open-data' && <Buildings />}
         {activeTab === 'search' && <OmniSearch />}
         {activeTab === 'sources' && <SourcesDirectory />}
         {activeTab === 'activity' && <MyActivity globalAgent={globalAgent} />}
