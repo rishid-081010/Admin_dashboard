@@ -45,7 +45,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Owners Data</span>
         </button>
 
-        {/* 3. Leads & Contacts */}
+        {/* 3. Data Cleaning */}
         <button 
           onClick={() => setActiveTab('leads')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -54,7 +54,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Leads &amp; Contacts</span>
+          <span>Data Cleaning</span>
         </button>
 
         {/* 4. Properties */}
