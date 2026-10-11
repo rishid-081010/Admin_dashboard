@@ -1,65 +1,174 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Filter, MoreHorizontal, User, Phone, Mail, 
   Building2, MapPin, Database, ExternalLink, Share2, 
   CheckCircle2, UserCheck, RefreshCw, ChevronDown, List, LayoutGrid,
-  SlidersHorizontal, X, ArrowUpDown
+  SlidersHorizontal, X, ArrowUpDown, Calendar, FileSpreadsheet, RotateCcw,
+  Check, ArrowRight
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
+import ownerFiltersMetadata from '../data/ownerFiltersMetadata.json';
 
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
+const BITRIX_STATUSES = [
+  { id: 'all', name: 'All Bitrix Statuses' },
+  { id: 'NEW', name: 'Fresh leads' },
+  { id: 'IN_PROCESS', name: 'Assigned' },
+  { id: 'PROCESSED', name: 'No Answer' },
+  { id: 'UC_K6BE93', name: 'Contacted — Qualifying' },
+  { id: 'UC_ASQ_OWNER', name: 'Owner / Listing Qualification' },
+  { id: 'UC_YYWHDB', name: 'Meeting and Viewing' },
+  { id: 'UC_AU79U4', name: 'Qualified / Hot' },
+  { id: 'UC_5A11LD', name: 'Offer / Negotiation' },
+  { id: 'UC_2GDUWK', name: 'Deal Closed' },
+  { id: '1', name: 'Not Interested' },
+  { id: '2', name: 'Wrong Contact Details' },
+  { id: '3', name: 'Broker/Agent' },
+  { id: '4', name: "Don't Call Again" },
+  { id: '5', name: 'Budget Issues' },
+  { id: '6', name: 'Unreachable — Closed' },
+  { id: 'JUNK', name: 'Junk Lead' },
+  { id: 'CONVERTED', name: 'Booking' }
+];
+
+const PROPERTY_SUBTYPES = [
+  'All',
+  'Flat',
+  'Unit',
+  'Residential',
+  'Villa',
+  'Land',
+  'Commercial',
+  'Office',
+  'Building',
+  'Hotel Apartment',
+  'Shop',
+  'Hotel Rooms',
+  'Industrial',
+  'Warehouse',
+  'Apartments',
+  'Duplex'
+];
+
 export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 'Melanie Simsiman', agentsList = [] }) {
-  // Search & Core Filters matching user screenshot
+  // ─── 1. Main Big Bar Search (Omni Search Engine style) ───────────────────
   const [searchTerm, setSearchTerm] = useState('');
-  const [areaFilter, setAreaFilter] = useState('All areas');
-  const [contactFilter, setContactFilter] = useState('All contacts');
-  const [agentFilter, setAgentFilter] = useState('All agents');
+
+  // ─── 2. Filters Box State & Sub-Filtering Options ────────────────────────
+  const [showFiltersBox, setShowFiltersBox] = useState(false);
+
+  // Sub-option: Present in CRM ('all' | 'yes' | 'no')
+  const [crmPresent, setCrmPresent] = useState('all');
+  // Sub-option (if present in CRM): Assigned / Unassigned ('all' | 'assigned' | 'unassigned')
+  const [crmAssignment, setCrmAssignment] = useState('all');
+  // Sub-option (if assigned): Agent Name ('all' or specific name)
+  const [crmAgent, setCrmAgent] = useState('all');
+  // Sub-option (if present in CRM): Bitrix Status ('all' or specific status)
+  const [crmBitrixStatus, setCrmBitrixStatus] = useState('all');
+
+  // Sub-option: Building (Searchable dropdown with search through buildings)
+  const [selectedBuilding, setSelectedBuilding] = useState('');
+  const [buildingSearchQuery, setBuildingSearchQuery] = useState('');
+  const [isBuildingMenuOpen, setIsBuildingMenuOpen] = useState(false);
+
+  // Sub-option: Type (Dropdown of all property subtypes)
+  const [selectedPropertyType, setSelectedPropertyType] = useState('All');
+
+  // Sub-option: Phone ('all' | 'yes' | 'no')
+  const [phoneFilter, setPhoneFilter] = useState('all');
+
+  // Sub-option: Email ('all' | 'yes' | 'no')
+  const [emailFilter, setEmailFilter] = useState('all');
+
+  // Sub-option: Data from (Roster of CSV/Excel source files with search feature)
+  const [selectedSourceFile, setSelectedSourceFile] = useState('');
+  const [sourceSearchQuery, setSourceSearchQuery] = useState('');
+  const [isSourceMenuOpen, setIsSourceMenuOpen] = useState(false);
+
+  // Sub-option: Date from <----> Date to
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // ─── 3. Right Side Controls ──────────────────────────────────────────────
   const [sortBy, setSortBy] = useState('Name A–Z');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
 
-  // Expandable "More filters" state
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
-  const [propertyTypeFilter, setPropertyTypeFilter] = useState('All types');
-  const [bedroomsFilter, setBedroomsFilter] = useState('All');
-
-  // Data & Pagination State
+  // ─── Data & Pagination State ─────────────────────────────────────────────
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
-  // Slider / Action State
+  // ─── Slider / Action State ───────────────────────────────────────────────
   const [selectedOwner, setSelectedOwner] = useState(null);
   const [pushedIds, setPushedIds] = useState(new Set());
   const [syncingId, setSyncingId] = useState(null);
 
-  // Available Areas
-  const areasList = [
-    'All areas',
-    'Downtown Dubai',
-    'Dubai Marina',
-    'Palm Jumeirah',
-    'Business Bay',
-    'Jumeirah Lakes Towers (JLT)',
-    'Dubai Hills Estate',
-    'Jumeirah Village Circle (JVC)',
-    'Al Barsha',
-    'Arabian Ranches',
-    'Creek Harbour',
-    'Meydan',
-    'DIFC'
-  ];
+  // Agents list
+  const availableAgents = useMemo(() => {
+    return agentsList && agentsList.length > 0 ? agentsList : [
+      { id: '6', name: 'Melanie Simsiman', role: 'Admin' },
+      { id: '7', name: 'Akarsh Arora', role: 'Agent' },
+      { id: '186', name: 'NIDAF KHAN', role: 'Agent' },
+      { id: '201', name: 'Humesh Gurung', role: 'Agent' }
+    ];
+  }, [agentsList]);
 
-  // Default agent list if none passed
-  const availableAgents = agentsList && agentsList.length > 0 ? agentsList : [
-    { id: '6', name: 'Melanie Simsiman', role: 'Admin' },
-    { id: '7', name: 'Akarsh Arora', role: 'Agent' },
-    { id: '186', name: 'NIDAF KHAN', role: 'Agent' },
-    { id: '201', name: 'Humesh Gurung', role: 'Agent' }
-  ];
+  // Filtered lists for searchable comboboxes
+  const allBuildings = useMemo(() => ownerFiltersMetadata?.buildings || [], []);
+  const filteredBuildings = useMemo(() => {
+    if (!buildingSearchQuery.trim()) return allBuildings.slice(0, 50);
+    const q = buildingSearchQuery.toLowerCase();
+    return allBuildings.filter(b => b.toLowerCase().includes(q)).slice(0, 50);
+  }, [allBuildings, buildingSearchQuery]);
 
+  const allSources = useMemo(() => ownerFiltersMetadata?.sources || [], []);
+  const filteredSources = useMemo(() => {
+    if (!sourceSearchQuery.trim()) return allSources.slice(0, 50);
+    const q = sourceSearchQuery.toLowerCase();
+    return allSources.filter(s => s.toLowerCase().includes(q)).slice(0, 50);
+  }, [allSources, sourceSearchQuery]);
+
+  // Active filters count
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (crmPresent !== 'all') count++;
+    if (crmPresent === 'yes' && crmAssignment !== 'all') count++;
+    if (crmPresent === 'yes' && crmAssignment === 'assigned' && crmAgent !== 'all') count++;
+    if (crmPresent === 'yes' && crmBitrixStatus !== 'all') count++;
+    if (selectedBuilding) count++;
+    if (selectedPropertyType !== 'All') count++;
+    if (phoneFilter !== 'all') count++;
+    if (emailFilter !== 'all') count++;
+    if (selectedSourceFile) count++;
+    if (dateFrom || dateTo) count++;
+    return count;
+  }, [
+    crmPresent, crmAssignment, crmAgent, crmBitrixStatus, 
+    selectedBuilding, selectedPropertyType, phoneFilter, emailFilter, 
+    selectedSourceFile, dateFrom, dateTo
+  ]);
+
+  const resetAllFilters = () => {
+    setCrmPresent('all');
+    setCrmAssignment('all');
+    setCrmAgent('all');
+    setCrmBitrixStatus('all');
+    setSelectedBuilding('');
+    setBuildingSearchQuery('');
+    setSelectedPropertyType('All');
+    setPhoneFilter('all');
+    setEmailFilter('all');
+    setSelectedSourceFile('');
+    setSourceSearchQuery('');
+    setDateFrom('');
+    setDateTo('');
+    setCurrentPage(1);
+  };
+
+  // ─── Query Execution ─────────────────────────────────────────────────────
   const fetchOwners = async () => {
     setLoading(true);
     try {
@@ -67,9 +176,9 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       const isSearching = searchTerm.trim().length > 1;
 
       // Base select
-      let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=lead_id,owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,vendor_source_file,bitrix_id,assigned_agent,assigned_agent_id&limit=${itemsPerPage}&offset=${offset}`;
+      let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=lead_id,owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,vendor_source_file,bitrix_id,assigned_agent,assigned_agent_id,bitrix_status&limit=${itemsPerPage}&offset=${offset}`;
 
-      // 1. Search Logic (Indexed equality for phones and IDs; trigram/ilike for names)
+      // 1. Omni Search Bar logic
       if (isSearching) {
         const queryTerm = searchTerm.trim();
         const cleanDigits = queryTerm.replace(/[^0-9]/g, '');
@@ -87,43 +196,67 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         }
       }
 
-      // 2. Area Filter
-      if (areaFilter !== 'All areas') {
-        const areaParam = areaFilter.replace(/\s*\(JLT\)|\s*\(JVC\)/g, '');
-        url += `&master_area=ilike.*${encodeURIComponent(areaParam)}*`;
-      }
+      // 2. Present in CRM & nested sub-filters
+      if (crmPresent === 'yes') {
+        url += '&bitrix_id=not.is.null';
 
-      // 3. Contact Filter
-      if (contactFilter === 'Has phone & email') {
-        url += `&phone_normalized=not.is.null&email=not.is.null`;
-      } else if (contactFilter === 'Has phone only') {
-        url += `&phone_normalized=not.is.null&email=is.null`;
-      } else if (contactFilter === 'In Bitrix24') {
-        url += `&bitrix_id=not.is.null`;
-      } else if (contactFilter === 'Not in CRM') {
-        url += `&bitrix_id=is.null`;
-      }
-
-      // 4. Agent Filter
-      if (agentFilter !== 'All agents') {
-        if (agentFilter === 'Unassigned') {
-          url += `&assigned_agent=is.null`;
-        } else {
-          url += `&assigned_agent=eq.${encodeURIComponent(agentFilter)}`;
+        // Assigned / Unassigned
+        if (crmAssignment === 'unassigned') {
+          url += '&assigned_agent=is.null';
+        } else if (crmAssignment === 'assigned') {
+          if (crmAgent !== 'all') {
+            url += `&assigned_agent=eq.${encodeURIComponent(crmAgent)}`;
+          } else {
+            url += '&assigned_agent=not.is.null';
+          }
         }
+
+        // Status (only when in CRM)
+        if (crmBitrixStatus !== 'all') {
+          url += `&or=(bitrix_status.eq.${encodeURIComponent(crmBitrixStatus)},bitrix_status_id.eq.${encodeURIComponent(crmBitrixStatus)})`;
+        }
+      } else if (crmPresent === 'no') {
+        url += '&bitrix_id=is.null';
       }
 
-      // 5. More Filters: Property Type
-      if (propertyTypeFilter !== 'All types') {
-        url += `&reported_property_type=ilike.*${encodeURIComponent(propertyTypeFilter)}*`;
+      // 3. Building
+      if (selectedBuilding) {
+        url += `&building_name=ilike.*${encodeURIComponent(selectedBuilding)}*`;
       }
 
-      // 6. More Filters: Bedrooms
-      if (bedroomsFilter !== 'All') {
-        url += `&verified_bedrooms=eq.${encodeURIComponent(bedroomsFilter)}`;
+      // 4. Type (Property subtype)
+      if (selectedPropertyType && selectedPropertyType !== 'All') {
+        url += `&reported_property_type=ilike.*${encodeURIComponent(selectedPropertyType)}*`;
       }
 
-      // 7. Sort Order (Avoid complex order during full-text search to maintain B-tree speed)
+      // 5. Phone
+      if (phoneFilter === 'yes') {
+        url += '&phone_normalized=not.is.null';
+      } else if (phoneFilter === 'no') {
+        url += '&phone_normalized=is.null';
+      }
+
+      // 6. Email
+      if (emailFilter === 'yes') {
+        url += '&email=not.is.null';
+      } else if (emailFilter === 'no') {
+        url += '&email=is.null';
+      }
+
+      // 7. Data from (Source file roster)
+      if (selectedSourceFile) {
+        url += `&vendor_source_file=eq.${encodeURIComponent(selectedSourceFile)}`;
+      }
+
+      // 8. Date from <----> Date to
+      if (dateFrom) {
+        url += `&verified_purchase_date=gte.${dateFrom}`;
+      }
+      if (dateTo) {
+        url += `&verified_purchase_date=lte.${dateTo}`;
+      }
+
+      // Sort Order
       if (!isSearching) {
         if (sortBy === 'Name A–Z') {
           url += `&order=full_name.asc`;
@@ -170,6 +303,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           vendor_source_file: row.vendor_source_file || null,
           source: 'Verified',
           bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
+          bitrix_status: row.bitrix_status || null,
           assigned_agent: row.assigned_agent || null,
           assigned_agent_id: row.assigned_agent_id || null,
           portfolioValue: row.verified_purchase_price ? `AED ${(parseFloat(row.verified_purchase_price) / 1000000).toFixed(1)}M` : 'Standard',
@@ -180,7 +314,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         setOwners([]);
       }
     } catch (error) {
-      console.error("Supabase unreachable", error);
+      console.error("Supabase fetch failed", error);
       setOwners([]);
     } finally {
       setLoading(false);
@@ -190,14 +324,15 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchOwners();
-    }, 300);
+    }, 280);
     return () => clearTimeout(timeoutId);
   }, [
-    currentPage, searchTerm, areaFilter, contactFilter, 
-    agentFilter, sortBy, propertyTypeFilter, bedroomsFilter
+    currentPage, searchTerm, crmPresent, crmAssignment, crmAgent, 
+    crmBitrixStatus, selectedBuilding, selectedPropertyType, 
+    phoneFilter, emailFilter, selectedSourceFile, dateFrom, dateTo, sortBy
   ]);
 
-  // Push lead to Bitrix CRM & write back bitrix_id and assigned_agent to Supabase
+  // ─── Bitrix24 Integration Actions ────────────────────────────────────────
   const pushToBitrix = async (lead, agentIdOverride, agentNameOverride) => {
     setSyncingId(lead.id);
     try {
@@ -253,7 +388,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     }
   };
 
-  // Re-assign agent directly from the table dropdown and sync to Supabase & Bitrix
   const handleAssignAgent = async (e, lead, selectedAgent) => {
     if (e) e.stopPropagation();
     try {
@@ -273,14 +407,10 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       );
 
       if (lead.bitrix_id) {
-        try {
-          await axios.post('https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/crm.lead.update.json', {
-            id: lead.bitrix_id,
-            fields: { ASSIGNED_BY_ID: selectedAgent.id }
-          });
-        } catch (bErr) {
-          console.warn("Bitrix agent update notice:", bErr);
-        }
+        await axios.post('https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/crm.lead.update.json', {
+          id: lead.bitrix_id,
+          fields: { ASSIGNED_BY_ID: selectedAgent.id }
+        });
       }
 
       setOwners(prev => prev.map(o => o.id === lead.id ? {
@@ -289,26 +419,13 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         assigned_agent_id: String(selectedAgent.id)
       } : o));
     } catch (err) {
-      console.error("Failed to assign agent:", err);
-      alert("Failed to update assigned agent in database");
+      console.error("Agent assignment sync failed", err);
     }
   };
 
-  if (selectedOwner) {
-    return (
-      <Owner360Detail
-        owner={selectedOwner}
-        onBack={() => setSelectedOwner(null)}
-        onPushToBitrix={pushToBitrix}
-        isPushed={pushedIds.has(selectedOwner.id) || !!selectedOwner.bitrix_id}
-        globalAgentName={selectedOwner.assigned_agent || globalAgentName}
-      />
-    );
-  }
-
   return (
     <div className="w-full flex flex-col h-full animate-fade-in relative text-white/80">
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-1.5" style={{ fontFamily: "Georgia, serif" }}>
@@ -320,110 +437,66 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         </div>
       </div>
 
-      {/* ─── Filtration Bar (Exact match to User's Specification) ───────── */}
-      <div className="bg-[#021024]/90 backdrop-blur-xl border border-white/[0.12] rounded-2xl shadow-xl p-3 sm:p-3.5 mb-5 select-none">
+      {/* ─── Main Search & Filtration Toolbar ──────────────────────────────── */}
+      <div className="bg-[#021024]/90 backdrop-blur-xl border border-white/[0.12] rounded-2xl shadow-xl p-3 sm:p-4 mb-4 select-none">
+        
+        {/* Top Row: Big Search Bar + Filters Button + Sort + View Toggle */}
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           
-          {/* Left Controls Group */}
-          <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
-            
-            {/* 1. Search input */}
-            <div className="relative min-w-[210px] sm:min-w-[240px] flex-1 sm:flex-none">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-              <input
-                type="text"
-                placeholder="Search name, building or unit..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white/[0.05] border border-white/15 focus:border-blue-500/60 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-white/50 focus:outline-none transition-all"
-              />
-              {searchTerm && (
-                <button 
-                  onClick={() => setSearchTerm('')} 
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* 2. All areas dropdown */}
-            <div className="relative">
-              <select
-                value={areaFilter}
-                onChange={(e) => setAreaFilter(e.target.value)}
-                className="bg-white/[0.05] hover:bg-white/[0.08] border border-white/15 focus:border-blue-500/60 rounded-xl pl-3 pr-8 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+          {/* 1. Main Big Bar Search (Omni Search Style) */}
+          <div className="relative flex-1 min-w-[260px] sm:min-w-[340px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" />
+            <input
+              type="text"
+              placeholder="Search by owner name, phone number, building, unit, or Lead ID..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-black/40 hover:bg-black/50 focus:bg-black/60 border border-white/15 focus:border-blue-500/80 rounded-2xl pl-12 pr-10 py-3 text-xs sm:text-sm font-medium text-white placeholder-white/40 focus:outline-none transition-all shadow-inner focus:ring-2 focus:ring-blue-500/20"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')} 
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+                title="Clear search"
               >
-                {areasList.map(area => (
-                  <option key={area} value={area} className="bg-slate-900 text-white">
-                    {area}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50 pointer-events-none" />
-            </div>
-
-            {/* 3. All contacts dropdown */}
-            <div className="relative">
-              <select
-                value={contactFilter}
-                onChange={(e) => setContactFilter(e.target.value)}
-                className="bg-white/[0.05] hover:bg-white/[0.08] border border-white/15 focus:border-blue-500/60 rounded-xl pl-3 pr-8 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
-              >
-                <option value="All contacts" className="bg-slate-900 text-white">All contacts</option>
-                <option value="Has phone & email" className="bg-slate-900 text-white">Has phone &amp; email</option>
-                <option value="Has phone only" className="bg-slate-900 text-white">Has phone only</option>
-                <option value="In Bitrix24" className="bg-slate-900 text-white">In Bitrix24</option>
-                <option value="Not in CRM" className="bg-slate-900 text-white">Not in CRM</option>
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50 pointer-events-none" />
-            </div>
-
-            {/* 4. All agents dropdown */}
-            <div className="relative">
-              <select
-                value={agentFilter}
-                onChange={(e) => setAgentFilter(e.target.value)}
-                className="bg-white/[0.05] hover:bg-white/[0.08] border border-white/15 focus:border-blue-500/60 rounded-xl pl-3 pr-8 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
-              >
-                <option value="All agents" className="bg-slate-900 text-white">All agents</option>
-                <option value="Unassigned" className="bg-slate-900 text-white">Unassigned</option>
-                {availableAgents.map(ag => (
-                  <option key={ag.id} value={ag.name} className="bg-slate-900 text-white">
-                    {ag.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50 pointer-events-none" />
-            </div>
-
-            {/* 5. More filters button */}
-            <button
-              onClick={() => setShowMoreFilters(prev => !prev)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                showMoreFilters || propertyTypeFilter !== 'All types' || bedroomsFilter !== 'All'
-                  ? 'bg-blue-600/30 text-blue-300 border-blue-500/50 shadow-sm'
-                  : 'bg-white/[0.05] hover:bg-white/[0.08] text-white/80 border-white/15'
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-white/60" />
-              <span>More filters</span>
-              {(propertyTypeFilter !== 'All types' || bedroomsFilter !== 'All') && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-              )}
-            </button>
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          {/* Right Controls Group: Sort + View Mode Toggle */}
-          <div className="flex items-center gap-3 shrink-0 self-end lg:self-auto">
-            {/* Sort Section */}
+          {/* Controls Cluster: Filters Button + Sort + View Mode */}
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0 self-end lg:self-auto">
+            
+            {/* 2. Filters Box Launcher Button */}
+            <button
+              onClick={() => setShowFiltersBox(prev => !prev)}
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-md ${
+                showFiltersBox || activeFiltersCount > 0
+                  ? 'bg-blue-600/30 text-blue-300 border-blue-500/60 shadow-blue-900/30 ring-1 ring-blue-500/40'
+                  : 'bg-white/[0.05] hover:bg-white/[0.09] text-white/90 border-white/15'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4 text-blue-400" />
+              <span className="font-bold tracking-wide">Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white shadow-sm">
+                  {activeFiltersCount}
+                </span>
+              )}
+              <ChevronDown className={`w-3.5 h-3.5 text-white/50 transition-transform ${showFiltersBox ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Sort Dropdown */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-white/50">Sort</span>
+              <span className="text-xs font-semibold text-white/50 hidden sm:inline">Sort</span>
               <div className="relative">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-white/[0.05] hover:bg-white/[0.08] border border-white/15 focus:border-blue-500/60 rounded-xl pl-3 pr-8 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+                  className="bg-white/[0.05] hover:bg-white/[0.08] border border-white/15 focus:border-blue-500/60 rounded-xl pl-3 pr-8 py-2.5 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
                 >
                   <option value="Name A–Z" className="bg-slate-900 text-white">Name A–Z</option>
                   <option value="Name Z–A" className="bg-slate-900 text-white">Name Z–A</option>
@@ -440,7 +513,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             <div className="flex items-center bg-black/40 border border-white/15 rounded-xl p-0.5 shadow-inner">
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-lg transition-all ${
+                className={`p-2 rounded-lg transition-all ${
                   viewMode === 'list' 
                     ? 'bg-blue-600 text-white shadow-sm' 
                     : 'text-white/40 hover:text-white'
@@ -451,7 +524,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               </button>
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-all ${
+                className={`p-2 rounded-lg transition-all ${
                   viewMode === 'grid' 
                     ? 'bg-blue-600 text-white shadow-sm' 
                     : 'text-white/40 hover:text-white'
@@ -465,61 +538,599 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           </div>
         </div>
 
-        {/* Expandable More Filters Drawer */}
-        {showMoreFilters && (
-          <div className="mt-3.5 pt-3.5 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 animate-fade-in text-xs">
-            <div>
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider block mb-1">Property Type</label>
-              <select
-                value={propertyTypeFilter}
-                onChange={(e) => setPropertyTypeFilter(e.target.value)}
-                className="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-1.5 text-white outline-none"
-              >
-                <option value="All types" className="bg-slate-900 text-white">All types</option>
-                <option value="Apartment" className="bg-slate-900 text-white">Apartment</option>
-                <option value="Villa" className="bg-slate-900 text-white">Villa</option>
-                <option value="Townhouse" className="bg-slate-900 text-white">Townhouse</option>
-                <option value="Penthouse" className="bg-slate-900 text-white">Penthouse</option>
-                <option value="Commercial" className="bg-slate-900 text-white">Commercial</option>
-              </select>
-            </div>
+        {/* ─── Active Filter Pills (Clickable dismissal) ────────────────────── */}
+        {activeFiltersCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-white/10 text-xs animate-fade-in">
+            <span className="text-white/40 font-bold text-[11px] uppercase tracking-wider">Active:</span>
+            
+            {crmPresent !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
+                CRM: {crmPresent === 'yes' ? 'In Bitrix24' : 'Not in CRM'}
+                <button onClick={() => setCrmPresent('all')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
 
-            <div>
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider block mb-1">Bedrooms</label>
-              <select
-                value={bedroomsFilter}
-                onChange={(e) => setBedroomsFilter(e.target.value)}
-                className="w-full bg-black/30 border border-white/15 rounded-xl px-3 py-1.5 text-white outline-none"
-              >
-                <option value="All" className="bg-slate-900 text-white">Any Bedrooms</option>
-                <option value="1" className="bg-slate-900 text-white">1 Bedroom</option>
-                <option value="2" className="bg-slate-900 text-white">2 Bedrooms</option>
-                <option value="3" className="bg-slate-900 text-white">3 Bedrooms</option>
-                <option value="4" className="bg-slate-900 text-white">4+ Bedrooms</option>
-              </select>
-            </div>
+            {crmPresent === 'yes' && crmAssignment !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
+                {crmAssignment === 'assigned' ? 'Assigned' : 'Unassigned'}
+                <button onClick={() => setCrmAssignment('all')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
 
-            <div className="flex items-end">
-              <button
-                onClick={() => {
-                  setPropertyTypeFilter('All types');
-                  setBedroomsFilter('All');
-                  setAreaFilter('All areas');
-                  setContactFilter('All contacts');
-                  setAgentFilter('All agents');
-                  setSearchTerm('');
-                  setSortBy('Name A–Z');
-                }}
-                className="w-full px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-medium transition-all"
-              >
-                Reset All Filters
-              </button>
-            </div>
+            {crmPresent === 'yes' && crmAssignment === 'assigned' && crmAgent !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
+                Agent: {crmAgent}
+                <button onClick={() => setCrmAgent('all')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            {crmPresent === 'yes' && crmBitrixStatus !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
+                Status: {BITRIX_STATUSES.find(s => s.id === crmBitrixStatus)?.name || crmBitrixStatus}
+                <button onClick={() => setCrmBitrixStatus('all')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            {selectedBuilding && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 font-medium">
+                Building: {selectedBuilding}
+                <button onClick={() => setSelectedBuilding('')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            {selectedPropertyType !== 'All' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-200 font-medium">
+                Type: {selectedPropertyType}
+                <button onClick={() => setSelectedPropertyType('All')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            {phoneFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 font-medium">
+                Phone: {phoneFilter === 'yes' ? 'Has Phone' : 'No Phone'}
+                <button onClick={() => setPhoneFilter('all')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            {emailFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 font-medium">
+                Email: {emailFilter === 'yes' ? 'Has Email' : 'No Email'}
+                <button onClick={() => setEmailFilter('all')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            {selectedSourceFile && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-medium">
+                File: {selectedSourceFile}
+                <button onClick={() => setSelectedSourceFile('')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            {(dateFrom || dateTo) && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-200 font-medium">
+                Date: {dateFrom || 'Any'} → {dateTo || 'Any'}
+                <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            <button
+              onClick={resetAllFilters}
+              className="text-white/40 hover:text-red-300 underline font-semibold ml-1 cursor-pointer transition-colors"
+            >
+              Reset all
+            </button>
           </div>
         )}
+
+        {/* ─── The Filters Box (One Big Expandable Box with All Sub-Filters) ─ */}
+        {showFiltersBox && (
+          <div className="mt-4 pt-4 border-t border-white/15 bg-black/40 rounded-2xl p-4 sm:p-5 shadow-2xl animate-fade-in text-xs space-y-4">
+            
+            {/* Box Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-blue-400" />
+                <span className="font-bold text-white text-sm">Advanced Filter Matrix</span>
+                <span className="text-white/40 text-xs hidden sm:inline">— Target owners across CRM lifecycle, building inventory, and data sources</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={resetAllFilters}
+                  className="px-2.5 py-1 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1 font-medium"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset
+                </button>
+                <button
+                  onClick={() => setShowFiltersBox(false)}
+                  className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Close filters"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-Filters Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              
+              {/* ── 1. Present in CRM (with Conditional Sub-Filters) ── */}
+              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-col justify-between">
+                <div>
+                  <label className="text-[11px] font-bold text-white/60 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-blue-400" />
+                    Present in CRM
+                  </label>
+                  
+                  {/* Yes / No / All toggle */}
+                  <div className="grid grid-cols-3 gap-1 bg-black/40 p-1 rounded-lg border border-white/10 mb-2.5">
+                    {['all', 'yes', 'no'].map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => {
+                          setCrmPresent(opt);
+                          if (opt !== 'yes') {
+                            setCrmAssignment('all');
+                            setCrmAgent('all');
+                            setCrmBitrixStatus('all');
+                          }
+                          setCurrentPage(1);
+                        }}
+                        className={`py-1 rounded text-center font-bold capitalize transition-all ${
+                          crmPresent === opt 
+                            ? 'bg-blue-600 text-white shadow-sm' 
+                            : 'text-white/50 hover:text-white'
+                        }`}
+                      >
+                        {opt === 'all' ? 'All' : opt === 'yes' ? 'Yes' : 'No'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Conditional sub-options: ONLY if present in CRM === 'yes' */}
+                  {crmPresent === 'yes' && (
+                    <div className="space-y-2.5 pt-2 border-t border-white/10 animate-fade-in">
+                      
+                      {/* Assignment status */}
+                      <div>
+                        <span className="text-[10px] font-semibold text-white/50 block mb-1">Assignment:</span>
+                        <div className="grid grid-cols-3 gap-1 bg-black/30 p-0.5 rounded-lg border border-white/10">
+                          {['all', 'assigned', 'unassigned'].map(asOpt => (
+                            <button
+                              key={asOpt}
+                              onClick={() => {
+                                setCrmAssignment(asOpt);
+                                if (asOpt !== 'assigned') setCrmAgent('all');
+                                setCurrentPage(1);
+                              }}
+                              className={`py-0.5 text-[11px] rounded text-center capitalize transition-all ${
+                                crmAssignment === asOpt 
+                                  ? 'bg-blue-500/40 text-blue-200 font-bold border border-blue-400/30' 
+                                  : 'text-white/40 hover:text-white'
+                              }`}
+                            >
+                              {asOpt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* If Assigned -> All agent names */}
+                      {crmAssignment === 'assigned' && (
+                        <div className="animate-fade-in">
+                          <span className="text-[10px] font-semibold text-white/50 block mb-1">Agent Name:</span>
+                          <select
+                            value={crmAgent}
+                            onChange={(e) => {
+                              setCrmAgent(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            className="w-full bg-black/60 border border-white/15 rounded-lg px-2.5 py-1 text-white outline-none focus:border-blue-500"
+                          >
+                            <option value="all" className="bg-slate-900 text-white">All Agents</option>
+                            {availableAgents.map(ag => (
+                              <option key={ag.id} value={ag.name} className="bg-slate-900 text-white">
+                                {ag.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Bitrix Status -> All bitrix statuses (only if lead is in CRM) */}
+                      <div className="animate-fade-in">
+                        <span className="text-[10px] font-semibold text-white/50 block mb-1">Bitrix CRM Status:</span>
+                        <select
+                          value={crmBitrixStatus}
+                          onChange={(e) => {
+                            setCrmBitrixStatus(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          className="w-full bg-black/60 border border-white/15 rounded-lg px-2.5 py-1 text-white outline-none focus:border-blue-500"
+                        >
+                          {BITRIX_STATUSES.map(st => (
+                            <option key={st.id} value={st.id} className="bg-slate-900 text-white">
+                              {st.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── 2. Building (Dropdown with Search through buildings) ── */}
+              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 relative">
+                <label className="text-[11px] font-bold text-white/60 uppercase tracking-wider block mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Building
+                  </span>
+                  {selectedBuilding && (
+                    <button 
+                      onClick={() => setSelectedBuilding('')}
+                      className="text-white/40 hover:text-red-300 text-[10px] lowercase"
+                    >
+                      clear
+                    </button>
+                  )}
+                </label>
+
+                {/* Search input for buildings */}
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
+                  <input
+                    type="text"
+                    placeholder="Search 300+ buildings..."
+                    value={buildingSearchQuery}
+                    onChange={(e) => {
+                      setBuildingSearchQuery(e.target.value);
+                      setIsBuildingMenuOpen(true);
+                    }}
+                    onFocus={() => setIsBuildingMenuOpen(true)}
+                    className="w-full bg-black/50 border border-white/15 focus:border-emerald-500/60 rounded-lg pl-8 pr-7 py-1.5 text-white placeholder-white/30 outline-none text-xs"
+                  />
+                  {buildingSearchQuery && (
+                    <button 
+                      onClick={() => setBuildingSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Selected Building Display */}
+                {selectedBuilding ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-200">
+                    <span className="font-semibold truncate">{selectedBuilding}</span>
+                    <button onClick={() => setSelectedBuilding('')}><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-white/40 italic mb-1">
+                    Select a building below or type to search:
+                  </div>
+                )}
+
+                {/* Dropdown list of buildings */}
+                {isBuildingMenuOpen && (
+                  <div className="mt-1 max-h-36 overflow-y-auto custom-scrollbar bg-[#051329] border border-white/15 rounded-lg divide-y divide-white/5 shadow-2xl z-30">
+                    <button
+                      onClick={() => {
+                        setSelectedBuilding('');
+                        setIsBuildingMenuOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 text-left text-white/50 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-between"
+                    >
+                      <span>All Buildings</span>
+                      {!selectedBuilding && <Check className="w-3 h-3 text-emerald-400" />}
+                    </button>
+                    {filteredBuildings.map(bldg => (
+                      <button
+                        key={bldg}
+                        onClick={() => {
+                          setSelectedBuilding(bldg);
+                          setIsBuildingMenuOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-left text-white/80 hover:bg-emerald-600/20 hover:text-emerald-200 transition-colors flex items-center justify-between text-xs truncate"
+                      >
+                        <span className="truncate">{bldg}</span>
+                        {selectedBuilding === bldg && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── 3. Type (Property Subtypes available in owners data) ── */}
+              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-col justify-between">
+                <div>
+                  <label className="text-[11px] font-bold text-white/60 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-purple-400" />
+                    Property Type
+                  </label>
+                  <p className="text-[11px] text-white/40 mb-2">Filter across verified property classifications:</p>
+                  
+                  <select
+                    value={selectedPropertyType}
+                    onChange={(e) => {
+                      setSelectedPropertyType(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full bg-black/60 border border-white/15 rounded-lg px-3 py-2 text-white outline-none focus:border-purple-500 font-medium cursor-pointer"
+                  >
+                    {PROPERTY_SUBTYPES.map(type => (
+                      <option key={type} value={type} className="bg-slate-900 text-white">
+                        {type === 'All' ? 'All Property Types' : type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Quick chip shortcuts */}
+                <div className="flex flex-wrap gap-1 mt-3">
+                  {['Flat', 'Villa', 'Commercial', 'Land'].map(pt => (
+                    <button
+                      key={pt}
+                      onClick={() => {
+                        setSelectedPropertyType(selectedPropertyType === pt ? 'All' : pt);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
+                        selectedPropertyType === pt 
+                          ? 'bg-purple-600 text-white border border-purple-400' 
+                          : 'bg-white/5 hover:bg-white/10 text-white/50'
+                      }`}
+                    >
+                      {pt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── 4 & 5. Contact Channels (Phone & Email Yes/No) ── */}
+              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex flex-col justify-between">
+                <div>
+                  <label className="text-[11px] font-bold text-white/60 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-amber-400" />
+                    Contact Verification
+                  </label>
+
+                  {/* Phone Yes/No */}
+                  <div className="mb-3">
+                    <span className="text-[10px] font-semibold text-white/50 block mb-1">Has Phone Number:</span>
+                    <div className="grid grid-cols-3 gap-1 bg-black/40 p-1 rounded-lg border border-white/10">
+                      {['all', 'yes', 'no'].map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => {
+                            setPhoneFilter(opt);
+                            setCurrentPage(1);
+                          }}
+                          className={`py-1 text-center font-bold capitalize rounded transition-all ${
+                            phoneFilter === opt 
+                              ? 'bg-amber-600 text-white shadow-sm' 
+                              : 'text-white/50 hover:text-white'
+                          }`}
+                        >
+                          {opt === 'all' ? 'All' : opt === 'yes' ? 'Yes' : 'No'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Email Yes/No */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-white/50 block mb-1">Has Email Address:</span>
+                    <div className="grid grid-cols-3 gap-1 bg-black/40 p-1 rounded-lg border border-white/10">
+                      {['all', 'yes', 'no'].map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => {
+                            setEmailFilter(opt);
+                            setCurrentPage(1);
+                          }}
+                          className={`py-1 text-center font-bold capitalize rounded transition-all ${
+                            emailFilter === opt 
+                              ? 'bg-amber-600 text-white shadow-sm' 
+                              : 'text-white/50 hover:text-white'
+                          }`}
+                        >
+                          {opt === 'all' ? 'All' : opt === 'yes' ? 'Yes' : 'No'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* ── 6. Data from (Source File Roster with Search Feature) ── */}
+              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 relative md:col-span-2">
+                <label className="text-[11px] font-bold text-white/60 uppercase tracking-wider block mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
+                    Data from (Source File Roster)
+                  </span>
+                  {selectedSourceFile && (
+                    <button 
+                      onClick={() => setSelectedSourceFile('')}
+                      className="text-white/40 hover:text-red-300 text-[10px] lowercase"
+                    >
+                      clear
+                    </button>
+                  )}
+                </label>
+
+                {/* Search input for source files */}
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
+                  <input
+                    type="text"
+                    placeholder="Search 400+ file rosters (e.g. jvc.xlsx, Business Bay, D1)..."
+                    value={sourceSearchQuery}
+                    onChange={(e) => {
+                      setSourceSearchQuery(e.target.value);
+                      setIsSourceMenuOpen(true);
+                    }}
+                    onFocus={() => setIsSourceMenuOpen(true)}
+                    className="w-full bg-black/50 border border-white/15 focus:border-cyan-500/60 rounded-lg pl-8 pr-7 py-1.5 text-white placeholder-white/30 outline-none text-xs"
+                  />
+                  {sourceSearchQuery && (
+                    <button 
+                      onClick={() => setSourceSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Selected File Display */}
+                {selectedSourceFile ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-200">
+                    <span className="font-semibold truncate">{selectedSourceFile}</span>
+                    <button onClick={() => setSelectedSourceFile('')}><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-white/40 italic mb-1">
+                    Select a source file below or search by file name:
+                  </div>
+                )}
+
+                {/* Dropdown list of source files */}
+                {isSourceMenuOpen && (
+                  <div className="mt-1 max-h-36 overflow-y-auto custom-scrollbar bg-[#051329] border border-white/15 rounded-lg divide-y divide-white/5 shadow-2xl z-30">
+                    <button
+                      onClick={() => {
+                        setSelectedSourceFile('');
+                        setIsSourceMenuOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 text-left text-white/50 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-between"
+                    >
+                      <span>All Data Sources</span>
+                      {!selectedSourceFile && <Check className="w-3 h-3 text-cyan-400" />}
+                    </button>
+                    {filteredSources.map(src => (
+                      <button
+                        key={src}
+                        onClick={() => {
+                          setSelectedSourceFile(src);
+                          setIsSourceMenuOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-left text-white/80 hover:bg-cyan-600/20 hover:text-cyan-200 transition-colors flex items-center justify-between text-xs truncate"
+                      >
+                        <span className="truncate">{src}</span>
+                        {selectedSourceFile === src && <Check className="w-3 h-3 text-cyan-400 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── 7. Date from <----> Date to ── */}
+              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 md:col-span-2">
+                <label className="text-[11px] font-bold text-white/60 uppercase tracking-wider block mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                    Date Range (Date from &lt;————&gt; Date to)
+                  </span>
+                  {(dateFrom || dateTo) && (
+                    <button 
+                      onClick={() => { setDateFrom(''); setDateTo(''); }}
+                      className="text-white/40 hover:text-red-300 text-[10px] lowercase"
+                    >
+                      clear
+                    </button>
+                  )}
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-center">
+                  <div className="relative">
+                    <span className="text-[10px] text-white/40 block mb-0.5">Date from:</span>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full bg-black/60 border border-white/15 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-white outline-none text-xs"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <span className="text-[10px] text-white/40 block mb-0.5">Date to:</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full bg-black/60 border border-white/15 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-white outline-none text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick preset chips */}
+                <div className="flex items-center gap-1.5 mt-2.5">
+                  <span className="text-[10px] text-white/40">Presets:</span>
+                  {[
+                    { label: '2024', from: '2024-01-01', to: '2024-12-31' },
+                    { label: '2023', from: '2023-01-01', to: '2023-12-31' },
+                    { label: '2022', from: '2022-01-01', to: '2022-12-31' }
+                  ].map(p => (
+                    <button
+                      key={p.label}
+                      onClick={() => {
+                        setDateFrom(p.from);
+                        setDateTo(p.to);
+                        setCurrentPage(1);
+                      }}
+                      className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-white/60 text-[10px]"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Box Footer Actions */}
+            <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+              <span className="text-white/50 text-xs">
+                {activeFiltersCount === 0 ? 'No filters currently applied' : `${activeFiltersCount} active filter${activeFiltersCount > 1 ? 's' : ''} applied`}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={resetAllFilters}
+                  className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-medium transition-all"
+                >
+                  Reset All Filters
+                </button>
+                <button
+                  onClick={() => setShowFiltersBox(false)}
+                  className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all shadow-md shadow-blue-900/30"
+                >
+                  Apply &amp; Close
+                </button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
       </div>
 
-      {/* Main Content Area: List Table View or Grid View */}
+      {/* ─── Main Content Area: List Table View or Grid View ───────────────── */}
       {viewMode === 'list' ? (
         <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col overflow-hidden">
           <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
@@ -550,28 +1161,24 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       onClick={() => setSelectedOwner(owner)}
                     >
                       {/* 1. Lead ID & Owner Name */}
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-4 font-medium text-white">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/80 font-bold border border-white/20 shrink-0">
-                            {String(owner.name).charAt(0)}
+                          <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs shrink-0">
+                            {owner.name ? String(owner.name).charAt(0) : 'O'}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white group-hover:text-[#3b82f6] transition-colors">{owner.name}</span>
+                            <div className="font-semibold text-white/95 group-hover:text-blue-400 transition-colors">
+                              {owner.name}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold">
+                                {owner.lead_id}
+                              </span>
                               {owner.property_type && (
-                                <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${
-                                  owner.property_type === 'BUYER' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                  owner.property_type === 'SELLER' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                                  'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                }`}>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider font-semibold">
                                   {owner.property_type}
                                 </span>
                               )}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[11px] font-mono font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
-                                {owner.lead_id}
-                              </span>
                             </div>
                           </div>
                         </div>
@@ -579,98 +1186,117 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
                       {/* 2. Phone & Email */}
                       <td className="px-5 py-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="flex items-center gap-2 text-white/80 font-mono text-xs">
-                            <Phone className="w-3.5 h-3.5 text-white/40"/> {owner.phone}
-                          </span>
-                          <span className="flex items-center gap-2 text-white/60 text-xs">
-                            <Mail className="w-3.5 h-3.5 text-white/40"/> {owner.email}
-                          </span>
+                        <div className="space-y-1 text-xs">
+                          <div className="flex items-center gap-1.5 text-white/80">
+                            <Phone className="w-3 h-3 text-white/40 shrink-0" />
+                            <span className="font-mono">{owner.phone}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-white/50">
+                            <Mail className="w-3 h-3 text-white/40 shrink-0" />
+                            <span className="truncate max-w-[140px]">{owner.email}</span>
+                          </div>
                         </div>
                       </td>
 
                       {/* 3. Property & Unit */}
                       <td className="px-5 py-4">
-                        <div className="font-medium text-white/80 flex items-center gap-2 flex-wrap">
-                          <span className="flex items-center gap-1.5">
-                            <Building2 className="w-4 h-4 text-blue-400 shrink-0"/> {owner.building}
-                          </span>
-                          {owner.unit_number && (
-                            <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded-md font-mono font-bold border border-blue-500/30">
-                              Unit {owner.unit_number}
+                        <div className="space-y-1 text-xs">
+                          <div className="font-medium text-white/90 flex items-center gap-1.5">
+                            <Building2 className="w-3 h-3 text-blue-400 shrink-0" />
+                            <span>{owner.building}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-white/50">
+                            {owner.unit_number && (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-300 font-mono text-[10px] font-bold">
+                                Unit {owner.unit_number}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-white/40" />
+                              {owner.area}
                             </span>
-                          )}
-                        </div>
-                        <div className="text-[12px] text-white/40 flex items-center gap-1.5 mt-0.5">
-                          <MapPin className="w-3.5 h-3.5"/> {owner.area}
+                          </div>
                         </div>
                       </td>
 
-                      {/* 4. Assigned Agent (Interactive Select) */}
+                      {/* 4. Assigned Agent */}
                       <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1.5">
-                          <UserCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                        <div className="relative inline-block w-44">
                           <select
-                            value={owner.assigned_agent_id || ''}
+                            value={owner.assigned_agent || ''}
                             onChange={(e) => {
-                              const found = availableAgents.find(a => String(a.id) === String(e.target.value));
-                              if (found) {
-                                handleAssignAgent(e, owner, found);
-                              }
+                              const chosen = availableAgents.find(a => a.name === e.target.value);
+                              if (chosen) handleAssignAgent(e, owner, chosen);
                             }}
-                            className={`text-xs rounded-lg px-2.5 py-1.5 outline-none font-medium transition-colors border ${
-                              owner.assigned_agent 
-                                ? 'bg-purple-500/10 text-purple-200 border-purple-500/30' 
-                                : 'bg-black/30 text-white/50 border-white/10 hover:border-white/20'
-                            }`}
+                            className="w-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/15 focus:border-blue-500/60 rounded-xl pl-7 pr-7 py-1.5 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
                           >
-                            <option value="" className="bg-slate-900 text-white/50">Unassigned</option>
+                            <option value="" disabled className="bg-slate-900 text-white/50">Unassigned</option>
                             {availableAgents.map(ag => (
-                              <option key={ag.id} value={ag.id} className="bg-slate-900 text-white">
+                              <option key={ag.id} value={ag.name} className="bg-slate-900 text-white">
                                 {ag.name}
                               </option>
                             ))}
                           </select>
+                          <UserCheck className="w-3.5 h-3.5 text-blue-400 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <ChevronDown className="w-3 h-3 text-white/40 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
                       </td>
 
-                      {/* 5. Bitrix ID / CRM Status */}
-                      <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                      {/* 5. Bitrix ID / Status */}
+                      <td className="px-5 py-4">
                         {isSynced ? (
-                          <a
-                            href={`https://crm.asquared.ae/crm/lead/details/${owner.bitrix_id}/`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-500/25 transition-all group"
-                            title="View lead in Bitrix24 CRM"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Bitrix #{owner.bitrix_id}</span>
-                            <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
-                          </a>
+                          <div className="flex flex-col gap-1">
+                            <a
+                              href={`https://crm.asquared.ae/crm/lead/details/${owner.bitrix_id}/`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-all w-fit group/btn"
+                            >
+                              <span>Lead #{owner.bitrix_id}</span>
+                              <ExternalLink className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
+                            </a>
+                            {owner.bitrix_status && (
+                              <span className="text-[10px] text-white/50">
+                                {owner.bitrix_status}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <button
-                            onClick={() => pushToBitrix(owner)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              pushToBitrix(owner);
+                            }}
                             disabled={isSyncing}
-                            className="inline-flex items-center gap-1.5 bg-blue-500/15 text-blue-300 border border-blue-500/30 hover:bg-blue-500/25 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-[1.02] disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/40 text-blue-300 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer"
                           >
                             {isSyncing ? (
-                              <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                              <>
+                                <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />
+                                <span>Syncing...</span>
+                              </>
                             ) : (
-                              <Share2 className="w-3.5 h-3.5 text-blue-400" />
+                              <>
+                                <Share2 className="w-3 h-3 text-blue-400" />
+                                <span>Push to Bitrix</span>
+                              </>
                             )}
-                            <span>{isSyncing ? 'Syncing...' : 'Push to Bitrix'}</span>
                           </button>
                         )}
                       </td>
 
                       {/* 6. Actions */}
                       <td className="px-5 py-4 text-right">
-                        <button 
-                          className="p-2 text-white/40 hover:text-white rounded-lg hover:bg-white/10 transition-colors" 
-                          onClick={(e) => { e.stopPropagation(); setSelectedOwner(owner); }}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedOwner(owner);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                          title="Open 360 View"
                         >
-                          <MoreHorizontal className="w-5 h-5" />
+                          <MoreHorizontal className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
@@ -681,29 +1307,64 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           </div>
           
           {/* Pagination Footer */}
-          <div className="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between text-sm text-white/60">
+          <div className="p-4 border-t border-white/10 bg-black/20 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-white/60">
             <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + owners.length} of 3.04M owner records</span>
-            <div className="flex gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30">Previous</button>
+            <div className="flex gap-1.5">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                disabled={currentPage === 1} 
+                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30"
+              >
+                Previous
+              </button>
               
-              <button onClick={() => setCurrentPage(1)} className={`px-3 py-1 rounded-md font-medium ${currentPage === 1 ? 'bg-[#3b82f6] text-white' : 'bg-white/5 border border-white/10 hover:text-white transition-colors'}`}>1</button>
+              <button 
+                onClick={() => setCurrentPage(1)} 
+                className={`px-3 py-1 rounded-md font-medium ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-white/5 border border-white/10 hover:text-white transition-colors'}`}
+              >
+                1
+              </button>
               
-              {currentPage > 3 && <span className="px-2 py-1">...</span>}
+              {currentPage > 3 && <span className="px-1.5 py-1 text-white/40">...</span>}
+              {currentPage > 2 && (
+                <button 
+                  onClick={() => setCurrentPage(currentPage - 1)} 
+                  className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+                >
+                  {currentPage - 1}
+                </button>
+              )}
+              {currentPage !== 1 && (
+                <button className="px-3 py-1 bg-blue-600 text-white rounded-md font-medium">
+                  {currentPage}
+                </button>
+              )}
               
-              {currentPage > 2 && <button onClick={() => setCurrentPage(currentPage - 1)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">{currentPage - 1}</button>}
+              <button 
+                onClick={() => setCurrentPage(currentPage + 1)} 
+                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+              >
+                {currentPage + 1}
+              </button>
+              <button 
+                onClick={() => setCurrentPage(currentPage + 2)} 
+                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+              >
+                {currentPage + 2}
+              </button>
               
-              {currentPage !== 1 && <button className="px-3 py-1 bg-[#3b82f6] text-white rounded-md font-medium">{currentPage}</button>}
-              
-              <button onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">{currentPage + 1}</button>
-              <button onClick={() => setCurrentPage(currentPage + 2)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">{currentPage + 2}</button>
-              
-              <span className="px-2 py-1">...</span>
-              <button onClick={() => setCurrentPage(currentPage + 1)} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">Next</button>
+              <span className="px-1.5 py-1 text-white/40">...</span>
+              <button 
+                onClick={() => setCurrentPage(currentPage + 1)} 
+                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
       ) : (
-        /* ─── Grid (Cards) View ────────────────────────────────────────── */
+        /* ─── Grid (Cards) View ────────────────────────────────────────────── */
         <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col overflow-hidden p-4">
           <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
             {loading ? (
@@ -727,7 +1388,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2.5">
                             <div className="w-9 h-9 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs">
-                              {String(owner.name).charAt(0)}
+                              {owner.name ? String(owner.name).charAt(0) : 'O'}
                             </div>
                             <div>
                               <h3 className="font-bold text-white text-sm group-hover:text-blue-400 transition-colors line-clamp-1">
@@ -758,45 +1419,49 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                               {owner.building}
                             </span>
                             {owner.unit_number && (
-                              <span className="font-mono text-blue-300 bg-blue-500/20 px-1.5 py-0.5 rounded text-[11px] font-bold">
+                              <span className="px-1.5 py-0.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-300 font-mono text-[10px] font-bold">
                                 Unit {owner.unit_number}
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-white/40 flex items-center gap-1 mt-1">
-                            <MapPin className="w-3 h-3 text-white/30" />
-                            {owner.area}
+                          <div className="flex items-center justify-between text-white/40 text-[11px] mt-1.5">
+                            <span>{owner.area}</span>
+                            {owner.property_type && (
+                              <span className="uppercase text-[9px] tracking-wider font-semibold text-white/50">
+                                {owner.property_type}
+                              </span>
+                            )}
                           </div>
                         </div>
 
-                        {/* Phone & Email */}
-                        <div className="space-y-1 text-xs text-white/70 mb-3">
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-3.5 h-3.5 text-white/40" />
-                            <span className="font-mono text-[11px]">{owner.phone}</span>
+                        {/* Contact info */}
+                        <div className="space-y-1 mb-4 text-xs text-white/70">
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3 h-3 text-white/40" />
+                            <span className="font-mono">{owner.phone}</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <Mail className="w-3.5 h-3.5 text-white/40" />
-                            <span className="text-[11px] truncate text-white/50">{owner.email || 'No email on file'}</span>
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-3 h-3 text-white/40" />
+                            <span className="truncate">{owner.email}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Bottom Controls: Assigned Agent + Bitrix Push */}
-                      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-1 flex-1 min-w-0">
-                          <UserCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      {/* Bottom Row: Agent Assignment & Sync button */}
+                      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5 text-xs text-white/70">
+                          <UserCheck className="w-3.5 h-3.5 text-blue-400" />
                           <select
-                            value={owner.assigned_agent_id || ''}
+                            value={owner.assigned_agent || ''}
                             onChange={(e) => {
-                              const found = availableAgents.find(a => String(a.id) === String(e.target.value));
-                              if (found) handleAssignAgent(e, owner, found);
+                              const chosen = availableAgents.find(a => a.name === e.target.value);
+                              if (chosen) handleAssignAgent(e, owner, chosen);
                             }}
-                            className="bg-transparent text-white/70 text-xs outline-none cursor-pointer truncate max-w-[120px]"
+                            className="bg-transparent border-none text-xs text-white/80 font-medium outline-none cursor-pointer"
                           >
-                            <option value="" className="bg-slate-900 text-white/50">Unassigned</option>
+                            <option value="" disabled className="bg-slate-900 text-white/50">Unassigned</option>
                             {availableAgents.map(ag => (
-                              <option key={ag.id} value={ag.id} className="bg-slate-900 text-white">
+                              <option key={ag.id} value={ag.name} className="bg-slate-900 text-white">
                                 {ag.name}
                               </option>
                             ))}
@@ -810,19 +1475,27 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                             rel="noreferrer"
                             className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
                           >
-                            Open CRM <ExternalLink className="w-3 h-3" />
+                            <span>Open</span>
+                            <ExternalLink className="w-3 h-3" />
                           </a>
                         ) : (
                           <button
                             onClick={() => pushToBitrix(owner)}
                             disabled={isSyncing}
-                            className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-xs font-semibold flex items-center gap-1 transition-all"
+                            className="px-2.5 py-1 rounded bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 text-xs font-semibold border border-blue-500/40 transition-colors flex items-center gap-1"
                           >
-                            {isSyncing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Share2 className="w-3 h-3" />}
-                            Push
+                            {isSyncing ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <>
+                                <Share2 className="w-3 h-3" />
+                                <span>Push</span>
+                              </>
+                            )}
                           </button>
                         )}
                       </div>
+
                     </div>
                   );
                 })}
@@ -830,15 +1503,36 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             )}
           </div>
 
-          {/* Pagination Footer */}
+          {/* Grid View Pagination Footer */}
           <div className="p-3 border-t border-white/10 bg-black/20 flex items-center justify-between text-xs text-white/60">
-            <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + owners.length} of 3.04M owners</span>
-            <div className="flex gap-1.5">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30">Previous</button>
-              <button onClick={() => setCurrentPage(p => p + 1)} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors">Next</button>
+            <span>Showing 1 to {owners.length} of 3.04M owners</span>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                disabled={currentPage === 1}
+                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30"
+              >
+                Previous
+              </button>
+              <button 
+                onClick={() => setCurrentPage(currentPage + 1)}
+                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* ─── Owner 360 Detail View Slider Modal ────────────────────────────── */}
+      {selectedOwner && (
+        <Owner360Detail 
+          owner={selectedOwner} 
+          onClose={() => setSelectedOwner(null)}
+          onAssignAgent={(agent) => handleAssignAgent(null, selectedOwner, agent)}
+          onPushToBitrix={() => pushToBitrix(selectedOwner)}
+        />
       )}
     </div>
   );
