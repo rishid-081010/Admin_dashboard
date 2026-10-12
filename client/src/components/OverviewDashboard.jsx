@@ -272,138 +272,95 @@ export default function OverviewDashboard({ onNavigate }) {
         {/* Card 1: Master Portfolio / Total Properties */}
         <div 
           onClick={() => onNavigate && onNavigate('owners')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#00386b] transition-all cursor-pointer"
+          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between group hover:border-[#00386b] transition-all cursor-pointer"
         >
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-2">
               <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
                 MASTER PORTFOLIO
               </div>
-              <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-400/25 flex items-center justify-center">
-                <Database className="w-3.5 h-3.5 text-blue-300" />
+              <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-400/25 flex items-center justify-center">
+                <Database className="w-4 h-4 text-blue-300" />
               </div>
             </div>
-            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1">
+            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
               3,042,722
             </div>
-            <div className="text-xs font-semibold text-emerald-400 inline-flex items-center gap-1.5 mt-0.5">
+            <div className="text-xs font-semibold text-emerald-400 inline-flex items-center gap-1.5 mt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               ✓ Supabase Synced · 1,382 Catalogs
             </div>
           </div>
-          {/* Dual Cyan Glowing Sine Waves Accent */}
-          <svg className="w-full h-12 mt-3 opacity-80" viewBox="0 0 240 48" fill="none">
-            <path d="M 0 32 Q 60 4 120 28 T 240 20" stroke="#00e5ff" strokeWidth="2" strokeDasharray="3 3" fill="none" opacity="0.6"/>
-            <path d="M 0 20 Q 60 40 120 18 T 240 26" stroke="#0091ff" strokeWidth="2.5" strokeDasharray="4 4" fill="none"/>
-          </svg>
         </div>
 
         {/* Card 2: Total Calls Made Today */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#00386b] transition-all cursor-pointer"
+          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between group hover:border-[#00386b] transition-all cursor-pointer"
         >
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-2">
               <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
                 TOTAL CALLS MADE TODAY
               </div>
-              <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-400/25 flex items-center justify-center">
-                <PhoneCall className="w-3.5 h-3.5 text-purple-300" />
+              <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-400/25 flex items-center justify-center">
+                <PhoneCall className="w-4 h-4 text-purple-300" />
               </div>
             </div>
-            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1">
+            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
               {voiceData.totalCallsToday.toLocaleString()}
             </div>
-            <div className="text-xs font-semibold text-sky-400 inline-flex items-center gap-1.5 mt-0.5">
+            <div className="text-xs font-semibold text-sky-400 inline-flex items-center gap-1.5 mt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
               Outbound Dispatch Active
             </div>
           </div>
-          {/* Dot Matrix Grid Accent */}
-          <svg className="w-full h-12 mt-3 opacity-75" viewBox="0 0 240 48" fill="none">
-            <defs>
-              <pattern id="dot-matrix-pat" x="0" y="0" width="12" height="10" patternUnits="userSpaceOnUse">
-                <circle cx="6" cy="5" r="1.8" fill="url(#dot-matrix-grad)" />
-              </pattern>
-              <linearGradient id="dot-matrix-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#8b5cf6" />
-                <stop offset="100%" stopColor="#06b6d4" />
-              </linearGradient>
-            </defs>
-            <rect width="240" height="48" fill="url(#dot-matrix-pat)" />
-          </svg>
         </div>
 
         {/* Card 3: Qualified Leads Today */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#00386b] transition-all cursor-pointer"
+          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between group hover:border-[#00386b] transition-all cursor-pointer"
         >
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-2">
               <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
                 QUALIFIED LEADS TODAY
               </div>
-              <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-400/30 flex items-center justify-center">
-                <Flame className="w-3.5 h-3.5 text-amber-300" />
+              <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-400/30 flex items-center justify-center">
+                <Flame className="w-4 h-4 text-amber-300" />
               </div>
             </div>
-            <div className="text-3xl sm:text-4xl font-extrabold text-amber-300 tracking-tight my-1">
+            <div className="text-3xl sm:text-4xl font-extrabold text-amber-300 tracking-tight my-1.5 font-mono">
               {voiceData.qualifiedLeadsToday.toLocaleString()}
             </div>
-            <div className="text-xs font-semibold text-emerald-400 mt-0.5">
+            <div className="text-xs font-semibold text-emerald-400 mt-1">
               Hot Buyers & Sellers Ready to Transact
             </div>
           </div>
-          {/* Green Smooth Wave Curve Accent */}
-          <svg className="w-full h-12 mt-3" viewBox="0 0 240 48" fill="none">
-            <defs>
-              <linearGradient id="green-glow-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-            <path d="M 0 36 Q 60 8 120 24 T 240 16 L 240 48 L 0 48 Z" fill="url(#green-glow-grad)" />
-            <path d="M 0 36 Q 60 8 120 24 T 240 16" stroke="#10b981" strokeWidth="2.5" />
-          </svg>
         </div>
 
         {/* Card 4: AI Voice Agents Fleet Status */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#00386b] transition-all cursor-pointer"
+          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between group hover:border-[#00386b] transition-all cursor-pointer"
         >
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-2">
               <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
                 AI VOICE AGENTS FLEET
               </div>
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center">
-                <Radio className="w-3.5 h-3.5 text-emerald-300" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center">
+                <Radio className="w-4 h-4 text-emerald-300" />
               </div>
             </div>
-            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1">
+            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
               3 / 3 Online
             </div>
-            <div className="text-xs font-medium text-slate-300 mt-0.5">
+            <div className="text-xs font-medium text-slate-300 mt-1">
               Sarah · James · Aisha Dialing Active
             </div>
           </div>
-          {/* Connected Polyline Graph with Nodes Accent */}
-          <svg className="w-full h-12 mt-3" viewBox="0 0 240 48" fill="none">
-            <polyline 
-              points="10,24 35,32 60,38 85,44 110,40 135,36 160,34 185,28 210,34 235,22" 
-              stroke="#8b5cf6" 
-              strokeWidth="2.5" 
-            />
-            {[
-              [10, 24], [35, 32], [60, 38], [85, 44], [110, 40],
-              [135, 36], [160, 34], [185, 28], [210, 34], [235, 22]
-            ].map(([cx, cy], i) => (
-              <circle key={i} cx={cx} cy={cy} r="3" fill="#c084fc" />
-            ))}
-          </svg>
         </div>
 
       </div>
