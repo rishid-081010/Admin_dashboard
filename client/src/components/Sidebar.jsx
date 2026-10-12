@@ -133,7 +133,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Buildings</span>
         </button>
 
-        {/* 10. Data Source */}
+        {/* 10. Data library */}
         <button 
           onClick={() => setActiveTab('sources')} 
           className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -142,8 +142,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Data Source</span>
-          <span className="bg-[#1e3a5f] text-[#60a5fa] border border-[#3b82f6]/30 text-[9.5px] font-bold px-2 py-0.5 rounded-full">1.38k</span>
+          <span>Data library</span>
+          <span className="text-[10px] text-slate-400 font-medium">1.38k</span>
         </button>
 
         {/* 11. Transactions */}

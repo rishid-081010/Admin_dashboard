@@ -1,37 +1,28 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  FileSpreadsheet, Search, Filter, Database, HardDrive, 
-  Download, ExternalLink, CheckCircle2, FolderArchive, 
-  ArrowUpDown, ShieldCheck, ArrowDownToLine, Clock, FileText, Check
-} from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SOURCES_DATA } from '../data/sourcesData';
 
 export default function SourcesDirectory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('All');
   const [selectedSizeFilter, setSelectedSizeFilter] = useState('All');
-  const [sortBy, setSortBy] = useState('name_asc');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('default');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [downloadingId, setDownloadingId] = useState(null);
 
   const PARQUET_URL = "https://qgxgtavkovqklijfpnfl.supabase.co/storage/v1/object/public/dubai_real_estate/sources_catalog.parquet";
 
-  // Real format counts (XLSX, XLS)
-  const formatCounts = useMemo(() => {
-    const counts = { 'All': SOURCES_DATA.length };
-    SOURCES_DATA.forEach(s => {
-      counts[s.extension] = (counts[s.extension] || 0) + 1;
-    });
-    return counts;
-  }, []);
-
   // Filtered & Sorted files strictly using authentic filesystem properties
   const filteredAndSorted = useMemo(() => {
     let result = SOURCES_DATA.filter(item => {
-      // 1. Exact filename search
-      const matchesSearch = searchTerm.trim() === '' || 
-        item.filename.toLowerCase().includes(searchTerm.toLowerCase());
+      // 1. Exact filename or status search
+      const q = searchTerm.trim().toLowerCase();
+      const matchesSearch = !q || 
+        item.filename.toLowerCase().includes(q) || 
+        (item.status && item.status.toLowerCase().includes(q)) ||
+        (item.duplicate_of && item.duplicate_of.toLowerCase().includes(q));
 
       // 2. Real format/extension filter
       const matchesFormat = selectedFormat === 'All' || item.extension === selectedFormat;
@@ -44,22 +35,27 @@ export default function SourcesDirectory() {
       else if (selectedSizeFilter === '2MB-10MB') matchesSize = kb > 2048 && kb <= 10240;
       else if (selectedSizeFilter === '>10MB') matchesSize = kb > 10240;
 
-      return matchesSearch && matchesFormat && matchesSize;
+      // 4. Status filter
+      let matchesStatus = true;
+      if (selectedStatusFilter === 'processed') matchesStatus = item.status === 'processed';
+      else if (selectedStatusFilter === 'duplicate') matchesStatus = !!item.duplicate_of;
+
+      return matchesSearch && matchesFormat && matchesSize && matchesStatus;
     });
 
     // Sorting
     result.sort((a, b) => {
       if (sortBy === 'name_asc') return a.filename.localeCompare(b.filename);
       if (sortBy === 'name_desc') return b.filename.localeCompare(a.filename);
+      if (sortBy === 'rows_desc') return (b.accepted_rows || 0) - (a.accepted_rows || 0);
+      if (sortBy === 'rows_asc') return (a.accepted_rows || 0) - (b.accepted_rows || 0);
       if (sortBy === 'size_desc') return b.size_bytes - a.size_bytes;
       if (sortBy === 'size_asc') return a.size_bytes - b.size_bytes;
-      if (sortBy === 'date_desc') return (b.date_modified || '').localeCompare(a.date_modified || '');
-      if (sortBy === 'date_asc') return (a.date_modified || '').localeCompare(b.date_modified || '');
-      return 0;
+      return 0; // Default order matches Image 1
     });
 
     return result;
-  }, [searchTerm, selectedFormat, selectedSizeFilter, sortBy]);
+  }, [searchTerm, selectedFormat, selectedSizeFilter, selectedStatusFilter, sortBy]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage) || 1;
@@ -68,21 +64,10 @@ export default function SourcesDirectory() {
     return filteredAndSorted.slice(start, start + itemsPerPage);
   }, [filteredAndSorted, currentPage, itemsPerPage]);
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
-  };
-
-  const handleFormatChange = (fmt) => {
-    setSelectedFormat(fmt);
-    setCurrentPage(1);
-  };
-
   const handleDownload = (item, e) => {
     if (e) e.stopPropagation();
     setDownloadingId(item.id);
     
-    // Trigger direct download
     const link = document.createElement('a');
     link.href = item.download_url;
     link.download = item.filename;
@@ -93,357 +78,256 @@ export default function SourcesDirectory() {
 
     setTimeout(() => {
       setDownloadingId(null);
-    }, 2000);
+    }, 1500);
   };
 
   return (
-    <div className="w-full flex flex-col h-full animate-fade-in relative text-white/80 overflow-y-auto custom-scrollbar pr-1 -mr-1">
+    <div className="w-full h-full flex flex-col bg-[#f8fafc] text-slate-800 -m-4 lg:-m-5 p-6 lg:p-8 overflow-y-auto custom-scrollbar font-sans select-text">
       
-      {/* ─── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md flex items-center gap-1.5">
-              <FolderArchive className="w-3.5 h-3.5 text-blue-400" />
-              Source Files Archive
-            </span>
-            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> 1,382 Verified Files
-            </span>
-          </div>
+      {/* ─── Header: Clean, Classic, Minimalist (Image 1) ───────────────── */}
+      <div className="mb-6">
+        <div className="text-[11px] font-sans tracking-[0.2em] uppercase text-slate-400 font-semibold mb-1">
+          A SQUARED / INTELLIGENCE
+        </div>
+        <h1 
+          className="text-3xl md:text-4xl text-[#0f172a] font-normal tracking-tight mb-1" 
+          style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
+        >
+          Data library
+        </h1>
+        <p className="text-sm text-slate-500">
+          Every source file and sheet is accounted for.
+        </p>
+      </div>
 
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
-            DATA SOURCES
-          </h1>
-          <p className="text-white/60 text-sm max-w-2xl">
-            Download or inspect original owner and transaction spreadsheets.
-          </p>
+      {/* ─── Search & Filters Card (Image 1) ────────────────────────────── */}
+      <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm p-5 mb-6">
+        <div className="text-[12px] font-semibold text-slate-600 mb-2.5">
+          Find a source
         </div>
 
-        {/* Action Button: Download Catalog */}
+        {/* Search input + Dark Search button */}
         <div className="flex items-center gap-3">
-          <a
-            href={PARQUET_URL}
-            target="_blank"
-            rel="noreferrer"
-            download="sources_catalog.parquet"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-600/30 hover:scale-[1.02]"
+          <input 
+            type="text"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search filename or processing status"
+            className="flex-1 bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-400 transition-all shadow-none"
+          />
+          <button 
+            onClick={() => setCurrentPage(1)}
+            className="bg-[#0a1128] hover:bg-[#132043] text-white px-7 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm shrink-0"
           >
-            <Download className="w-4 h-4" />
-            Download Catalog (56.5 KB)
-          </a>
-        </div>
-      </div>
-
-      {/* ─── 4 Top KPI Cards ────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        
-        {/* Card 1: Total Source Files */}
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-          <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Total Files</span>
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-white tracking-tight">
-              1,382
-            </div>
-            <div className="text-[11px] text-white/40 mt-1">
-              1,371 .XLSX • 11 .XLS spreadsheets
-            </div>
-          </div>
+            Search
+          </button>
         </div>
 
-        {/* Card 2: Total File Size */}
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-          <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Total File Size</span>
-            <HardDrive className="w-4 h-4 text-blue-400" />
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-white tracking-tight">
-              2.16 GB
-            </div>
-            <div className="text-[11px] text-white/40 mt-1">
-              2,270,848,288 total bytes
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Archive Size */}
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-          <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Archive Size</span>
-            <Database className="w-4 h-4 text-purple-400" />
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-white tracking-tight">
-              1.69 GB
-            </div>
-            <div className="text-[11px] text-white/40 mt-1">
-              Zip archive compressed volume
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Catalog File Size */}
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-          <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Catalog File Size</span>
-            <FolderArchive className="w-4 h-4 text-amber-400" />
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-emerald-400 tracking-tight">
-              56.5 KB
-            </div>
-            <div className="text-[11px] text-white/40 mt-1">
-              Indexed database catalog
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Search and Filter Bar ──────────────────────────────────────── */}
-      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg p-5 mb-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
-          
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Search 1,382 files by exact filename (e.g. Kempinski, Burj Al Nojoom, Satwa, Wasl)..."
-              className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition-colors"
-            />
-            {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs"
+        {/* Minimalist, Understated Filter Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-100 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Format Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2.5 py-1">
+              <span className="font-medium text-slate-500">Format:</span>
+              <select 
+                value={selectedFormat} 
+                onChange={(e) => { setSelectedFormat(e.target.value); setCurrentPage(1); }}
+                className="bg-transparent text-slate-700 outline-none cursor-pointer font-medium"
               >
-                Clear
-              </button>
-            )}
+                <option value="All">All Formats</option>
+                <option value="XLSX">XLSX</option>
+                <option value="XLS">XLS</option>
+              </select>
+            </div>
+
+            {/* Size Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2.5 py-1">
+              <span className="font-medium text-slate-500">Size:</span>
+              <select 
+                value={selectedSizeFilter} 
+                onChange={(e) => { setSelectedSizeFilter(e.target.value); setCurrentPage(1); }}
+                className="bg-transparent text-slate-700 outline-none cursor-pointer font-medium"
+              >
+                <option value="All">All Sizes</option>
+                <option value="<500KB">&lt; 500 KB</option>
+                <option value="500KB-2MB">500 KB – 2 MB</option>
+                <option value="2MB-10MB">2 MB – 10 MB</option>
+                <option value=">10MB">&gt; 10 MB</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2.5 py-1">
+              <span className="font-medium text-slate-500">Status:</span>
+              <select 
+                value={selectedStatusFilter} 
+                onChange={(e) => { setSelectedStatusFilter(e.target.value); setCurrentPage(1); }}
+                className="bg-transparent text-slate-700 outline-none cursor-pointer font-medium"
+              >
+                <option value="All">All Statuses</option>
+                <option value="processed">Processed</option>
+                <option value="duplicate">Duplicates</option>
+              </select>
+            </div>
+
+            {/* Sort Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2.5 py-1">
+              <span className="font-medium text-slate-500">Sort:</span>
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-transparent text-slate-700 outline-none cursor-pointer font-medium"
+              >
+                <option value="default">Default Order</option>
+                <option value="name_asc">File Name (A–Z)</option>
+                <option value="name_desc">File Name (Z–A)</option>
+                <option value="rows_desc">Accepted Rows (High to Low)</option>
+                <option value="rows_asc">Accepted Rows (Low to High)</option>
+                <option value="size_desc">File Size (Largest)</option>
+                <option value="size_asc">File Size (Smallest)</option>
+              </select>
+            </div>
           </div>
 
-          {/* Sort By Dropdown */}
-          <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2">
-            <ArrowUpDown className="w-4 h-4 text-white/40 shrink-0" />
-            <span className="text-xs text-white/50 font-medium shrink-0">Sort:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="bg-transparent text-white text-xs font-semibold outline-none cursor-pointer"
+          <div className="flex items-center gap-3">
+            <span className="text-slate-400">
+              {filteredAndSorted.length.toLocaleString()} files accounted for
+            </span>
+            <a 
+              href={PARQUET_URL}
+              download="sources_catalog.parquet"
+              className="text-xs text-slate-500 hover:text-slate-900 transition-colors underline underline-offset-2"
             >
-              <option value="name_asc" className="bg-[#0b132b]">File Name (A → Z)</option>
-              <option value="name_desc" className="bg-[#0b132b]">File Name (Z → A)</option>
-              <option value="size_desc" className="bg-[#0b132b]">File Size (Largest First)</option>
-              <option value="size_asc" className="bg-[#0b132b]">File Size (Smallest First)</option>
-              <option value="date_desc" className="bg-[#0b132b]">Date Modified (Newest First)</option>
-              <option value="date_asc" className="bg-[#0b132b]">Date Modified (Oldest First)</option>
-            </select>
+              Export Catalog (.parquet)
+            </a>
           </div>
-
-          {/* Size Filter Dropdown */}
-          <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2">
-            <Filter className="w-4 h-4 text-white/40 shrink-0" />
-            <span className="text-xs text-white/50 font-medium shrink-0">Size:</span>
-            <select
-              value={selectedSizeFilter}
-              onChange={(e) => { setSelectedSizeFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-transparent text-white text-xs font-semibold outline-none cursor-pointer"
-            >
-              <option value="All" className="bg-[#0b132b]">All Sizes</option>
-              <option value="<500KB" className="bg-[#0b132b]">&lt; 500 KB</option>
-              <option value="500KB-2MB" className="bg-[#0b132b]">500 KB – 2 MB</option>
-              <option value="2MB-10MB" className="bg-[#0b132b]">2 MB – 10 MB</option>
-              <option value=">10MB" className="bg-[#0b132b]">&gt; 10 MB</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Format Filter Pills */}
-        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/[0.08]">
-          <span className="text-xs text-white/40 font-semibold mr-1 flex items-center gap-1 shrink-0">
-            <FileText className="w-3.5 h-3.5" /> File Type:
-          </span>
-          {Object.entries(formatCounts).map(([fmt, count]) => (
-            <button
-              key={fmt}
-              onClick={() => handleFormatChange(fmt)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                selectedFormat === fmt
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10'
-              }`}
-            >
-              {fmt === 'All' ? 'All Files' : `.${fmt}`} ({count})
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* ─── Source Files Table ─────────────────────────────────────────── */}
-      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-xl overflow-hidden flex-1 flex flex-col">
+      {/* ─── The Clean White Table (Image 1) ────────────────────────────── */}
+      <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden mb-6 flex-1 flex flex-col">
         <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-white/[0.08] bg-[#051833] text-white/60 uppercase font-mono tracking-wider sticky top-0 z-20 shadow-md shadow-black/40">
-              <tr>
-                <th className="py-3.5 px-4 font-semibold w-14 bg-[#051833]">#</th>
-                <th className="py-3.5 px-4 font-semibold bg-[#051833]">FILE NAME</th>
-                <th className="py-3.5 px-4 font-semibold w-28 bg-[#051833]">FORMAT</th>
-                <th className="py-3.5 px-4 font-semibold w-36 bg-[#051833]">FILE SIZE</th>
-                <th className="py-3.5 px-4 font-semibold w-44 bg-[#051833]">MODIFIED DATE</th>
-                <th className="py-3.5 px-4 font-semibold text-right w-36 bg-[#051833]">DOWNLOAD</th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200/80 bg-white">
+                <th className="py-3 px-5 text-xs font-medium text-slate-500 w-[44%]">File</th>
+                <th className="py-3 px-4 text-xs font-medium text-slate-500 w-[8%]">Tabs</th>
+                <th className="py-3 px-4 text-xs font-medium text-slate-500 w-[14%]">Accepted rows</th>
+                <th className="py-3 px-4 text-xs font-medium text-slate-500 w-[11%]">Quarantined</th>
+                <th className="py-3 px-4 text-xs font-medium text-slate-500 w-[11%]">Status</th>
+                <th className="py-3 px-5 text-xs font-medium text-slate-500 w-[12%]">Duplicate of</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-white/40">
-                    No source files matching "{searchTerm}". Try clearing your filters.
+            <tbody className="divide-y divide-slate-100">
+              {paginated.map((item) => (
+                <tr 
+                  key={item.id}
+                  className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                  onClick={() => handleDownload(item)}
+                >
+                  {/* File name */}
+                  <td className="py-3.5 px-5 text-sm text-slate-800 font-normal">
+                    <div className="flex items-center justify-between gap-3">
+                      <span 
+                        className="truncate max-w-[460px] group-hover:text-blue-600 transition-colors" 
+                        title={item.filename}
+                      >
+                        {item.filename}
+                      </span>
+                      <button 
+                        onClick={(e) => handleDownload(item, e)}
+                        title="Download file"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200/70 rounded text-slate-400 hover:text-slate-700 shrink-0"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+
+                  {/* Tabs */}
+                  <td className="py-3.5 px-4 text-sm text-slate-600">
+                    {item.tabs || 1}
+                  </td>
+
+                  {/* Accepted rows */}
+                  <td className="py-3.5 px-4 text-sm text-slate-700 font-normal">
+                    {item.accepted_rows !== null && item.accepted_rows !== undefined 
+                      ? item.accepted_rows.toLocaleString() 
+                      : '—'}
+                  </td>
+
+                  {/* Quarantined */}
+                  <td className="py-3.5 px-4 text-sm text-slate-400">
+                    {item.quarantined ? item.quarantined.toLocaleString() : '—'}
+                  </td>
+
+                  {/* Status pill */}
+                  <td className="py-3.5 px-4 text-sm">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">
+                      {item.status || 'processed'}
+                    </span>
+                  </td>
+
+                  {/* Duplicate of */}
+                  <td className="py-3.5 px-5 text-sm text-slate-400 truncate max-w-[150px]" title={item.duplicate_of || ''}>
+                    {item.duplicate_of || '—'}
                   </td>
                 </tr>
-              ) : (
-                paginated.map((item) => (
-                  <tr 
-                    key={item.id} 
-                    onClick={(e) => handleDownload(item, e)}
-                    className="hover:bg-white/[0.04] transition-colors group cursor-pointer"
-                    title={`Click to download ${item.filename}`}
-                  >
-                    {/* Index */}
-                    <td className="py-3.5 px-4 font-mono text-white/30 text-[11px]">
-                      {item.id}
-                    </td>
-
-                    {/* Exact File Name */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
-                          <FileSpreadsheet className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-semibold text-white group-hover:text-blue-400 transition-colors font-mono text-xs break-all">
-                            {item.filename}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Format */}
-                    <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
-                        item.extension === 'XLSX' 
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      }`}>
-                        .{item.extension}
-                      </span>
-                    </td>
-
-                    {/* File Size */}
-                    <td className="py-3.5 px-4 font-mono text-white/80 font-medium text-xs">
-                      {item.size_formatted}
-                    </td>
-
-                    {/* Modified Date */}
-                    <td className="py-3.5 px-4 font-mono text-white/50 text-xs">
-                      {item.date_modified || '—'}
-                    </td>
-
-                    {/* Download Button */}
-                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={(e) => handleDownload(item, e)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          downloadingId === item.id
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 shadow-sm'
-                        }`}
-                        title="Download file"
-                      >
-                        {downloadingId === item.id ? (
-                          <>
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Saved</span>
-                          </>
-                        ) : (
-                          <>
-                            <ArrowDownToLine className="w-3.5 h-3.5" />
-                            <span>Download</span>
-                          </>
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
 
-        {/* ─── Pagination Footer ────────────────────────────────────────── */}
-        <div className="p-4 border-t border-white/10 bg-black/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/60">
-          <div className="flex items-center gap-4">
-            <span>
-              Showing {filteredAndSorted.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSorted.length)} of {filteredAndSorted.length.toLocaleString()} files
-            </span>
+        {/* ─── Pagination Bar ────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-white text-xs text-slate-500 shrink-0">
+          <div>
+            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSorted.length)} of {filteredAndSorted.length.toLocaleString()} files
+          </div>
 
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="text-white/40">Per page:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                className="bg-black/40 border border-white/10 rounded-md px-2 py-1 text-white text-xs outline-none cursor-pointer"
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span>Per page:</span>
+              <select 
+                value={itemsPerPage} 
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-transparent border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none cursor-pointer"
               >
                 <option value={25}>25</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
+                <option value={200}>200</option>
               </select>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30"
-            >
-              First
-            </button>
 
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30"
-            >
-              Previous
-            </button>
-            
-            <span className="px-3 py-1 font-mono text-white/80">
-              Page {currentPage} of {totalPages}
-            </span>
-
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30"
-            >
-              Next
-            </button>
-
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30"
-            >
-              Last
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-2.5 py-1 border border-slate-200 rounded text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-slate-600 font-medium px-1">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1 border border-slate-200 rounded text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
     </div>
   );
 }
