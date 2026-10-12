@@ -143,35 +143,6 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Main Glassmorphic Container */}
         <main className="flex-1 bg-[#021024]/60 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl p-4 lg:p-5 overflow-hidden relative flex flex-col min-h-0">
-          
-          {/* Executive Top Status Bar (Replacing client-dependent View As dropdown) */}
-          <div className="absolute top-3.5 right-4 z-20 flex items-center gap-2">
-            {/* OmniSearch Global Trigger Pill */}
-            <button
-              onClick={() => setIsOmniSearchModalOpen(true)}
-              className="flex items-center gap-1.5 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/15 hover:border-blue-500/50 shadow-xl rounded-xl px-2.5 sm:px-3 py-1 transition-all text-xs text-white/70 hover:text-white cursor-pointer group"
-              title="Global Database Search (Ctrl+F6 or Cmd+K)"
-            >
-              <Search className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
-              <span className="hidden sm:inline font-medium">Search DB</span>
-              <kbd className="text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-white/50 border border-white/10 font-mono">
-                ⌘K / ^F6
-              </kbd>
-            </button>
-
-            {/* Live Dubai Time */}
-            <div className="hidden md:flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/15 shadow-xl rounded-xl px-2.5 py-1 text-xs text-white/60 font-mono">
-              <Clock className="w-3.5 h-3.5 text-blue-400" />
-              <span>{dubaiTime || 'Dubai GST'}</span>
-            </div>
-
-            {/* PostgreSQL Database Sync Indicator */}
-            <div className="hidden lg:flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-500/30 shadow-xl rounded-xl px-2.5 py-1 text-xs text-emerald-300 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>3.04M Live</span>
-            </div>
-          </div>
-
           {/* Tab Views */}
           {activeTab === 'overview' && (
             <OverviewDashboard onNavigate={(tab) => setActiveTab(tab)} />
