@@ -227,7 +227,7 @@ export default function OverviewDashboard({ onNavigate }) {
   return (
     <div className="w-full flex flex-col gap-6 select-text text-white font-sans animate-fade-in pr-1 pb-16">
 
-      {/* ─── 1. TOP HEADER SECTION (Clean, spacious header matching reference) ─── */}
+      {/* ─── 1. TOP HEADER SECTION ─────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white mb-1">
@@ -240,7 +240,7 @@ export default function OverviewDashboard({ onNavigate }) {
 
         <div className="flex items-center gap-3">
           {/* Live Telephony Status Pill */}
-          <div className="flex items-center gap-2 text-xs bg-[#001830] border border-[#00284b] px-3.5 py-2 rounded-xl shadow-inner">
+          <div className="flex items-center gap-2 text-xs bg-[#0c1829] border border-[#233549] px-3.5 py-2 rounded-xl shadow-md">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span className="text-slate-400 font-medium">Voice Cluster:</span>
             <span className="text-emerald-400 font-bold">Active & Dialing</span>
@@ -249,7 +249,7 @@ export default function OverviewDashboard({ onNavigate }) {
           {/* Refresh Data button */}
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#001830] border border-[#00284b] hover:bg-[#002244] text-xs font-semibold text-white shadow transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c1829] border border-[#233549] hover:bg-[#122238] hover:border-[#2f4666] text-xs font-semibold text-white shadow-md transition-all active:scale-95"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-400' : ''}`} />
             <span>Refresh Data</span>
@@ -258,7 +258,7 @@ export default function OverviewDashboard({ onNavigate }) {
           {/* Shortcut to Voice Agent Centre */}
           <button 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow-md"
           >
             <span>Voice Agent Centre</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -266,118 +266,141 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── 2. TOP 4 KEY METRIC CARDS (Bigger, spacious layout matching reference) ─── */}
+      {/* ─── 2. TOP 4 KEY METRIC CARDS (Exact styling from Image 1) ─────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Card 1: Master Portfolio / Total Properties */}
         <div 
           onClick={() => onNavigate && onNavigate('owners')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between group hover:border-[#00386b] transition-all cursor-pointer"
+          className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-xl shadow-black/40 relative overflow-hidden group hover:border-[#385175] transition-all cursor-pointer"
         >
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                MASTER PORTFOLIO
-              </div>
-              <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-400/25 flex items-center justify-center">
-                <Database className="w-4 h-4 text-blue-300" />
-              </div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
+              MASTER PORTFOLIO
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
               3,042,722
             </div>
-            <div className="text-xs font-semibold text-emerald-400 inline-flex items-center gap-1.5 mt-1">
+            <div className="text-xs font-semibold text-emerald-400 inline-flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               ✓ Supabase Synced · 1,382 Catalogs
             </div>
           </div>
+          {/* Dual Cyan Glowing Sine Waves Accent (Exact match to Image 1) */}
+          <svg className="w-full h-12 mt-3 opacity-90" viewBox="0 0 240 48" fill="none">
+            <path d="M 0 32 Q 60 4 120 28 T 240 20" stroke="#00e5ff" strokeWidth="2" strokeDasharray="3 3" fill="none" opacity="0.6"/>
+            <path d="M 0 20 Q 60 40 120 18 T 240 26" stroke="#0091ff" strokeWidth="2.5" strokeDasharray="4 4" fill="none"/>
+          </svg>
         </div>
 
         {/* Card 2: Total Calls Made Today */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between group hover:border-[#00386b] transition-all cursor-pointer"
+          className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-xl shadow-black/40 relative overflow-hidden group hover:border-[#385175] transition-all cursor-pointer"
         >
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                TOTAL CALLS MADE TODAY
-              </div>
-              <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-400/25 flex items-center justify-center">
-                <PhoneCall className="w-4 h-4 text-purple-300" />
-              </div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
+              TOTAL CALLS MADE TODAY
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
               {voiceData.totalCallsToday.toLocaleString()}
             </div>
-            <div className="text-xs font-semibold text-sky-400 inline-flex items-center gap-1.5 mt-1">
+            <div className="text-xs font-semibold text-sky-400 inline-flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
               Outbound Dispatch Active
             </div>
           </div>
+          {/* Dot Matrix Grid Accent */}
+          <svg className="w-full h-12 mt-3 opacity-75" viewBox="0 0 240 48" fill="none">
+            <defs>
+              <pattern id="dot-matrix-pat" x="0" y="0" width="12" height="10" patternUnits="userSpaceOnUse">
+                <circle cx="6" cy="5" r="1.8" fill="url(#dot-matrix-grad)" />
+              </pattern>
+              <linearGradient id="dot-matrix-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#8b5cf6" />
+                <stop offset="100%" stopColor="#06b6d4" />
+              </linearGradient>
+            </defs>
+            <rect width="240" height="48" fill="url(#dot-matrix-pat)" />
+          </svg>
         </div>
 
         {/* Card 3: Qualified Leads Today */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between group hover:border-[#00386b] transition-all cursor-pointer"
+          className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-xl shadow-black/40 relative overflow-hidden group hover:border-[#385175] transition-all cursor-pointer"
         >
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                QUALIFIED LEADS TODAY
-              </div>
-              <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-400/30 flex items-center justify-center">
-                <Flame className="w-4 h-4 text-amber-300" />
-              </div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
+              QUALIFIED LEADS TODAY
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold text-amber-300 tracking-tight my-1.5 font-mono">
               {voiceData.qualifiedLeadsToday.toLocaleString()}
             </div>
-            <div className="text-xs font-semibold text-emerald-400 mt-1">
+            <div className="text-xs font-semibold text-emerald-400 mt-0.5">
               Hot Buyers & Sellers Ready to Transact
             </div>
           </div>
+          {/* Green Smooth Wave Curve Accent */}
+          <svg className="w-full h-12 mt-3" viewBox="0 0 240 48" fill="none">
+            <defs>
+              <linearGradient id="green-glow-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+            <path d="M 0 36 Q 60 8 120 24 T 240 16 L 240 48 L 0 48 Z" fill="url(#green-glow-grad)" />
+            <path d="M 0 36 Q 60 8 120 24 T 240 16" stroke="#10b981" strokeWidth="2.5" />
+          </svg>
         </div>
 
         {/* Card 4: AI Voice Agents Fleet Status */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between group hover:border-[#00386b] transition-all cursor-pointer"
+          className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-xl shadow-black/40 relative overflow-hidden group hover:border-[#385175] transition-all cursor-pointer"
         >
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                AI VOICE AGENTS FLEET
-              </div>
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center">
-                <Radio className="w-4 h-4 text-emerald-300" />
-              </div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
+              AI VOICE AGENTS FLEET
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
               3 / 3 Online
             </div>
-            <div className="text-xs font-medium text-slate-300 mt-1">
+            <div className="text-xs font-medium text-slate-300 mt-0.5">
               Sarah · James · Aisha Dialing Active
             </div>
           </div>
+          {/* Connected Polyline Graph with Nodes Accent */}
+          <svg className="w-full h-12 mt-3" viewBox="0 0 240 48" fill="none">
+            <polyline 
+              points="10,24 35,32 60,38 85,44 110,40 135,36 160,34 185,28 210,34 235,22" 
+              stroke="#8b5cf6" 
+              strokeWidth="2.5" 
+            />
+            {[
+              [10, 24], [35, 32], [60, 38], [85, 44], [110, 40],
+              [135, 36], [160, 34], [185, 28], [210, 34], [235, 22]
+            ].map(([cx, cy], i) => (
+              <circle key={i} cx={cx} cy={cy} r="3" fill="#c084fc" />
+            ))}
+          </svg>
         </div>
 
       </div>
 
-      {/* ─── 3. HORIZONTAL PIPELINE DYNAMICS BANNER (Matching reference) ─── */}
-      <div className="bg-[#001830] border border-[#00284b] rounded-2xl p-5 shadow-lg">
+      {/* ─── 3. HORIZONTAL PIPELINE DYNAMICS BANNER ─────────────────────────── */}
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40">
         <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-4">
           TELEPHONY & CONVERSATION DYNAMICS PIPELINE
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[#00284b] gap-y-4 sm:gap-y-0">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[#233549] gap-y-4 sm:gap-y-0">
           
           <div className="px-2 sm:px-4 first:pl-0">
             <div className="text-xs text-slate-400 font-medium mb-1">
               Dispatched Today
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight">
+            <div className="text-2xl font-bold text-white tracking-tight font-mono">
               {voiceData.totalCallsToday.toLocaleString()}
             </div>
           </div>
@@ -386,7 +409,7 @@ export default function OverviewDashboard({ onNavigate }) {
             <div className="text-xs text-slate-400 font-medium mb-1">
               Connected Calls
             </div>
-            <div className="text-2xl font-bold text-emerald-400 tracking-tight">
+            <div className="text-2xl font-bold text-emerald-400 tracking-tight font-mono">
               {Math.round(voiceData.totalCallsToday * 0.48).toLocaleString()}
             </div>
           </div>
@@ -395,7 +418,7 @@ export default function OverviewDashboard({ onNavigate }) {
             <div className="text-xs text-slate-400 font-medium mb-1">
               Qualified Leads
             </div>
-            <div className="text-2xl font-bold text-sky-400 tracking-tight">
+            <div className="text-2xl font-bold text-sky-400 tracking-tight font-mono">
               {voiceData.qualifiedLeadsToday.toLocaleString()}
             </div>
           </div>
@@ -404,7 +427,7 @@ export default function OverviewDashboard({ onNavigate }) {
             <div className="text-xs text-slate-400 font-medium mb-1">
               Hot Mandates
             </div>
-            <div className="text-2xl font-bold text-amber-400 tracking-tight">
+            <div className="text-2xl font-bold text-amber-400 tracking-tight font-mono">
               48
             </div>
           </div>
@@ -413,7 +436,7 @@ export default function OverviewDashboard({ onNavigate }) {
             <div className="text-xs text-slate-400 font-medium mb-1">
               Transferred to Brokers
             </div>
-            <div className="text-2xl font-bold text-rose-400 tracking-tight">
+            <div className="text-2xl font-bold text-rose-400 tracking-tight font-mono">
               116
             </div>
           </div>
@@ -421,8 +444,8 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── 4. IMMEDIATE ACTIVITY (HOT LEADS FEED) ─── */}
-      <div className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg">
+      {/* ─── 4. IMMEDIATE ACTIVITY (HOT LEADS FEED) ─────────────────────────── */}
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2">
@@ -442,7 +465,7 @@ export default function OverviewDashboard({ onNavigate }) {
             </span>
             <button
               onClick={() => onNavigate && onNavigate('owners')}
-              className="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-[#00284b]/60 border border-[#00386b] hover:bg-[#00284b] transition-all flex items-center gap-1.5"
+              className="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] transition-all flex items-center gap-1.5"
             >
               <span>View all</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -456,7 +479,7 @@ export default function OverviewDashboard({ onNavigate }) {
             <div
               key={act.id}
               onClick={() => onNavigate && onNavigate(act.targetTab)}
-              className="p-4 bg-[#001020] border border-[#00284b] rounded-xl hover:border-[#00407a] hover:bg-[#00162e] transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+              className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl hover:border-[#2a4363] hover:bg-[#091728] transition-all cursor-pointer flex flex-col justify-between gap-3 group"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -476,7 +499,7 @@ export default function OverviewDashboard({ onNavigate }) {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-[#00284b]/60 text-[11px]">
+              <div className="flex items-center justify-between pt-2 border-t border-[#1a2c42] text-[11px]">
                 <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px]">
                   <Bot className="w-3.5 h-3.5 text-blue-400" /> {act.agent}
                 </span>
@@ -490,9 +513,6 @@ export default function OverviewDashboard({ onNavigate }) {
       </div>
 
       {/* ─── 5. SCROLL DOWN CONTENT: AGENTS FLEET DETAIL & WORKFLOW HEALTH ─── */}
-      {/* Placed below so user can naturally scroll down to see the larger dedicated cards */}
-
-      {/* AI Voice Agent Fleet Cluster Cards */}
       <div className="flex flex-col gap-4 pt-2">
         <div className="flex items-center justify-between">
           <div>
@@ -509,7 +529,7 @@ export default function OverviewDashboard({ onNavigate }) {
 
           <button
             onClick={() => onNavigate && onNavigate('voice')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow-md"
           >
             <span>Open Voice Agent 360</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -520,7 +540,7 @@ export default function OverviewDashboard({ onNavigate }) {
           {/* Agent 1: Sarah */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-5 bg-[#001830] border border-blue-500/30 rounded-2xl hover:border-blue-400/60 transition-all cursor-pointer shadow-lg flex flex-col justify-between group"
+            className="p-6 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -549,7 +569,7 @@ export default function OverviewDashboard({ onNavigate }) {
               </p>
             </div>
 
-            <div className="pt-3 border-t border-[#00284b] flex items-center justify-between text-xs text-blue-300 font-medium">
+            <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-blue-300 font-medium">
               <span>View Call Logs & Metrics</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
@@ -558,7 +578,7 @@ export default function OverviewDashboard({ onNavigate }) {
           {/* Agent 2: James */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-5 bg-[#001830] border border-purple-500/30 rounded-2xl hover:border-purple-400/60 transition-all cursor-pointer shadow-lg flex flex-col justify-between group"
+            className="p-6 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -587,7 +607,7 @@ export default function OverviewDashboard({ onNavigate }) {
               </p>
             </div>
 
-            <div className="pt-3 border-t border-[#00284b] flex items-center justify-between text-xs text-purple-300 font-medium">
+            <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-purple-300 font-medium">
               <span>View Call Logs & Metrics</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
@@ -596,7 +616,7 @@ export default function OverviewDashboard({ onNavigate }) {
           {/* Agent 3: Aisha */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-5 bg-[#001830] border border-emerald-500/30 rounded-2xl hover:border-emerald-400/60 transition-all cursor-pointer shadow-lg flex flex-col justify-between group"
+            className="p-6 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
           >
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -625,7 +645,7 @@ export default function OverviewDashboard({ onNavigate }) {
               </p>
             </div>
 
-            <div className="pt-3 border-t border-[#00284b] flex items-center justify-between text-xs text-emerald-300 font-medium">
+            <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-emerald-300 font-medium">
               <span>View Call Logs & Metrics</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
@@ -633,8 +653,8 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* Automated Workflow Health Widget */}
-      <div className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg">
+      {/* ─── 6. AUTOMATED WORKFLOW HEALTH WIDGET ────────────────────────────── */}
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2">
@@ -658,7 +678,7 @@ export default function OverviewDashboard({ onNavigate }) {
           {WORKFLOWS.map((wf) => (
             <div 
               key={wf.id}
-              className="p-3.5 bg-[#001020] border border-[#00284b] rounded-xl flex items-center justify-between gap-3 hover:border-[#003d73] transition-colors"
+              className="p-3.5 bg-[#06111e] border border-[#1a2c42] rounded-xl flex items-center justify-between gap-3 hover:border-[#2a4363] transition-colors"
             >
               <div className="flex items-start gap-2.5 min-w-0">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 ${
