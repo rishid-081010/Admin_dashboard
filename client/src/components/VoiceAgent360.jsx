@@ -24,6 +24,9 @@ export default function VoiceAgent360({
   const [activeCallModal, setActiveCallModal] = useState(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
+  // Stable string key to avoid re-running on object reference changes
+  const filterKey = `${filterParams?.timeFilter}_${filterParams?.selectedDate}_${filterParams?.selectedYear}_${filterParams?.selectedMonth}_${filterParams?.selectedWeek}`;
+
   // Load 360 data whenever agent, page, search, or statusFilter changes
   useEffect(() => {
     let isMounted = true;
@@ -47,7 +50,7 @@ export default function VoiceAgent360({
     };
     load360();
     return () => { isMounted = false; };
-  }, [agent.id, filterParams, page, search, statusFilter]);
+  }, [agent.id, filterKey, page, search, statusFilter]);
 
   const copyToClipboard = (text, field) => {
     if (!text) return;
@@ -332,7 +335,7 @@ export default function VoiceAgent360({
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
-              {loading ? (
+              {loading && !data ? (
                 <tr>
                   <td colSpan="7" className="py-12 text-center text-white/40">
                     <Clock className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-400" />

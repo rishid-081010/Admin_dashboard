@@ -63,7 +63,6 @@ export default function App() {
   const [activeTab, setActiveTabState] = useState(() => getTabFromUrl());
   const [selectedListingId, setSelectedListingId] = useState(null);
   const [isOmniSearchModalOpen, setIsOmniSearchModalOpen] = useState(false);
-  const [dubaiTime, setDubaiTime] = useState('');
 
   const setActiveTab = (newTab, pushState = true) => {
     setActiveTabState(newTab);
@@ -84,24 +83,6 @@ export default function App() {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // Live Dubai Time Clock (GST / UTC+4)
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const options = { 
-        timeZone: 'Asia/Dubai', 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit',
-        hour12: false 
-      };
-      setDubaiTime(new Intl.DateTimeFormat('en-GB', options).format(now) + ' GST');
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
   }, []);
 
   // Global Keyboard Shortcut: Ctrl + F6 or Cmd + F6 (and Ctrl + K / Cmd + K)

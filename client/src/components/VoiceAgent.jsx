@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Mic, Activity, PhoneOff, PhoneOutgoing, Clock, 
   Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Play, User, RefreshCw
@@ -41,12 +41,16 @@ export default function VoiceAgent() {
     loadData();
   }, [timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek]);
 
+  const filterParams = useMemo(() => ({
+    timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek
+  }), [timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek]);
+
   // If user opened an Agent's 360 view
   if (selectedAgentFor360) {
     return (
       <VoiceAgent360 
         agent={selectedAgentFor360}
-        filterParams={{ timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek }}
+        filterParams={filterParams}
         onBack={() => setSelectedAgentFor360(null)}
       />
     );
