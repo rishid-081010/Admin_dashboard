@@ -148,56 +148,6 @@ export default function OverviewDashboard({ onNavigate }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-          {/* Day Segmented Toggle */}
-          <div className="flex items-center bg-[#07111c] border border-[#233549] p-1 rounded-xl shadow-inner">
-            <button
-              onClick={() => setSelectedDate(getTodayDubai())}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                selectedDate === getTodayDubai()
-                  ? 'bg-[#1b2b48] text-white shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Today (Oct 12)
-            </button>
-            <button
-              onClick={() => setSelectedDate('2026-10-11')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                selectedDate === '2026-10-11'
-                  ? 'bg-[#1b2b48] text-white shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Yesterday (Oct 11)
-            </button>
-          </div>
-
-          {/* Live Telephony Status Pill */}
-          <div className="flex items-center gap-2 text-xs bg-[#0c1829] border border-[#233549] px-3.5 py-2 rounded-xl shadow-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-slate-400 font-medium">Voice Cluster:</span>
-            <span className="text-emerald-400 font-bold">Active & Dialing</span>
-          </div>
-
-          {/* Refresh Data button */}
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c1829] border border-[#233549] hover:bg-[#122238] hover:border-[#2f4666] text-xs font-semibold text-white shadow-md transition-all active:scale-95"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-400' : ''}`} />
-            <span>Refresh Data</span>
-          </button>
-
-          {/* Shortcut to Voice Agent Centre */}
-          <button 
-            onClick={() => onNavigate && onNavigate('voice')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow-md"
-          >
-            <span>Voice Agent Centre</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
       </div>
 
       {/* ─── 2. TOP 4 KEY METRIC CARDS (Exact styling from Image 1) ─────────── */}
