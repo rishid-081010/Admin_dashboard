@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
+import Building360Detail from './Building360Detail';
 
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
@@ -512,6 +513,17 @@ export default function Buildings() {
         owner={selectedOwner} 
         onBack={() => setSelectedOwner(null)}
         globalAgentName="Melanie Simsiman"
+      />
+    );
+  }
+
+  // If viewing a Building 360 profile (opens into a new page like Owner 360 does)
+  if (selectedBuilding) {
+    return (
+      <Building360Detail 
+        building={selectedBuilding} 
+        onBack={() => setSelectedBuilding(null)}
+        onSelectOwner={(owner) => setSelectedOwner(owner)}
       />
     );
   }

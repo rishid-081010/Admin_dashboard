@@ -6,6 +6,7 @@ import {
   ExternalLink, Sparkles, RefreshCw, X, ChevronRight, Hash, Database
 } from 'lucide-react';
 import Owner360Detail from './Owner360Detail';
+import Building360Detail from './Building360Detail';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
@@ -559,6 +560,17 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
     );
   }
 
+  // If a Building 360 profile is open, render it full page (just like Owner 360!)
+  if (selectedBuilding) {
+    return (
+      <Building360Detail 
+        building={selectedBuilding} 
+        onBack={() => setSelectedBuilding(null)}
+        onSelectOwner={(owner) => setSelectedOwner(owner)}
+      />
+    );
+  }
+
   const getSearchPlaceholder = () => {
     switch (filterType) {
       case 'Buildings':
@@ -1014,148 +1026,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* INSIDE-BUILDING EXPLORER DRAWER                                     */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {selectedBuilding && (
-        <div className="absolute inset-y-0 right-0 w-full md:w-[620px] bg-[#020b18]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl z-40 flex flex-col animate-slide-left">
-          <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[10.5px] uppercase font-mono font-bold tracking-wider text-blue-400">
-                  {selectedBuilding.area}
-                </span>
-                <h3 className="text-lg font-bold text-white tracking-wide" style={{ fontFamily: "Georgia, serif" }}>
-                  {selectedBuilding.name}
-                </h3>
-                <p className="text-xs text-white/50">
-                  {selectedBuilding.propertyType} • Verified owners registry
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setSelectedBuilding(null)}
-              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
 
-          <div className="p-4 grid grid-cols-3 gap-3 border-b border-white/5 bg-white/[0.02] shrink-0">
-            <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Verified Units</div>
-              <div className="text-lg font-extrabold text-white">{selectedBuilding.unitsCount}</div>
-            </div>
-            <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Verified Owners</div>
-              <div className="text-lg font-extrabold text-white">{selectedBuilding.ownersCount}</div>
-            </div>
-            <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">With Phone</div>
-              <div className="text-lg font-extrabold text-emerald-400">
-                {selectedBuilding.contactsCount} / {selectedBuilding.ownersCount}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 border-b border-white/5 shrink-0">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-              <input
-                type="text"
-                placeholder="Filter by owner name, unit #, or phone..."
-                value={drawerSearch}
-                onChange={(e) => setDrawerSearch(e.target.value)}
-                className="w-full bg-[#03152d] border border-white/10 focus:border-blue-500 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/40 outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2.5 min-h-0">
-            {loadingBuildingOwners ? (
-              <div className="py-16 text-center text-white/40 flex flex-col items-center">
-                <RefreshCw className="w-6 h-6 animate-spin text-blue-400 mb-2" />
-                <p className="text-xs">Loading building units &amp; owners...</p>
-              </div>
-            ) : filteredDrawerOwners.length > 0 ? (
-              filteredDrawerOwners.map((owner, i) => (
-                <div 
-                  key={owner.id || i}
-                  className="bg-[#03152d]/80 border border-white/5 hover:border-blue-500/40 rounded-xl p-3 flex items-center justify-between gap-3 transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 shrink-0">
-                      Unit {owner.unit}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-white truncate">{owner.name}</div>
-                      <div className="text-[11px] text-white/40 flex items-center gap-1.5">
-                        <span>{owner.lead_id}</span>
-                        <span>•</span>
-                        <span className="text-emerald-400 flex items-center gap-0.5">
-                          <ShieldCheck className="w-3 h-3" /> Verified Owner
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {owner.phone && owner.phone !== 'N/A' ? (
-                      <button
-                        onClick={(e) => copyPhone(owner.phone, e)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 transition-all"
-                      >
-                        {copiedPhone === owner.phone ? <Check className="w-3 h-3" /> : <Phone className="w-3 h-3" />}
-                        <span className="font-mono">{copiedPhone === owner.phone ? 'Copied' : owner.phone}</span>
-                      </button>
-                    ) : (
-                      <span className="text-[11px] text-white/30 italic px-2">Unlisted</span>
-                    )}
-
-                    <button
-                      onClick={() => setSelectedOwner({
-                        id: owner.id,
-                        lead_id: owner.lead_id,
-                        name: owner.name,
-                        unit_number: owner.unit,
-                        building: owner.building,
-                        area: owner.area,
-                        phone: owner.phone,
-                        email: owner.email,
-                        property_category: owner.property_category,
-                        bitrix_id: owner.bitrix_id
-                      })}
-                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 shadow-sm transition-all"
-                    >
-                      <span>Owner 360</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="py-12 text-center text-xs text-white/40">
-                No matching owners in this building.
-              </div>
-            )}
-          </div>
-
-          <div className="p-3 border-t border-white/10 bg-[#010814] flex items-center justify-between text-xs text-white/40 shrink-0">
-            <span>
-              Showing {filteredDrawerOwners.length} verified owner records in {selectedBuilding.name}
-            </span>
-            <button 
-              onClick={() => setSelectedBuilding(null)}
-              className="text-white/60 hover:text-white px-3 py-1 rounded bg-white/5 hover:bg-white/10 font-semibold"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* INSIDE-AREA EXPLORER DRAWER                                         */}
