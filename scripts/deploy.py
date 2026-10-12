@@ -64,7 +64,12 @@ def upload_file(local_path, remote_rel_path):
         print(f"FAILED to get Location header for {remote_rel_path}")
         return False
         
-    real_patch_url = f"https://srv529-files.hstgr.io/rest{loc}"
+    if loc.startswith('http'):
+        real_patch_url = loc
+    elif loc.startswith('/'):
+        real_patch_url = f"https://srv529-files.hstgr.io/rest{loc}"
+    else:
+        real_patch_url = f"https://srv529-files.hstgr.io/rest/{loc}"
     patch_headers = {
         'X-Auth': auth_key,
         'X-Auth-Rest': rest_auth_key,
