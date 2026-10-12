@@ -544,26 +544,26 @@ export default function Buildings() {
 
         {/* Aggregate Stats Badges */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="bg-[#03152d]/90 border border-white/10 rounded-xl px-3.5 py-2 flex items-center gap-2.5 backdrop-blur-md shadow-lg">
+          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <Building2 className="w-4 h-4 text-blue-400" />
             <div>
-              <div className="text-[11px] text-white/40 uppercase font-mono font-medium leading-none">Buildings</div>
+              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Buildings</div>
               <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">{buildings.length.toLocaleString()}</div>
             </div>
           </div>
 
-          <div className="bg-[#03152d]/90 border border-white/10 rounded-xl px-3.5 py-2 flex items-center gap-2.5 backdrop-blur-md shadow-lg">
+          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <Layers className="w-4 h-4 text-emerald-400" />
             <div>
-              <div className="text-[11px] text-white/40 uppercase font-mono font-medium leading-none">Units in DB</div>
+              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Units in DB</div>
               <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">{totalStats.totalUnits.toLocaleString()}</div>
             </div>
           </div>
 
-          <div className="bg-[#03152d]/90 border border-white/10 rounded-xl px-3.5 py-2 flex items-center gap-2.5 backdrop-blur-md shadow-lg">
+          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <Users className="w-4 h-4 text-sky-400" />
             <div>
-              <div className="text-[11px] text-white/40 uppercase font-mono font-medium leading-none">Linked Profiles</div>
+              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Linked Profiles</div>
               <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">{totalStats.totalOwners.toLocaleString()}</div>
             </div>
           </div>
@@ -571,10 +571,10 @@ export default function Buildings() {
       </div>
 
       {/* ── Search & Filter Controls ───────────────────────────────── */}
-      <div className="bg-[#03152d]/80 border border-white/10 rounded-2xl p-4 mb-6 shadow-xl backdrop-blur-md flex-shrink-0 flex flex-col md:flex-row items-center gap-4">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 mb-6 shadow-xl shadow-black/40 flex-shrink-0 flex flex-col md:flex-row items-center gap-4">
         {/* Search Input */}
-        <div className="flex-1 w-full flex items-center bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 transition-all focus-within:border-blue-500/60 focus-within:ring-1 focus-within:ring-blue-500/30">
-          <Search className="w-4 h-4 text-white/50 mr-3 flex-shrink-0" />
+        <div className="flex-1 w-full flex items-center bg-[#06111e] border border-[#1a2c42] rounded-xl px-4 py-2.5 transition-all focus-within:border-blue-500/60 focus-within:ring-1 focus-within:ring-blue-500/30">
+          <Search className="w-4 h-4 text-slate-400 mr-3 flex-shrink-0" />
           <input
             type="text"
             placeholder="Search building name, community, or type..."
@@ -583,12 +583,12 @@ export default function Buildings() {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full bg-transparent text-[14px] text-white placeholder-white/40 focus:outline-none"
+            className="w-full bg-transparent text-[14px] text-white placeholder-slate-400 focus:outline-none"
           />
           {searchTerm && (
             <button 
               onClick={() => setSearchTerm('')}
-              className="text-white/40 hover:text-white p-1 ml-1"
+              className="text-slate-400 hover:text-white p-1 ml-1"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -604,16 +604,16 @@ export default function Buildings() {
                 setSelectedCommunity(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-black/40 border border-white/10 text-white text-[13px] rounded-xl px-3.5 py-2.5 appearance-none focus:outline-none focus:border-blue-500/60 cursor-pointer font-medium"
+              className="w-full bg-[#06111e] border border-[#1a2c42] text-white text-[13px] rounded-xl px-3.5 py-2.5 appearance-none focus:outline-none focus:border-blue-500/60 cursor-pointer font-medium"
             >
-              <option value="All" className="bg-[#051833]">All Communities ({buildings.length})</option>
+              <option value="All" className="bg-[#0c1829]">All Communities ({buildings.length})</option>
               {communitiesList.filter(c => c !== 'All').map(comm => (
-                <option key={comm} value={comm} className="bg-[#051833]">
+                <option key={comm} value={comm} className="bg-[#0c1829]">
                   {comm}
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-4 h-4 text-white/40 absolute right-3 top-3 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
           </div>
 
           {/* Sort By Dropdown */}
@@ -621,21 +621,21 @@ export default function Buildings() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 text-white text-[13px] rounded-xl px-3.5 py-2.5 appearance-none focus:outline-none focus:border-blue-500/60 cursor-pointer font-medium"
+              className="w-full bg-[#06111e] border border-[#1a2c42] text-white text-[13px] rounded-xl px-3.5 py-2.5 appearance-none focus:outline-none focus:border-blue-500/60 cursor-pointer font-medium"
             >
-              <option value="most_owners" className="bg-[#051833]">Most Owners</option>
-              <option value="most_units" className="bg-[#051833]">Most Units</option>
-              <option value="coverage" className="bg-[#051833]">Phone Coverage</option>
-              <option value="name" className="bg-[#051833]">Name (A-Z)</option>
+              <option value="most_owners" className="bg-[#0c1829]">Most Owners</option>
+              <option value="most_units" className="bg-[#0c1829]">Most Units</option>
+              <option value="coverage" className="bg-[#0c1829]">Phone Coverage</option>
+              <option value="name" className="bg-[#0c1829]">Name (A-Z)</option>
             </select>
-            <ChevronDown className="w-4 h-4 text-white/40 absolute right-3 top-3 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
           </div>
 
           {/* Refresh Button */}
           <button 
             onClick={fetchBuildingsData}
             title="Refresh buildings database"
-            className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/10 rounded-xl text-white/60 hover:text-white transition-all flex-shrink-0"
+            className="p-2.5 bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] rounded-xl text-slate-400 hover:text-white transition-all flex-shrink-0"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
           </button>
@@ -666,69 +666,69 @@ export default function Buildings() {
             {currentBuildings.map((b, i) => (
               <div 
                 key={`${b.name}-${i}`} 
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all p-6 flex flex-col justify-between text-left group"
+                className="bg-[#0c1829] rounded-2xl border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 hover:shadow-2xl transition-all p-6 flex flex-col justify-between text-left group"
               >
                 {/* Upper Section */}
                 <div>
-                  {/* Top Navy Icon Box (Exact match to Image 2) */}
-                  <div className="w-12 h-12 rounded-xl bg-[#03152d] flex items-center justify-center mb-5 flex-shrink-0 shadow-sm">
+                  {/* Top Navy Icon Box */}
+                  <div className="w-12 h-12 rounded-xl bg-[#06111e] border border-[#1a2c42] flex items-center justify-center mb-5 flex-shrink-0 shadow-sm">
                     <Building2 className="w-5 h-5 text-sky-400 stroke-[1.8]" />
                   </div>
 
-                  {/* Community Tag (Exact uppercase blue font from Image 2) */}
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600 font-mono mb-1.5">
+                  {/* Community Tag */}
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-sky-400 font-mono mb-1.5">
                     {b.area}
                   </div>
 
-                  {/* Building Title (Large Serif Font from Image 2) */}
+                  {/* Building Title */}
                   <h3 
-                    className="text-2xl font-bold font-serif text-slate-900 tracking-tight leading-snug mb-1"
+                    className="text-2xl font-bold font-serif text-white tracking-tight leading-snug mb-1 group-hover:text-blue-300 transition-colors"
                     title={b.name}
                   >
                     {b.name}
                   </h3>
 
-                  {/* Subtitle with Separator (From Image 2) */}
-                  <div className="text-xs text-slate-500 font-normal pb-4 border-b border-slate-100 flex items-center gap-1.5">
+                  {/* Subtitle with Separator */}
+                  <div className="text-xs text-slate-400 font-normal pb-4 border-b border-[#1a2c42] flex items-center gap-1.5">
                     <span>{b.propertyType}</span>
                     <span>•</span>
-                    <span>Verified in owners data</span>
+                    <span className="text-emerald-400">Verified in owners data</span>
                   </div>
 
                   {/* 2-Column Key Metrics (Units in workspace & Linked profiles) */}
                   <div className="grid grid-cols-2 gap-4 py-4">
                     <div>
-                      <div className="text-2xl sm:text-3xl font-bold font-serif text-slate-900 leading-none">
+                      <div className="text-2xl sm:text-3xl font-bold font-serif text-white leading-none">
                         {b.unitsCount}
                       </div>
-                      <div className="text-xs text-slate-500 font-medium mt-1">
+                      <div className="text-xs text-slate-400 font-medium mt-1">
                         Units in workspace
                       </div>
                     </div>
                     <div>
-                      <div className="text-2xl sm:text-3xl font-bold font-serif text-slate-900 leading-none">
+                      <div className="text-2xl sm:text-3xl font-bold font-serif text-white leading-none">
                         {b.ownersCount}
                       </div>
-                      <div className="text-xs text-slate-500 font-medium mt-1">
+                      <div className="text-xs text-slate-400 font-medium mt-1">
                         Linked profiles
                       </div>
                     </div>
                   </div>
 
                   {/* Contacts Available Row (Divider above and below) */}
-                  <div className="py-3 border-y border-slate-100 flex items-center justify-between text-[13px]">
-                    <span className="text-slate-600 font-medium">Contacts available</span>
-                    <span className="font-bold text-slate-900 font-mono">
+                  <div className="py-3 border-y border-[#1a2c42] flex items-center justify-between text-[13px]">
+                    <span className="text-slate-300 font-medium">Contacts available</span>
+                    <span className="font-bold text-white font-mono">
                       {b.contactsCount} / {b.ownersCount}
                     </span>
                   </div>
                 </div>
 
-                {/* Bottom Action Button (Dark Navy button hugging content from Image 2) */}
+                {/* Bottom Action Button */}
                 <div className="mt-5">
                   <button
                     onClick={() => handleExploreBuilding(b)}
-                    className="bg-[#03152d] hover:bg-[#07244d] text-white text-[13px] font-semibold px-5 py-2.5 rounded-lg transition-all shadow-sm hover:shadow active:scale-[0.98] w-fit inline-flex items-center gap-1.5"
+                    className="bg-[#06111e] hover:bg-[#122238] border border-[#233549] hover:border-[#385175] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98] w-fit inline-flex items-center gap-1.5"
                   >
                     <span>Explore building</span>
                   </button>
@@ -740,8 +740,8 @@ export default function Buildings() {
 
         {/* ── Pagination Bar ─────────────────────────────────────────── */}
         {!loading && totalPages > 1 && (
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#03152d]/80 border border-white/10 rounded-2xl px-5 py-3.5 backdrop-blur-md">
-            <div className="text-xs text-white/50">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0c1829] border border-[#233549] rounded-2xl px-5 py-3.5 shadow-xl shadow-black/40">
+            <div className="text-xs text-slate-400">
               Showing <span className="text-white font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-white font-medium">{Math.min(currentPage * itemsPerPage, filteredBuildings.length)}</span> of <span className="text-white font-medium">{filteredBuildings.length.toLocaleString()}</span> buildings
             </div>
 
@@ -749,19 +749,19 @@ export default function Buildings() {
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs font-semibold text-white/70 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1"
+                className="px-3 py-1.5 rounded-lg bg-[#06111e] border border-[#1a2c42] text-xs font-semibold text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1"
               >
                 <ChevronLeft className="w-3.5 h-3.5" /> Previous
               </button>
 
-              <div className="text-xs font-mono px-3 text-white/70">
+              <div className="text-xs font-mono px-3 text-slate-300">
                 Page <span className="text-white font-bold">{currentPage}</span> / {totalPages}
               </div>
 
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs font-semibold text-white/70 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1"
+                className="px-3 py-1.5 rounded-lg bg-[#06111e] border border-[#1a2c42] text-xs font-semibold text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1"
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />
               </button>

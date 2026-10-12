@@ -9,6 +9,7 @@ import { fetchVoiceOverview } from '../utils/voiceAgentService';
 export default function OverviewDashboard({ onNavigate }) {
   const getTodayDubai = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
 
+  const [selectedDate, setSelectedDate] = useState(getTodayDubai());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [voiceData, setVoiceData] = useState({
@@ -25,6 +26,7 @@ export default function OverviewDashboard({ onNavigate }) {
     const agents = res.agents || [];
     const sAgent = agents.find(a => a.id === '682cf6ae-23fd-44f3-a4a3-756998cd62c1') || {};
     const jAgent = agents.find(a => a.id === '91732d4e-3b60-4950-8aa6-4060c0803119') || {};
+    const aAgent = agents.find(a => a.id === 'f99e8e9a-48b1-411f-806e-6cb7d1dde58b') || {};
     const parseNum = (val, fallback = 0) => {
       if (typeof val === 'number') return isNaN(val) ? fallback : val;
       if (typeof val === 'string') {
@@ -67,16 +69,15 @@ export default function OverviewDashboard({ onNavigate }) {
     });
   };
 
-  // Fetch live present day telemetry from Supabase
+  // Fetch live daily telemetry from Supabase
   useEffect(() => {
     let isMounted = true;
     async function loadTelemetry() {
       try {
         setLoading(true);
-        const todayDubai = getTodayDubai();
         const res = await fetchVoiceOverview({
           timeFilter: 'Daily',
-          selectedDate: todayDubai
+          selectedDate
         });
 
         if (isMounted && res) {
@@ -91,15 +92,14 @@ export default function OverviewDashboard({ onNavigate }) {
 
     loadTelemetry();
     return () => { isMounted = false; };
-  }, []);
+  }, [selectedDate]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const todayDubai = getTodayDubai();
       const res = await fetchVoiceOverview({
         timeFilter: 'Daily',
-        selectedDate: todayDubai
+        selectedDate
       });
       if (res) {
         updateVoiceStats(res);
@@ -274,7 +274,31 @@ export default function OverviewDashboard({ onNavigate }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+          {/* Day Segmented Toggle */}
+          <div className="flex items-center bg-[#07111c] border border-[#233549] p-1 rounded-xl shadow-inner">
+            <button
+              onClick={() => setSelectedDate(getTodayDubai())}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                selectedDate === getTodayDubai()
+                  ? 'bg-[#1b2b48] text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Today (Oct 12)
+            </button>
+            <button
+              onClick={() => setSelectedDate('2026-10-11')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                selectedDate === '2026-10-11'
+                  ? 'bg-[#1b2b48] text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Yesterday (Oct 11)
+            </button>
+          </div>
+
           {/* Live Telephony Status Pill */}
           <div className="flex items-center gap-2 text-xs bg-[#0c1829] border border-[#233549] px-3.5 py-2 rounded-xl shadow-md">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>

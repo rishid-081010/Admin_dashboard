@@ -20,43 +20,45 @@
 
 /* Unified Sidebar-Consistent Glassmorphism Design Tokens */
 .glass-panel {
-  background: #001830;
-  border: 1px solid #00284b;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  background: #0c1829;
+  border: 1px solid #233549;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
 }
 
 .glass-card {
-  background: #001e39;
-  border: 1px solid #00284b;
-  border-radius: 20px;
+  background: #0c1829;
+  border: 1px solid #233549;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: hidden;
+  transition: all 0.2s ease;
 }
 
 .glass-card:hover {
-  border-color: #003d73;
+  border-color: #385175;
 }
 
 .glass-pill {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #06111e;
+  border: 1px solid #1a2c42;
 }
 
 .glass-pill:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: #091728;
+  border-color: #2a4363;
 }
 
 .glass-pill-active {
-  background: #00284b;
-  border: 1px solid #003d73;
+  background: #183153;
+  border: 1px solid #385175;
   color: #ffffff;
   font-weight: 600;
 }
 
 .glass-input {
-  background: #001428;
-  border: 1px solid #00284b;
+  background: #06111e;
+  border: 1px solid #1a2c42;
   color: #ffffff;
 }
 
