@@ -1,13 +1,17 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { 
+  LayoutDashboard, Users, Building2, Search, AlertTriangle, 
+  BarChart3, Sparkles, PhoneCall, FileSpreadsheet, Layers, 
+  ExternalLink, Settings, Activity, FileCheck
+} from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const isListingActive = activeTab === 'listing' || activeTab === 'dashboard' || activeTab === 'new' || activeTab === 'detail';
   const isLeadsActive = activeTab === 'leads';
 
   return (
-    <aside className="w-[215px] shrink-0 bg-[#021024]/80 backdrop-blur-2xl border border-white/[0.1] rounded-2xl p-2.5 flex flex-col h-full shadow-2xl select-none overflow-hidden transition-all hidden md:flex">
-      {/* Brand Header: Original Official Logo */}
+    <aside className="w-[220px] shrink-0 bg-[#021024]/80 backdrop-blur-2xl border border-white/[0.1] rounded-2xl p-2.5 flex flex-col h-full shadow-2xl select-none overflow-hidden transition-all hidden md:flex">
+      {/* Brand Header */}
       <div 
         onClick={() => setActiveTab('overview')}
         className="brand-logo flex flex-col items-center justify-center pt-1.5 pb-2.5 px-2 cursor-pointer select-none group border-b border-white/[0.06] shrink-0"
@@ -17,10 +21,13 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           alt="A SQUARED REAL ESTATE" 
           className="w-36 h-auto object-contain transition-transform group-hover:scale-[1.03]"
         />
+        <div className="text-[9.5px] font-mono tracking-widest uppercase text-blue-400/80 mt-1">
+          OWNERS INTELLIGENCE
+        </div>
       </div>
 
       {/* Navigation Links evenly distributed across the entire vertical widget height */}
-      <nav className="w-full flex-1 flex flex-col justify-between py-2 min-h-0">
+      <nav className="w-full flex-1 flex flex-col justify-between py-2 min-h-0 space-y-0.5">
         {/* 1. Overview */}
         <button 
           onClick={() => setActiveTab('overview')} 
@@ -45,17 +52,16 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Owners Data</span>
         </button>
 
-        {/* 3. My Activity */}
+        {/* 3. Buildings & Communities */}
         <button 
-          onClick={() => setActiveTab('activity')} 
-          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'activity' 
+          onClick={() => setActiveTab('buildings')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'buildings' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>My Activity</span>
-          <span className="bg-[#ef4444] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
+          <span>Buildings</span>
         </button>
 
         {/* 4. Search Engine */}
@@ -73,19 +79,34 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           </span>
         </button>
 
-        {/* 5. Team Management */}
+        {/* 5. Review Queue */}
         <button 
-          onClick={() => setActiveTab('team')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'team' 
+          onClick={() => setActiveTab('reviews')} 
+          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'reviews' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Team Management</span>
+          <span>Review Queue</span>
+          <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full">
+            6
+          </span>
         </button>
 
-        {/* 6. Data Cleaning */}
+        {/* 6. Dataset Comparison (Pre-Purchase Benchmark) */}
+        <button 
+          onClick={() => setActiveTab('comparison')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'comparison' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>Dataset Comparison</span>
+        </button>
+
+        {/* 7. Data Cleaning */}
         <button 
           onClick={() => setActiveTab('leads')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -97,43 +118,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Data Cleaning</span>
         </button>
 
-        {/* 7. Listing Studio */}
-        <button 
-          onClick={() => setActiveTab('listing')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            isListingActive 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Listing Studio</span>
-        </button>
-
-        {/* 8. Voice Agent Centre */}
-        <button 
-          onClick={() => setActiveTab('voice')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'voice' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Voice Agent Centre</span>
-        </button>
-
-        {/* 9. Buildings */}
-        <button 
-          onClick={() => setActiveTab('buildings')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'buildings' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Buildings</span>
-        </button>
-
-        {/* 10. Data library */}
+        {/* 8. Data library */}
         <button 
           onClick={() => setActiveTab('sources')} 
           className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -146,7 +131,44 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span className="text-[10px] text-slate-400 font-medium">1.38k</span>
         </button>
 
-        {/* 11. Transactions */}
+        {/* 9. Listing Studio */}
+        <button 
+          onClick={() => setActiveTab('listing')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            isListingActive 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>Listing Studio</span>
+        </button>
+
+        {/* 10. Voice Agent Centre */}
+        <button 
+          onClick={() => setActiveTab('voice')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'voice' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>Voice Agent Centre</span>
+        </button>
+
+        {/* 11. My Activity */}
+        <button 
+          onClick={() => setActiveTab('activity')} 
+          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'activity' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>My Activity</span>
+          <span className="bg-[#ef4444] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
+        </button>
+
+        {/* 12. Transactions (External link to DLD Transaction Dashboard) */}
         <a 
           href="https://transactionaldashboard.asquared.ae/" 
           target="_blank" 
@@ -157,7 +179,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <ExternalLink className="w-3.5 h-3.5 text-white/50" />
         </a>
 
-        {/* 12. Account and settings */}
+        {/* 13. Account and settings */}
         <button 
           onClick={() => setActiveTab('settings')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${

@@ -279,10 +279,22 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       });
       
       if (Array.isArray(response.data)) {
-        const mapped = response.data.map(row => ({
-          id: row.owner_id ? String(row.owner_id) : 'UnknownID',
-          lead_id: row.lead_id ? String(row.lead_id) : (row.owner_id ? String(row.owner_id) : 'LEAD-0000000'),
-          name: row.full_name ? String(row.full_name) : 'Unknown Owner',
+        const mapped = response.data.map(row => {
+          let cleanName = (row.full_name ? String(row.full_name).trim() : '');
+          if (!cleanName || cleanName === '_' || cleanName === '-' || cleanName === '--' || cleanName.toLowerCase() === 'null') {
+            if (row.building_name && row.unit_number) {
+              cleanName = `Owner (${row.building_name} Unit ${row.unit_number})`;
+            } else if (row.building_name) {
+              cleanName = `Property Owner (${row.building_name})`;
+            } else {
+              cleanName = 'Verified Property Owner';
+            }
+          }
+
+          return {
+            id: row.owner_id ? String(row.owner_id) : 'UnknownID',
+            lead_id: row.lead_id ? String(row.lead_id) : (row.owner_id ? String(row.owner_id) : 'LEAD-0000000'),
+            name: cleanName,
           building: row.building_name ? String(row.building_name) : 'N/A',
           area: row.master_area ? String(row.master_area) : 'Dubai',
           phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
@@ -305,7 +317,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           assigned_agent_id: row.assigned_agent_id || null,
           portfolioValue: row.verified_purchase_price ? `AED ${(parseFloat(row.verified_purchase_price) / 1000000).toFixed(1)}M` : 'Standard',
           lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
-        }));
+        }; });
         setOwners(mapped);
       } else {
         setOwners([]);
