@@ -64,46 +64,37 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         {/* 4. Search Engine */}
         <button 
           onClick={() => setActiveTab('search')} 
-          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
             activeTab === 'search' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
           <span>Search Engine</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50 border border-white/10 font-mono tracking-tight">
-            ^F6
-          </span>
         </button>
 
         {/* 5. Review Queue */}
         <button 
           onClick={() => setActiveTab('reviews')} 
-          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
             activeTab === 'reviews' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
           <span>Review Queue</span>
-          <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full">
-            6
-          </span>
         </button>
 
         {/* 6. Workflows (n8n Automations) */}
         <button 
           onClick={() => setActiveTab('workflows')} 
-          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
             activeTab === 'workflows' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
           <span>Workflows</span>
-          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full">
-            n8n
-          </span>
         </button>
 
         {/* 7. Data Cleaning */}
@@ -121,14 +112,13 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         {/* 8. Data library */}
         <button 
           onClick={() => setActiveTab('sources')} 
-          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
             activeTab === 'sources' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
           <span>Data library</span>
-          <span className="text-[10px] text-slate-400 font-medium">1.38k</span>
         </button>
 
         {/* 9. Listing Studio */}
@@ -158,14 +148,13 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         {/* 11. My Activity */}
         <button 
           onClick={() => setActiveTab('activity')} 
-          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
             activeTab === 'activity' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
           <span>My Activity</span>
-          <span className="bg-[#ef4444] text-white text-[9.5px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
         </button>
 
         {/* 12. Transactions (External link to DLD Transaction Dashboard) */}
