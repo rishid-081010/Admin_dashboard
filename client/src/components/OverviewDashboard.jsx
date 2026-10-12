@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   Database, PhoneCall, Flame, Bot, CheckCircle2, 
   Activity, ChevronRight, ArrowRight, RefreshCw, Zap,
-  Building2, Radio
+  Building2, Radio, ExternalLink
 } from 'lucide-react';
 import { fetchVoiceOverview } from '../utils/voiceAgentService';
 
 export default function OverviewDashboard({ onNavigate }) {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [voiceData, setVoiceData] = useState({
     totalCallsToday: 1000,
     qualifiedLeadsToday: 181,
@@ -67,7 +68,14 @@ export default function OverviewDashboard({ onNavigate }) {
     return () => { isMounted = false; };
   }, []);
 
-  // Hot leads & immediate action feed
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 600);
+  };
+
+  // Immediate Hot Leads Feed
   const IMMEDIATE_ACTIVITIES = [
     {
       id: 'imm-1',
@@ -217,28 +225,40 @@ export default function OverviewDashboard({ onNavigate }) {
   ];
 
   return (
-    <div className="w-full flex flex-col gap-6 select-text text-white/90 animate-fade-in pr-1">
+    <div className="w-full flex flex-col gap-6 select-text text-white font-sans animate-fade-in pr-1 pb-16">
 
-      {/* ─── TOP HEADER ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+      {/* ─── 1. TOP HEADER SECTION (Clean, spacious header matching reference) ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-0.5">
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-1">
             Overview
           </h1>
-          <p className="text-slate-400 text-sm">
-            Live AI telephony telemetry, hot lead activity, and automated workflow pipeline health.
+          <p className="text-slate-400 text-sm font-normal">
+            Live Connected to Supabase Engine | Dubai Land Department Register
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 text-xs bg-[#001830] border border-[#00284b] px-3 py-1.5 rounded-xl">
+        <div className="flex items-center gap-3">
+          {/* Live Telephony Status Pill */}
+          <div className="flex items-center gap-2 text-xs bg-[#001830] border border-[#00284b] px-3.5 py-2 rounded-xl shadow-inner">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-slate-400">Voice Cluster:</span>
+            <span className="text-slate-400 font-medium">Voice Cluster:</span>
             <span className="text-emerald-400 font-bold">Active & Dialing</span>
           </div>
+
+          {/* Refresh Data button */}
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#001830] border border-[#00284b] hover:bg-[#002244] text-xs font-semibold text-white shadow transition-all active:scale-95"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-400' : ''}`} />
+            <span>Refresh Data</span>
+          </button>
+
+          {/* Shortcut to Voice Agent Centre */}
           <button 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow"
           >
             <span>Voice Agent Centre</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -246,313 +266,557 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── TOP 6 KPI CARDS (Original data: Properties, Calls, Leads, 3 Agents) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 shrink-0">
+      {/* ─── 2. TOP 4 KEY METRIC CARDS (Bigger, spacious layout matching reference) ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
-        {/* 1. Total Properties */}
+        {/* Card 1: Master Portfolio / Total Properties */}
         <div 
           onClick={() => onNavigate && onNavigate('owners')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#003d73] transition-all flex flex-col justify-between cursor-pointer"
+          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#00386b] transition-all cursor-pointer"
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Master Portfolio</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-400/25 flex items-center justify-center">
-              <Database className="w-3.5 h-3.5 text-blue-300" />
-            </div>
-          </div>
           <div>
-            <div className="text-[11px] text-slate-400 font-medium">Total Properties</div>
-            <div className="text-2xl font-extrabold text-white tracking-tight my-0.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                MASTER PORTFOLIO
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-400/25 flex items-center justify-center">
+                <Database className="w-3.5 h-3.5 text-blue-300" />
+              </div>
+            </div>
+            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1">
               3,042,722
             </div>
-          </div>
-          <div className="mt-2">
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] border border-emerald-500/30 font-semibold inline-flex items-center gap-1">
+            <div className="text-xs font-semibold text-emerald-400 inline-flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              ✓ Supabase Synced
-            </span>
-          </div>
-        </div>
-
-        {/* 2. Total Calls Made Today */}
-        <div 
-          onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#003d73] transition-all flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Live Telephony</span>
-            <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-400/25 flex items-center justify-center">
-              <PhoneCall className="w-3.5 h-3.5 text-purple-300" />
+              ✓ Supabase Synced · 1,382 Catalogs
             </div>
           </div>
+          {/* Dual Cyan Glowing Sine Waves Accent */}
+          <svg className="w-full h-12 mt-3 opacity-80" viewBox="0 0 240 48" fill="none">
+            <path d="M 0 32 Q 60 4 120 28 T 240 20" stroke="#00e5ff" strokeWidth="2" strokeDasharray="3 3" fill="none" opacity="0.6"/>
+            <path d="M 0 20 Q 60 40 120 18 T 240 26" stroke="#0091ff" strokeWidth="2.5" strokeDasharray="4 4" fill="none"/>
+          </svg>
+        </div>
+
+        {/* Card 2: Total Calls Made Today */}
+        <div 
+          onClick={() => onNavigate && onNavigate('voice')}
+          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#00386b] transition-all cursor-pointer"
+        >
           <div>
-            <div className="text-[11px] text-slate-400 font-medium">Total Calls Made Today</div>
-            <div className="text-2xl font-extrabold text-white tracking-tight my-0.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                TOTAL CALLS MADE TODAY
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-400/25 flex items-center justify-center">
+                <PhoneCall className="w-3.5 h-3.5 text-purple-300" />
+              </div>
+            </div>
+            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1">
+              {voiceData.totalCallsToday.toLocaleString()}
+            </div>
+            <div className="text-xs font-semibold text-sky-400 inline-flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+              Outbound Dispatch Active
+            </div>
+          </div>
+          {/* Dot Matrix Grid Accent */}
+          <svg className="w-full h-12 mt-3 opacity-75" viewBox="0 0 240 48" fill="none">
+            <defs>
+              <pattern id="dot-matrix-pat" x="0" y="0" width="12" height="10" patternUnits="userSpaceOnUse">
+                <circle cx="6" cy="5" r="1.8" fill="url(#dot-matrix-grad)" />
+              </pattern>
+              <linearGradient id="dot-matrix-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#8b5cf6" />
+                <stop offset="100%" stopColor="#06b6d4" />
+              </linearGradient>
+            </defs>
+            <rect width="240" height="48" fill="url(#dot-matrix-pat)" />
+          </svg>
+        </div>
+
+        {/* Card 3: Qualified Leads Today */}
+        <div 
+          onClick={() => onNavigate && onNavigate('voice')}
+          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#00386b] transition-all cursor-pointer"
+        >
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                QUALIFIED LEADS TODAY
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-400/30 flex items-center justify-center">
+                <Flame className="w-3.5 h-3.5 text-amber-300" />
+              </div>
+            </div>
+            <div className="text-3xl sm:text-4xl font-extrabold text-amber-300 tracking-tight my-1">
+              {voiceData.qualifiedLeadsToday.toLocaleString()}
+            </div>
+            <div className="text-xs font-semibold text-emerald-400 mt-0.5">
+              Hot Buyers & Sellers Ready to Transact
+            </div>
+          </div>
+          {/* Green Smooth Wave Curve Accent */}
+          <svg className="w-full h-12 mt-3" viewBox="0 0 240 48" fill="none">
+            <defs>
+              <linearGradient id="green-glow-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+            <path d="M 0 36 Q 60 8 120 24 T 240 16 L 240 48 L 0 48 Z" fill="url(#green-glow-grad)" />
+            <path d="M 0 36 Q 60 8 120 24 T 240 16" stroke="#10b981" strokeWidth="2.5" />
+          </svg>
+        </div>
+
+        {/* Card 4: AI Voice Agents Fleet Status */}
+        <div 
+          onClick={() => onNavigate && onNavigate('voice')}
+          className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 min-h-[190px] flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#00386b] transition-all cursor-pointer"
+        >
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                AI VOICE AGENTS FLEET
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center">
+                <Radio className="w-3.5 h-3.5 text-emerald-300" />
+              </div>
+            </div>
+            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1">
+              3 / 3 Online
+            </div>
+            <div className="text-xs font-medium text-slate-300 mt-0.5">
+              Sarah · James · Aisha Dialing Active
+            </div>
+          </div>
+          {/* Connected Polyline Graph with Nodes Accent */}
+          <svg className="w-full h-12 mt-3" viewBox="0 0 240 48" fill="none">
+            <polyline 
+              points="10,24 35,32 60,38 85,44 110,40 135,36 160,34 185,28 210,34 235,22" 
+              stroke="#8b5cf6" 
+              strokeWidth="2.5" 
+            />
+            {[
+              [10, 24], [35, 32], [60, 38], [85, 44], [110, 40],
+              [135, 36], [160, 34], [185, 28], [210, 34], [235, 22]
+            ].map(([cx, cy], i) => (
+              <circle key={i} cx={cx} cy={cy} r="3" fill="#c084fc" />
+            ))}
+          </svg>
+        </div>
+
+      </div>
+
+      {/* ─── 3. HORIZONTAL PIPELINE DYNAMICS BANNER (Matching reference) ─── */}
+      <div className="bg-[#001830] border border-[#00284b] rounded-2xl p-5 shadow-lg">
+        <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-4">
+          TELEPHONY & CONVERSATION DYNAMICS PIPELINE
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[#00284b] gap-y-4 sm:gap-y-0">
+          
+          <div className="px-2 sm:px-4 first:pl-0">
+            <div className="text-xs text-slate-400 font-medium mb-1">
+              Dispatched Today
+            </div>
+            <div className="text-2xl font-bold text-white tracking-tight">
               {voiceData.totalCallsToday.toLocaleString()}
             </div>
           </div>
-          <div className="mt-2">
-            <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-[10px] border border-blue-500/30 font-semibold inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-              Outbound Dispatch
-            </span>
-          </div>
-        </div>
 
-        {/* 3. Qualified Leads Today */}
-        <div 
-          onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-[#00284b] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-amber-400/40 transition-all flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-amber-300/80 uppercase tracking-widest font-bold">Ready to Transact</span>
-            <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-400/30 flex items-center justify-center">
-              <Flame className="w-3.5 h-3.5 text-amber-300" />
+          <div className="px-2 sm:px-4">
+            <div className="text-xs text-slate-400 font-medium mb-1">
+              Connected Calls
+            </div>
+            <div className="text-2xl font-bold text-emerald-400 tracking-tight">
+              {Math.round(voiceData.totalCallsToday * 0.48).toLocaleString()}
             </div>
           </div>
-          <div>
-            <div className="text-[11px] text-amber-200/70 font-medium">Qualified Leads Today</div>
-            <div className="text-2xl font-extrabold text-amber-300 tracking-tight my-0.5">
+
+          <div className="px-2 sm:px-4">
+            <div className="text-xs text-slate-400 font-medium mb-1">
+              Qualified Leads
+            </div>
+            <div className="text-2xl font-bold text-sky-400 tracking-tight">
               {voiceData.qualifiedLeadsToday.toLocaleString()}
             </div>
           </div>
-          <div className="mt-2">
-            <span className="text-[10px] text-slate-400 font-medium truncate block" title="Hot buyers or sellers ready to buy or sell">
-              Hot buyers & sellers ready
-            </span>
-          </div>
-        </div>
 
-        {/* 4. Agent 1: Sarah */}
-        <div 
-          onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-blue-500/25 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-blue-400/50 transition-all flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-[10px] font-bold">
-                1
-              </div>
-              <span className="text-[11px] text-white font-bold">Agent 1: Sarah</span>
+          <div className="px-2 sm:px-4">
+            <div className="text-xs text-slate-400 font-medium mb-1">
+              Hot Mandates
             </div>
-            <span className="text-[9.5px] text-blue-400/80">Primary AI</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 my-1">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                {voiceData.agent1.health}
-              </span>
-            </div>
-            <div className="text-[13px] font-bold text-white mt-1">
-              {voiceData.agent1.callsToday.toLocaleString()} <span className="text-slate-400 text-[11px] font-normal">calls today</span>
+            <div className="text-2xl font-bold text-amber-400 tracking-tight">
+              48
             </div>
           </div>
-          <div className="text-[9.5px] text-slate-400 truncate mt-1">
-            {voiceData.agent1.role}
-          </div>
-        </div>
 
-        {/* 5. Agent 2: James */}
-        <div 
-          onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-purple-500/25 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-purple-400/50 transition-all flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-full bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 text-[10px] font-bold">
-                2
-              </div>
-              <span className="text-[11px] text-white font-bold">Agent 2: James</span>
+          <div className="px-2 sm:px-4">
+            <div className="text-xs text-slate-400 font-medium mb-1">
+              Transferred to Brokers
             </div>
-            <span className="text-[9.5px] text-purple-400/80">High-Vol</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 my-1">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                {voiceData.agent2.health}
-              </span>
-            </div>
-            <div className="text-[13px] font-bold text-white mt-1">
-              {voiceData.agent2.callsToday.toLocaleString()} <span className="text-slate-400 text-[11px] font-normal">calls today</span>
+            <div className="text-2xl font-bold text-rose-400 tracking-tight">
+              116
             </div>
           </div>
-          <div className="text-[9.5px] text-slate-400 truncate mt-1">
-            {voiceData.agent2.role}
-          </div>
-        </div>
 
-        {/* 6. Agent 3: Aisha */}
-        <div 
-          onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#001830] border border-emerald-500/25 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-emerald-400/50 transition-all flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 text-[10px] font-bold">
-                3
-              </div>
-              <span className="text-[11px] text-white font-bold">Agent 3: Aisha</span>
-            </div>
-            <span className="text-[9.5px] text-emerald-400/80">Prime UAE</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 my-1">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                {voiceData.agent3.health}
-              </span>
-            </div>
-            <div className="text-[13px] font-bold text-white mt-1">
-              {voiceData.agent3.callsToday.toLocaleString()} <span className="text-slate-400 text-[11px] font-normal">calls today</span>
-            </div>
-          </div>
-          <div className="text-[9.5px] text-slate-400 truncate mt-1">
-            {voiceData.agent3.role}
-          </div>
         </div>
-
       </div>
 
-      {/* ─── BOTTOM: Immediate Activity + Workflow Health (scroll-down) ────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* ─── 4. TWO-COLUMN SECTION (Property Allocation + Immediate Activity) ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
-        {/* ─── Left Widget: Immediate Activity (Hot Leads) ─── */}
-        <div className="bg-[#001830] border border-[#00284b] rounded-2xl p-5 flex flex-col shadow-lg hover:border-[#003d73] transition-all">
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <div>
-              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-                <Flame className="w-5 h-5 text-amber-400" /> Immediate Activity
-              </h3>
-              <p className="text-[11.5px] text-slate-400 mt-0.5">
-                Hot buyers and sellers identified by voice agents requiring immediate broker action.
-              </p>
+        {/* Left Column: PROPERTY ASSET ALLOCATION */}
+        <div className="lg:col-span-5 bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+          <div>
+            <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-5">
+              PROPERTY ASSET ALLOCATION
             </div>
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold shrink-0">
-              6 Hot Leads Active
-            </span>
-          </div>
 
-          <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1" style={{ maxHeight: '480px' }}>
-            {IMMEDIATE_ACTIVITIES.map((item) => (
-              <div 
-                key={item.id}
-                onClick={() => onNavigate && onNavigate(item.targetTab)}
-                className="p-3.5 bg-[#001020] border border-[#00284b] rounded-xl hover:bg-[#001a30] hover:border-[#003d73] transition-all cursor-pointer flex flex-col gap-2 group"
-              >
-                {/* Header row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h4 className="font-semibold text-white text-[13px] truncate group-hover:text-blue-300 transition-colors">
-                      {item.title}
-                    </h4>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${item.badgeStyle}`}>
-                      {item.badge}
-                    </span>
-                  </div>
-                  <span className="text-[10.5px] text-slate-400 shrink-0">
-                    {item.time}
-                  </span>
+            <div className="space-y-4">
+              {/* Apartments */}
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-slate-300 font-medium">Apartments</span>
+                  <span className="text-white font-bold font-mono">598,253</span>
                 </div>
-
-                {/* Hot Lead Intent & Context */}
-                <div className="text-[12px] text-amber-200/90 font-medium">
-                  {item.subtitle}
-                </div>
-                <p className="text-[11.5px] text-slate-400 line-clamp-2 leading-relaxed">
-                  {item.description}
-                </p>
-
-                {/* Footer Action Row */}
-                <div className="flex items-center justify-between pt-1.5 border-t border-[#00284b] text-[11px]">
-                  <span className="text-slate-400 flex items-center gap-1 text-[10.5px]">
-                    <Bot className="w-3.5 h-3.5 text-blue-400" /> {item.agent}
-                  </span>
-
-                  <button className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-[11px] font-semibold flex items-center gap-1 transition-all">
-                    <span>{item.actionLabel}</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                <div className="h-2 w-full bg-[#00284b] rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: '75%' }}></div>
                 </div>
               </div>
-            ))}
+
+              {/* Villas */}
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-slate-300 font-medium">Villas</span>
+                  <span className="text-white font-bold font-mono">89,897</span>
+                </div>
+                <div className="h-2 w-full bg-[#00284b] rounded-full overflow-hidden">
+                  <div className="h-full bg-purple-500 rounded-full" style={{ width: '28%' }}></div>
+                </div>
+              </div>
+
+              {/* Commercial */}
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-slate-300 font-medium">Commercial</span>
+                  <span className="text-white font-bold font-mono">68,344</span>
+                </div>
+                <div className="h-2 w-full bg-[#00284b] rounded-full overflow-hidden">
+                  <div className="h-full bg-cyan-400 rounded-full" style={{ width: '22%' }}></div>
+                </div>
+              </div>
+
+              {/* Land & Plots */}
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-slate-300 font-medium">Land & Plots</span>
+                  <span className="text-white font-bold font-mono">142,762</span>
+                </div>
+                <div className="h-2 w-full bg-[#00284b] rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-400 rounded-full" style={{ width: '45%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-5 mt-5 border-t border-[#00284b] flex items-center justify-between text-xs text-slate-400">
+            <span>Portfolio Coverage</span>
+            <span className="text-emerald-400 font-bold font-mono">899,256 Register Units</span>
           </div>
         </div>
 
-        {/* ─── Right Widget: Workflow Health ─────────────────────────── */}
-        <div className="bg-[#001830] border border-[#00284b] rounded-2xl p-5 flex flex-col shadow-lg hover:border-[#003d73] transition-all">
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <div>
-              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-                <Activity className="w-5 h-5 text-emerald-400" /> Workflow Health
-              </h3>
-              <p className="text-[11.5px] text-slate-400 mt-0.5">
-                Executions today and operational health across all data, voice, and sync pipelines.
-              </p>
-            </div>
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1.5 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              7 / 7 Positive
-            </span>
-          </div>
+        {/* Right Column: IMMEDIATE ACTIVITY (Hot Leads Feed formatted cleanly) */}
+        <div className="lg:col-span-7 bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-base font-bold text-white tracking-tight">
+                    Immediate Activity
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  High-intent buyers & sellers requiring immediate broker action.
+                </p>
+              </div>
 
-          <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1" style={{ maxHeight: '480px' }}>
-            {WORKFLOWS.map((wf) => (
-              <div 
-                key={wf.id}
-                className="p-3.5 bg-[#001020] border border-[#00284b] rounded-xl hover:bg-[#001a30] transition-all flex items-center justify-between gap-3"
-              >
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 ${
-                    wf.status === 'Positive' 
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                      : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                  }`}>
-                    <Zap className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-white text-[13px] font-semibold truncate">
-                        {wf.name}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
+                  6 Hot Leads
+                </span>
+                <button
+                  onClick={() => onNavigate && onNavigate('owners')}
+                  className="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-[#00284b]/60 border border-[#00386b] hover:bg-[#00284b] transition-all flex items-center gap-1.5"
+                >
+                  <span>View all</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* List of immediate hot leads */}
+            <div className="space-y-3">
+              {IMMEDIATE_ACTIVITIES.slice(0, 4).map((act) => (
+                <div
+                  key={act.id}
+                  onClick={() => onNavigate && onNavigate(act.targetTab)}
+                  className="p-3.5 bg-[#001020] border border-[#00284b] rounded-xl hover:border-[#00407a] hover:bg-[#00162e] transition-all cursor-pointer flex flex-col gap-1.5 group"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h4 className="font-semibold text-white text-xs truncate group-hover:text-blue-300 transition-colors">
+                        {act.title}
                       </h4>
-                      <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10">
-                        {wf.type}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${act.badgeStyle}`}>
+                        {act.badge}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                      {wf.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3.5 shrink-0 text-right">
-                  <div>
-                    <div className="text-[13px] font-bold text-white tracking-tight">
-                      {wf.executionsToday.toLocaleString()}
-                    </div>
-                    <div className="text-[9.5px] uppercase tracking-wider text-slate-400">
-                      today
-                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                      {act.time}
+                    </span>
                   </div>
 
-                  <div className={`px-2.5 py-1 rounded-full text-[11px] font-bold border flex items-center gap-1.5 ${
-                    wf.status === 'Positive'
-                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                      : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      wf.status === 'Positive' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
-                    }`} />
-                    <span>{wf.status}</span>
+                  <div className="text-xs text-amber-200/90 font-medium">
+                    {act.subtitle}
+                  </div>
+                  <p className="text-[11.5px] text-slate-400 line-clamp-1 leading-relaxed">
+                    {act.description}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-[#00284b]/60 text-[11px]">
+                    <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px]">
+                      <Bot className="w-3.5 h-3.5 text-blue-400" /> {act.agent}
+                    </span>
+                    <button className="px-2.5 py-0.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-[11px] font-semibold flex items-center gap-1 transition-all">
+                      <span>{act.actionLabel}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
       </div>
+
+      {/* ─── 5. SCROLL DOWN CONTENT: AGENTS FLEET DETAIL & WORKFLOW HEALTH ─── */}
+      {/* Placed below so user can naturally scroll down to see the larger dedicated cards */}
+
+      {/* AI Voice Agent Fleet Cluster Cards */}
+      <div className="flex flex-col gap-4 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <PhoneCall className="w-4 h-4 text-purple-400" />
+              <h2 className="text-lg font-bold text-white tracking-tight">
+                AI Voice Agent Operational Fleet
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Real-time telemetry, calls dispatched today, and operational status for autonomous outbound agents.
+            </p>
+          </div>
+
+          <button
+            onClick={() => onNavigate && onNavigate('voice')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all"
+          >
+            <span>Open Voice Agent 360</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Agent 1: Sarah */}
+          <div 
+            onClick={() => onNavigate && onNavigate('voice')}
+            className="p-5 bg-[#001830] border border-blue-500/30 rounded-2xl hover:border-blue-400/60 transition-all cursor-pointer shadow-lg flex flex-col justify-between group"
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-xs font-bold">
+                    1
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
+                      Agent 1: Sarah
+                    </h4>
+                    <span className="text-[10px] text-blue-400/80 font-mono">Primary AI</span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  {voiceData.agent1.health}
+                </span>
+              </div>
+
+              <div className="text-2xl font-black text-white my-2 font-mono">
+                {voiceData.agent1.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                {voiceData.agent1.role} · Focuses on high-intent sellers, luxury villas, and exclusive mandate acquisition.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-[#00284b] flex items-center justify-between text-xs text-blue-300 font-medium">
+              <span>View Call Logs & Metrics</span>
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* Agent 2: James */}
+          <div 
+            onClick={() => onNavigate && onNavigate('voice')}
+            className="p-5 bg-[#001830] border border-purple-500/30 rounded-2xl hover:border-purple-400/60 transition-all cursor-pointer shadow-lg flex flex-col justify-between group"
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 text-xs font-bold">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
+                      Agent 2: James
+                    </h4>
+                    <span className="text-[10px] text-purple-400/80 font-mono">High-Volume</span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  {voiceData.agent2.health}
+                </span>
+              </div>
+
+              <div className="text-2xl font-black text-white my-2 font-mono">
+                {voiceData.agent2.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                {voiceData.agent2.role} · Engages pre-allocated capital investors, off-plan allocations, and portfolio additions.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-[#00284b] flex items-center justify-between text-xs text-purple-300 font-medium">
+              <span>View Call Logs & Metrics</span>
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* Agent 3: Aisha */}
+          <div 
+            onClick={() => onNavigate && onNavigate('voice')}
+            className="p-5 bg-[#001830] border border-emerald-500/30 rounded-2xl hover:border-emerald-400/60 transition-all cursor-pointer shadow-lg flex flex-col justify-between group"
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 text-xs font-bold">
+                    3
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                      Agent 3: Aisha
+                    </h4>
+                    <span className="text-[10px] text-emerald-400/80 font-mono">Prime UAE</span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  {voiceData.agent3.health}
+                </span>
+              </div>
+
+              <div className="text-2xl font-black text-white my-2 font-mono">
+                {voiceData.agent3.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                {voiceData.agent3.role} · Dedicated coverage for Business Bay, Downtown, DIFC, and prime residential towers.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-[#00284b] flex items-center justify-between text-xs text-emerald-300 font-medium">
+              <span>View Call Logs & Metrics</span>
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Automated Workflow Health Widget */}
+      <div className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Automated Workflow & Data Pipeline Health
+              </h3>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Live background sync executions, database pipelines, and OCR document processing.
+            </p>
+          </div>
+
+          <span className="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            7 / 7 Systems Operational
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {WORKFLOWS.map((wf) => (
+            <div 
+              key={wf.id}
+              className="p-3.5 bg-[#001020] border border-[#00284b] rounded-xl flex items-center justify-between gap-3 hover:border-[#003d73] transition-colors"
+            >
+              <div className="flex items-start gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 ${
+                  wf.status === 'Positive' 
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                    : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                }`}>
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-white text-xs font-semibold truncate">
+                      {wf.name}
+                    </h4>
+                    <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10">
+                      {wf.type}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                    {wf.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0 text-right">
+                <div>
+                  <div className="text-xs font-bold text-white font-mono">
+                    {wf.executionsToday.toLocaleString()}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wider text-slate-400 font-mono">
+                    {wf.latency}
+                  </div>
+                </div>
+
+                <div className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{wf.status}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }
