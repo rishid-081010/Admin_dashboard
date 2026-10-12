@@ -191,26 +191,26 @@ export default function WorkflowsDirectory() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
         
         {/* Total Workflows */}
-        <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 shadow-xl flex flex-col justify-between">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-white/50 font-bold">Total Workflows</span>
+            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 font-bold">Total Workflows</span>
             <Layers className="w-4 h-4 text-blue-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-white font-serif">
+          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
             {summary.totalWorkflows}
           </div>
-          <div className="text-[10.5px] text-white/40 font-mono mt-1">
+          <div className="text-[10.5px] text-slate-500 font-mono mt-1">
             Registered in n8n cluster
           </div>
         </div>
 
         {/* Active Automations */}
-        <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 shadow-xl flex flex-col justify-between">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400/80 font-bold">Active Workflows</span>
             <Zap className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-serif">
+          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">
             {summary.activeWorkflows}
           </div>
           <div className="text-[10.5px] text-emerald-400/70 font-mono mt-1 flex items-center gap-1">
@@ -220,29 +220,29 @@ export default function WorkflowsDirectory() {
         </div>
 
         {/* Executions Today */}
-        <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 shadow-xl flex flex-col justify-between">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-blue-400/80 font-bold">Executions Today</span>
-            <Activity className="w-4 h-4 text-blue-400" />
+            <span className="text-[10px] uppercase font-mono tracking-wider text-sky-400/80 font-bold">Executions Today</span>
+            <Activity className="w-4 h-4 text-sky-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-white font-serif">
+          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
             {summary.totalExecutionsToday.toLocaleString()}
           </div>
-          <div className="text-[10.5px] text-blue-300/70 font-mono mt-1">
+          <div className="text-[10.5px] text-sky-300/70 font-mono mt-1">
             Live triggers &amp; runs today
           </div>
         </div>
 
         {/* System Health */}
-        <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 shadow-xl flex flex-col justify-between">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-white/50 font-bold">Status Overview</span>
+            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 font-bold">Status Overview</span>
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-serif flex items-center gap-2">
+          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono flex items-center gap-2">
             <span>{summary.errorWorkflows === 0 ? 'Healthy' : `${summary.errorWorkflows} Errors`}</span>
           </div>
-          <div className="text-[10.5px] text-white/40 font-mono mt-1">
+          <div className="text-[10.5px] text-slate-500 font-mono mt-1">
             {summary.healthyWorkflows} operational / 0 failures
           </div>
         </div>
@@ -250,17 +250,17 @@ export default function WorkflowsDirectory() {
       </div>
 
       {/* ── 3. Search & Filter Bar ──────────────────────────────────── */}
-      <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-3.5 shadow-xl shrink-0 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 shadow-xl shadow-black/40 shrink-0 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         
         {/* Search input */}
-        <div className="flex-1 flex items-center bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 focus-within:border-blue-500/60 focus-within:ring-1 focus-within:ring-blue-500/30 transition-all">
-          <Search className="w-4 h-4 text-white/40 mr-2.5 shrink-0" />
+        <div className="flex-1 flex items-center bg-[#06111e] border border-[#1a2c42] rounded-xl px-3.5 py-2 focus-within:border-blue-500/60 focus-within:ring-1 focus-within:ring-blue-500/30 transition-all">
+          <Search className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
           <input
             type="text"
             placeholder="Search by workflow name, ID, or trigger (e.g. Bitrix, Call, Vapi)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-transparent text-xs text-white placeholder-white/40 outline-none"
+            className="w-full bg-transparent text-xs text-white placeholder-slate-400 outline-none"
           />
         </div>
 
@@ -279,7 +279,7 @@ export default function WorkflowsDirectory() {
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 statusFilter === tab.id
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-black/30 text-white/50 hover:text-white border border-white/5'
+                  : 'bg-[#06111e] text-slate-400 hover:text-white border border-[#1a2c42]'
               }`}
             >
               {tab.label}
@@ -290,11 +290,11 @@ export default function WorkflowsDirectory() {
       </div>
 
       {/* ── 4. Main Workflows Table ─────────────────────────────────── */}
-      <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl shadow-xl overflow-hidden flex-1 flex flex-col min-h-0">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 overflow-hidden flex-1 flex flex-col min-h-0">
         <div className="overflow-x-auto flex-1 custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/10 bg-black/30 text-[11px] uppercase font-mono text-white/50 tracking-wider">
+              <tr className="border-b border-[#233549] bg-[#071322] text-[11px] uppercase font-mono text-slate-400 tracking-wider">
                 <th className="py-3 px-4 w-[6%]">State</th>
                 <th className="py-3 px-5 w-[38%]">Workflow Name</th>
                 <th className="py-3 px-4 w-[16%]">Executions Today</th>
@@ -303,11 +303,11 @@ export default function WorkflowsDirectory() {
                 <th className="py-3 px-4 w-[10%] text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-xs">
+            <tbody className="divide-y divide-[#1b2b3d] text-xs">
               {filteredWorkflows.map((wf) => (
                 <tr 
                   key={wf.id}
-                  className="hover:bg-white/[0.04] transition-colors group cursor-pointer"
+                  className="hover:bg-[#102035] transition-colors group cursor-pointer"
                   onClick={() => window.open(wf.n8nUrl, '_blank')}
                 >
                   {/* Active / Inactive switch badge */}

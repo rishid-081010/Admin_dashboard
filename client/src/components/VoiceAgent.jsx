@@ -112,56 +112,56 @@ export default function VoiceAgent() {
       {/* ─── 4 Hero KPI Cards ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Card 1: Calls Placed */}
-        <div className="bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-5 hover:border-white/20 transition-all">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <PhoneOutgoing className="w-6 h-6 text-blue-400 mb-3" />
-          <div className="text-xs font-medium text-white/60 mb-1">Calls Placed</div>
+          <div className="text-xs font-medium text-slate-400 mb-1">Calls Placed</div>
           <div className="text-3xl font-bold text-white transition-all font-mono">
             {callsCount}
           </div>
-          <div className="text-[11px] text-white/40 mt-1">
+          <div className="text-[11px] text-slate-500 mt-1">
             Outbound telephony attempts
           </div>
         </div>
 
         {/* Card 2: Drops & Unanswered */}
-        <div className="bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-5 hover:border-white/20 transition-all">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <PhoneOff className="w-6 h-6 text-red-400 mb-3" />
-          <div className="text-xs font-medium text-white/60 mb-1">Voicemails &amp; Drops</div>
+          <div className="text-xs font-medium text-slate-400 mb-1">Voicemails &amp; Drops</div>
           <div className="text-3xl font-bold text-white transition-all font-mono">
             {dropsCount}
           </div>
-          <div className="text-[11px] text-white/40 mt-1">
+          <div className="text-[11px] text-slate-500 mt-1">
             No answer, busy, or carrier failed
           </div>
         </div>
 
         {/* Card 3: Qualified Leads */}
-        <div className="bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-5 hover:border-white/20 transition-all">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <Activity className="w-6 h-6 text-emerald-400 mb-3" />
-          <div className="text-xs font-medium text-white/60 mb-1">Qualified Leads</div>
+          <div className="text-xs font-medium text-slate-400 mb-1">Qualified Leads</div>
           <div className="text-3xl font-bold text-emerald-400 transition-all font-mono">
             {leadsCount}
           </div>
-          <div className="text-[11px] text-white/40 mt-1">
+          <div className="text-[11px] text-slate-500 mt-1">
             Awaiting availability / Verified interest
           </div>
         </div>
 
         {/* Card 4: Avg Call Duration */}
-        <div className="bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden p-5 hover:border-white/20 transition-all">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <Clock className="w-6 h-6 text-purple-400 mb-3" />
-          <div className="text-xs font-medium text-white/60 mb-1">Average Duration</div>
+          <div className="text-xs font-medium text-slate-400 mb-1">Average Duration</div>
           <div className="text-3xl font-bold text-white transition-all font-mono">
             {durationStr}
           </div>
-          <div className="text-[11px] text-white/40 mt-1">
+          <div className="text-[11px] text-slate-500 mt-1">
             Conversation talk time
           </div>
         </div>
       </div>
 
       {/* ─── 3 Real Voice Agents Section ───────────────────────────── */}
-      <div className="bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col p-6 mb-6">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col p-6 mb-6">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="font-bold text-white text-base flex items-center gap-2">
@@ -181,7 +181,7 @@ export default function VoiceAgent() {
             <div 
               key={agent.id}
               onClick={() => setSelectedAgentFor360(agent)}
-              className="border border-white/10 hover:border-blue-500/40 rounded-2xl p-5 bg-black/25 hover:bg-black/45 backdrop-blur-md transition-all cursor-pointer group flex flex-col justify-between hover:shadow-xl hover:shadow-blue-500/10 relative overflow-hidden"
+              className="border border-[#1b2b3d] hover:border-[#385175] rounded-2xl p-5 bg-[#06111e] hover:bg-[#102035] transition-all cursor-pointer group flex flex-col justify-between hover:shadow-xl shadow-md relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/15 transition-colors pointer-events-none"></div>
 
@@ -200,8 +200,8 @@ export default function VoiceAgent() {
                         Active
                       </span>
                     </div>
-                    <div className="text-xs text-white/60 mt-0.5 truncate">{agent.role}</div>
-                    <div className="text-[10px] font-mono text-white/40 mt-1 flex items-center gap-1.5">
+                    <div className="text-xs text-slate-400 mt-0.5 truncate">{agent.role}</div>
+                    <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-1.5">
                       <span>{agent.line}</span>
                       <span>&bull;</span>
                       <span>{agent.voiceModel}</span>
@@ -210,33 +210,33 @@ export default function VoiceAgent() {
                 </div>
 
                 {/* Description */}
-                <p className="text-xs text-white/50 mb-4 line-clamp-2 leading-relaxed">
+                <p className="text-xs text-slate-400 mb-4 line-clamp-2 leading-relaxed">
                   {agent.description}
                 </p>
 
                 {/* Key Metrics Grid */}
-                <div className="space-y-2.5 pt-3 border-t border-white/10">
+                <div className="space-y-2.5 pt-3 border-t border-[#1b2b3d]">
                   <div className="flex justify-between text-xs">
-                    <span className="text-white/50">Calls Handled:</span>
+                    <span className="text-slate-400">Calls Handled:</span>
                     <span className="text-white font-bold font-mono">{agent.calls}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-white/50">Lead Conversion:</span>
+                    <span className="text-slate-400">Lead Conversion:</span>
                     <span className="text-emerald-400 font-bold font-mono">{agent.cvr}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-white/50">Avg Duration:</span>
+                    <span className="text-slate-400">Avg Duration:</span>
                     <span className="text-purple-300 font-mono">{agent.avgDuration}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-white/50">Cost Efficiency:</span>
-                    <span className="text-white/80 font-mono">{agent.cost} / lead</span>
+                    <span className="text-slate-400">Cost Efficiency:</span>
+                    <span className="text-slate-300 font-mono">{agent.cost} / lead</span>
                   </div>
                 </div>
               </div>
 
               {/* Call to action button */}
-              <div className="mt-4 pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs font-semibold text-blue-400 group-hover:text-blue-300">
+              <div className="mt-4 pt-3 border-t border-[#1b2b3d] flex items-center justify-between text-xs font-semibold text-blue-400 group-hover:text-blue-300">
                 <span>Open Voice Agent 360</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -247,17 +247,17 @@ export default function VoiceAgent() {
 
       {/* ─── Recent Sample Calls Stream ────────────────────────────── */}
       {overviewData?.sampleCalls && overviewData.sampleCalls.length > 0 && (
-        <div className="bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg p-5">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-white text-sm">Recent Outbound Calls Stream</h3>
-              <p className="text-xs text-white/50">Showing latest calls from active date scope</p>
+              <p className="text-xs text-slate-400">Showing latest calls from active date scope</p>
             </div>
           </div>
 
-          <div className="overflow-x-auto max-h-[300px] custom-scrollbar border border-white/[0.06] rounded-xl bg-black/20">
-            <table className="w-full text-left text-xs text-white/80 border-collapse">
-              <thead className="bg-[#051833] text-white/60 uppercase font-mono text-[10px] sticky top-0 border-b border-white/[0.08]">
+          <div className="overflow-x-auto max-h-[300px] custom-scrollbar border border-[#1b2b3d] rounded-xl bg-[#06111e]">
+            <table className="w-full text-left text-xs text-slate-300 border-collapse">
+              <thead className="bg-[#071322] text-slate-400 uppercase font-mono text-[10px] sticky top-0 border-b border-[#233549]">
                 <tr>
                   <th className="py-2.5 px-3">Time</th>
                   <th className="py-2.5 px-3">Owner Name</th>

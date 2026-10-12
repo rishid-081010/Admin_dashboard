@@ -69,11 +69,11 @@ export default function VoiceDateFilter({
   const firstDayOfWeek = new Date(Date.UTC(calYear, calMonth, 1)).getUTCDay(); // 0 = Sun
 
   return (
-    <div className="w-full bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 shadow-xl backdrop-blur-xl mb-6 flex flex-col gap-3">
+    <div className="w-full bg-[#0c1829] border border-[#233549] rounded-2xl p-4 shadow-xl shadow-black/40 mb-6 flex flex-col gap-3">
       {/* ─── Top Filter Tabs & Quick Date Badge ────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Filter Type Pills */}
-        <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/10 p-1 rounded-xl">
+        <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] p-1 rounded-xl">
           {[
             { id: 'Daily', label: 'Daily', icon: CalendarIcon },
             { id: 'Weekly', label: 'Weekly', icon: CalendarRange },
@@ -89,7 +89,7 @@ export default function VoiceDateFilter({
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 timeFilter === id 
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-400' 
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
+                  : 'text-slate-400 hover:text-white hover:bg-[#102035]'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -106,7 +106,7 @@ export default function VoiceDateFilter({
             </span>
           )}
 
-          <div className="text-xs font-medium text-white/70 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
+          <div className="text-xs font-medium text-slate-300 bg-[#06111e] border border-[#1b2b3d] px-3 py-1.5 rounded-xl flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span className="font-mono text-white text-xs">{activeLabel || 'Selected Scope'}</span>
           </div>
@@ -115,17 +115,17 @@ export default function VoiceDateFilter({
 
       {/* ─── DAILY MODE: Inbuilt Calendar & Stepper ─────────────────── */}
       {timeFilter === 'Daily' && (
-        <div className="pt-2 border-t border-white/[0.06] flex flex-col gap-3">
+        <div className="pt-2 border-t border-[#1b2b3d] flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             {/* Quick shortcuts */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-mono text-white/40 uppercase tracking-wider mr-1">Quick Select:</span>
+              <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mr-1">Quick Select:</span>
               <button
                 onClick={() => setSelectedDate('2026-10-11')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
                   selectedDate === '2026-10-11'
                     ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
-                    : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
+                    : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#102035] border border-[#1b2b3d]'
                 }`}
               >
                 ⚡ Today (Oct 11, 2026)
@@ -135,7 +135,7 @@ export default function VoiceDateFilter({
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
                   selectedDate === '2026-10-10'
                     ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
-                    : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
+                    : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#102035] border border-[#1b2b3d]'
                 }`}
               >
                 Yesterday (Oct 10)
@@ -145,7 +145,7 @@ export default function VoiceDateFilter({
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
                   selectedDate === '2026-09-27'
                     ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
-                    : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
+                    : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#102035] border border-[#1b2b3d]'
                 }`}
               >
                 Sep 27 High-Dial
@@ -155,7 +155,7 @@ export default function VoiceDateFilter({
             {/* Toggle Calendar Grid Button */}
             <button
               onClick={() => setShowCalendarDropdown(!showCalendarDropdown)}
-              className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all ml-auto"
+              className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#06111e] hover:bg-[#102035] border border-[#1b2b3d] hover:border-[#385175] text-white transition-all ml-auto"
             >
               <CalendarIcon className="w-3.5 h-3.5 text-blue-400" />
               <span>{showCalendarDropdown ? 'Hide Calendar' : 'Pick Day from Calendar'}</span>
@@ -163,12 +163,12 @@ export default function VoiceDateFilter({
           </div>
 
           {/* Interactive Month/Year Stepper + Grid */}
-          <div className="bg-black/40 border border-white/10 rounded-xl p-3.5 flex flex-col gap-3">
+          <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3.5 flex flex-col gap-3">
             {/* Calendar Month & Year Bar */}
             <div className="flex items-center justify-between px-1">
               <button
                 onClick={handlePrevMonth}
-                className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-colors"
+                className="p-1 rounded-lg bg-[#071322] hover:bg-[#102035] text-slate-300 hover:text-white border border-[#1b2b3d] transition-colors"
                 title="Previous Month"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -240,38 +240,38 @@ export default function VoiceDateFilter({
 
       {/* ─── WEEKLY MODE: Month & Week Picker ───────────────────────── */}
       {timeFilter === 'Weekly' && (
-        <div className="pt-2 border-t border-white/[0.06] flex flex-col gap-3">
+        <div className="pt-2 border-t border-[#1b2b3d] flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
             {/* Year Selector */}
-            <div className="flex items-center gap-1.5 bg-black/30 border border-white/10 rounded-xl px-2.5 py-1">
-              <span className="text-[11px] text-white/40 font-mono">Year:</span>
+            <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-xl px-2.5 py-1">
+              <span className="text-[11px] text-slate-500 font-mono">Year:</span>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                 className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer"
               >
-                <option value="2026" className="bg-slate-900">2026</option>
-                <option value="2025" className="bg-slate-900">2025</option>
+                <option value="2026" className="bg-[#0c1829]">2026</option>
+                <option value="2025" className="bg-[#0c1829]">2025</option>
               </select>
             </div>
 
             {/* Month Selector */}
-            <div className="flex items-center gap-1.5 bg-black/30 border border-white/10 rounded-xl px-2.5 py-1">
-              <span className="text-[11px] text-white/40 font-mono">Month:</span>
+            <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-xl px-2.5 py-1">
+              <span className="text-[11px] text-slate-500 font-mono">Month:</span>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer"
               >
                 {MONTH_NAMES.map((m, idx) => (
-                  <option key={m} value={idx + 1} className="bg-slate-900">
+                  <option key={m} value={idx + 1} className="bg-[#0c1829]">
                     {m} {idx >= 4 && idx <= 9 ? '⚡' : ''}
                   </option>
                 ))}
               </select>
             </div>
 
-            <span className="text-white/20">|</span>
+            <span className="text-slate-600">|</span>
 
             {/* Week Pills */}
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -288,7 +288,7 @@ export default function VoiceDateFilter({
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     selectedWeek === w
                       ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25 ring-1 ring-blue-400'
-                      : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
+                      : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#102035] border border-[#1b2b3d]'
                   }`}
                 >
                   {label}
@@ -301,22 +301,22 @@ export default function VoiceDateFilter({
 
       {/* ─── MONTHLY MODE: Month Grid Picker ────────────────────────── */}
       {timeFilter === 'Monthly' && (
-        <div className="pt-2 border-t border-white/[0.06] flex flex-col gap-3">
+        <div className="pt-2 border-t border-[#1b2b3d] flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-white/50 font-mono uppercase tracking-wider">
+            <span className="text-xs text-slate-400 font-mono uppercase tracking-wider">
               Select Calendar Month ({selectedYear})
             </span>
             <div className="flex items-center gap-1 text-xs">
               <button 
                 onClick={() => setSelectedYear(selectedYear - 1)}
-                className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/60 hover:text-white"
+                className="p-1 rounded bg-[#06111e] hover:bg-[#102035] text-slate-400 hover:text-white border border-[#1b2b3d]"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <span className="font-bold text-white font-mono px-1">{selectedYear}</span>
               <button 
                 onClick={() => setSelectedYear(selectedYear + 1)}
-                className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/60 hover:text-white"
+                className="p-1 rounded bg-[#06111e] hover:bg-[#102035] text-slate-400 hover:text-white border border-[#1b2b3d]"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
@@ -341,7 +341,7 @@ export default function VoiceDateFilter({
                   className={`p-2.5 rounded-xl text-left transition-all border ${
                     isSelected
                       ? 'bg-blue-600/30 border-blue-500 text-white shadow-lg shadow-blue-500/20 ring-1 ring-blue-400'
-                      : 'bg-black/30 border-white/5 hover:border-white/20 text-white/70 hover:text-white hover:bg-white/5'
+                      : 'bg-[#06111e] border-[#1b2b3d] hover:border-[#385175] text-slate-300 hover:text-white hover:bg-[#102035]'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -362,12 +362,12 @@ export default function VoiceDateFilter({
 
       {/* ─── ALL TIME MODE: Informational Banner ────────────────────── */}
       {timeFilter === 'All Time' && (
-        <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-white/60">
+        <div className="pt-2 border-t border-[#1b2b3d] flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-400"></span>
             <span>Displaying complete database history from May 2026 to October 2026</span>
           </div>
-          <span className="font-mono text-white/40">79,993 Recorded Calls Across 3 Lines</span>
+          <span className="font-mono text-slate-500">79,993 Recorded Calls Across 3 Lines</span>
         </div>
       )}
     </div>

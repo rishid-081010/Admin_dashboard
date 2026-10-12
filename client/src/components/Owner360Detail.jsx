@@ -110,7 +110,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       </div>
 
       {/* --- Profile Header Widget (Clean Display Only) --- */}
-      <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 sm:p-5 mb-6 shadow-xl relative overflow-hidden backdrop-blur-xl flex items-center gap-4">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 sm:p-5 mb-6 shadow-xl shadow-black/40 relative overflow-hidden flex items-center gap-4">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
         {/* Avatar with Initials */}
@@ -121,7 +121,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
         {/* Owner Details */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-[#06111e] border border-[#1b2b3d] px-2 py-0.5 rounded-md">
               {owner.lead_id || owner.id || 'LEAD-0000000'}
             </span>
             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -133,12 +133,12 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             {owner.name}
           </h1>
 
-          <p className="text-xs text-white/50 mt-1 flex items-center gap-1.5 flex-wrap">
+          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
             <span>Person</span>
             <span>&bull;</span>
             <span>{owner.area || 'Dubai'}</span>
             <span>&bull;</span>
-            <span className="text-white/40">Verified Ownership Records</span>
+            <span className="text-slate-500">Verified Ownership Records</span>
           </p>
         </div>
       </div>
@@ -147,8 +147,8 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         
         {/* Card 1: Property Owned */}
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-          <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
+        <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
+          <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
             <span>Property Owned</span>
             <Building2 className="w-4 h-4 text-blue-400" />
           </div>
@@ -159,7 +159,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             >
               {primaryPropertyName}
             </div>
-            <div className="text-[11px] text-white/40 mt-1 flex items-center justify-between">
+            <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
               <span>{propertiesCount} registered unit{propertiesCount > 1 ? 's' : ''}</span>
               <span className="text-blue-400/80">{owner.area || 'Dubai'}</span>
             </div>
@@ -167,8 +167,8 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
         </div>
 
         {/* Card 2: Phone Number */}
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-          <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
+        <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
+          <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
             <span>Phone Number</span>
             <Phone className="w-4 h-4 text-emerald-400" />
           </div>
@@ -183,22 +183,22 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
               {isAvailablePhone && (
                 <button
                   onClick={() => copyToClipboard(owner.phone, 'phone_card')}
-                  className="p-1 rounded-md hover:bg-white/10 text-white/50 hover:text-white transition-all ml-1 shrink-0"
+                  className="p-1 rounded-md hover:bg-[#102035] text-slate-400 hover:text-white transition-all ml-1 shrink-0"
                   title="Copy Phone"
                 >
                   {copiedField === 'phone_card' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               )}
             </div>
-            <div className="text-[11px] text-white/40 mt-1">
+            <div className="text-[11px] text-slate-500 mt-1">
               {isAvailablePhone ? 'Mobile number verified' : 'No mobile on record'}
             </div>
           </div>
         </div>
 
         {/* Card 3: Assigned Broker */}
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-          <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
+        <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
+          <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
             <span>Assigned Broker</span>
             <UserCheck className="w-4 h-4 text-purple-400" />
           </div>
@@ -206,15 +206,15 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             <div className="text-xl font-bold text-white tracking-tight truncate" title={assignedAgent}>
               {assignedAgent}
             </div>
-            <div className="text-[11px] text-white/40 mt-1">
+            <div className="text-[11px] text-slate-500 mt-1">
               Primary broker assigned
             </div>
           </div>
         </div>
 
         {/* Card 4: Source File */}
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
-          <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
+        <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
+          <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
             <span>Source File</span>
             <FileText className="w-4 h-4 text-amber-400" />
           </div>
@@ -225,7 +225,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             >
               {sourceFileName}
             </div>
-            <div className="text-[11px] text-white/40 mt-1 flex items-center justify-between">
+            <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
               <span>Linked registry file</span>
               <span className="text-emerald-400/80 font-mono text-[10px]">Verified</span>
             </div>
@@ -234,7 +234,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       </div>
 
       {/* ─── Sub-Actions Toolbar ────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#0c1829] border border-[#233549] rounded-xl mb-6 shadow-xl shadow-black/40">
         <div className="flex flex-wrap items-center gap-2">
           {/* Watchlist Toggle */}
           <button 
@@ -242,7 +242,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
               isWatchlist 
                 ? 'bg-amber-400/20 text-amber-300 border-amber-400/40' 
-                : 'bg-white/[0.04] text-white/70 border-white/10 hover:text-white'
+                : 'bg-[#06111e] text-slate-300 border-[#1b2b3d] hover:border-[#385175] hover:text-white'
             }`}
           >
             <Star className={`w-3.5 h-3.5 ${isWatchlist ? 'fill-amber-300 text-amber-300' : ''}`} />
@@ -250,23 +250,23 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           </button>
 
           {/* Priority Dropdown */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-lg text-xs">
-            <span className="text-white/40">Priority</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-lg text-xs">
+            <span className="text-slate-400">Priority</span>
             <select 
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
               className="bg-transparent text-white font-semibold outline-none cursor-pointer"
             >
-              <option value="Normal" className="bg-[#0b132b]">Normal</option>
-              <option value="High" className="bg-[#0b132b]">High</option>
-              <option value="Urgent VIP" className="bg-[#0b132b]">Urgent VIP</option>
+              <option value="Normal" className="bg-[#0c1829]">Normal</option>
+              <option value="High" className="bg-[#0c1829]">High</option>
+              <option value="Urgent VIP" className="bg-[#0c1829]">Urgent VIP</option>
             </select>
           </div>
 
           {/* Print Profile */}
           <button 
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.04] hover:bg-white/[0.08] text-white/70 hover:text-white border border-white/10 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#06111e] hover:bg-[#102035] text-slate-300 hover:text-white border border-[#1b2b3d] hover:border-[#385175] transition-all"
           >
             <Printer className="w-3.5 h-3.5" />
             Print profile
@@ -275,7 +275,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           {/* Draft Message */}
           <button 
             onClick={() => setShowFollowupModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.04] hover:bg-white/[0.08] text-white/70 hover:text-white border border-white/10 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#06111e] hover:bg-[#102035] text-slate-300 hover:text-white border border-[#1b2b3d] hover:border-[#385175] transition-all"
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             Draft Message
@@ -300,7 +300,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       </div>
 
       {/* ─── Navigation Tabs ────────────────────────────── */}
-      <div className="flex border-b border-white/[0.08] mb-6 gap-8">
+      <div className="flex border-b border-[#233549] mb-6 gap-8">
         {[
           { id: 'portfolio', label: 'Portfolio' },
           { id: 'contacts', label: 'Contact Info' },
@@ -313,7 +313,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             className={`pb-3 text-sm font-semibold transition-all relative ${
               activeTab === tab.id 
                 ? 'text-white' 
-                : 'text-white/40 hover:text-white/80'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             {tab.label}
@@ -332,15 +332,15 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           
           {/* TAB 1: PORTFOLIO */}
           {activeTab === 'portfolio' && (
-            <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6 shadow-xl">
+            <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
               <div className="mb-4">
                 <h2 className="text-lg font-bold text-white tracking-tight">Registered Properties</h2>
-                <p className="text-xs text-white/50">Registered owner details and property records.</p>
+                <p className="text-xs text-slate-400">Registered owner details and property records.</p>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="border-b border-white/[0.08] text-white/40 uppercase font-mono tracking-wider">
+                  <thead className="border-b border-[#233549] text-slate-400 uppercase font-mono tracking-wider">
                     <tr>
                       <th className="pb-3 font-semibold">PROPERTY</th>
                       <th className="pb-3 font-semibold">OWNER NAME</th>
@@ -349,9 +349,9 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
                       <th className="pb-3 font-semibold text-right">VERIFICATION STATUS</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
+                  <tbody className="divide-y divide-[#1b2b3d]/60">
                     {(relatedProperties.length > 0 ? relatedProperties : [owner]).map((prop, idx) => (
-                      <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                      <tr key={idx} className="hover:bg-[#102035] transition-colors">
                         
                         {/* Property */}
                         <td className="py-4 pr-3">
@@ -419,16 +419,16 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
               {/* Phone Information */}
-              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08]">
-                <div className="flex items-center justify-between mb-3 text-xs text-white/50">
+              <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-xl shadow-black/40">
+                <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
                   <span className="font-semibold uppercase tracking-wider">Primary Phone</span>
                   <Phone className="w-4 h-4 text-emerald-400" />
                 </div>
-                <div className="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-white/10">
+                <div className="flex items-center justify-between bg-[#06111e] p-3 rounded-xl border border-[#1b2b3d]">
                   <span className="text-base font-bold font-mono text-white">{owner.phone || 'N/A'}</span>
                   <button 
                     onClick={() => copyToClipboard(owner.phone, 'phone')}
-                    className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"
+                    className="p-1.5 hover:bg-[#102035] rounded-lg text-slate-400 hover:text-white transition-colors"
                   >
                     {copiedField === 'phone' ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -452,16 +452,16 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
               </div>
 
               {/* Email Information */}
-              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08]">
-                <div className="flex items-center justify-between mb-3 text-xs text-white/50">
+              <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-xl shadow-black/40">
+                <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
                   <span className="font-semibold uppercase tracking-wider">Email Address</span>
                   <Mail className="w-4 h-4 text-blue-400" />
                 </div>
-                <div className="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-white/10">
+                <div className="flex items-center justify-between bg-[#06111e] p-3 rounded-xl border border-[#1b2b3d]">
                   <span className="text-sm font-medium text-white truncate max-w-[200px]">{owner.email || 'N/A'}</span>
                   <button 
                     onClick={() => copyToClipboard(owner.email, 'email')}
-                    className="p-1.5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"
+                    className="p-1.5 hover:bg-[#102035] rounded-lg text-slate-400 hover:text-white transition-colors"
                   >
                     {copiedField === 'email' ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -477,23 +477,23 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
               </div>
 
               {/* Personal Identification Details */}
-              <div className="md:col-span-2 p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08]">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-4">Identity &amp; Passport Details</h3>
+              <div className="md:col-span-2 p-5 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-xl shadow-black/40">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Identity &amp; Passport Details</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                  <div className="bg-black/20 p-3 rounded-xl border border-white/10">
-                    <div className="text-white/40 mb-1">Nationality</div>
+                  <div className="bg-[#06111e] p-3 rounded-xl border border-[#1b2b3d]">
+                    <div className="text-slate-400 mb-1">Nationality</div>
                     <div className="font-semibold text-white">{owner.nationality || 'Unspecified'}</div>
                   </div>
-                  <div className="bg-black/20 p-3 rounded-xl border border-white/10">
-                    <div className="text-white/40 mb-1">Emirates ID</div>
+                  <div className="bg-[#06111e] p-3 rounded-xl border border-[#1b2b3d]">
+                    <div className="text-slate-400 mb-1">Emirates ID</div>
                     <div className="font-mono font-medium text-white">{owner.emirates_id || 'Not on file'}</div>
                   </div>
-                  <div className="bg-black/20 p-3 rounded-xl border border-white/10">
-                    <div className="text-white/40 mb-1">Passport Expiry</div>
+                  <div className="bg-[#06111e] p-3 rounded-xl border border-[#1b2b3d]">
+                    <div className="text-slate-400 mb-1">Passport Expiry</div>
                     <div className="font-mono font-medium text-white">{owner.passport_expiry || 'N/A'}</div>
                   </div>
-                  <div className="bg-black/20 p-3 rounded-xl border border-white/10">
-                    <div className="text-white/40 mb-1">Golden Visa Status</div>
+                  <div className="bg-[#06111e] p-3 rounded-xl border border-[#1b2b3d]">
+                    <div className="text-slate-400 mb-1">Golden Visa Status</div>
                     <div className="font-semibold text-emerald-400">High Eligibility</div>
                   </div>
                 </div>
@@ -504,30 +504,30 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           {/* TAB 3: ACTIVITY & TASKS */}
           {activeTab === 'activity' && (
             <div className="space-y-4">
-              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08]">
+              <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-xl shadow-black/40">
                 <h3 className="text-sm font-bold text-white mb-2">Follow-ups &amp; CRM Status</h3>
-                <p className="text-xs text-white/50 mb-4">Status across Bitrix24 CRM and direct outreach channels.</p>
+                <p className="text-xs text-slate-400 mb-4">Status across Bitrix24 CRM and direct outreach channels.</p>
 
                 <div className="space-y-3 text-xs">
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/30 border border-white/10">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#06111e] border border-[#1b2b3d]">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">CRM</div>
                       <div>
                         <div className="font-semibold text-white">Bitrix24 CRM Record</div>
-                        <div className="text-[11px] text-white/40">{owner.bitrix_id ? `Assigned to Lead ID #${owner.bitrix_id}` : 'Pending sync to broker pipeline'}</div>
+                        <div className="text-[11px] text-slate-400">{owner.bitrix_id ? `Assigned to Lead ID #${owner.bitrix_id}` : 'Pending sync to broker pipeline'}</div>
                       </div>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${owner.bitrix_id ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/10 text-white/50'}`}>
+                    <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${owner.bitrix_id ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/10 text-slate-400'}`}>
                       {owner.bitrix_id ? 'SYNCED' : 'UNSYNCED'}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/30 border border-white/10">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#06111e] border border-[#1b2b3d]">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">CALL</div>
                       <div>
                         <div className="font-semibold text-white">Outbound Call</div>
-                        <div className="text-[11px] text-white/40">Call script ready</div>
+                        <div className="text-[11px] text-slate-400">Call script ready</div>
                       </div>
                     </div>
                     <button 
@@ -544,25 +544,25 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
 
           {/* TAB 4: SOURCE DOCUMENTS */}
           {activeTab === 'evidence' && (
-            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-4 text-xs">
+            <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-xl shadow-black/40 space-y-4 text-xs">
               <div>
                 <h3 className="text-sm font-bold text-white mb-1">Data Source &amp; Import History</h3>
-                <p className="text-xs text-white/50">Mapping from vendor data files to verified database records.</p>
+                <p className="text-xs text-slate-400">Mapping from vendor data files to verified database records.</p>
               </div>
 
               <div className="space-y-3 font-mono">
-                <div className="p-3 bg-black/30 rounded-xl border border-white/10">
-                  <div className="text-white/40 mb-1">Source Data File</div>
+                <div className="p-3 bg-[#06111e] rounded-xl border border-[#1b2b3d]">
+                  <div className="text-slate-400 mb-1">Source Data File</div>
                   <div className="text-white font-bold">{owner.vendor_source_file || 'MASTER DUBAI NEW TRANSACTIONS.xlsx'}</div>
                 </div>
 
-                <div className="p-3 bg-black/30 rounded-xl border border-white/10">
-                  <div className="text-white/40 mb-1">Lead ID</div>
+                <div className="p-3 bg-[#06111e] rounded-xl border border-[#1b2b3d]">
+                  <div className="text-slate-400 mb-1">Lead ID</div>
                   <div className="text-blue-400">{owner.lead_id || owner.id}</div>
                 </div>
 
-                <div className="p-3 bg-black/30 rounded-xl border border-white/10">
-                  <div className="text-white/40 mb-1">Land Registry Match</div>
+                <div className="p-3 bg-[#06111e] rounded-xl border border-[#1b2b3d]">
+                  <div className="text-slate-400 mb-1">Land Registry Match</div>
                   <div className="text-emerald-400">
                     {owner.match_confidence || (owner.dld_matched ? 'FINGERPRINT_VERIFIED' : 'UNMATCHED_LEAD')}
                   </div>
@@ -574,7 +574,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
 
         {/* Right Column (1/3 Width) - Overview */}
         <div className="space-y-6">
-          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 shadow-xl relative backdrop-blur-xl">
+          <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40 relative">
             
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-white tracking-tight">Overview</h2>
@@ -585,7 +585,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             </div>
 
             {/* Smart Summary Box */}
-            <div className="p-4 rounded-xl bg-black/30 border border-white/[0.08] text-xs text-white/80 leading-relaxed mb-6 space-y-2">
+            <div className="p-4 rounded-xl bg-[#06111e] border border-[#1b2b3d] text-xs text-slate-300 leading-relaxed mb-6 space-y-2">
               <p>
                 <strong className="text-white">{owner.name}</strong> is currently linked to{' '}
                 <strong className="text-white">{propertiesCount} property</strong> across{' '}
@@ -594,7 +594,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
               <p>
                 Estimated portfolio tier is <strong className="text-emerald-400">{owner.portfolioValue || 'Standard'}</strong>. Contact availability is verified through source records with phone <strong className="text-white">{owner.phone || 'N/A'}</strong>.
               </p>
-              <p className="text-white/50 text-[11px] pt-1 border-t border-white/[0.08]">
+              <p className="text-slate-400 text-[11px] pt-1 border-t border-[#1b2b3d]">
                 CRM status: {owner.bitrix_id ? `Active lead in Bitrix24 (${owner.bitrix_id})` : 'Unassigned to live Bitrix CRM pipeline'}.
               </p>
             </div>

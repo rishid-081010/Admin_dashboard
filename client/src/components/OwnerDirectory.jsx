@@ -661,7 +661,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
         {/* ─── Simple & Minimalist Filters Subtab (Matches User's Mockup) ───── */}
         {showFiltersBox && (
-          <div className="mt-4 border-t border-white/10 bg-[#040e21]/95 backdrop-blur-xl rounded-2xl shadow-2xl animate-fade-in flex flex-col max-h-[75vh] overflow-hidden">
+          <div className="mt-4 border border-[#233549] bg-[#06111e] rounded-2xl shadow-2xl animate-fade-in flex flex-col max-h-[75vh] overflow-hidden">
             
             {/* Scrollable Form Body */}
             <div className="overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-5 flex-1">
@@ -912,24 +912,24 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
       {/* ─── Main Content Area: List Table View or Grid View ───────────────── */}
       {viewMode === 'list' ? (
-        <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden">
           <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
             <table className="w-full text-left border-collapse text-[14px]">
-              <thead className="bg-[#051833] border-b border-white/15 text-xs uppercase tracking-wider text-white/70 sticky top-0 z-20 shadow-md shadow-black/40">
+              <thead className="bg-[#071322] border-b border-[#233549] text-xs uppercase tracking-wider text-slate-400 sticky top-0 z-20 shadow-md shadow-black/40">
                 <tr>
-                  <th className="px-5 py-4 font-semibold bg-[#051833]">Lead ID &amp; Owner</th>
-                  <th className="px-5 py-4 font-semibold bg-[#051833]">Phone &amp; Email</th>
-                  <th className="px-5 py-4 font-semibold bg-[#051833]">Property &amp; Unit</th>
-                  <th className="px-5 py-4 font-semibold bg-[#051833]">Assigned Agent</th>
-                  <th className="px-5 py-4 font-semibold bg-[#051833]">Bitrix ID / Status</th>
-                  <th className="px-5 py-4 font-semibold text-right bg-[#051833]">Residential / Commercial</th>
+                  <th className="px-5 py-4 font-semibold bg-[#071322]">Lead ID &amp; Owner</th>
+                  <th className="px-5 py-4 font-semibold bg-[#071322]">Phone &amp; Email</th>
+                  <th className="px-5 py-4 font-semibold bg-[#071322]">Property &amp; Unit</th>
+                  <th className="px-5 py-4 font-semibold bg-[#071322]">Assigned Agent</th>
+                  <th className="px-5 py-4 font-semibold bg-[#071322]">Bitrix ID / Status</th>
+                  <th className="px-5 py-4 font-semibold text-right bg-[#071322]">Residential / Commercial</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-[#1b2b3d]">
                 {loading ? (
-                  <tr><td colSpan="6" className="text-center py-12 text-white/40">Loading owner records...</td></tr>
+                  <tr><td colSpan="6" className="text-center py-12 text-slate-400">Loading owner records...</td></tr>
                 ) : owners.length === 0 ? (
-                  <tr><td colSpan="6" className="text-center py-12 text-white/40">No owners found matching filters.</td></tr>
+                  <tr><td colSpan="6" className="text-center py-12 text-slate-400">No owners found matching filters.</td></tr>
                 ) : owners.map((owner) => {
                   const isSynced = !!owner.bitrix_id || pushedIds.has(owner.id);
                   const isSyncing = syncingId === owner.id;
@@ -937,7 +937,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   return (
                     <tr 
                       key={owner.id} 
-                      className="hover:bg-white/5 transition-colors group cursor-pointer" 
+                      className="hover:bg-[#102035] transition-colors group cursor-pointer" 
                       onClick={() => setSelectedOwner(owner)}
                     >
                       {/* 1. Lead ID & Owner Name */}
@@ -1071,29 +1071,29 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           </div>
           
           {/* Pagination Footer */}
-          <div className="p-4 border-t border-white/10 bg-black/20 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-white/60">
+          <div className="p-4 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-400">
             <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + owners.length} of 3.04M owner records</span>
             <div className="flex gap-1.5">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                 disabled={currentPage === 1} 
-                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30"
+                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30"
               >
                 Previous
               </button>
               
               <button 
                 onClick={() => setCurrentPage(1)} 
-                className={`px-3 py-1 rounded-md font-medium ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-white/5 border border-white/10 hover:text-white transition-colors'}`}
+                className={`px-3 py-1 rounded-md font-medium ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white transition-colors'}`}
               >
                 1
               </button>
               
-              {currentPage > 3 && <span className="px-1.5 py-1 text-white/40">...</span>}
+              {currentPage > 3 && <span className="px-1.5 py-1 text-slate-500">...</span>}
               {currentPage > 2 && (
                 <button 
                   onClick={() => setCurrentPage(currentPage - 1)} 
-                  className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors"
                 >
                   {currentPage - 1}
                 </button>
@@ -1106,21 +1106,21 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               
               <button 
                 onClick={() => setCurrentPage(currentPage + 1)} 
-                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors"
               >
                 {currentPage + 1}
               </button>
               <button 
                 onClick={() => setCurrentPage(currentPage + 2)} 
-                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors"
               >
                 {currentPage + 2}
               </button>
               
-              <span className="px-1.5 py-1 text-white/40">...</span>
+              <span className="px-1.5 py-1 text-slate-500">...</span>
               <button 
                 onClick={() => setCurrentPage(currentPage + 1)} 
-                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors"
               >
                 Next
               </button>
@@ -1129,12 +1129,12 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         </div>
       ) : (
         /* ─── Grid (Cards) View ────────────────────────────────────────────── */
-        <div className="flex-1 min-h-0 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative flex flex-col overflow-hidden p-4">
+        <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden p-4">
           <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
             {loading ? (
-              <div className="text-center py-16 text-white/40">Loading owner cards...</div>
+              <div className="text-center py-16 text-slate-400">Loading owner cards...</div>
             ) : owners.length === 0 ? (
-              <div className="text-center py-16 text-white/40">No owners found matching filters.</div>
+              <div className="text-center py-16 text-slate-400">No owners found matching filters.</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {owners.map(owner => {
@@ -1145,7 +1145,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                     <div
                       key={owner.id}
                       onClick={() => setSelectedOwner(owner)}
-                      className="bg-black/30 hover:bg-black/40 border border-white/10 hover:border-blue-500/40 rounded-xl p-4 transition-all cursor-pointer flex flex-col justify-between shadow-lg group"
+                      className="bg-[#06111e] hover:bg-[#102035] border border-[#1b2b3d] hover:border-[#385175] rounded-xl p-4 transition-all cursor-pointer flex flex-col justify-between shadow-lg group"
                     >
                       <div>
                         {/* Top Row: Avatar + Lead ID + CRM badge */}

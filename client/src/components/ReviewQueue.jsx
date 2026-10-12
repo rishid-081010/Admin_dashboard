@@ -137,26 +137,26 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
 
         {/* Aggregate Health Stats */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="bg-[#03152d]/90 border border-amber-500/20 rounded-xl px-3.5 py-2 flex items-center gap-2.5 backdrop-blur-md shadow-lg">
+          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
             <div>
-              <div className="text-[10px] text-white/40 uppercase font-mono font-medium leading-none">Pending Decisions</div>
+              <div className="text-[10px] text-slate-400 uppercase font-mono font-medium leading-none">Pending Decisions</div>
               <div className="text-sm font-bold text-amber-300 leading-tight font-serif mt-0.5">{pendingCount}</div>
             </div>
           </div>
 
-          <div className="bg-[#03152d]/90 border border-emerald-500/20 rounded-xl px-3.5 py-2 flex items-center gap-2.5 backdrop-blur-md shadow-lg">
+          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <div>
-              <div className="text-[10px] text-white/40 uppercase font-mono font-medium leading-none">Resolved in Session</div>
+              <div className="text-[10px] text-slate-400 uppercase font-mono font-medium leading-none">Resolved in Session</div>
               <div className="text-sm font-bold text-emerald-300 leading-tight font-serif mt-0.5">{resolvedCount}</div>
             </div>
           </div>
 
-          <div className="bg-[#03152d]/90 border border-white/10 rounded-xl px-3.5 py-2 flex items-center gap-2.5 backdrop-blur-md shadow-lg">
+          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <ShieldCheck className="w-4 h-4 text-blue-400" />
             <div>
-              <div className="text-[10px] text-white/40 uppercase font-mono font-medium leading-none">Clean Ingestion Rate</div>
+              <div className="text-[10px] text-slate-400 uppercase font-mono font-medium leading-none">Clean Ingestion Rate</div>
               <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">99.4%</div>
             </div>
           </div>
@@ -164,7 +164,7 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
       </div>
 
       {/* ── Category Tabs ────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-3 mb-4 shrink-0 overflow-x-auto custom-scrollbar">
+      <div className="flex items-center gap-2 border-b border-[#233549] pb-3 mb-4 shrink-0 overflow-x-auto custom-scrollbar">
         {[
           { id: 'all', label: `All Pending (${items.filter(i => i.status === 'pending').length})` },
           { id: 'building_alias', label: `Building Aliases (${items.filter(i => i.category === 'building_alias' && i.status === 'pending').length})` },
@@ -178,7 +178,7 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
               activeCategory === tab.id
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
+                : 'text-slate-400 hover:text-white hover:bg-[#0c1829]'
             }`}
           >
             {tab.label}
@@ -189,10 +189,10 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
       {/* ── Queue Cards List ─────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar min-h-0">
         {filteredItems.length === 0 ? (
-          <div className="text-center py-20 bg-white/[0.02] border border-white/10 rounded-2xl p-8">
+          <div className="text-center py-20 bg-[#0c1829] border border-[#233549] rounded-2xl p-8 shadow-xl shadow-black/40">
             <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-60" />
             <h3 className="text-lg font-bold text-white mb-1">Queue Cleared</h3>
-            <p className="text-xs text-white/50 max-w-sm mx-auto">
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
               All flagged records in this category have been verified against canonical database entities.
             </p>
           </div>
@@ -200,10 +200,10 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
           filteredItems.map(item => (
             <div
               key={item.id}
-              className={`p-4 rounded-xl border transition-all ${
+              className={`p-4 rounded-xl border transition-all shadow-xl shadow-black/40 ${
                 item.status === 'resolved'
                   ? 'bg-emerald-950/20 border-emerald-500/30 opacity-70'
-                  : 'bg-[#03152d]/80 hover:bg-[#061d3d] border-white/10 hover:border-white/20'
+                  : 'bg-[#0c1829] hover:bg-[#102035] border-[#233549] hover:border-[#385175]'
               }`}
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

@@ -374,65 +374,65 @@ export default function LeadIngestionStudio() {
         </div>
       )}
 
-      {/* 5 Glass KPI Stat Cards */}
+      {/* 5 KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Card 1: Clean & Ready */}
-        <div className="glass-card p-5 border-emerald-500/30 bg-emerald-950/20 rounded-2xl relative overflow-hidden">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Clean &amp; Ready
           </p>
           <div className="text-3xl font-bold font-mono text-emerald-300">
             {stats.ready.toLocaleString()}
           </div>
-          <p className="text-[10px] text-white/60 mt-1">100% E.164 Validated (UAE &amp; Global)</p>
+          <p className="text-[10px] text-slate-400 mt-1">100% E.164 Validated (UAE &amp; Global)</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
         </div>
 
         {/* Card 2: Total Processed */}
-        <div className="glass-card p-5 border-white/[0.08] bg-white/[0.02] rounded-2xl relative overflow-hidden">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-white/60 mb-1 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-white/60" /> Total Processed
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-slate-400" /> Total Processed
           </p>
           <div className="text-3xl font-bold font-mono text-white">
             {stats.total.toLocaleString()}
           </div>
-          <p className="text-[10px] text-white/60 mt-1">Imported Rows</p>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-600" />
+          <p className="text-[10px] text-slate-400 mt-1">Imported Rows</p>
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#1b2b3d]" />
         </div>
 
         {/* Card 3: In-File Duplicates */}
-        <div className="glass-card p-5 border-amber-500/30 bg-amber-950/20 rounded-2xl relative overflow-hidden">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-amber-400" /> In-File Duplicates
           </p>
           <div className="text-3xl font-bold font-mono text-amber-300">
             {stats.duplicates_file.toLocaleString()}
           </div>
-          <p className="text-[10px] text-white/60 mt-1">Repeated Phone Numbers</p>
+          <p className="text-[10px] text-slate-400 mt-1">Repeated Phone Numbers</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-500" />
         </div>
 
         {/* Card 4: Already In CRM */}
-        <div className="glass-card p-5 border-cyan-500/30 bg-cyan-950/20 rounded-2xl relative overflow-hidden">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 mb-1 flex items-center gap-1.5">
             <Database className="w-3.5 h-3.5 text-cyan-400" /> Already In CRM
           </p>
           <div className="text-3xl font-bold font-mono text-cyan-300">
             {stats.duplicates_db.toLocaleString()}
           </div>
-          <p className="text-[10px] text-white/60 mt-1">Already In Supabase</p>
+          <p className="text-[10px] text-slate-400 mt-1">Already In Supabase</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-cyan-500" />
         </div>
 
         {/* Card 5: Invalid / Landlines */}
-        <div className="glass-card p-5 border-rose-500/30 bg-rose-950/20 rounded-2xl relative overflow-hidden">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-wider text-rose-400 mb-1 flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> Invalid / Landlines
           </p>
           <div className="text-3xl font-bold font-mono text-rose-300">
             {stats.invalid.toLocaleString()}
           </div>
-          <p className="text-[10px] text-white/60 mt-1">Bad format or landlines</p>
+          <p className="text-[10px] text-slate-400 mt-1">Bad format or landlines</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-rose-500" />
         </div>
       </div>
@@ -451,10 +451,10 @@ export default function LeadIngestionStudio() {
               handleFileUpload(e.dataTransfer.files[0]);
             }
           }}
-          className={`w-full glass-card p-10 rounded-3xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[200px] ${
+          className={`w-full bg-[#0c1829] p-10 rounded-3xl border-2 border-dashed shadow-xl shadow-black/40 transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[200px] ${
             isDragging
-              ? 'border-blue-400 bg-blue-500/10 scale-[1.01]'
-              : 'border-white/10 hover:border-blue-500/40 hover:bg-white/[0.02]'
+              ? 'border-blue-400 bg-[#102035] scale-[1.01]'
+              : 'border-[#233549] hover:border-[#385175] hover:bg-[#0f1d30]'
           }`}
         >
           <input
@@ -481,27 +481,27 @@ export default function LeadIngestionStudio() {
               </div>
               <p className="text-sm font-bold text-white">File Processed Successfully ({stats.total} total rows)</p>
               <p className="text-xs text-emerald-400 font-medium">All {totalColumnsCount} original columns preserved with 0 dropped columns</p>
-              <p className="text-xs text-white/40 mt-1">Click or drop another file to replace</p>
+              <p className="text-xs text-slate-400 mt-1">Click or drop another file to replace</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white/60 group-hover:text-blue-400 group-hover:scale-105 transition-all shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-[#06111e] border border-[#1b2b3d] flex items-center justify-center text-slate-400 group-hover:text-blue-400 group-hover:scale-105 transition-all shadow-xl">
                 <UploadCloud className="w-7 h-7" />
               </div>
               <div>
                 <p className="text-base font-bold text-white">
                   Drag &amp; drop raw developer Excel (.xlsx, .xls) or CSV here
                 </p>
-                <p className="text-xs text-white/60 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Supports Jumeirah Islands, Damac Hills, Emaar, DLD exports, and arbitrary multi-column spreadsheets.
                 </p>
               </div>
               <div className="flex items-center gap-3 mt-1">
-                <span className="px-3 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[11px] text-white/80 font-mono">
+                <span className="px-3 py-1 rounded-lg bg-[#06111e] border border-[#1b2b3d] text-[11px] text-slate-300 font-mono">
                   Browse (.xlsx, .xls, .csv)
                 </span>
-                <span className="text-xs text-white/40 flex items-center gap-1">
-                  <Clipboard className="w-3 h-3 text-white/60" /> Press <kbd className="px-1.5 py-0.5 bg-black/40 rounded border border-white/10 text-[10px] font-mono">Ctrl + V</kbd> to paste
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <Clipboard className="w-3 h-3 text-slate-400" /> Press <kbd className="px-1.5 py-0.5 bg-[#06111e] rounded border border-[#1b2b3d] text-[10px] font-mono">Ctrl + V</kbd> to paste
                 </span>
               </div>
             </div>
@@ -511,15 +511,15 @@ export default function LeadIngestionStudio() {
 
       {/* AI Column Mapping Card & Column Integrity Banner */}
       {previewData && (
-        <div className="glass-card p-5 rounded-2xl border border-white/[0.08] space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/[0.06]">
+        <div className="bg-[#0c1829] p-5 rounded-2xl border border-[#233549] shadow-xl shadow-black/40 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#233549]">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5 text-blue-400" />
               Data-Driven Column Auto-Detector
             </h4>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1">
-                <CheckCheck className="w-3 h-3" /> {totalColumnsCount} / {totalColumnsCount} Columns Preserved
+                <CheckCheck className="w-3.5 h-3.5" /> {totalColumnsCount} / {totalColumnsCount} Columns Preserved
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
                 Unit Column: {mapping.UNIT || mapping.unit || 'property_number'}
@@ -529,8 +529,8 @@ export default function LeadIngestionStudio() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {Object.entries(mapping).map(([key, val]) => (
-              <div key={key} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <span className="text-[9px] font-bold uppercase text-white/60 block">{key}</span>
+              <div key={key} className="p-2.5 rounded-xl bg-[#06111e] border border-[#1b2b3d]">
+                <span className="text-[9px] font-bold uppercase text-slate-400 block">{key}</span>
                 <span className="text-xs font-mono font-medium text-emerald-400 truncate block mt-0.5" title={String(val)}>
                   {val ? String(val) : '—'}
                 </span>
@@ -542,7 +542,7 @@ export default function LeadIngestionStudio() {
 
       {/* Preview Table Matrix Section */}
       {previewData && (
-        <div className="glass-card p-6 rounded-3xl border border-white/[0.08] space-y-4">
+        <div className="bg-[#0c1829] p-6 rounded-3xl border border-[#233549] shadow-xl shadow-black/40 space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
             {/* Filter Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1">

@@ -640,7 +640,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="w-full bg-[#03152d]/90 border-2 border-white/10 focus:border-[#3b82f6] rounded-2xl pl-14 sm:pl-16 pr-14 sm:pr-16 py-3.5 sm:py-4 text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/20 transition-all shadow-2xl backdrop-blur-xl"
+            className="w-full bg-[#0c1829] border-2 border-[#233549] focus:border-[#3b82f6] rounded-2xl pl-14 sm:pl-16 pr-14 sm:pr-16 py-3.5 sm:py-4 text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/20 transition-all shadow-2xl"
           />
           <button 
             onClick={() => handleSearch()} 
@@ -653,7 +653,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
         {/* 8 Filter Pills */}
         <div className="flex items-center gap-2 mb-5 flex-wrap shrink-0">
-          <div className="flex items-center gap-1.5 text-white/50 text-xs font-bold uppercase tracking-wider mr-1">
+          <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider mr-1">
             <Filter className="w-3.5 h-3.5 text-blue-400" />
             <span>Filters:</span>
           </div>
@@ -665,7 +665,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   filterType === f 
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 border border-blue-400' 
-                    : 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white'
+                    : 'bg-[#0c1829] text-slate-300 border border-[#233549] hover:bg-[#122238] hover:text-white'
                 }`}
               >
                 {f}
@@ -707,7 +707,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               {idResults.map((item, idx) => (
                 <div 
                   key={item.owner_id || idx}
-                  className="bg-[#03152d]/80 border border-emerald-500/30 hover:border-emerald-400/60 rounded-xl p-4 transition-all shadow-lg flex items-center justify-between gap-4 group"
+                  className="bg-[#0c1829] border border-[#233549] hover:border-emerald-400/60 rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
@@ -804,7 +804,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                   <div
                     key={area.rawName || idx}
                     onClick={() => openAreaExplorer(area)}
-                    className="bg-[#03152d]/80 hover:bg-[#062044] border border-amber-500/20 hover:border-amber-400/50 rounded-xl p-4 transition-all shadow-lg cursor-pointer group flex flex-col justify-between"
+                    className="bg-[#0c1829] hover:bg-[#102035] border border-[#233549] hover:border-amber-400/50 rounded-xl p-4 transition-all shadow-xl shadow-black/40 cursor-pointer group flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -877,7 +877,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 <div 
                   key={b.rawName || idx}
                   onClick={() => openBuildingExplorer(b)}
-                  className="bg-[#03152d]/80 hover:bg-[#062044] border border-white/10 hover:border-blue-500/50 rounded-xl p-4 transition-all shadow-lg flex items-center justify-between gap-4 cursor-pointer group"
+                  className="bg-[#0c1829] hover:bg-[#102035] border border-[#233549] hover:border-[#385175] rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 cursor-pointer group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-11 h-11 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/25 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -957,7 +957,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               {ownerResults.map((item, idx) => (
                 <div 
                   key={item.owner_id || idx}
-                  className="bg-[#03152d]/80 hover:bg-[#062044] border border-white/10 hover:border-white/20 rounded-xl p-4 transition-all shadow-lg flex items-center justify-between gap-4 group"
+                  className="bg-[#0c1829] hover:bg-[#102035] border border-[#233549] hover:border-[#385175] rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-white/5 text-white/70 border border-white/10 flex items-center justify-center shrink-0">

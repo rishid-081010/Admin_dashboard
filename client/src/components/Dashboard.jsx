@@ -141,16 +141,16 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="glass-card p-5 space-y-4 rounded-2xl border border-white/[0.05]">
+      <div className="bg-[#0c1829] border border-[#233549] p-5 space-y-4 rounded-2xl shadow-xl shadow-black/40">
         {/* Search Input */}
         <div className="relative">
-          <Search className="w-4 h-4 text-white/60 absolute left-4 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by property name, reference (#MG-2026), or type..."
-            className="w-full bg-[#050B14] border border-white/[0.05] rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all"
+            className="w-full bg-[#06111e] border border-[#1b2b3d] rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#385175] transition-all"
           />
         </div>
 
@@ -158,7 +158,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
         <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
           {/* Status Filters */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-white/60 mr-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">
               STATUS:
             </span>
             {['All Status', 'Completed', 'Processing', 'Draft'].map((status) => (
@@ -168,8 +168,8 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 onClick={() => setStatusFilter(status)}
                 className={`px-3.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                   statusFilter === status
-                    ? 'bg-white/[0.06] text-white border border-white/[0.08] shadow-sm font-bold'
-                    : 'bg-white/[0.03] border border-white/[0.06] text-white/60 hover:text-white hover:bg-white/[0.06]'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold'
+                    : 'bg-[#06111e] border border-[#1b2b3d] text-slate-400 hover:text-white hover:bg-[#102035]'
                 }`}
               >
                 {status}
@@ -179,7 +179,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
 
           {/* Type Filters */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-white/60 mr-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">
               TYPE:
             </span>
             {['All Types', 'Apartment', 'Villa', 'Penthouse', 'Townhouse'].map((type) => (
@@ -189,8 +189,8 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 onClick={() => setTypeFilter(type)}
                 className={`px-3.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                   typeFilter === type
-                    ? 'bg-white/[0.06] text-white border border-white/[0.08] shadow-sm font-bold'
-                    : 'bg-white/[0.03] border border-white/[0.06] text-white/60 hover:text-white hover:bg-white/[0.06]'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold'
+                    : 'bg-[#06111e] border border-[#1b2b3d] text-slate-400 hover:text-white hover:bg-[#102035]'
                 }`}
               >
                 {type}
@@ -202,29 +202,29 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
 
       {/* Content */}
       {loading ? (
-        <div className="glass-card p-12 text-center rounded-2xl border border-white/[0.05]">
+        <div className="bg-[#0c1829] border border-[#233549] p-12 text-center rounded-2xl shadow-xl shadow-black/40">
           <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
-          <p className="text-white/60 text-sm font-medium">Loading property listings from Supabase...</p>
+          <p className="text-slate-400 text-sm font-medium">Loading property listings from Supabase...</p>
         </div>
       ) : error ? (
-        <div className="glass-card p-8 text-center text-rose-400 rounded-2xl border border-rose-500/20">
+        <div className="bg-[#0c1829] border border-rose-500/30 p-8 text-center text-rose-400 rounded-2xl shadow-xl shadow-black/40">
           <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
           <p>{error}</p>
         </div>
       ) : filteredListings.length === 0 ? (
-        <div className="glass-card p-12 text-center rounded-2xl border border-white/[0.05]">
-          <Building2 className="w-12 h-12 text-white/40 mx-auto mb-3 opacity-60" />
+        <div className="bg-[#0c1829] border border-[#233549] p-12 text-center rounded-2xl shadow-xl shadow-black/40">
+          <Building2 className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
           <h3 className="text-lg font-serif font-bold text-white mb-1">No Listings Found</h3>
-          <p className="text-white/60 text-xs max-w-sm mx-auto mb-5">
+          <p className="text-slate-400 text-xs max-w-sm mx-auto mb-5">
             {searchQuery || statusFilter !== 'All Status' || typeFilter !== 'All Types'
               ? 'No listings match your filter criteria.'
               : 'Create your first property listing with automated DLD Title Deed OCR and AI photo enhancement.'}
           </p>
           <button
             onClick={onNewListingClick}
-            className="bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-lg shadow-blue-500/25"
           >
-            <PlusCircle className="w-4 h-4 text-blue-400" />
+            <PlusCircle className="w-4 h-4" />
             Create Listing
           </button>
         </div>
@@ -234,16 +234,16 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
             <div
               key={listing.id}
               onClick={() => onSelectListing(listing)}
-              className="glass-card p-5 rounded-2xl border border-white/[0.05] hover:border-blue-500/40 transition-all cursor-pointer group flex flex-col justify-between"
+              className="bg-[#0c1829] p-5 rounded-2xl border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 transition-all cursor-pointer group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-white/[0.05] text-white/80 border border-white/[0.08]">
+                    <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-[#06111e] text-slate-300 border border-[#1b2b3d]">
                       {listing.property_type || 'Apartment'}
                     </span>
                     {listing.reference && (
-                      <span className="text-[10px] font-mono text-white/60">
+                      <span className="text-[10px] font-mono text-slate-400">
                         {listing.reference}
                       </span>
                     )}
@@ -255,26 +255,26 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                   {listing.name || 'Untitled Luxury Listing'}
                 </h3>
 
-                <div className="flex items-center gap-4 text-xs text-white/60 mb-4">
+                <div className="flex items-center gap-4 text-xs text-slate-400 mb-4">
                   <span className="flex items-center gap-1">
-                    <ImageIcon className="w-3.5 h-3.5 text-white/60" />
+                    <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
                     {listing.images?.length || 0} Photos
                   </span>
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-white/60" />
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     {new Date(listing.created_at || Date.now()).toLocaleDateString()}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-white/[0.06] text-xs">
+              <div className="flex items-center justify-between pt-3 border-t border-[#1b2b3d] text-xs">
                 <span className="text-blue-400 group-hover:translate-x-1 transition-transform font-semibold flex items-center gap-1">
                   Open Listing <ArrowRight className="w-3.5 h-3.5" />
                 </span>
                 <button
                   type="button"
                   onClick={(e) => handleDeleteListing(e, listing.id)}
-                  className="p-1.5 rounded-lg text-white/40 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                   title="Delete Listing"
                 >
                   <Trash2 className="w-4 h-4" />

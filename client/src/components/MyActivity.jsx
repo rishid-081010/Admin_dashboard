@@ -65,9 +65,9 @@ export default function MyActivity({ globalAgent }) {
         </div>
         <div className="flex items-center gap-4">
 
-          <div className="flex gap-2 bg-black/40 backdrop-blur-md border border-white/10 p-1 rounded-xl">
-            <button onClick={() => setView('board')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${view === 'board' ? 'bg-white/10 text-white' : 'text-white/60'}`}><LayoutDashboard className="w-4 h-4" /> Board</button>
-            <button onClick={() => setView('list')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${view === 'list' ? 'bg-white/10 text-white' : 'text-white/60'}`}><List className="w-4 h-4" /> List</button>
+          <div className="flex gap-2 bg-[#0c1829] border border-[#233549] p-1 rounded-xl shadow-xl shadow-black/40">
+            <button onClick={() => setView('board')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${view === 'board' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'text-slate-400 hover:text-white hover:bg-[#102035]'}`}><LayoutDashboard className="w-4 h-4" /> Board</button>
+            <button onClick={() => setView('list')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${view === 'list' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'text-slate-400 hover:text-white hover:bg-[#102035]'}`}><List className="w-4 h-4" /> List</button>
           </div>
         </div>
       </div>
@@ -75,26 +75,26 @@ export default function MyActivity({ globalAgent }) {
       <div className="flex-1 overflow-x-auto custom-scrollbar pb-4">
         <div className="flex gap-6 min-w-max h-full">
           {loading ? (
-             <div className="w-full text-center text-white/40 py-20">Syncing live leads from Bitrix24...</div>
+             <div className="w-full text-center text-slate-400 py-20">Syncing live leads from Bitrix24...</div>
           ) : columns.map(col => (
-            <div key={col.id} className="w-[320px] flex flex-col h-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg relative overflow-hidden">
-              <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/20">
+            <div key={col.id} className="w-[320px] flex flex-col h-full bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative overflow-hidden">
+              <div className="p-4 border-b border-[#233549] flex items-center justify-between bg-[#071322]">
                 <h3 className="font-bold text-white flex items-center gap-2">
-                  {col.title} <span className="bg-white/10 text-white/80 text-xs px-2 py-0.5 rounded-full">{col.count}</span>
+                  {col.title} <span className="bg-[#06111e] border border-[#1b2b3d] text-slate-300 text-xs px-2 py-0.5 rounded-full">{col.count}</span>
                 </h3>
-                <button className="text-white/40 hover:text-white"><MoreHorizontal className="w-5 h-5" /></button>
+                <button className="text-slate-400 hover:text-white"><MoreHorizontal className="w-5 h-5" /></button>
               </div>
               <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-3">
                 {col.items.map((item, i) => (
-                  <div key={i} className="bg-black/20 border border-white/10 rounded-[14px] p-4 hover:border-[#3b82f6]/50 cursor-grab transition-colors shadow-sm">
+                  <div key={i} className="bg-[#06111e] border border-[#1b2b3d] hover:border-[#385175] rounded-[14px] p-4 cursor-grab transition-all shadow-sm hover:shadow-md">
                     <h4 className="text-white font-semibold mb-2">{item.title}</h4>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#10b981] font-bold">{item.value}</span>
-                      <span className="text-white/40">{item.date}</span>
+                      <span className="text-slate-400">{item.date}</span>
                     </div>
                   </div>
                 ))}
-                {col.items.length === 0 && <div className="text-white/40 text-sm text-center py-4">No leads</div>}
+                {col.items.length === 0 && <div className="text-slate-500 text-sm text-center py-4">No leads</div>}
               </div>
             </div>
           ))}

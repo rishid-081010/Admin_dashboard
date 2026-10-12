@@ -82,26 +82,26 @@ export default function SourcesDirectory() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#f8fafc] text-slate-800 -m-4 lg:-m-5 p-6 lg:p-8 overflow-y-auto custom-scrollbar font-sans select-text">
+    <div className="w-full h-full flex flex-col text-white -m-4 lg:-m-5 p-6 lg:p-8 overflow-y-auto custom-scrollbar font-sans select-text">
       
-      {/* ─── Header: Clean, Classic, Minimalist (Image 1) ───────────────── */}
+      {/* ─── Header: Clean, Classic, Minimalist ─────────────────────────── */}
       <div className="mb-6">
-        <div className="text-[11px] font-sans tracking-[0.2em] uppercase text-slate-400 font-semibold mb-1">
+        <div className="text-[11px] font-mono tracking-[0.2em] uppercase text-blue-400 font-semibold mb-1">
           A SQUARED / INTELLIGENCE
         </div>
         <h1 
-          className="text-3xl md:text-4xl text-[#0f172a] font-bold tracking-tight mb-1" 
+          className="text-3xl md:text-4xl text-white font-bold tracking-tight mb-1" 
         >
           Data library
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-400">
           Every source file and sheet is accounted for.
         </p>
       </div>
 
-      {/* ─── Search & Filters Card (Image 1) ────────────────────────────── */}
-      <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm p-5 mb-6">
-        <div className="text-[12px] font-semibold text-slate-600 mb-2.5">
+      {/* ─── Search & Filters Card ────────────────────────────────────────── */}
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 p-5 mb-6">
+        <div className="text-[12px] font-semibold text-slate-300 mb-2.5">
           Find a source
         </div>
 
@@ -115,78 +115,78 @@ export default function SourcesDirectory() {
               setCurrentPage(1);
             }}
             placeholder="Search filename or processing status"
-            className="flex-1 bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-400 transition-all shadow-none"
+            className="flex-1 bg-[#06111e] border border-[#1b2b3d] rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#385175] transition-all shadow-none"
           />
           <button 
             onClick={() => setCurrentPage(1)}
-            className="bg-[#0a1128] hover:bg-[#132043] text-white px-7 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm shrink-0"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-7 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-blue-500/25 shrink-0"
           >
             Search
           </button>
         </div>
 
-        {/* Minimalist, Understated Filter Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-100 text-xs text-slate-500">
+        {/* Minimalist Filter Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 mt-4 border-t border-[#233549] text-xs text-slate-400">
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Format Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2.5 py-1">
-              <span className="font-medium text-slate-500">Format:</span>
+            <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-lg px-2.5 py-1">
+              <span className="font-medium text-slate-400">Format:</span>
               <select 
                 value={selectedFormat} 
                 onChange={(e) => { setSelectedFormat(e.target.value); setCurrentPage(1); }}
-                className="bg-transparent text-slate-700 outline-none cursor-pointer font-medium"
+                className="bg-transparent text-white outline-none cursor-pointer font-medium"
               >
-                <option value="All">All Formats</option>
-                <option value="XLSX">XLSX</option>
-                <option value="XLS">XLS</option>
+                <option value="All" className="bg-[#0c1829]">All Formats</option>
+                <option value="XLSX" className="bg-[#0c1829]">XLSX</option>
+                <option value="XLS" className="bg-[#0c1829]">XLS</option>
               </select>
             </div>
 
             {/* Size Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2.5 py-1">
-              <span className="font-medium text-slate-500">Size:</span>
+            <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-lg px-2.5 py-1">
+              <span className="font-medium text-slate-400">Size:</span>
               <select 
                 value={selectedSizeFilter} 
                 onChange={(e) => { setSelectedSizeFilter(e.target.value); setCurrentPage(1); }}
-                className="bg-transparent text-slate-700 outline-none cursor-pointer font-medium"
+                className="bg-transparent text-white outline-none cursor-pointer font-medium"
               >
-                <option value="All">All Sizes</option>
-                <option value="<500KB">&lt; 500 KB</option>
-                <option value="500KB-2MB">500 KB – 2 MB</option>
-                <option value="2MB-10MB">2 MB – 10 MB</option>
-                <option value=">10MB">&gt; 10 MB</option>
+                <option value="All" className="bg-[#0c1829]">All Sizes</option>
+                <option value="<500KB" className="bg-[#0c1829]">&lt; 500 KB</option>
+                <option value="500KB-2MB" className="bg-[#0c1829]">500 KB – 2 MB</option>
+                <option value="2MB-10MB" className="bg-[#0c1829]">2 MB – 10 MB</option>
+                <option value=">10MB" className="bg-[#0c1829]">&gt; 10 MB</option>
               </select>
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2.5 py-1">
-              <span className="font-medium text-slate-500">Status:</span>
+            <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-lg px-2.5 py-1">
+              <span className="font-medium text-slate-400">Status:</span>
               <select 
                 value={selectedStatusFilter} 
                 onChange={(e) => { setSelectedStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="bg-transparent text-slate-700 outline-none cursor-pointer font-medium"
+                className="bg-transparent text-white outline-none cursor-pointer font-medium"
               >
-                <option value="All">All Statuses</option>
-                <option value="processed">Processed</option>
-                <option value="duplicate">Duplicates</option>
+                <option value="All" className="bg-[#0c1829]">All Statuses</option>
+                <option value="processed" className="bg-[#0c1829]">Processed</option>
+                <option value="duplicate" className="bg-[#0c1829]">Duplicates</option>
               </select>
             </div>
 
             {/* Sort Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2.5 py-1">
-              <span className="font-medium text-slate-500">Sort:</span>
+            <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-lg px-2.5 py-1">
+              <span className="font-medium text-slate-400">Sort:</span>
               <select 
                 value={sortBy} 
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-transparent text-slate-700 outline-none cursor-pointer font-medium"
+                className="bg-transparent text-white outline-none cursor-pointer font-medium"
               >
-                <option value="default">Default Order</option>
-                <option value="name_asc">File Name (A–Z)</option>
-                <option value="name_desc">File Name (Z–A)</option>
-                <option value="rows_desc">Accepted Rows (High to Low)</option>
-                <option value="rows_asc">Accepted Rows (Low to High)</option>
-                <option value="size_desc">File Size (Largest)</option>
-                <option value="size_asc">File Size (Smallest)</option>
+                <option value="default" className="bg-[#0c1829]">Default Order</option>
+                <option value="name_asc" className="bg-[#0c1829]">File Name (A–Z)</option>
+                <option value="name_desc" className="bg-[#0c1829]">File Name (Z–A)</option>
+                <option value="rows_desc" className="bg-[#0c1829]">Accepted Rows (High to Low)</option>
+                <option value="rows_asc" className="bg-[#0c1829]">Accepted Rows (Low to High)</option>
+                <option value="size_desc" className="bg-[#0c1829]">File Size (Largest)</option>
+                <option value="size_asc" className="bg-[#0c1829]">File Size (Smallest)</option>
               </select>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function SourcesDirectory() {
             <a 
               href={PARQUET_URL}
               download="sources_catalog.parquet"
-              className="text-xs text-slate-500 hover:text-slate-900 transition-colors underline underline-offset-2"
+              className="text-xs text-blue-400 hover:text-blue-300 transition-colors underline underline-offset-2"
             >
               Export Catalog (.parquet)
             </a>
@@ -206,32 +206,32 @@ export default function SourcesDirectory() {
         </div>
       </div>
 
-      {/* ─── The Clean White Table (Image 1) ────────────────────────────── */}
-      <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden mb-6 flex-1 flex flex-col">
+      {/* ─── The Main Data Library Table ─────────────────────────────────── */}
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 overflow-hidden mb-6 flex-1 flex flex-col">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200/80 bg-white">
-                <th className="py-3 px-5 text-xs font-medium text-slate-500 w-[44%]">File</th>
-                <th className="py-3 px-4 text-xs font-medium text-slate-500 w-[8%]">Tabs</th>
-                <th className="py-3 px-4 text-xs font-medium text-slate-500 w-[14%]">Accepted rows</th>
-                <th className="py-3 px-4 text-xs font-medium text-slate-500 w-[11%]">Quarantined</th>
-                <th className="py-3 px-4 text-xs font-medium text-slate-500 w-[11%]">Status</th>
-                <th className="py-3 px-5 text-xs font-medium text-slate-500 w-[12%]">Duplicate of</th>
+              <tr className="border-b border-[#233549] bg-[#071322]">
+                <th className="py-3 px-5 text-xs font-semibold text-slate-400 w-[44%]">File</th>
+                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[8%]">Tabs</th>
+                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[14%]">Accepted rows</th>
+                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[11%]">Quarantined</th>
+                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[11%]">Status</th>
+                <th className="py-3 px-5 text-xs font-semibold text-slate-400 w-[12%]">Duplicate of</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[#1b2b3d]/60">
               {paginated.map((item) => (
                 <tr 
                   key={item.id}
-                  className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                  className="hover:bg-[#102035] transition-colors group cursor-pointer"
                   onClick={() => handleDownload(item)}
                 >
                   {/* File name */}
-                  <td className="py-3.5 px-5 text-sm text-slate-800 font-normal">
+                  <td className="py-3.5 px-5 text-sm text-slate-200 font-normal">
                     <div className="flex items-center justify-between gap-3">
                       <span 
-                        className="truncate max-w-[460px] group-hover:text-blue-600 transition-colors" 
+                        className="truncate max-w-[460px] group-hover:text-blue-300 transition-colors" 
                         title={item.filename}
                       >
                         {item.filename}
@@ -239,7 +239,7 @@ export default function SourcesDirectory() {
                       <button 
                         onClick={(e) => handleDownload(item, e)}
                         title="Download file"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200/70 rounded text-slate-400 hover:text-slate-700 shrink-0"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[#1b2b3d] rounded text-slate-400 hover:text-white shrink-0"
                       >
                         <Download className="w-3.5 h-3.5" />
                       </button>
@@ -247,31 +247,31 @@ export default function SourcesDirectory() {
                   </td>
 
                   {/* Tabs */}
-                  <td className="py-3.5 px-4 text-sm text-slate-600">
+                  <td className="py-3.5 px-4 text-sm text-slate-400">
                     {item.tabs || 1}
                   </td>
 
                   {/* Accepted rows */}
-                  <td className="py-3.5 px-4 text-sm text-slate-700 font-normal">
+                  <td className="py-3.5 px-4 text-sm text-slate-300 font-mono">
                     {item.accepted_rows !== null && item.accepted_rows !== undefined 
                       ? item.accepted_rows.toLocaleString() 
                       : '—'}
                   </td>
 
                   {/* Quarantined */}
-                  <td className="py-3.5 px-4 text-sm text-slate-400">
+                  <td className="py-3.5 px-4 text-sm text-slate-500 font-mono">
                     {item.quarantined ? item.quarantined.toLocaleString() : '—'}
                   </td>
 
                   {/* Status pill */}
                   <td className="py-3.5 px-4 text-sm">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#06111e] text-slate-300 border border-[#1b2b3d]">
                       {item.status || 'processed'}
                     </span>
                   </td>
 
                   {/* Duplicate of */}
-                  <td className="py-3.5 px-5 text-sm text-slate-400 truncate max-w-[150px]" title={item.duplicate_of || ''}>
+                  <td className="py-3.5 px-5 text-sm text-slate-500 truncate max-w-[150px]" title={item.duplicate_of || ''}>
                     {item.duplicate_of || '—'}
                   </td>
                 </tr>
@@ -281,7 +281,7 @@ export default function SourcesDirectory() {
         </div>
 
         {/* ─── Pagination Bar ────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-white text-xs text-slate-500 shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-t border-[#233549] bg-[#071322] text-xs text-slate-400 shrink-0">
           <div>
             Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSorted.length)} of {filteredAndSorted.length.toLocaleString()} files
           </div>
@@ -295,12 +295,12 @@ export default function SourcesDirectory() {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-transparent border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none cursor-pointer"
+                className="bg-[#06111e] border border-[#1b2b3d] rounded px-1.5 py-0.5 text-slate-300 outline-none cursor-pointer"
               >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={200}>200</option>
+                <option value={25} className="bg-[#0c1829]">25</option>
+                <option value={50} className="bg-[#0c1829]">50</option>
+                <option value={100} className="bg-[#0c1829]">100</option>
+                <option value={200} className="bg-[#0c1829]">200</option>
               </select>
             </div>
 
@@ -308,17 +308,17 @@ export default function SourcesDirectory() {
               <button 
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="px-2.5 py-1 border border-slate-200 rounded text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="px-2.5 py-1 border border-[#1b2b3d] bg-[#06111e] rounded text-slate-300 hover:bg-[#102035] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
-              <span className="text-slate-600 font-medium px-1">
+              <span className="text-slate-300 font-medium px-1">
                 Page {currentPage} of {totalPages}
               </span>
               <button 
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="px-2.5 py-1 border border-slate-200 rounded text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="px-2.5 py-1 border border-[#1b2b3d] bg-[#06111e] rounded text-slate-300 hover:bg-[#102035] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
