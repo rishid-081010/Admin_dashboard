@@ -4,7 +4,7 @@ import {
   Activity, ChevronRight, ArrowRight, RefreshCw, Zap,
   Building2, Radio, ExternalLink, ChevronDown, Check
 } from 'lucide-react';
-import { fetchVoiceOverview, fetchImmediateActivities } from '../utils/voiceAgentService';
+import { fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount } from '../utils/voiceAgentService';
 import { fetchN8nWorkflows } from '../utils/n8nService';
 
 export default function OverviewDashboard({ onNavigate }) {
@@ -13,6 +13,7 @@ export default function OverviewDashboard({ onNavigate }) {
   const [selectedDate, setSelectedDate] = useState(getTodayDubai());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [totalLeadsCount, setTotalLeadsCount] = useState(3042722);
   const [voiceData, setVoiceData] = useState({
     totalCallsToday: 0,
     answeredCallsToday: 0,
@@ -94,10 +95,11 @@ export default function OverviewDashboard({ onNavigate }) {
   const loadAllTelemetry = async () => {
     try {
       setLoading(true);
-      const [resVoice, resActivities, resN8n] = await Promise.allSettled([
+      const [resVoice, resActivities, resN8n, resLeadsCount] = await Promise.allSettled([
         fetchVoiceOverview({ timeFilter: 'Daily', selectedDate }),
         fetchImmediateActivities(),
-        fetchN8nWorkflows()
+        fetchN8nWorkflows(),
+        fetchTotalLeadsCount()
       ]);
 
       if (resVoice.status === 'fulfilled' && resVoice.value) {
@@ -108,6 +110,9 @@ export default function OverviewDashboard({ onNavigate }) {
       }
       if (resN8n.status === 'fulfilled' && resN8n.value) {
         setN8nData(resN8n.value);
+      }
+      if (resLeadsCount.status === 'fulfilled' && typeof resLeadsCount.value === 'number') {
+        setTotalLeadsCount(resLeadsCount.value);
       }
     } catch (err) {
       console.warn('Error loading live telemetry:', err);
@@ -149,16 +154,16 @@ export default function OverviewDashboard({ onNavigate }) {
       {/* ─── 2. TOP 4 KEY METRIC CARDS ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
-        {/* Card 1: Master Portfolio / Total Properties */}
+        {/* Card 1: Total Leads */}
         <div 
           onClick={() => onNavigate && onNavigate('owners')}
           className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40 group hover:border-[#385175] transition-all cursor-pointer"
         >
           <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
-            MASTER PORTFOLIO
+            TOTAL LEADS
           </div>
           <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
-            3,042,722
+            {totalLeadsCount.toLocaleString()}
           </div>
         </div>
 

@@ -519,3 +519,36 @@ export async function fetchImmediateActivities() {
   }
 }
 
+// Fetch total live non-duplicate leads / verified owners count from Supabase
+export async function fetchTotalLeadsCount() {
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Prefer': 'count=exact'
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_BASE_URL}/owner_intelligence_leads?limit=1`, { headers });
+    const contentRange = res.headers.get('Content-Range') || '';
+    const match = contentRange.match(/\/(\d+)/);
+    if (match && match[1]) {
+      return parseInt(match[1], 10);
+    }
+  } catch (err) {
+    console.warn('Failed to fetch from owner_intelligence_leads, falling back to owners_data:', err);
+  }
+
+  try {
+    const res2 = await fetch(`${SUPABASE_BASE_URL}/owners_data?limit=1`, { headers });
+    const contentRange2 = res2.headers.get('Content-Range') || '';
+    const match2 = contentRange2.match(/\/(\d+)/);
+    if (match2 && match2[1]) {
+      return parseInt(match2[1], 10);
+    }
+  } catch (err2) {
+    console.warn('Failed to fetch from owners_data:', err2);
+  }
+
+  return 3042722;
+}
+
