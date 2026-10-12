@@ -306,9 +306,9 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                 {building.name}
               </h1>
 
-              <p className="text-slate-400 text-xs sm:text-sm mt-1">
-                {building.propertyType || 'Residential'} • Official Dubai land deed &amp; verified unit ownership directory.
-              </p>
+              <div className="text-slate-400 text-xs mt-1">
+                {building.propertyType || 'Residential'}
+              </div>
             </div>
           </div>
 

@@ -138,41 +138,23 @@ export default function WorkflowsDirectory() {
       {/* ── 1. Top Header Bar ─────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-mono uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              Live n8n Cloud Sync
-            </span>
-            <span className="text-[11px] text-white/40 font-mono">
-              Auto-updating every 5 minutes
-            </span>
-          </div>
-
           <h1 
             className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white" 
             style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
           >
-            N8N WORKFLOWS &amp; AUTOMATIONS
+            N8N WORKFLOWS
           </h1>
-          <p className="text-white/60 text-xs sm:text-sm mt-0.5">
-            Live execution telemetry, trigger health, and error monitoring directly retrieved from n8n.
-          </p>
         </div>
 
         {/* Live Refresh Controls */}
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          <div className="hidden sm:flex flex-col text-right font-mono text-[11px] text-white/50">
-            <span>Next sync in: <strong className="text-emerald-400">{formatCountdown(secondsUntilNextRefresh)}</strong></span>
-            <span className="text-[10px] text-white/30">Last updated: {lastRefreshed.toLocaleTimeString()}</span>
-          </div>
-
           <button
             onClick={() => fetchTelemetry(true)}
             disabled={loading}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow-sm disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>{loading ? 'Refreshing n8n...' : 'Refresh Now'}</span>
+            <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
           </button>
 
           <a
@@ -199,9 +181,6 @@ export default function WorkflowsDirectory() {
           <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
             {summary.totalWorkflows}
           </div>
-          <div className="text-[10.5px] text-slate-500 font-mono mt-1">
-            Registered in n8n cluster
-          </div>
         </div>
 
         {/* Active Automations */}
@@ -212,10 +191,6 @@ export default function WorkflowsDirectory() {
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">
             {summary.activeWorkflows}
-          </div>
-          <div className="text-[10.5px] text-emerald-400/70 font-mono mt-1 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Listening &amp; Executing
           </div>
         </div>
 
@@ -228,9 +203,6 @@ export default function WorkflowsDirectory() {
           <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
             {summary.totalExecutionsToday.toLocaleString()}
           </div>
-          <div className="text-[10.5px] text-sky-300/70 font-mono mt-1">
-            Live triggers &amp; runs today
-          </div>
         </div>
 
         {/* System Health */}
@@ -241,9 +213,6 @@ export default function WorkflowsDirectory() {
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono flex items-center gap-2">
             <span>{summary.errorWorkflows === 0 ? 'Healthy' : `${summary.errorWorkflows} Errors`}</span>
-          </div>
-          <div className="text-[10.5px] text-slate-500 font-mono mt-1">
-            {summary.healthyWorkflows} operational / 0 failures
           </div>
         </div>
 

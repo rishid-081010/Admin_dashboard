@@ -197,15 +197,12 @@ export default function VoiceAgent360({
         {/* Card 1: Total Calls in Filter */}
         <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
-            <span>Calls Handled (Filtered)</span>
+            <span>Calls Handled</span>
             <PhoneOutgoing className="w-4 h-4 text-blue-400" />
           </div>
           <div>
             <div className="text-3xl font-bold text-white tracking-tight font-mono">
               {totalCallsCount.toLocaleString()}
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1">
-              Calls placed by {agent.name}
             </div>
           </div>
         </div>
@@ -213,15 +210,12 @@ export default function VoiceAgent360({
         {/* Card 2: Connect / Answer Rate */}
         <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
-            <span>Answered / Pickup Rate</span>
+            <span>Answered Rate</span>
             <Activity className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
             <div className="text-3xl font-bold text-emerald-400 tracking-tight font-mono">
               {answerRate}
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1">
-              Spoke with human owner
             </div>
           </div>
         </div>
@@ -236,9 +230,6 @@ export default function VoiceAgent360({
             <div className="text-3xl font-bold text-white tracking-tight font-mono">
               {qualRate}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">
-              Awaiting availability / Interest confirmed
-            </div>
           </div>
         </div>
 
@@ -251,9 +242,6 @@ export default function VoiceAgent360({
           <div>
             <div className="text-3xl font-bold text-white tracking-tight font-mono">
               {avgDuration}
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1">
-              Average conversation length
             </div>
           </div>
         </div>

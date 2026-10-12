@@ -86,17 +86,11 @@ export default function SourcesDirectory() {
       
       {/* ─── Header: Clean, Classic, Minimalist ─────────────────────────── */}
       <div className="mb-6">
-        <div className="text-[11px] font-mono tracking-[0.2em] uppercase text-blue-400 font-semibold mb-1">
-          A SQUARED / INTELLIGENCE
-        </div>
         <h1 
-          className="text-3xl md:text-4xl text-white font-bold tracking-tight mb-1" 
+          className="text-3xl md:text-4xl text-white font-bold tracking-tight" 
         >
           Data library
         </h1>
-        <p className="text-sm text-slate-400">
-          Every source file and sheet is accounted for.
-        </p>
       </div>
 
       {/* ─── Search & Filters Card ────────────────────────────────────────── */}

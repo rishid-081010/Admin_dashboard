@@ -11,16 +11,10 @@ export default function DataHealth() {
       </div>
 
       {/* Breadcrumb & Header */}
-      <div className="shrink-0">
-        <div className="text-[10px] font-mono tracking-widest text-white/40 uppercase mb-1">
-          A SQUARED / SYSTEM
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1">
+      <div className="shrink-0 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
           Data Quality
         </h1>
-        <p className="text-white/60 text-xs sm:text-sm font-medium">
-          Overview of imported spreadsheets, owner profiles, and verified property records.
-        </p>
       </div>
 
       {/* 4 Health Metric Cards */}
@@ -29,32 +23,28 @@ export default function DataHealth() {
         <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 shadow-2xl relative flex flex-col justify-between group hover:border-white/20 transition-all">
           <div className="w-10 h-1 bg-blue-500 rounded-full mb-3"></div>
           <div className="text-xs text-white/60 font-semibold mb-2">Source Files</div>
-          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">1,118</div>
-          <div className="text-[11.5px] text-white/50">1,380+ sheets processed</div>
+          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">1,118</div>
         </div>
 
         {/* Card 2 */}
         <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 shadow-2xl relative flex flex-col justify-between group hover:border-white/20 transition-all">
           <div className="w-10 h-1 bg-purple-500 rounded-full mb-3"></div>
           <div className="text-xs text-white/60 font-semibold mb-2">Owner Profiles</div>
-          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">3,042,722</div>
-          <div className="text-[11.5px] text-white/50">Unique owner profiles</div>
+          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">3,042,722</div>
         </div>
 
         {/* Card 3 */}
         <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 shadow-2xl relative flex flex-col justify-between group hover:border-white/20 transition-all">
           <div className="w-10 h-1 bg-emerald-500 rounded-full mb-3"></div>
           <div className="text-xs text-white/60 font-semibold mb-2">Properties Verified</div>
-          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">897,696</div>
-          <div className="text-[11.5px] text-white/50">Property units matched</div>
+          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">897,696</div>
         </div>
 
         {/* Card 4 */}
         <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 shadow-2xl relative flex flex-col justify-between group hover:border-white/20 transition-all">
           <div className="w-10 h-1 bg-amber-500 rounded-full mb-3"></div>
           <div className="text-xs text-white/60 font-semibold mb-2">Data Issues</div>
-          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">0</div>
-          <div className="text-[11.5px] text-emerald-400 font-medium">0 format errors detected</div>
+          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">0</div>
         </div>
       </div>
 

@@ -335,7 +335,6 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
               <div className="mb-4">
                 <h2 className="text-lg font-bold text-white tracking-tight">Registered Properties</h2>
-                <p className="text-xs text-slate-400">Registered owner details and property records.</p>
               </div>
 
               <div className="overflow-x-auto">
@@ -505,8 +504,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           {activeTab === 'activity' && (
             <div className="space-y-4">
               <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-xl shadow-black/40">
-                <h3 className="text-sm font-bold text-white mb-2">Follow-ups &amp; CRM Status</h3>
-                <p className="text-xs text-slate-400 mb-4">Status across Bitrix24 CRM and direct outreach channels.</p>
+                <h3 className="text-sm font-bold text-white mb-4">Follow-ups &amp; CRM Status</h3>
 
                 <div className="space-y-3 text-xs">
                   <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#06111e] border border-[#1b2b3d]">
@@ -546,8 +544,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           {activeTab === 'evidence' && (
             <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-xl shadow-black/40 space-y-4 text-xs">
               <div>
-                <h3 className="text-sm font-bold text-white mb-1">Data Source &amp; Import History</h3>
-                <p className="text-xs text-slate-400">Mapping from vendor data files to verified database records.</p>
+                <h3 className="text-sm font-bold text-white mb-3">Data Source &amp; Import History</h3>
               </div>
 
               <div className="space-y-3 font-mono">

@@ -619,12 +619,9 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
       {/* Main Header */}
       <div className="flex flex-col items-center justify-center mt-2 mb-5 shrink-0">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
           SEARCH DATABASE
         </h1>
-        <p className="text-white/50 text-xs sm:text-sm text-center">
-          Search across 3.04 million property owners, buildings, areas, and verified IDs in Dubai.
-        </p>
       </div>
 
       {/* Center Search Container */}

@@ -458,12 +458,9 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       {/* Page Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-1.5">
-            OWNERS DATA
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Owners Data
           </h1>
-          <p className="text-white/60 text-[14px]">
-            Directory of 3,042,722 verified property owners linked to Bitrix24 CRM pipeline.
-          </p>
         </div>
       </div>
 

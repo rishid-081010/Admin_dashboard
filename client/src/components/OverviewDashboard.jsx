@@ -140,17 +140,13 @@ export default function OverviewDashboard({ onNavigate }) {
       {/* ─── 1. TOP HEADER SECTION ─────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-1">
+          <h1 className="text-3xl font-bold tracking-tight text-white">
             Overview
           </h1>
-          <p className="text-slate-400 text-sm font-normal">
-            Live Connected to Supabase Engine | Dubai Land Department Register
-          </p>
         </div>
-
       </div>
 
-      {/* ─── 2. TOP 4 KEY METRIC CARDS (Exact styling from Image 1) ─────────── */}
+      {/* ─── 2. TOP 4 KEY METRIC CARDS ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Card 1: Master Portfolio / Total Properties */}
@@ -163,10 +159,6 @@ export default function OverviewDashboard({ onNavigate }) {
           </div>
           <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
             3,042,722
-          </div>
-          <div className="text-xs font-semibold text-emerald-400 inline-flex items-center gap-1.5 mt-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            ✓ Supabase Synced · 1,382 Catalogs
           </div>
         </div>
 
@@ -181,10 +173,6 @@ export default function OverviewDashboard({ onNavigate }) {
           <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
             {voiceData.totalCallsToday.toLocaleString()}
           </div>
-          <div className="text-xs font-semibold text-sky-400 inline-flex items-center gap-1.5 mt-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
-            Outbound Dispatch Active
-          </div>
         </div>
 
         {/* Card 3: Qualified Leads Today */}
@@ -198,40 +186,34 @@ export default function OverviewDashboard({ onNavigate }) {
           <div className="text-3xl sm:text-4xl font-extrabold text-amber-300 tracking-tight my-1.5 font-mono">
             {voiceData.qualifiedLeadsToday.toLocaleString()}
           </div>
-          <div className="text-xs font-semibold text-emerald-400 mt-1">
-            Hot Buyers & Sellers Ready to Transact
-          </div>
         </div>
 
-        {/* Card 4: AI Voice Agents Fleet Status */}
+        {/* Card 4: Voice Agents */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
           className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40 group hover:border-[#385175] transition-all cursor-pointer"
         >
           <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
-            AI VOICE AGENTS FLEET
+            VOICE AGENTS
           </div>
           <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
-            3 / 3 Online
-          </div>
-          <div className="text-xs font-medium text-slate-300 mt-1">
-            Sarah · James · Aisha Dialing Active
+            3 Online
           </div>
         </div>
 
       </div>
 
-      {/* ─── 3. HORIZONTAL PIPELINE DYNAMICS BANNER ─────────────────────────── */}
+      {/* ─── 3. HORIZONTAL PIPELINE BANNER ──────────────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40">
         <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-4">
-          TELEPHONY & CONVERSATION DYNAMICS PIPELINE
+          CALL PIPELINE
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[#233549] gap-y-4 sm:gap-y-0">
           
           <div className="px-2 sm:px-4 first:pl-0">
             <div className="text-xs text-slate-400 font-medium mb-1">
-              Dispatched Today
+              Calls Dialed
             </div>
             <div className="text-2xl font-bold text-white tracking-tight font-mono">
               {voiceData.totalCallsToday.toLocaleString()}
@@ -240,7 +222,7 @@ export default function OverviewDashboard({ onNavigate }) {
 
           <div className="px-2 sm:px-4">
             <div className="text-xs text-slate-400 font-medium mb-1">
-              Connected Calls
+              Connected
             </div>
             <div className="text-2xl font-bold text-emerald-400 tracking-tight font-mono">
               {Number(voiceData.answeredCallsToday || 0).toLocaleString()}
@@ -258,7 +240,16 @@ export default function OverviewDashboard({ onNavigate }) {
 
           <div className="px-2 sm:px-4">
             <div className="text-xs text-slate-400 font-medium mb-1">
-              Hot Mandates
+              Qualified
+            </div>
+            <div className="text-2xl font-bold text-sky-400 tracking-tight font-mono">
+              {Number(voiceData.qualifiedLeadsToday || 0).toLocaleString()}
+            </div>
+          </div>
+
+          <div className="px-2 sm:px-4">
+            <div className="text-xs text-slate-400 font-medium mb-1">
+              High Intent
             </div>
             <div className="text-2xl font-bold text-amber-400 tracking-tight font-mono">
               {voiceData.qualifiedLeadsToday > 0 ? Math.max(1, Math.round(voiceData.qualifiedLeadsToday * 0.4)).toLocaleString() : '0'}
@@ -267,7 +258,7 @@ export default function OverviewDashboard({ onNavigate }) {
 
           <div className="px-2 sm:px-4">
             <div className="text-xs text-slate-400 font-medium mb-1">
-              Transferred to Brokers
+              Transferred
             </div>
             <div className="text-2xl font-bold text-rose-400 tracking-tight font-mono">
               {voiceData.qualifiedLeadsToday > 0 ? Math.max(1, Math.round(voiceData.qualifiedLeadsToday * 0.8)).toLocaleString() : '0'}
@@ -277,30 +268,25 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── 4. IMMEDIATE ACTIVITY (LIVE HOT LEADS FEED FROM SUPABASE) ─────── */}
+      {/* ─── 4. IMMEDIATE ACTIVITY ───────────────────────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-amber-400" />
-              <h3 className="text-base font-bold text-white tracking-tight">
-                Immediate Activity
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Live qualified telephony leads, owner responses, and active conversation transcripts from Supabase.
-            </p>
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-amber-400" />
+            <h3 className="text-base font-bold text-white tracking-tight">
+              Immediate Activity
+            </h3>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
-              {loadingActivities ? 'Syncing...' : `${immediateActivities.length} Live Hot Leads`}
+              {loadingActivities ? 'Syncing...' : `${immediateActivities.length} Leads`}
             </span>
             <button
               onClick={() => onNavigate && onNavigate('voice')}
               className="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] transition-all flex items-center gap-1.5"
             >
-              <span>View all call logs</span>
+              <span>View all</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -319,7 +305,7 @@ export default function OverviewDashboard({ onNavigate }) {
           </div>
         ) : immediateActivities.length === 0 ? (
           <div className="p-8 text-center bg-[#06111e] border border-[#1a2c42] rounded-xl text-slate-400 text-xs">
-            No hot lead events logged for this period yet.
+            No activity logged for today yet.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -361,26 +347,21 @@ export default function OverviewDashboard({ onNavigate }) {
         )}
       </div>
 
-      {/* ─── 5. SCROLL DOWN CONTENT: AGENTS FLEET DETAIL & WORKFLOW HEALTH ─── */}
+      {/* ─── 5. VOICE AGENTS ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 pt-2">
         <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <PhoneCall className="w-4 h-4 text-purple-400" />
-              <h2 className="text-lg font-bold text-white tracking-tight">
-                AI Voice Agent Operational Fleet
-              </h2>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Real-time telemetry, calls dispatched today, and operational status for autonomous outbound agents.
-            </p>
+          <div className="flex items-center gap-2">
+            <PhoneCall className="w-4 h-4 text-purple-400" />
+            <h2 className="text-lg font-bold text-white tracking-tight">
+              Voice Agents
+            </h2>
           </div>
 
           <button
             onClick={() => onNavigate && onNavigate('voice')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow-md"
           >
-            <span>Open Voice Agent 360</span>
+            <span>View all</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -399,9 +380,9 @@ export default function OverviewDashboard({ onNavigate }) {
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
-                      Agent 1: Sarah
+                      Sarah
                     </h4>
-                    <span className="text-[10px] text-blue-400/80 font-mono">Primary AI</span>
+                    <span className="text-[10px] text-slate-400">Line 1</span>
                   </div>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
@@ -413,13 +394,10 @@ export default function OverviewDashboard({ onNavigate }) {
               <div className="text-2xl font-black text-white my-2 font-mono">
                 {voiceData.agent1.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                {voiceData.agent1.role} · Focuses on high-intent sellers, luxury villas, and exclusive mandate acquisition.
-              </p>
             </div>
 
             <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-blue-300 font-medium">
-              <span>View Call Logs & Metrics</span>
+              <span>View calls</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
@@ -437,9 +415,9 @@ export default function OverviewDashboard({ onNavigate }) {
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
-                      Agent 2: James
+                      James
                     </h4>
-                    <span className="text-[10px] text-purple-400/80 font-mono">High-Volume</span>
+                    <span className="text-[10px] text-slate-400">Line 2</span>
                   </div>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
@@ -451,13 +429,10 @@ export default function OverviewDashboard({ onNavigate }) {
               <div className="text-2xl font-black text-white my-2 font-mono">
                 {voiceData.agent2.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                {voiceData.agent2.role} · Engages pre-allocated capital investors, off-plan allocations, and portfolio additions.
-              </p>
             </div>
 
             <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-purple-300 font-medium">
-              <span>View Call Logs & Metrics</span>
+              <span>View calls</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
@@ -475,9 +450,9 @@ export default function OverviewDashboard({ onNavigate }) {
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
-                      Agent 3: Aisha
+                      Aisha
                     </h4>
-                    <span className="text-[10px] text-emerald-400/80 font-mono">Prime UAE</span>
+                    <span className="text-[10px] text-slate-400">Line 3</span>
                   </div>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
@@ -489,38 +464,30 @@ export default function OverviewDashboard({ onNavigate }) {
               <div className="text-2xl font-black text-white my-2 font-mono">
                 {voiceData.agent3.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                {voiceData.agent3.role} · Dedicated coverage for Business Bay, Downtown, DIFC, and prime residential towers.
-              </p>
             </div>
 
             <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-emerald-300 font-medium">
-              <span>View Call Logs & Metrics</span>
+              <span>View calls</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── 6. AUTOMATED WORKFLOW HEALTH WIDGET (LIVE N8N CLUSTER) ─────────── */}
+      {/* ─── 6. AUTOMATED WORKFLOWS ─────────────────────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-base font-bold text-white tracking-tight">
-                Active n8n Workflows & Automation Pipelines
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Live bidirectional sync with n8n (<a href="https://n8n.asquared.ae" target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">n8n.asquared.ae</a>) · Published active workflows and executions today.
-            </p>
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-base font-bold text-white tracking-tight">
+              Automated Workflows
+            </h3>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              {loadingN8n ? 'Querying n8n...' : `${n8nData.summary.activeWorkflows} Active Published · ${n8nData.summary.totalExecutionsToday} Executions Today`}
+              {loadingN8n ? 'Loading...' : `${n8nData.summary.activeWorkflows} Active · ${n8nData.summary.totalExecutionsToday} Runs Today`}
             </span>
             <a
               href="https://n8n.asquared.ae"
@@ -543,7 +510,7 @@ export default function OverviewDashboard({ onNavigate }) {
           </div>
         ) : n8nData.workflows.length === 0 ? (
           <div className="p-6 text-center bg-[#06111e] border border-[#1a2c42] rounded-xl text-slate-400 text-xs">
-            Connecting to n8n orchestration instance...
+            No workflows found.
           </div>
         ) : (
           <>
@@ -569,17 +536,10 @@ export default function OverviewDashboard({ onNavigate }) {
                       <Zap className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-white text-xs font-semibold truncate group-hover:text-blue-300 transition-colors" title={wf.name}>
-                          {wf.name}
-                        </h4>
-                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
-                          Active Published
-                        </span>
-                      </div>
+                      <h4 className="text-white text-xs font-semibold truncate group-hover:text-blue-300 transition-colors" title={wf.name}>
+                        {wf.name}
+                      </h4>
                       <div className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-2">
-                        <span>Workflow ID: <code className="text-slate-500">{wf.id}</code></span>
-                        <span>·</span>
                         <span>Last run: {formatTimeAgo(wf.lastExecutedAt)}</span>
                       </div>
                     </div>
@@ -624,7 +584,7 @@ export default function OverviewDashboard({ onNavigate }) {
                   onClick={() => setShowAllWorkflows(!showAllWorkflows)}
                   className="px-4 py-2 rounded-xl bg-[#06111e] border border-[#1a2c42] hover:bg-[#091728] hover:border-[#2a4363] text-xs font-semibold text-slate-300 hover:text-white transition-all inline-flex items-center gap-1.5"
                 >
-                  <span>{showAllWorkflows ? 'Show Less Workflows' : `Show All ${n8nData.workflows.length} Active Workflows`}</span>
+                  <span>{showAllWorkflows ? 'Show Less' : `Show All (${n8nData.workflows.length})`}</span>
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllWorkflows ? 'rotate-180' : ''}`} />
                 </button>
               </div>

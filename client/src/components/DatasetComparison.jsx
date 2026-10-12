@@ -138,23 +138,16 @@ export default function DatasetComparison() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-white/10 gap-3 shrink-0">
         <div>
-          <div className="text-[11px] font-mono uppercase tracking-wider text-blue-400 font-semibold flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-blue-400" />
-            <span>DATA FACTORY · PRE-PURCHASE INTELLIGENCE</span>
-          </div>
           <h1 className="text-2xl font-bold font-serif text-white tracking-tight mt-0.5">
-            Dataset Comparison & Pre-Purchase ROI Benchmark
+            Dataset Comparison
           </h1>
-          <p className="text-xs text-white/50 mt-0.5">
-            Evaluate external broker lists and supplier spreadsheets against your 3,042,722 verified records before purchasing or importing.
-          </p>
         </div>
 
         {/* Upload Custom File */}
         <div className="flex items-center gap-2">
           <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-2 active:scale-95">
             <Upload className="w-3.5 h-3.5" />
-            <span>Upload Dataset to Benchmark</span>
+            <span>Upload Dataset</span>
             <input 
               type="file" 
               accept=".xlsx,.xls,.csv" 

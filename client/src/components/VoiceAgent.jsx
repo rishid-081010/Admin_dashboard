@@ -76,11 +76,8 @@ export default function VoiceAgent() {
             </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-white">
-            VOICE AGENT CENTRE
+            Voice Agent Centre
           </h1>
-          <p className="text-white/60 text-[14px]">
-            Outbound dialing analytics, conversational qualification, and agent performance.
-          </p>
         </div>
 
         <button
@@ -89,7 +86,7 @@ export default function VoiceAgent() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all self-start sm:self-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh Live Logs</span>
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -118,9 +115,6 @@ export default function VoiceAgent() {
           <div className="text-3xl font-bold text-white transition-all font-mono">
             {callsCount}
           </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Outbound telephony attempts
-          </div>
         </div>
 
         {/* Card 2: Drops & Unanswered */}
@@ -129,9 +123,6 @@ export default function VoiceAgent() {
           <div className="text-xs font-medium text-slate-400 mb-1">Voicemails &amp; Drops</div>
           <div className="text-3xl font-bold text-white transition-all font-mono">
             {dropsCount}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            No answer, busy, or carrier failed
           </div>
         </div>
 
@@ -142,9 +133,6 @@ export default function VoiceAgent() {
           <div className="text-3xl font-bold text-emerald-400 transition-all font-mono">
             {leadsCount}
           </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Awaiting availability / Verified interest
-          </div>
         </div>
 
         {/* Card 4: Avg Call Duration */}
@@ -154,26 +142,15 @@ export default function VoiceAgent() {
           <div className="text-3xl font-bold text-white transition-all font-mono">
             {durationStr}
           </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Conversation talk time
-          </div>
         </div>
       </div>
 
       {/* ─── 3 Real Voice Agents Section ───────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col p-6 mb-6">
         <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="font-bold text-white text-base flex items-center gap-2">
-              <span>Active Voice Telephony Agents</span>
-              <span className="text-xs font-mono font-normal text-white/40 bg-white/5 px-2 py-0.5 rounded-full">
-                3 Dedicated Lines
-              </span>
-            </h3>
-            <p className="text-xs text-white/50 mt-0.5">
-              Click any agent card to launch <strong className="text-blue-400">Voice Agent 360</strong> for granular conversation logs, recording audio, and transcripts.
-            </p>
-          </div>
+          <h3 className="font-bold text-white text-base">
+            Voice Agents
+          </h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -203,16 +180,9 @@ export default function VoiceAgent() {
                     <div className="text-xs text-slate-400 mt-0.5 truncate">{agent.role}</div>
                     <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-1.5">
                       <span>{agent.line}</span>
-                      <span>&bull;</span>
-                      <span>{agent.voiceModel}</span>
                     </div>
                   </div>
                 </div>
-
-                {/* Description */}
-                <p className="text-xs text-slate-400 mb-4 line-clamp-2 leading-relaxed">
-                  {agent.description}
-                </p>
 
                 {/* Key Metrics Grid */}
                 <div className="space-y-2.5 pt-3 border-t border-[#1b2b3d]">
@@ -228,16 +198,12 @@ export default function VoiceAgent() {
                     <span className="text-slate-400">Avg Duration:</span>
                     <span className="text-purple-300 font-mono">{agent.avgDuration}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Cost Efficiency:</span>
-                    <span className="text-slate-300 font-mono">{agent.cost} / lead</span>
-                  </div>
                 </div>
               </div>
 
               {/* Call to action button */}
               <div className="mt-4 pt-3 border-t border-[#1b2b3d] flex items-center justify-between text-xs font-semibold text-blue-400 group-hover:text-blue-300">
-                <span>Open Voice Agent 360</span>
+                <span>View Agent 360</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>

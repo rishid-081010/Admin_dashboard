@@ -534,12 +534,9 @@ export default function Buildings() {
       {/* ── Top Header Bar ─────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1.5" style={{ fontFamily: "Georgia, serif" }}>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white" style={{ fontFamily: "Georgia, serif" }}>
             BUILDINGS &amp; COMMUNITIES
           </h1>
-          <p className="text-white/60 text-[14px]">
-            Live portfolio overview of buildings, verified units, and linked owner contacts across Dubai.
-          </p>
         </div>
 
         {/* Aggregate Stats Badges */}

@@ -122,17 +122,9 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
       {/* ── Top Header ──────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 shrink-0">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-amber-400 font-mono">
-              Data Integrity &amp; Quality Control
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
             REVIEW QUEUE
           </h1>
-          <p className="text-white/60 text-xs sm:text-sm">
-            Operational workspace to resolve building alias merges, contact conflicts, and deed evidence anomalies.
-          </p>
         </div>
 
         {/* Aggregate Health Stats */}
