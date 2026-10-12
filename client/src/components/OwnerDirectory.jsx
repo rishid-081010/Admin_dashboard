@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, SlidersHorizontal, ChevronDown, List, LayoutGrid,
   X, Building2, Phone, Mail, MapPin, ExternalLink, Share2, 
-  MoreHorizontal, UserCheck, RefreshCw
+  MoreHorizontal, UserCheck, RefreshCw, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
@@ -51,6 +51,94 @@ const PROPERTY_SUBTYPES = [
   'Duplex'
 ];
 
+// Robust name formatting helper to normalize spacing, strip stray symbols, and format title case cleanly
+function formatOwnerName(rawName, buildingName, unitNumber) {
+  if (!rawName) {
+    if (buildingName && unitNumber) {
+      const uClean = String(unitNumber).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim();
+      return `Owner (${buildingName} Unit ${uClean})`;
+    } else if (buildingName && buildingName !== 'Dubai' && buildingName !== '1') {
+      return `Property Owner (${buildingName})`;
+    }
+    return 'Verified Property Owner';
+  }
+
+  let s = String(rawName).trim();
+  const lowerRaw = s.toLowerCase();
+
+  // 1. Check dummy values first
+  if (!s || 
+      /^[\s,.;:\-_~?!@#$%^&*()[\]{}"'/]+$/.test(s) ||
+      /\?{2,}/.test(s) ||
+      ['null', 'n/a', 'na', 'none', 'unknown', 'nil', 'undefined', 'nan', '-ls', '1 nos', 'nos', '-', '--'].includes(lowerRaw)) {
+    if (buildingName && unitNumber) {
+      const uClean = String(unitNumber).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim();
+      return `Owner (${buildingName} Unit ${uClean})`;
+    } else if (buildingName && buildingName !== 'Dubai' && buildingName !== '1') {
+      return `Property Owner (${buildingName})`;
+    }
+    return 'Verified Property Owner';
+  }
+
+  // 2. Replace semicolons, underscores, pipes, and slashes with clean single spaces
+  s = s.replace(/[;_|\\/]+/g, ' ');
+
+  // 3. Replace commas with single space
+  s = s.replace(/,\s*/g, ' ');
+
+  // 4. Clean up multiple dots or dashes like "..", "--"
+  s = s.replace(/\.{2,}/g, '.').replace(/-{2,}/g, '-');
+
+  // 5. Strip leading/trailing punctuation & symbols
+  s = s.replace(/^[\s,.;:\-_~?!@#$%^&*+/|]+/, '').replace(/[\s,.;:\-_~?!@#$%^&*+/|]+$/, '').trim();
+
+  // 6. Normalize multiple spaces into a single space
+  s = s.replace(/\s+/g, ' ').trim();
+
+  // Re-check if empty after stripping
+  if (!s || s.length < 2) {
+    if (buildingName && unitNumber) {
+      const uClean = String(unitNumber).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim();
+      return `Owner (${buildingName} Unit ${uClean})`;
+    } else if (buildingName && buildingName !== 'Dubai' && buildingName !== '1') {
+      return `Property Owner (${buildingName})`;
+    }
+    return 'Verified Property Owner';
+  }
+
+  // 7. Title casing: if ALL CAPS or all lower
+  const isAllCaps = s === s.toUpperCase() && /[A-Z]/.test(s);
+  const isAllLower = s === s.toLowerCase() && /[a-z]/.test(s);
+
+  // Short legal acronyms to keep uppercase
+  const preserveAcronyms = new Set([
+    'LLC', 'L.L.C', 'L.L.C.', 'DMCC', 'PJSC', 'P.J.S.C', 'FZE', 'F.Z.E', 'FZCO', 
+    'FZ-LLC', 'LTD', 'L.T.D', 'INC', 'CORP', 'PLC', 'UAE', 'USA', 'UK', 'DWC', 
+    'REIT', 'LGT', 'DIFC', 'JLT', 'JVC'
+  ]);
+
+  s = s.split(' ').map(word => {
+    const cleanWord = word.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (preserveAcronyms.has(cleanWord) || preserveAcronyms.has(word.toUpperCase())) {
+      return word.toUpperCase();
+    }
+    if (word.includes('-')) {
+      return word.split('-').map(part => {
+        const cleanPart = part.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (preserveAcronyms.has(cleanPart)) return cleanPart;
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      }).join('-');
+    }
+
+    if (isAllCaps || isAllLower) {
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }
+    return word;
+  }).join(' ');
+
+  return s;
+}
+
 export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 'Melanie Simsiman', agentsList = [] }) {
   // ─── 1. Main Big Bar Search (Omni Search Style) ──────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,6 +171,18 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
+  const [customPageInput, setCustomPageInput] = useState('');
+  const customPageInputRef = useRef(null);
+  const totalCount = 3042722;
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+  const handleCustomPageSubmit = () => {
+    const pageNum = parseInt(customPageInput, 10);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum);
+      setCustomPageInput('');
+    }
+  };
 
   // ─── Modal / Action State ────────────────────────────────────────────────
   const [selectedOwner, setSelectedOwner] = useState(null);
@@ -280,52 +380,41 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       
       if (Array.isArray(response.data)) {
         const mapped = response.data.map(row => {
-          let cleanName = (row.full_name ? String(row.full_name).trim() : '');
-          cleanName = cleanName.replace(/^[\s,.;:\-_~?!@#$%^&*+/\\|]+/, '').replace(/[\s,.;:\-_~?!@#$%^&*+/\\|]+$/, '').trim();
-
-          const isDummy = !cleanName || 
-            /^[\s,.;:\-_~?!@#$%^&*()[\]{}"'/\\]+$/.test(cleanName) ||
-            /\?{2,}/.test(cleanName) ||
-            ['null', 'n/a', 'na', 'none', 'unknown', 'nil', 'undefined', 'nan', '-ls', '1 nos', 'nos'].includes(cleanName.toLowerCase());
-
-          if (isDummy) {
-            if (row.building_name && row.unit_number) {
-              const uClean = String(row.unit_number).replace(/[\s\-_/]+$/, '').trim();
-              cleanName = `Owner (${row.building_name} Unit ${uClean})`;
-            } else if (row.building_name) {
-              cleanName = `Property Owner (${row.building_name})`;
-            } else {
-              cleanName = 'Verified Property Owner';
-            }
+          let cleanUnit = row.unit_number ? String(row.unit_number).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim() : null;
+          let cleanBuilding = row.building_name ? String(row.building_name).trim() : 'Dubai';
+          if (cleanBuilding === '1' || cleanBuilding.toLowerCase() === 'null') {
+            cleanBuilding = row.master_area || 'Dubai';
           }
+          let cleanName = formatOwnerName(row.full_name, cleanBuilding, cleanUnit);
 
           return {
             id: row.owner_id ? String(row.owner_id) : 'UnknownID',
             lead_id: row.lead_id ? String(row.lead_id) : (row.owner_id ? String(row.owner_id) : 'LEAD-0000000'),
             name: cleanName,
-          building: row.building_name ? String(row.building_name) : 'N/A',
-          area: row.master_area ? String(row.master_area) : 'Dubai',
-          phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
-          email: row.email ? String(row.email) : 'N/A',
-          units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
-          unit_number: row.unit_number ? String(row.unit_number).replace(/[\s\-_/]+$/, '').trim() : null,
-          property_type: row.reported_property_type || null,
-          property_category: row.property_category || (row.reported_property_type && /commercial|office|shop|warehouse|industrial|hotel|showroom|store|workshop|factory/i.test(row.reported_property_type) ? 'Commercial' : 'Residential'),
-          nationality: row.nationality || null,
-          emirates_id: row.emirates_id || null,
-          passport_expiry: row.passport_expiry || null,
-          verified_purchase_price: row.verified_purchase_price || null,
-          verified_purchase_date: row.verified_purchase_date || null,
-          verified_size_sqft: row.verified_size_sqft || null,
-          vendor_source_file: row.vendor_source_file || null,
-          source: 'Verified',
-          bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
-          bitrix_status: row.bitrix_status || null,
-          assigned_agent: row.assigned_agent || null,
-          assigned_agent_id: row.assigned_agent_id || null,
-          portfolioValue: row.verified_purchase_price ? `AED ${(parseFloat(row.verified_purchase_price) / 1000000).toFixed(1)}M` : 'Standard',
-          lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
-        }; });
+            building: cleanBuilding,
+            area: row.master_area ? String(row.master_area).trim() : 'Dubai',
+            phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
+            email: row.email ? String(row.email).trim() : 'N/A',
+            units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
+            unit_number: cleanUnit,
+            property_type: row.reported_property_type || null,
+            property_category: row.property_category || (row.reported_property_type && /commercial|office|shop|warehouse|industrial|hotel|showroom|store|workshop|factory/i.test(row.reported_property_type) ? 'Commercial' : 'Residential'),
+            nationality: row.nationality || null,
+            emirates_id: row.emirates_id || null,
+            passport_expiry: row.passport_expiry || null,
+            verified_purchase_price: row.verified_purchase_price || null,
+            verified_purchase_date: row.verified_purchase_date || null,
+            verified_size_sqft: row.verified_size_sqft || null,
+            vendor_source_file: row.vendor_source_file || null,
+            source: 'Verified',
+            bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
+            bitrix_status: row.bitrix_status || null,
+            assigned_agent: row.assigned_agent || null,
+            assigned_agent_id: row.assigned_agent_id || null,
+            portfolioValue: row.verified_purchase_price ? `AED ${(parseFloat(row.verified_purchase_price) / 1000000).toFixed(1)}M` : 'Standard',
+            lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
+          };
+        });
         setOwners(mapped);
       } else {
         setOwners([]);
@@ -911,15 +1000,15 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       {viewMode === 'list' ? (
         <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden">
           <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
-            <table className="w-full text-left border-collapse text-[14px]">
+            <table className="w-full text-left border-collapse text-[13.5px]">
               <thead className="bg-[#071322] border-b border-[#233549] text-xs uppercase tracking-wider text-slate-400 sticky top-0 z-20 shadow-md shadow-black/40">
                 <tr>
-                  <th className="px-5 py-4 font-semibold bg-[#071322]">Lead ID &amp; Owner</th>
-                  <th className="px-5 py-4 font-semibold bg-[#071322]">Phone &amp; Email</th>
-                  <th className="px-5 py-4 font-semibold bg-[#071322]">Property &amp; Unit</th>
-                  <th className="px-5 py-4 font-semibold bg-[#071322]">Assigned Agent</th>
-                  <th className="px-5 py-4 font-semibold bg-[#071322]">Bitrix ID / Status</th>
-                  <th className="px-5 py-4 font-semibold text-right bg-[#071322]">Residential / Commercial</th>
+                  <th className="w-[28%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Lead ID &amp; Owner</th>
+                  <th className="w-[18%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Phone &amp; Email</th>
+                  <th className="w-[22%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Property &amp; Unit</th>
+                  <th className="w-[13%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Assigned Agent</th>
+                  <th className="w-[11%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Bitrix ID / Status</th>
+                  <th className="w-[8%] px-5 py-3.5 font-semibold text-right bg-[#071322] align-middle">Category</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1b2b3d]">
@@ -934,25 +1023,25 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   return (
                     <tr 
                       key={owner.id} 
-                      className="hover:bg-[#102035] transition-colors group cursor-pointer" 
+                      className="hover:bg-[#102035] transition-colors group cursor-pointer border-b border-[#1b2b3d]/60 last:border-b-0 h-[68px]" 
                       onClick={() => setSelectedOwner(owner)}
                     >
                       {/* 1. Lead ID & Owner Name */}
-                      <td className="px-5 py-4 font-medium text-white">
+                      <td className="px-5 py-3 font-medium text-white align-middle">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs shrink-0 shadow-sm">
                             {owner.name ? (String(owner.name).match(/[a-zA-Z0-9]/) || ['O'])[0].toUpperCase() : 'O'}
                           </div>
-                          <div>
-                            <div className="font-semibold text-white/95 group-hover:text-blue-400 transition-colors">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white/95 group-hover:text-blue-400 transition-colors truncate text-sm leading-snug">
                               {owner.name}
                             </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold">
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold tracking-tight">
                                 {owner.lead_id}
                               </span>
                               {owner.property_type && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider font-semibold">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider font-semibold truncate max-w-[140px]">
                                   {owner.property_type}
                                 </span>
                               )}
@@ -962,34 +1051,34 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 2. Phone & Email */}
-                      <td className="px-5 py-4">
-                        <div className="space-y-1 text-xs">
-                          <div className="flex items-center gap-1.5 text-white/80">
-                            <Phone className="w-3 h-3 text-white/40 shrink-0" />
-                            <span className="font-mono">{owner.phone}</span>
+                      <td className="px-5 py-3 align-middle">
+                        <div className="flex flex-col justify-center space-y-1 text-xs">
+                          <div className="flex items-center gap-1.5 text-white/85">
+                            <Phone className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                            <span className="font-mono tracking-tight">{owner.phone}</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-white/50">
-                            <Mail className="w-3 h-3 text-white/40 shrink-0" />
-                            <span className="truncate max-w-[140px]">{owner.email}</span>
+                            <Mail className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                            <span className="truncate max-w-[160px]">{owner.email}</span>
                           </div>
                         </div>
                       </td>
 
                       {/* 3. Property & Unit */}
-                      <td className="px-5 py-4">
-                        <div className="space-y-1 text-xs">
+                      <td className="px-5 py-3 align-middle">
+                        <div className="flex flex-col justify-center space-y-1 text-xs">
                           <div className="font-medium text-white/90 flex items-center gap-1.5">
-                            <Building2 className="w-3 h-3 text-blue-400 shrink-0" />
-                            <span>{owner.building}</span>
+                            <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span className="truncate max-w-[190px] font-medium">{owner.building}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-white/50">
+                          <div className="flex items-center gap-2 text-white/50 flex-wrap">
                             {owner.unit_number && (
-                              <span className="px-1.5 py-0.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-300 font-mono text-[10px] font-bold">
+                              <span className="px-1.5 py-0.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-300 font-mono text-[10px] font-bold shrink-0">
                                 Unit {owner.unit_number}
                               </span>
                             )}
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-white/40" />
+                            <span className="flex items-center gap-1 truncate text-slate-300">
+                              <MapPin className="w-3 h-3 text-white/40 shrink-0" />
                               {owner.area}
                             </span>
                           </div>
@@ -997,13 +1086,13 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 4. Assigned Agent */}
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3 align-middle">
                         {owner.assigned_agent ? (
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-[10px] shrink-0">
                               {owner.assigned_agent.charAt(0)}
                             </div>
-                            <span className="text-xs font-semibold text-white/90 truncate max-w-[150px]">
+                            <span className="text-xs font-semibold text-white/90 truncate max-w-[140px]">
                               {owner.assigned_agent}
                             </span>
                           </div>
@@ -1015,10 +1104,10 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 5. Bitrix ID / Status */}
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3 align-middle">
                         {owner.bitrix_status ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold w-fit">
+                          <div className="flex flex-col justify-center gap-0.5">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold w-fit">
                               {BITRIX_STATUSES.find(s => s.id === owner.bitrix_status)?.name || owner.bitrix_status}
                             </span>
                             {owner.bitrix_id && (
@@ -1051,7 +1140,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 6. Residential / Commercial */}
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-5 py-3 text-right align-middle">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
                           owner.property_category === 'Commercial'
                             ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
@@ -1069,58 +1158,135 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           
           {/* Pagination Footer */}
           <div className="p-4 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-400">
-            <span>Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + owners.length} of 3.04M owner records</span>
-            <div className="flex gap-1.5">
+            <span>
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + owners.length} of {totalCount.toLocaleString()} owner records (Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()})
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                 disabled={currentPage === 1} 
-                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30"
+                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
               >
                 Previous
               </button>
               
+              {/* First Page */}
               <button 
                 onClick={() => setCurrentPage(1)} 
-                className={`px-3 py-1 rounded-md font-medium ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white transition-colors'}`}
+                className={`px-3 py-1 rounded-md text-xs font-medium ${currentPage === 1 ? 'bg-blue-600 text-white shadow-sm' : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white transition-colors'}`}
               >
                 1
               </button>
               
-              {currentPage > 3 && <span className="px-1.5 py-1 text-slate-500">...</span>}
+              {/* Ellipsis if beyond page 3 */}
+              {currentPage > 3 && (
+                <button 
+                  onClick={() => customPageInputRef.current?.focus()} 
+                  title="Click to jump to custom page"
+                  className="px-1.5 py-1 text-slate-500 hover:text-slate-300 text-xs transition-colors cursor-pointer"
+                >
+                  ...
+                </button>
+              )}
+              
+              {/* Preceding page */}
               {currentPage > 2 && (
                 <button 
                   onClick={() => setCurrentPage(currentPage - 1)} 
-                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors"
+                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white text-xs font-medium transition-colors"
                 >
                   {currentPage - 1}
                 </button>
               )}
-              {currentPage !== 1 && (
-                <button className="px-3 py-1 bg-blue-600 text-white rounded-md font-medium">
+
+              {/* Current page (if not first and not last) */}
+              {currentPage !== 1 && currentPage !== totalPages && (
+                <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs font-medium shadow-sm">
                   {currentPage}
                 </button>
               )}
               
-              <button 
-                onClick={() => setCurrentPage(currentPage + 1)} 
-                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors"
-              >
-                {currentPage + 1}
-              </button>
-              <button 
-                onClick={() => setCurrentPage(currentPage + 2)} 
-                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors"
-              >
-                {currentPage + 2}
-              </button>
+              {/* Following page */}
+              {currentPage < totalPages - 1 && (
+                <button 
+                  onClick={() => setCurrentPage(currentPage + 1)} 
+                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white text-xs font-medium transition-colors"
+                >
+                  {currentPage + 1}
+                </button>
+              )}
+
+              {/* Second following page if near start */}
+              {currentPage === 1 && totalPages > 2 && (
+                <button 
+                  onClick={() => setCurrentPage(2)} 
+                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white text-xs font-medium transition-colors"
+                >
+                  2
+                </button>
+              )}
+              {currentPage === 1 && totalPages > 3 && (
+                <button 
+                  onClick={() => setCurrentPage(3)} 
+                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white text-xs font-medium transition-colors"
+                >
+                  3
+                </button>
+              )}
               
-              <span className="px-1.5 py-1 text-slate-500">...</span>
+              {/* Ellipsis if not near end */}
+              {currentPage < totalPages - 2 && (
+                <button 
+                  onClick={() => customPageInputRef.current?.focus()} 
+                  title="Click to jump to custom page"
+                  className="px-1.5 py-1 text-slate-500 hover:text-slate-300 text-xs transition-colors cursor-pointer"
+                >
+                  ...
+                </button>
+              )}
+
+              {/* Last Page */}
+              {totalPages > 1 && currentPage !== 1 && (
+                <button 
+                  onClick={() => setCurrentPage(totalPages)} 
+                  className={`px-3 py-1 rounded-md text-xs font-medium ${currentPage === totalPages ? 'bg-blue-600 text-white shadow-sm' : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white transition-colors'}`}
+                >
+                  {totalPages.toLocaleString()}
+                </button>
+              )}
+
               <button 
-                onClick={() => setCurrentPage(currentPage + 1)} 
-                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                disabled={currentPage >= totalPages} 
+                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
               >
                 Next
               </button>
+
+              {/* Custom Page Input Box */}
+              <div className="flex items-center gap-1.5 ml-2 pl-2.5 border-l border-[#233549]">
+                <span className="text-xs text-slate-400 whitespace-nowrap font-medium">Go to:</span>
+                <input
+                  ref={customPageInputRef}
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={customPageInput}
+                  onChange={(e) => setCustomPageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCustomPageSubmit();
+                  }}
+                  placeholder="Page #"
+                  className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  onClick={handleCustomPageSubmit}
+                  disabled={!customPageInput || isNaN(parseInt(customPageInput, 10))}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm cursor-pointer"
+                >
+                  Go
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1246,22 +1412,58 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           </div>
 
           {/* Grid View Pagination Footer */}
-          <div className="p-3 border-t border-white/10 bg-black/20 flex items-center justify-between text-xs text-white/60">
-            <span>Showing 1 to {owners.length} of 3.04M owners</span>
-            <div className="flex gap-2">
+          <div className="p-3 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+            <span>
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + owners.length} of {totalCount.toLocaleString()} owners (Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()})
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                 disabled={currentPage === 1}
-                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors disabled:opacity-30"
+                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
               >
                 Previous
               </button>
               <button 
-                onClick={() => setCurrentPage(currentPage + 1)}
-                className="px-3 py-1 bg-white/5 border border-white/10 rounded-md hover:text-white transition-colors"
+                onClick={() => setCurrentPage(1)} 
+                className={`px-3 py-1 rounded-md text-xs font-medium ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white transition-colors'}`}
+              >
+                1
+              </button>
+              {currentPage !== 1 && (
+                <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs font-medium">
+                  {currentPage}
+                </button>
+              )}
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
               >
                 Next
               </button>
+              <div className="flex items-center gap-1.5 ml-1.5 pl-2 border-l border-[#233549]">
+                <span className="text-slate-400 text-xs">Go to:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={customPageInput}
+                  onChange={(e) => setCustomPageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCustomPageSubmit();
+                  }}
+                  placeholder="Page #"
+                  className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors"
+                />
+                <button
+                  onClick={handleCustomPageSubmit}
+                  disabled={!customPageInput || isNaN(parseInt(customPageInput, 10))}
+                  className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30"
+                >
+                  Go
+                </button>
+              </div>
             </div>
           </div>
         </div>
