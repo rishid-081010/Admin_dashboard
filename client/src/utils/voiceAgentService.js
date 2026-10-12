@@ -376,7 +376,123 @@ export async function fetchVoiceAgent360(assistantId, filterParams, page = 1, pa
   };
 }
 
-// Fetch Live Immediate Activities from Supabase vapi_call_logs joined with owner_intelligence_leads
+// Helper: Check if lead has confirmed positive intent to buy, sell, or rent and needs broker action
+function isLeadReadyAndHot(c) {
+  const status = (c.voice_call_status || '').toLowerCase();
+  const note = (c.note || '').toLowerCase();
+  const summary = (c.summary || '').toLowerCase();
+
+  // 1. Strict Exclusions: Cold pickups, voicemails, no answers, rejections, or far future
+  const negativePhrases = [
+    'no action', 'no answer', 'did_not_answer', 'not interested', 
+    'declined both', 'declined to discuss', 'call ended prematurely', 
+    'ended prematurely', 'in 2028', 'next year', 'not ready for at least', 
+    'busy', 'voicemail', 'wrong number', 'silence before', 'dnp', 'hung up'
+  ];
+  for (const neg of negativePhrases) {
+    if (status.includes(neg) || note.includes(neg) || summary.includes(neg)) {
+      return false;
+    }
+  }
+
+  // 2. Strict Inclusions: Must express intent to sell, rent, buy, or request price / availability callback
+  const isAwaiting = status.includes('awaiting availability');
+  const isPositiveNote = note.includes('positive') || 
+                         note.includes('wants to sell') || 
+                         note.includes('wants to rent') || 
+                         note.includes('ready to buy') || 
+                         note.includes('open to selling') || 
+                         note.includes('open to rent') || 
+                         note.includes('for sale and rent') ||
+                         note.includes('expects') ||
+                         note.includes('callback') ||
+                         note.includes('whatsapp');
+
+  const isPositiveSummary = summary.includes('open to selling') || 
+                            summary.includes('looking to rent') || 
+                            summary.includes('interested in selling') || 
+                            summary.includes('interested in buying') || 
+                            summary.includes('wishes to rent out');
+
+  return (isAwaiting && (isPositiveNote || isPositiveSummary || note.length > 10)) || isPositiveNote || isPositiveSummary;
+}
+
+// Helper: Determine badge and transaction intent
+function determineBadgeAndIntent(call) {
+  const specificText = `${call.note || ''} ${call.summary || ''}`.toLowerCase();
+  const hasBuy = specificText.includes('buy') || specificText.includes('cash buyer') || specificText.includes('purchase');
+  const hasSell = specificText.includes('sell') || specificText.includes('selling') || specificText.includes('for sale');
+  const hasRent = specificText.includes('rent') || specificText.includes('renting') || specificText.includes('lease');
+
+  if (hasBuy && hasSell) {
+    return {
+      badge: 'Buy & Sell',
+      badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      intent: 'Dual Transaction'
+    };
+  }
+  if (hasBuy) {
+    return {
+      badge: 'Ready to Buy',
+      badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      intent: 'Buyer'
+    };
+  }
+  if (hasSell && !hasRent) {
+    return {
+      badge: 'Ready to Sell',
+      badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+      intent: 'Seller'
+    };
+  }
+  if (hasRent && !hasSell) {
+    return {
+      badge: 'Ready to Rent',
+      badgeStyle: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+      intent: 'Rental Listing'
+    };
+  }
+  if (hasSell && hasRent) {
+    return {
+      badge: 'Rent or Sell',
+      badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      intent: 'Rent or Sell'
+    };
+  }
+  return {
+    badge: 'Hot Lead',
+    badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    intent: 'Action ASAP'
+  };
+}
+
+// Helper: Extract clean property/unit title
+function extractPropertyTitle(call, owner) {
+  if (owner.building_name && isNaN(owner.building_name) && owner.building_name !== owner.master_area) {
+    return `${owner.building_name}${owner.unit_number ? ` · Unit ${owner.unit_number}` : ''}`;
+  }
+
+  // Check if note mentions building
+  const note = call.note || '';
+  const match = note.match(/(?:at|for|unit at)\s+([A-Za-z0-9\s'–-]+?)(?:,|\.|\s+expects|\s+for\s+\d|\s+open|\s+vacant|$)/i);
+  if (match && match[1] && match[1].trim().length > 3) {
+    const bName = match[1].trim();
+    if (owner.unit_number) return `${bName} · Unit ${owner.unit_number}`;
+    return bName;
+  }
+
+  if (owner.building_name && isNaN(owner.building_name)) {
+    return `${owner.building_name}${owner.unit_number ? ` · Unit ${owner.unit_number}` : ''}`;
+  }
+
+  if (call.customer_name) {
+    return `${call.customer_name} · Hot Inquiry`;
+  }
+
+  return `Direct Owner Lead (${call.customer_phone || 'UAE'})`;
+}
+
+// Fetch Live Immediate Activities: ONLY verified leads ready to buy, sell, or rent
 export async function fetchImmediateActivities() {
   const headers = {
     'apikey': SUPABASE_KEY,
@@ -384,28 +500,43 @@ export async function fetchImmediateActivities() {
   };
 
   try {
-    // 1. Fetch calls with summary (rich conversations) and answered calls (duration >= 15s)
-    const [sumRes, durRes] = await Promise.all([
-      fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?summary=not.is.null&order=created_at.desc&limit=12`, { headers }),
-      fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?duration_seconds=gte.15&order=created_at.desc&limit=20`, { headers })
+    // 1. Specifically query for awaiting availability and verified positive calls
+    const [awaitingRes, positiveRes] = await Promise.all([
+      fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?voice_call_status=ilike.*awaiting*&order=created_at.desc&limit=50`, { headers }),
+      fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?note=ilike.*positive*&order=created_at.desc&limit=50`, { headers })
     ]);
 
-    const sumCalls = sumRes.ok ? await sumRes.json() : [];
-    const durCalls = durRes.ok ? await durRes.json() : [];
+    const awaitingList = awaitingRes.ok ? await awaitingRes.json() : [];
+    const positiveList = positiveRes.ok ? await positiveRes.json() : [];
 
-    // Prioritize calls with rich summaries or qualified outcomes, then longer durations
-    const seen = new Set();
-    const rawList = [];
-    for (const c of [...sumCalls, ...durCalls]) {
-      if (!seen.has(c.id)) {
-        seen.add(c.id);
-        rawList.push(c);
+    // Deduplicate calls by call id
+    const seenCalls = new Set();
+    const allCalls = [];
+    for (const c of [...awaitingList, ...positiveList]) {
+      if (!seenCalls.has(c.id)) {
+        seenCalls.add(c.id);
+        allCalls.push(c);
       }
     }
 
-    rawList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    const topCalls = rawList.slice(0, 6);
+    // Filter strictly for verified hot leads
+    const hotCalls = allCalls.filter(isLeadReadyAndHot);
+    hotCalls.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+    // Deduplicate by customer phone so each lead is represented by their most recent actionable call
+    const seenPhones = new Set();
+    const deduplicatedCalls = [];
+    for (const c of hotCalls) {
+      const phone = c.customer_phone;
+      if (phone && !seenPhones.has(phone)) {
+        seenPhones.add(phone);
+        deduplicatedCalls.push(c);
+      } else if (!phone) {
+        deduplicatedCalls.push(c);
+      }
+    }
+
+    const topCalls = deduplicatedCalls.slice(0, 6);
     if (topCalls.length === 0) return [];
 
     // 2. Fetch owner intelligence details for matching customer phone numbers
@@ -421,7 +552,12 @@ export async function fetchImmediateActivities() {
         if (ownersRes.ok) {
           const owners = await ownersRes.json();
           (owners || []).forEach(o => {
-            if (o.phone_normalized) ownersMap[o.phone_normalized] = o;
+            if (o.phone_normalized) {
+              const prev = ownersMap[o.phone_normalized];
+              if (!prev || (o.building_name && isNaN(o.building_name) && o.building_name.length > (prev.building_name || '').length)) {
+                ownersMap[o.phone_normalized] = o;
+              }
+            }
           });
         }
       } catch (err) {
@@ -429,7 +565,7 @@ export async function fetchImmediateActivities() {
       }
     }
 
-    // 3. Format into activity cards
+    // 3. Format into actionable hot lead cards
     return topCalls.map((c) => {
       const owner = ownersMap[c.customer_phone] || {};
       const agentConfig = AGENTS_CONFIG[c.assistantId];
@@ -437,49 +573,24 @@ export async function fetchImmediateActivities() {
       const durSec = Number(c.duration_seconds) || 0;
       const durStr = durSec > 0 ? formatDuration(durSec) : 'Connected';
 
-      // Title determination
-      let title = '';
-      if (owner.building_name) {
-        title = `${owner.building_name}${owner.unit_number ? ` (Unit ${owner.unit_number})` : ''}`;
-      } else if (c.customer_name) {
-        title = `${c.customer_name} · Owner Inquiry`;
-      } else {
-        title = `Property Owner (${c.customer_phone || 'Private'})`;
+      const { badge, badgeStyle, intent } = determineBadgeAndIntent(c);
+      const title = extractPropertyTitle(c, owner);
+
+      // Clean owner name
+      let ownerName = owner.full_name || c.customer_name || 'Property Owner';
+      if (ownerName.length > 30) {
+        const parts = ownerName.split(' ');
+        if (parts.length > 3) {
+          ownerName = parts.slice(0, 3).join(' ');
+        }
       }
 
-      // Subtitle determination
-      let subtitle = '';
-      if (owner.master_area) {
-        subtitle = `${owner.full_name || c.customer_name || 'Property Owner'} · ${owner.master_area}`;
-      } else {
-        subtitle = `${c.customer_name || 'Owner'} (${c.customer_phone || ''})`;
-      }
+      const area = owner.master_area && isNaN(owner.master_area) ? owner.master_area : 'Dubai';
+      const subtitle = `${ownerName} · ${area} · ${c.customer_phone || ''}`;
 
-      // Intent & Badge
-      let badge = 'Call Answered';
-      let badgeStyle = 'bg-sky-500/20 text-sky-300 border-sky-500/40';
-      const statusLower = (c.voice_call_status || '').toLowerCase();
-
-      if (c.summary) {
-        badge = 'AI Qualified';
-        badgeStyle = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-      } else if (statusLower.includes('awaiting') || statusLower.includes('qualified') || statusLower.includes('rent') || statusLower.includes('sell')) {
-        badge = 'Hot Lead';
-        badgeStyle = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-      } else if (statusLower.includes('contacted')) {
-        badge = 'Contacted';
-        badgeStyle = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
-      }
-
-      // Description / Summary
-      let description = '';
-      if (c.summary) {
-        description = c.summary;
-      } else if (c.voice_call_status) {
-        description = `${owner.full_name || c.customer_name || 'Owner'} answered call (${durStr}). Outcome: ${c.voice_call_status}.`;
-      } else {
-        description = `${owner.full_name || c.customer_name || 'Owner'} connected with ${agentName} for ${durStr}. Ready for broker review.`;
-      }
+      // Clean, actionable description
+      let description = c.note ? c.note.trim() : (c.summary ? c.summary.trim() : 'Confirmed transaction intent. Urgent human broker intervention required.');
+      description = description.charAt(0).toUpperCase() + description.slice(1);
 
       // Relative time calculation
       let time = 'Recently';
@@ -493,7 +604,11 @@ export async function fetchImmediateActivities() {
           if (diffHours < 24) time = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
           else {
             const diffDays = Math.floor(diffHours / 24);
-            time = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+            if (diffDays === 1) time = 'Yesterday';
+            else if (diffDays < 7) time = `${diffDays} days ago`;
+            else {
+              time = new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
           }
         }
       }
@@ -504,13 +619,17 @@ export async function fetchImmediateActivities() {
         subtitle,
         badge,
         badgeStyle,
+        intent,
         description,
         time,
         agent: `${agentName} · ${durStr}`,
         targetTab: 'voice',
         actionLabel: 'Open Voice 360',
         recordingUrl: c.recording_url,
-        phone: c.customer_phone
+        phone: c.customer_phone,
+        ownerName,
+        buildingName: owner.building_name,
+        unitNumber: owner.unit_number
       };
     });
   } catch (err) {
