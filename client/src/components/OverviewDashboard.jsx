@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   Database, PhoneCall, Flame, Bot, CheckCircle2, 
   Activity, ChevronRight, ArrowRight, RefreshCw, Zap,
-  Building2, Radio, ExternalLink
+  Building2, Radio, ExternalLink, ChevronDown, Check
 } from 'lucide-react';
-import { fetchVoiceOverview } from '../utils/voiceAgentService';
+import { fetchVoiceOverview, fetchImmediateActivities } from '../utils/voiceAgentService';
+import { fetchN8nWorkflows } from '../utils/n8nService';
 
 export default function OverviewDashboard({ onNavigate }) {
   const getTodayDubai = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
@@ -20,6 +21,27 @@ export default function OverviewDashboard({ onNavigate }) {
     agent2: { name: 'James', role: 'Portfolio & Investor Outreach', callsToday: 0, health: 'Active Running' },
     agent3: { name: 'Aisha', role: 'Prime Community Specialist', callsToday: 0, health: 'Standby' }
   });
+
+  // Live Immediate Activities from Supabase
+  const [immediateActivities, setImmediateActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+
+  // Live n8n Workflows
+  const [n8nData, setN8nData] = useState({
+    summary: { activeWorkflows: 0, totalExecutionsToday: 0, healthyWorkflows: 0, errorWorkflows: 0 },
+    workflows: []
+  });
+  const [loadingN8n, setLoadingN8n] = useState(true);
+  const [showAllWorkflows, setShowAllWorkflows] = useState(false);
+
+  const formatTimeAgo = (isoDate) => {
+    if (!isoDate) return 'Awaiting trigger';
+    const diffSec = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
+    if (diffSec < 60) return 'Just now';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return `${Math.floor(diffSec / 86400)}d ago`;
+  };
 
   const updateVoiceStats = (res) => {
     if (!res) return;
@@ -69,196 +91,48 @@ export default function OverviewDashboard({ onNavigate }) {
     });
   };
 
-  // Fetch live daily telemetry from Supabase
-  useEffect(() => {
-    let isMounted = true;
-    async function loadTelemetry() {
-      try {
-        setLoading(true);
-        const res = await fetchVoiceOverview({
-          timeFilter: 'Daily',
-          selectedDate
-        });
+  const loadAllTelemetry = async () => {
+    try {
+      setLoading(true);
+      const [resVoice, resActivities, resN8n] = await Promise.allSettled([
+        fetchVoiceOverview({ timeFilter: 'Daily', selectedDate }),
+        fetchImmediateActivities(),
+        fetchN8nWorkflows()
+      ]);
 
-        if (isMounted && res) {
-          updateVoiceStats(res);
-        }
-      } catch (err) {
-        console.warn('Error loading Supabase live counters:', err);
-      } finally {
-        if (isMounted) setLoading(false);
+      if (resVoice.status === 'fulfilled' && resVoice.value) {
+        updateVoiceStats(resVoice.value);
       }
+      if (resActivities.status === 'fulfilled' && Array.isArray(resActivities.value)) {
+        setImmediateActivities(resActivities.value);
+      }
+      if (resN8n.status === 'fulfilled' && resN8n.value) {
+        setN8nData(resN8n.value);
+      }
+    } catch (err) {
+      console.warn('Error loading live telemetry:', err);
+    } finally {
+      setLoading(false);
+      setLoadingActivities(false);
+      setLoadingN8n(false);
     }
+  };
 
-    loadTelemetry();
-    return () => { isMounted = false; };
+  // Fetch live daily telemetry from Supabase & n8n
+  useEffect(() => {
+    loadAllTelemetry();
   }, [selectedDate]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const res = await fetchVoiceOverview({
-        timeFilter: 'Daily',
-        selectedDate
-      });
-      if (res) {
-        updateVoiceStats(res);
-      }
+      await loadAllTelemetry();
     } catch (err) {
       console.warn('Failed refreshing telemetry:', err);
     } finally {
       setTimeout(() => setRefreshing(false), 400);
     }
   };
-
-  // Immediate Hot Leads Feed
-  const IMMEDIATE_ACTIVITIES = [
-    {
-      id: 'imm-1',
-      title: 'Palm Jumeirah Villa (Frond N)',
-      subtitle: 'Open to exclusive listing at AED 28.5M',
-      intent: 'Hot Seller Ready to List',
-      badge: 'Hot Seller',
-      badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-      description: 'Owner confirmed willingness to list. Sarah qualified on 3m 42s call. Exclusive mandate draft requested.',
-      time: '14 mins ago',
-      agent: 'Sarah (Agent 1)',
-      targetTab: 'owners',
-      actionLabel: 'Open Owner 360'
-    },
-    {
-      id: 'imm-2',
-      title: 'Burj Crown Downtown (2BR Unit 1804)',
-      subtitle: 'Cash investor ready to buy immediately',
-      intent: 'Hot Buyer Ready to Buy',
-      badge: 'Hot Buyer',
-      badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      description: 'Investor with pre-allocated AED 4.2M capital seeking high-floor Burj Khalifa view. James qualified.',
-      time: '28 mins ago',
-      agent: 'James (Agent 2)',
-      targetTab: 'owners',
-      actionLabel: 'Assign Broker'
-    },
-    {
-      id: 'imm-3',
-      title: 'Burlington Commercial Tower (Unit 1402)',
-      subtitle: 'Commercial tenant renegotiation / sale inquiry',
-      intent: 'Commercial Re-evaluation',
-      badge: 'Commercial Lead',
-      badgeStyle: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
-      description: 'Corporate owner reviewing portfolio reallocation. Unit 1402 tenant lease expiring next month.',
-      time: '45 mins ago',
-      agent: 'Aisha (Agent 3)',
-      targetTab: 'buildings',
-      actionLabel: 'View Building'
-    },
-    {
-      id: 'imm-4',
-      title: 'Sobha Hartland (Forest Villa 12)',
-      subtitle: 'Off-plan handover investor seeking tenant or exit',
-      intent: 'Dual Intent',
-      badge: 'Dual Intent',
-      badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
-      description: 'Ready to lease at AED 420k/yr or exit at AED 11.5M net. Assigned to Melanie Simsiman.',
-      time: '1 hour ago',
-      agent: 'Sarah (Agent 1)',
-      targetTab: 'owners',
-      actionLabel: 'Open Owner 360'
-    },
-    {
-      id: 'imm-5',
-      title: 'Dubai Hills Estate (5BR Villa)',
-      subtitle: 'Off-market listing opportunity at AED 18.7M',
-      intent: 'Off-Market Listing',
-      badge: 'Hot Seller',
-      badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-      description: 'Owner prefers discreet sale. Pre-approved valuation at AED 18.7M. Ready for private viewing arrangement.',
-      time: '2 hours ago',
-      agent: 'James (Agent 2)',
-      targetTab: 'owners',
-      actionLabel: 'Open Owner 360'
-    },
-    {
-      id: 'imm-6',
-      title: 'One Za\'abeel (Unit 2205)',
-      subtitle: 'International investor relocating from London',
-      intent: 'International Buyer',
-      badge: 'Hot Buyer',
-      badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      description: 'HNW client pre-approved for AED 12M+. Seeking branded residences with Burj Khalifa views. Arriving Dubai next week.',
-      time: '3 hours ago',
-      agent: 'Aisha (Agent 3)',
-      targetTab: 'owners',
-      actionLabel: 'Assign Broker'
-    }
-  ];
-
-  // Automated pipeline workflows
-  const WORKFLOWS = [
-    {
-      id: 'wf-1',
-      name: 'AI Voice Outbound Telephony Dispatcher',
-      description: 'Vapi + Twilio outbound dialer cluster and live speech synthesis',
-      executionsToday: 1000,
-      status: 'Positive',
-      type: 'Telephony Engine',
-      latency: '320ms'
-    },
-    {
-      id: 'wf-2',
-      name: 'Claude Haiku Sentiment & Qualification Engine',
-      description: 'Real-time call transcript evaluation, intent extraction, and qualification scoring',
-      executionsToday: 1000,
-      status: 'Positive',
-      type: 'LLM Event Driven',
-      latency: '180ms'
-    },
-    {
-      id: 'wf-3',
-      name: 'Bitrix24 CRM Bidirectional Webhook Sync',
-      description: 'Real-time lead ingestion, stage progression, and call summary sync',
-      executionsToday: 1248,
-      status: 'Positive',
-      type: 'REST Webhook',
-      latency: '95ms'
-    },
-    {
-      id: 'wf-4',
-      name: 'Title Deed & Emirates ID OCR Pipeline',
-      description: 'Document intelligence, ownership identity proof, and NOC intent detection',
-      executionsToday: 84,
-      status: 'Positive',
-      type: 'Document Intelligence',
-      latency: '2.1s'
-    },
-    {
-      id: 'wf-5',
-      name: 'AI Spreadsheet Cleaner & Normalizer',
-      description: 'Header fuzzy matching, phone formatting, and duplicate quarantining across 1.38k catalogs',
-      executionsToday: 312,
-      status: 'Positive',
-      type: 'Data Factory',
-      latency: '890ms'
-    },
-    {
-      id: 'wf-6',
-      name: 'DLD Market Transaction Price Feed',
-      description: 'Dubai Land Department official transactions registry indexing and valuation benchmark',
-      executionsToday: 62,
-      status: 'Positive',
-      type: 'Hourly Scheduled',
-      latency: '410ms'
-    },
-    {
-      id: 'wf-7',
-      name: 'Broker Catalog Parquet Ingestion',
-      description: 'Supabase storage catalog sync tracking 1,382 raw spreadsheet files and sheets',
-      executionsToday: 1382,
-      status: 'Positive',
-      type: 'Storage Sync',
-      latency: '115ms'
-    }
-  ];
 
   return (
     <div className="w-full flex flex-col gap-6 select-text text-white font-sans animate-fade-in pr-1 pb-16">
@@ -453,7 +327,7 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── 4. IMMEDIATE ACTIVITY (HOT LEADS FEED) ─────────────────────────── */}
+      {/* ─── 4. IMMEDIATE ACTIVITY (LIVE HOT LEADS FEED FROM SUPABASE) ─────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -464,61 +338,77 @@ export default function OverviewDashboard({ onNavigate }) {
               </h3>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              High-intent buyers & sellers requiring immediate broker action.
+              Live qualified telephony leads, owner responses, and active conversation transcripts from Supabase.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
-              6 Hot Leads
+              {loadingActivities ? 'Syncing...' : `${immediateActivities.length} Live Hot Leads`}
             </span>
             <button
-              onClick={() => onNavigate && onNavigate('owners')}
+              onClick={() => onNavigate && onNavigate('voice')}
               className="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] transition-all flex items-center gap-1.5"
             >
-              <span>View all</span>
+              <span>View all call logs</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
         {/* List of immediate hot leads */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {IMMEDIATE_ACTIVITIES.map((act) => (
-            <div
-              key={act.id}
-              onClick={() => onNavigate && onNavigate(act.targetTab)}
-              className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl hover:border-[#2a4363] hover:bg-[#091728] transition-all cursor-pointer flex flex-col justify-between gap-3 group"
-            >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <h4 className="font-semibold text-white text-xs truncate group-hover:text-blue-300 transition-colors">
-                    {act.title}
-                  </h4>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${act.badgeStyle}`}>
-                    {act.badge}
+        {loadingActivities ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl animate-pulse h-36 flex flex-col justify-between">
+                <div className="h-4 bg-slate-800 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-slate-800/60 rounded w-1/2 mb-2"></div>
+                <div className="h-8 bg-slate-800/40 rounded w-full"></div>
+              </div>
+            ))}
+          </div>
+        ) : immediateActivities.length === 0 ? (
+          <div className="p-8 text-center bg-[#06111e] border border-[#1a2c42] rounded-xl text-slate-400 text-xs">
+            No hot lead events logged for this period yet.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {immediateActivities.map((act) => (
+              <div
+                key={act.id}
+                onClick={() => onNavigate && onNavigate(act.targetTab || 'voice')}
+                className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl hover:border-[#2a4363] hover:bg-[#091728] transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <h4 className="font-semibold text-white text-xs truncate group-hover:text-blue-300 transition-colors" title={act.title}>
+                      {act.title}
+                    </h4>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${act.badgeStyle}`}>
+                      {act.badge}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-amber-200/90 font-medium mb-1 truncate" title={act.subtitle}>
+                    {act.subtitle}
+                  </div>
+                  <p className="text-[11.5px] text-slate-400 line-clamp-2 leading-relaxed" title={act.description}>
+                    {act.description}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-[#1a2c42] text-[11px]">
+                  <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px]">
+                    <Bot className="w-3.5 h-3.5 text-blue-400" /> {act.agent}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    {act.time}
                   </span>
                 </div>
-
-                <div className="text-xs text-amber-200/90 font-medium mb-1">
-                  {act.subtitle}
-                </div>
-                <p className="text-[11.5px] text-slate-400 line-clamp-2 leading-relaxed">
-                  {act.description}
-                </p>
               </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-[#1a2c42] text-[11px]">
-                <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px]">
-                  <Bot className="w-3.5 h-3.5 text-blue-400" /> {act.agent}
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  {act.time}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ─── 5. SCROLL DOWN CONTENT: AGENTS FLEET DETAIL & WORKFLOW HEALTH ─── */}
@@ -662,74 +552,135 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── 6. AUTOMATED WORKFLOW HEALTH WIDGET ────────────────────────────── */}
+      {/* ─── 6. AUTOMATED WORKFLOW HEALTH WIDGET (LIVE N8N CLUSTER) ─────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-400" />
               <h3 className="text-base font-bold text-white tracking-tight">
-                Automated Workflow & Data Pipeline Health
+                Active n8n Workflows & Automation Pipelines
               </h3>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Live background sync executions, database pipelines, and OCR document processing.
+              Live bidirectional sync with n8n (<a href="https://n8n.asquared.ae" target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">n8n.asquared.ae</a>) · Published active workflows and executions today.
             </p>
           </div>
 
-          <span className="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            7 / 7 Systems Operational
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {WORKFLOWS.map((wf) => (
-            <div 
-              key={wf.id}
-              className="p-3.5 bg-[#06111e] border border-[#1a2c42] rounded-xl flex items-center justify-between gap-3 hover:border-[#2a4363] transition-colors"
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              {loadingN8n ? 'Querying n8n...' : `${n8nData.summary.activeWorkflows} Active Published · ${n8nData.summary.totalExecutionsToday} Executions Today`}
+            </span>
+            <a
+              href="https://n8n.asquared.ae"
+              target="_blank"
+              rel="noreferrer"
+              className="p-1.5 rounded-lg bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] text-slate-400 hover:text-white transition-all text-xs flex items-center gap-1"
+              title="Open n8n Console"
             >
-              <div className="flex items-start gap-2.5 min-w-0">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 ${
-                  wf.status === 'Positive' 
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                    : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                }`}>
-                  <Zap className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-white text-xs font-semibold truncate">
-                      {wf.name}
-                    </h4>
-                    <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10">
-                      {wf.type}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                    {wf.description}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0 text-right">
-                <div>
-                  <div className="text-xs font-bold text-white font-mono">
-                    {wf.executionsToday.toLocaleString()}
-                  </div>
-                  <div className="text-[9px] uppercase tracking-wider text-slate-400 font-mono">
-                    {wf.latency}
-                  </div>
-                </div>
-
-                <div className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>{wf.status}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
         </div>
+
+        {/* Active Workflows Grid */}
+        {loadingN8n ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="p-3.5 bg-[#06111e] border border-[#1a2c42] rounded-xl animate-pulse h-20"></div>
+            ))}
+          </div>
+        ) : n8nData.workflows.length === 0 ? (
+          <div className="p-6 text-center bg-[#06111e] border border-[#1a2c42] rounded-xl text-slate-400 text-xs">
+            Connecting to n8n orchestration instance...
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(showAllWorkflows ? n8nData.workflows : n8nData.workflows.slice(0, 8)).map((wf) => (
+                <a
+                  key={wf.id}
+                  href={wf.n8nUrl || `https://n8n.asquared.ae/workflow/${wf.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-3.5 bg-[#06111e] border border-[#1a2c42] rounded-xl flex items-center justify-between gap-3 hover:border-[#2a4363] hover:bg-[#091728] transition-all group"
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 ${
+                      wf.status === 'healthy' 
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                        : wf.status === 'running'
+                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                        : wf.status === 'error'
+                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                        : 'bg-slate-500/10 border-slate-500/20 text-slate-400'
+                    }`}>
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-white text-xs font-semibold truncate group-hover:text-blue-300 transition-colors" title={wf.name}>
+                          {wf.name}
+                        </h4>
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                          Active Published
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-2">
+                        <span>Workflow ID: <code className="text-slate-500">{wf.id}</code></span>
+                        <span>·</span>
+                        <span>Last run: {formatTimeAgo(wf.lastExecutedAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0 text-right">
+                    <div>
+                      <div className="text-xs font-bold text-white font-mono">
+                        {wf.executionsToday} <span className="text-[10px] text-slate-400 font-normal">runs today</span>
+                      </div>
+                      <div className="text-[9.5px] text-slate-400 font-mono">
+                        {wf.successToday > 0 ? `${wf.successToday} ok` : 'standby'}
+                      </div>
+                    </div>
+
+                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+                      wf.status === 'healthy'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : wf.status === 'running'
+                        ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                        : wf.status === 'error'
+                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                        : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        wf.status === 'healthy' ? 'bg-emerald-400 animate-pulse' :
+                        wf.status === 'running' ? 'bg-blue-400 animate-pulse' :
+                        wf.status === 'error' ? 'bg-rose-400' : 'bg-slate-400'
+                      }`} />
+                      <span className="capitalize">{wf.status || 'Active'}</span>
+                    </div>
+
+                    <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-colors" />
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {n8nData.workflows.length > 8 && (
+              <div className="mt-3.5 text-center">
+                <button
+                  onClick={() => setShowAllWorkflows(!showAllWorkflows)}
+                  className="px-4 py-2 rounded-xl bg-[#06111e] border border-[#1a2c42] hover:bg-[#091728] hover:border-[#2a4363] text-xs font-semibold text-slate-300 hover:text-white transition-all inline-flex items-center gap-1.5"
+                >
+                  <span>{showAllWorkflows ? 'Show Less Workflows' : `Show All ${n8nData.workflows.length} Active Workflows`}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllWorkflows ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
     </div>
