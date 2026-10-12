@@ -375,3 +375,147 @@ export async function fetchVoiceAgent360(assistantId, filterParams, page = 1, pa
     totalPages: Math.ceil(totalCalls / pageSize) || 1
   };
 }
+
+// Fetch Live Immediate Activities from Supabase vapi_call_logs joined with owner_intelligence_leads
+export async function fetchImmediateActivities() {
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`
+  };
+
+  try {
+    // 1. Fetch calls with summary (rich conversations) and answered calls (duration >= 15s)
+    const [sumRes, durRes] = await Promise.all([
+      fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?summary=not.is.null&order=created_at.desc&limit=12`, { headers }),
+      fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?duration_seconds=gte.15&order=created_at.desc&limit=20`, { headers })
+    ]);
+
+    const sumCalls = sumRes.ok ? await sumRes.json() : [];
+    const durCalls = durRes.ok ? await durRes.json() : [];
+
+    // Prioritize calls with rich summaries or qualified outcomes, then longer durations
+    const seen = new Set();
+    const rawList = [];
+    for (const c of [...sumCalls, ...durCalls]) {
+      if (!seen.has(c.id)) {
+        seen.add(c.id);
+        rawList.push(c);
+      }
+    }
+
+    rawList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const topCalls = rawList.slice(0, 6);
+
+    if (topCalls.length === 0) return [];
+
+    // 2. Fetch owner intelligence details for matching customer phone numbers
+    const phones = topCalls.map(c => c.customer_phone).filter(Boolean);
+    const ownersMap = {};
+    if (phones.length > 0) {
+      try {
+        const encodedPhones = phones.map(p => encodeURIComponent(p)).join(',');
+        const ownersRes = await fetch(
+          `${SUPABASE_BASE_URL}/owner_intelligence_leads?phone_normalized=in.(${encodedPhones})&select=full_name,building_name,unit_number,master_area,reported_property_type,phone_normalized`,
+          { headers }
+        );
+        if (ownersRes.ok) {
+          const owners = await ownersRes.json();
+          (owners || []).forEach(o => {
+            if (o.phone_normalized) ownersMap[o.phone_normalized] = o;
+          });
+        }
+      } catch (err) {
+        console.warn('Could not join owner_intelligence_leads:', err);
+      }
+    }
+
+    // 3. Format into activity cards
+    return topCalls.map((c) => {
+      const owner = ownersMap[c.customer_phone] || {};
+      const agentConfig = AGENTS_CONFIG[c.assistantId];
+      const agentName = agentConfig ? `${agentConfig.name} (${agentConfig.line.split(' ')[0]})` : 'Sarah (Line 1)';
+      const durSec = Number(c.duration_seconds) || 0;
+      const durStr = durSec > 0 ? formatDuration(durSec) : 'Connected';
+
+      // Title determination
+      let title = '';
+      if (owner.building_name) {
+        title = `${owner.building_name}${owner.unit_number ? ` (Unit ${owner.unit_number})` : ''}`;
+      } else if (c.customer_name) {
+        title = `${c.customer_name} · Owner Inquiry`;
+      } else {
+        title = `Property Owner (${c.customer_phone || 'Private'})`;
+      }
+
+      // Subtitle determination
+      let subtitle = '';
+      if (owner.master_area) {
+        subtitle = `${owner.full_name || c.customer_name || 'Property Owner'} · ${owner.master_area}`;
+      } else {
+        subtitle = `${c.customer_name || 'Owner'} (${c.customer_phone || ''})`;
+      }
+
+      // Intent & Badge
+      let badge = 'Call Answered';
+      let badgeStyle = 'bg-sky-500/20 text-sky-300 border-sky-500/40';
+      const statusLower = (c.voice_call_status || '').toLowerCase();
+
+      if (c.summary) {
+        badge = 'AI Qualified';
+        badgeStyle = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      } else if (statusLower.includes('awaiting') || statusLower.includes('qualified') || statusLower.includes('rent') || statusLower.includes('sell')) {
+        badge = 'Hot Lead';
+        badgeStyle = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      } else if (statusLower.includes('contacted')) {
+        badge = 'Contacted';
+        badgeStyle = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      }
+
+      // Description / Summary
+      let description = '';
+      if (c.summary) {
+        description = c.summary;
+      } else if (c.voice_call_status) {
+        description = `${owner.full_name || c.customer_name || 'Owner'} answered call (${durStr}). Outcome: ${c.voice_call_status}.`;
+      } else {
+        description = `${owner.full_name || c.customer_name || 'Owner'} connected with ${agentName} for ${durStr}. Ready for broker review.`;
+      }
+
+      // Relative time calculation
+      let time = 'Recently';
+      if (c.created_at) {
+        const diffMs = Date.now() - new Date(c.created_at).getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) time = 'Just now';
+        else if (diffMins < 60) time = `${diffMins} mins ago`;
+        else {
+          const diffHours = Math.floor(diffMins / 60);
+          if (diffHours < 24) time = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+          else {
+            const diffDays = Math.floor(diffHours / 24);
+            time = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+          }
+        }
+      }
+
+      return {
+        id: c.id,
+        title,
+        subtitle,
+        badge,
+        badgeStyle,
+        description,
+        time,
+        agent: `${agentName} · ${durStr}`,
+        targetTab: 'voice',
+        actionLabel: 'Open Voice 360',
+        recordingUrl: c.recording_url,
+        phone: c.customer_phone
+      };
+    });
+  } catch (err) {
+    console.error('Error in fetchImmediateActivities:', err);
+    return [];
+  }
+}
+
