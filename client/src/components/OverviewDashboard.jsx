@@ -5,7 +5,7 @@ import {
   Building2, Radio, ExternalLink, ChevronDown, Check,
   Phone, MessageSquare
 } from 'lucide-react';
-import { fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount } from '../utils/voiceAgentService';
+import { fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount, markLeadAsCompleted } from '../utils/voiceAgentService';
 import { fetchN8nWorkflows } from '../utils/n8nService';
 
 export default function OverviewDashboard({ onNavigate }) {
@@ -137,6 +137,20 @@ export default function OverviewDashboard({ onNavigate }) {
       console.warn('Failed refreshing telemetry:', err);
     } finally {
       setTimeout(() => setRefreshing(false), 400);
+    }
+  };
+
+  const handleCompleteLead = async (leadId, phone, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    // Optimistically remove from state immediately
+    setImmediateActivities(prev => prev.filter(act => act.id !== leadId));
+    try {
+      await markLeadAsCompleted(leadId, phone);
+    } catch (err) {
+      console.warn('Failed to mark lead as completed:', err);
     }
   };
 
@@ -311,6 +325,15 @@ export default function OverviewDashboard({ onNavigate }) {
                         <span>Call</span>
                       </a>
                     )}
+                    <button
+                      type="button"
+                      onClick={(e) => handleCompleteLead(act.id, act.phone, e)}
+                      title="Mark as completed & remove from queue"
+                      className="p-1 px-2 rounded bg-slate-800/90 hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:text-emerald-300 text-slate-300 border border-slate-700/80 flex items-center gap-1 text-[10px] font-medium transition-all group/done"
+                    >
+                      <Check className="w-3 h-3 text-slate-400 group-hover/done:text-emerald-400 transition-colors" />
+                      <span>Done</span>
+                    </button>
                   </div>
                 </div>
               </div>

@@ -433,6 +433,18 @@ export async function fetchImmediateActivities() {
   };
 
   try {
+    // Load locally marked completed leads
+    const localCompletedSet = new Set();
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('completed_action_leads') : null;
+      if (raw) {
+        const arr = JSON.parse(raw);
+        arr.forEach(id => localCompletedSet.add(id));
+      }
+    } catch (e) {
+      console.warn('Could not read completed_action_leads from localStorage:', e);
+    }
+
     // 1. Fetch calls with awaiting availability status OR high-intent keywords OR rich summaries
     const [statusRes, summaryRes] = await Promise.all([
       fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?or=(voice_call_status.ilike.*Awaiting*,note.ilike.*positive*,note.ilike.*wants to*,note.ilike.*interested*)&order=created_at.desc&limit=100`, { headers }),
@@ -458,10 +470,39 @@ export async function fetchImmediateActivities() {
     const seenPhones = new Set();
 
     for (const c of rawList) {
+      // Exclude if already marked as completed locally
+      if (localCompletedSet.has(c.id)) {
+        continue;
+      }
+
       const note = (c.note || '').trim();
       const summary = (c.summary || '').trim();
       const vStatus = (c.voice_call_status || '').trim();
       const combined = `${note} ${summary} ${vStatus}`.toLowerCase();
+
+      // Exclude if completed in database / already actioned by broker
+      if (
+        vStatus.toLowerCase().includes('completed') ||
+        vStatus.toLowerCase().includes('broker handled') ||
+        vStatus.toLowerCase().includes('action completed') ||
+        combined.includes('action completed') ||
+        combined.includes('broker handled')
+      ) {
+        continue;
+      }
+
+      // Automated Removal Algorithm:
+      // Exclude if a subsequent answered call to this owner already exists (i.e. already followed up)
+      const hasSubsequentCall = rawList.some(other =>
+        other.id !== c.id &&
+        other.customer_phone &&
+        other.customer_phone === c.customer_phone &&
+        new Date(other.created_at) > new Date(c.created_at) &&
+        (Number(other.duration_seconds) || 0) >= 10
+      );
+      if (hasSubsequentCall) {
+        continue;
+      }
 
       // Exclude all cold, unreached, or negative outcomes
       if (
@@ -717,3 +758,42 @@ export async function fetchTotalLeadsCount() {
   return 3042722;
 }
 
+// Mark a lead as completed manually by broker and persist across sessions and database
+export async function markLeadAsCompleted(callId, phone) {
+  if (!callId) return false;
+
+  // 1. Immediately persist to localStorage for instant local retention across page reloads
+  try {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('completed_action_leads');
+      let completed = raw ? JSON.parse(raw) : [];
+      if (!completed.includes(callId)) {
+        completed.push(callId);
+        localStorage.setItem('completed_action_leads', JSON.stringify(completed));
+      }
+    }
+  } catch (err) {
+    console.warn('LocalStorage write failed:', err);
+  }
+
+  // 2. Persist to Supabase database so it updates globally across all devices & users
+  try {
+    const res = await fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?id=eq.${callId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        voice_call_status: 'Action Completed - Broker Handled',
+        updated_at: new Date().toISOString()
+      })
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Supabase update failed:', err);
+    return false;
+  }
+}
