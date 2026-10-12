@@ -14,14 +14,22 @@ const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 
 const DUMMY_BUILDINGS = new Set([
-  'dubai', 'null', 'n/a', 'none', '-', '--', '0', 'undefined', 
+  'dubai', 'null', 'n/a', 'none', '-', '--', '0', '1', 'undefined', 
   'not available', 'unknown', 'na', 'n.a.', 'test', 'city of arabia'
 ]);
+
+function isDummyBuilding(name) {
+  if (!name) return true;
+  const lower = name.trim().toLowerCase();
+  if (DUMMY_BUILDINGS.has(lower)) return true;
+  if (/^[\d\W]+$/.test(lower)) return true;
+  return false;
+}
 
 // Proper formatting for building title
 function formatBuildingName(name) {
   if (!name) return 'Unknown Building';
-  const trimmed = name.trim();
+  const trimmed = name.trim().replace(/^\[.*?\]\s*/, '');
   if (trimmed.toLowerCase() === 'burlington tower' || trimmed.toLowerCase() === 'burlington') {
     return 'Burlington';
   }
@@ -148,7 +156,7 @@ export default function Buildings() {
     fetchBuildingsData();
   }, []);
 
-  // Server-side debounced search for any building across all 3M+ records
+  // Server-side debounced search for any building across all 16,740+ buildings in DB
   useEffect(() => {
     if (!searchTerm || searchTerm.trim().length < 2) {
       setServerBuildings([]);
@@ -162,47 +170,37 @@ export default function Buildings() {
         const headers = { apikey, Authorization: `Bearer ${apikey}` };
         const q = encodeURIComponent(searchTerm.trim());
         const res = await axios.get(
-          `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${q}*&select=building_name,master_area,phone_normalized,reported_property_type,unit_number,full_name,owner_id,lead_id&limit=200`,
+          `${SUPABASE_BASE_URL}/building_directory_stats?building_name=ilike.*${q}*&order=total_owners.desc&limit=200`,
           { headers }
         );
 
         if (res.data && res.data.length > 0) {
-          const bMap = {};
-          res.data.forEach(row => {
-            const rawBn = (row.building_name || '').trim();
-            if (!rawBn || DUMMY_BUILDINGS.has(rawBn.toLowerCase())) return;
+          const list = res.data
+            .filter(row => !isDummyBuilding(row.building_name))
+            .map(row => {
+              const rawBn = (row.building_name || '').trim();
+              const displayName = formatBuildingName(rawBn);
+              const owners = Number(row.total_owners) || 0;
+              const units = Number(row.total_units) || 0;
+              const contacts = Number(row.total_contacts) || 0;
+              const coverage = row.contact_coverage != null
+                ? Math.round(Number(row.contact_coverage))
+                : (owners > 0 ? Math.round((contacts / owners) * 100) : 0);
 
-            const displayName = formatBuildingName(rawBn);
-            const normKey = displayName.toLowerCase();
-
-            if (!bMap[normKey]) {
-              bMap[normKey] = {
+              return {
                 rawName: rawBn,
                 name: displayName,
                 area: getBuildingCommunity(rawBn, row.master_area),
-                propertyType: getBuildingType(rawBn, row.reported_property_type),
-                unitsSet: new Set(),
-                ownersCount: 0,
-                contactsCount: 0,
+                propertyType: getBuildingType(rawBn, row.property_category || row.reported_property_type),
+                ownersCount: owners,
+                unitsCount: units > 0 ? units : owners,
+                contactsCount: contacts,
+                contactCoverage: coverage,
                 sampleOwners: []
               };
-            }
+            });
 
-            bMap[normKey].ownersCount += 1;
-            if (row.unit_number && String(row.unit_number).trim()) {
-              bMap[normKey].unitsSet.add(String(row.unit_number).trim());
-            }
-            if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) {
-              bMap[normKey].contactsCount += 1;
-            }
-          });
-
-          const foundList = Object.values(bMap).map(b => ({
-            ...b,
-            unitsCount: b.unitsSet.size > 0 ? b.unitsSet.size : b.ownersCount,
-            contactCoverage: b.ownersCount > 0 ? Math.round((b.contactsCount / b.ownersCount) * 100) : 0
-          }));
-          setServerBuildings(foundList);
+          setServerBuildings(list);
         } else {
           setServerBuildings([]);
         }
@@ -211,7 +209,7 @@ export default function Buildings() {
       } finally {
         setIsSearchingServer(false);
       }
-    }, 350);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -221,76 +219,42 @@ export default function Buildings() {
     try {
       const apikey = SUPABASE_API_KEY;
       const headers = { apikey, Authorization: `Bearer ${apikey}` };
-      
-      // Fetch 5 batches in parallel (5,000 records) for fast and comprehensive data
-      const fetchBatch = (offset) => 
-        axios.get(
-          `${SUPABASE_BASE_URL}/owners_data?select=building_name,master_area,phone_normalized,reported_property_type,unit_number,full_name,owner_id,lead_id&limit=1000&offset=${offset}`,
-          { headers }
-        ).then(res => res.data).catch(() => []);
 
-      const batches = await Promise.all([
-        fetchBatch(0),
-        fetchBatch(1000),
-        fetchBatch(2000),
-        fetchBatch(3000),
-        fetchBatch(4000)
-      ]);
+      const res = await axios.get(
+        `${SUPABASE_BASE_URL}/building_directory_stats?order=total_owners.desc&limit=1000`,
+        { headers }
+      );
 
-      const allRows = batches.flat();
-      const bMap = {};
+      if (res.data && res.data.length > 0) {
+        const list = res.data
+          .filter(row => !isDummyBuilding(row.building_name))
+          .map(row => {
+            const rawBn = (row.building_name || '').trim();
+            const displayName = formatBuildingName(rawBn);
+            const owners = Number(row.total_owners) || 0;
+            const units = Number(row.total_units) || 0;
+            const contacts = Number(row.total_contacts) || 0;
+            const coverage = row.contact_coverage != null
+              ? Math.round(Number(row.contact_coverage))
+              : (owners > 0 ? Math.round((contacts / owners) * 100) : 0);
 
-      allRows.forEach(row => {
-        const rawBn = (row.building_name || '').trim();
-        if (!rawBn || DUMMY_BUILDINGS.has(rawBn.toLowerCase())) return;
-
-        const displayName = formatBuildingName(rawBn);
-        const normKey = displayName.toLowerCase();
-
-        if (!bMap[normKey]) {
-          bMap[normKey] = {
-            rawName: rawBn,
-            name: displayName,
-            area: getBuildingCommunity(rawBn, row.master_area),
-            propertyType: getBuildingType(rawBn, row.reported_property_type),
-            unitsSet: new Set(),
-            ownersCount: 0,
-            contactsCount: 0,
-            sampleOwners: []
-          };
-        }
-
-        bMap[normKey].ownersCount += 1;
-        if (row.unit_number && String(row.unit_number).trim()) {
-          bMap[normKey].unitsSet.add(String(row.unit_number).trim());
-        }
-        if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) {
-          bMap[normKey].contactsCount += 1;
-        }
-
-        if (bMap[normKey].sampleOwners.length < 30) {
-          bMap[normKey].sampleOwners.push({
-            id: row.owner_id || row.lead_id || `OWN-${bMap[normKey].sampleOwners.length + 1}`,
-            lead_id: row.lead_id || `LEAD-${String(row.id || Math.floor(Math.random() * 90000 + 10000))}`,
-            name: row.full_name || 'Property Owner',
-            unit: row.unit_number || 'N/A',
-            phone: row.phone_normalized || 'N/A',
-            area: bMap[normKey].area,
-            building: displayName,
-            type: bMap[normKey].propertyType
+            return {
+              rawName: rawBn,
+              name: displayName,
+              area: getBuildingCommunity(rawBn, row.master_area),
+              propertyType: getBuildingType(rawBn, row.property_category || row.reported_property_type),
+              ownersCount: owners,
+              unitsCount: units > 0 ? units : owners,
+              contactsCount: contacts,
+              contactCoverage: coverage,
+              sampleOwners: []
+            };
           });
-        }
-      });
 
-
-
-      const list = Object.values(bMap).map(b => ({
-        ...b,
-        unitsCount: b.unitsSet.size > 0 ? b.unitsSet.size : b.ownersCount,
-        contactCoverage: b.ownersCount > 0 ? Math.round((b.contactsCount / b.ownersCount) * 100) : 0
-      }));
-
-      setBuildings(list);
+        setBuildings(list);
+      } else {
+        setBuildings([]);
+      }
     } catch (err) {
       console.error('Error fetching buildings from Supabase:', err);
       setBuildings([]);
@@ -299,76 +263,9 @@ export default function Buildings() {
     }
   };
 
-  // Open building explore drawer and load all specific owners directly from Supabase
-  const handleExploreBuilding = async (building) => {
+  // Open building explore view
+  const handleExploreBuilding = (building) => {
     setSelectedBuilding(building);
-    setDrawerSearch('');
-    setLoadingBuildingOwners(true);
-    try {
-      const apikey = SUPABASE_API_KEY;
-      const headers = { apikey, Authorization: `Bearer ${apikey}` };
-      
-      let searchFilter = `building_name=ilike.*${encodeURIComponent(building.rawName)}*`;
-      if (building.name.toLowerCase() === 'burlington') {
-        searchFilter = `or=(building_name.ilike.*Burlington*,building_name.ilike.*BURLINGTON TOWER*)`;
-      }
-
-      const res = await axios.get(
-        `${SUPABASE_BASE_URL}/owners_data?${searchFilter}&select=owner_id,lead_id,full_name,unit_number,phone_normalized,reported_property_type,master_area,property_category,bitrix_id&limit=400`,
-        { headers }
-      );
-      if (res.data && res.data.length > 0) {
-        const mapped = res.data.map((r, i) => {
-          const rawName = (r.full_name || '').trim();
-          const cleanName = (!rawName || rawName === '_' || rawName === 'null') 
-            ? `Verified Unit Owner (${r.unit_number ? 'Unit ' + r.unit_number : building.name})` 
-            : rawName;
-          
-          const unit = r.unit_number ? String(r.unit_number).trim() : 'N/A';
-          const sizeMetrics = getUnitSizeMetrics(unit, building.propertyType);
-          const hasPhone = Boolean(r.phone_normalized && String(r.phone_normalized).trim().length > 6);
-          const occupancy = getOccupancyObservation(unit, hasPhone);
-          const floor = getFloorFromUnit(unit);
-
-          return {
-            id: r.owner_id || r.lead_id || `OWN-${i + 1}`,
-            lead_id: r.lead_id || `LEAD-${r.owner_id || (10400 + i)}`,
-            name: cleanName,
-            unit: unit,
-            floor: floor,
-            phone: hasPhone ? r.phone_normalized : 'N/A',
-            hasPhone: hasPhone,
-            area: r.master_area || building.area,
-            building: building.name,
-            type: building.propertyType,
-            sqm: sizeMetrics.sqm,
-            sqft: sizeMetrics.sqft,
-            occupancy: occupancy,
-            crmStatus: hasPhone ? 'Synced' : 'Draft',
-            rawRecord: r
-          };
-        });
-        setBuildingOwners(mapped);
-
-        const unitsSet = new Set(mapped.map(m => m.unit).filter(u => u && u !== 'N/A'));
-        const phonesCount = mapped.filter(m => m.hasPhone).length;
-
-        setSelectedBuilding(prev => ({
-          ...prev,
-          unitsCount: prev.unitsCount > unitsSet.size ? prev.unitsCount : (unitsSet.size || mapped.length),
-          ownersCount: prev.ownersCount > mapped.length ? prev.ownersCount : mapped.length,
-          contactsCount: prev.contactsCount > phonesCount ? prev.contactsCount : phonesCount,
-          contactCoverage: prev.contactCoverage || Math.round((phonesCount / mapped.length) * 100)
-        }));
-      } else {
-        setBuildingOwners([]);
-      }
-    } catch (e) {
-      console.error('Error fetching building owners:', e);
-      setBuildingOwners([]);
-    } finally {
-      setLoadingBuildingOwners(false);
-    }
   };
 
   // Copy phone number

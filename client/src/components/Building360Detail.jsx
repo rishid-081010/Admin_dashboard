@@ -45,12 +45,18 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
   const [copiedPhone, setCopiedPhone] = useState(null);
   const [copiedTowerName, setCopiedTowerName] = useState(false);
   const [selectedOwnerFor360, setSelectedOwnerFor360] = useState(null);
+  const [buildingStats, setBuildingStats] = useState({
+    ownersCount: building?.ownersCount || 0,
+    unitsCount: building?.unitsCount || 0,
+    contactsCount: building?.contactsCount || 0,
+    contactCoverage: building?.contactCoverage || 0,
+  });
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
-  // Fetch verified unit roster from Supabase for this building
+  // Fetch verified unit roster and building stats from Supabase
   useEffect(() => {
     let isMounted = true;
     async function loadBuildingUnits() {
@@ -62,10 +68,52 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           apikey: SUPABASE_API_KEY, 
           Authorization: `Bearer ${SUPABASE_API_KEY}` 
         };
-        const queryTerm = (building.rawName || building.name).trim().replace(/'/g, "''");
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(queryTerm)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price&limit=500`;
+        const rawBn = (building.rawName || building.name || '').trim();
+
+        // If buildingStats not yet populated with aggregate numbers, fetch from building_directory_stats
+        if (!building?.ownersCount) {
+          try {
+            const statsRes = await axios.get(
+              `${SUPABASE_BASE_URL}/building_directory_stats?building_name=eq.${encodeURIComponent(rawBn)}&limit=1`,
+              { headers }
+            );
+            if (isMounted && statsRes.data && statsRes.data[0]) {
+              const s = statsRes.data[0];
+              const oCount = Number(s.total_owners) || 0;
+              const uCount = Number(s.total_units) || 0;
+              const cCount = Number(s.total_contacts) || 0;
+              const cov = s.contact_coverage != null
+                ? Math.round(Number(s.contact_coverage))
+                : (oCount > 0 ? Math.round((cCount / oCount) * 100) : 0);
+              setBuildingStats({
+                ownersCount: oCount,
+                unitsCount: uCount,
+                contactsCount: cCount,
+                contactCoverage: cov
+              });
+            }
+          } catch (e) {
+            console.error('Failed to load building aggregate stats:', e);
+          }
+        }
+
+        // Query units with indexed exact search so it never times out
+        let searchFilter;
+        if (rawBn.toLowerCase() === 'burlington' || (building.name || '').toLowerCase() === 'burlington') {
+          searchFilter = `or=(building_name.eq.Burlington,building_name.eq.BURLINGTON%20TOWER)`;
+        } else {
+          searchFilter = `building_name=eq.${encodeURIComponent(rawBn)}`;
+        }
+
+        const endpoint = `${SUPABASE_BASE_URL}/owners_data?${searchFilter}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price&limit=500`;
         
-        const res = await axios.get(endpoint, { headers });
+        let res = await axios.get(endpoint, { headers });
+        if (!res.data || res.data.length === 0) {
+          // Fallback with ilike (no wildcards) in case of casing differences
+          const fallbackEndpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.${encodeURIComponent(rawBn)}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price&limit=500`;
+          res = await axios.get(fallbackEndpoint, { headers });
+        }
+
         if (isMounted && res.data && res.data.length > 0) {
           const mapped = res.data.map((r, i) => {
             const rawName = (r.full_name || '').trim();
@@ -111,21 +159,25 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
     return () => { isMounted = false; };
   }, [building]);
 
-  // Derived stats from actual fetched records
+  // Derived stats: STRICTLY prioritizes the true building database totals
   const metrics = useMemo(() => {
-    const total = owners.length;
+    const totalOwners = buildingStats.ownersCount || building?.ownersCount || owners.length || 0;
     const unitsSet = new Set(owners.map(o => o.unit).filter(u => u && u !== 'N/A'));
-    const unitsCount = unitsSet.size > 0 ? unitsSet.size : (building?.unitsCount || total);
-    const withPhone = owners.filter(o => o.hasPhone).length;
-    const phoneCoverage = total > 0 ? Math.round((withPhone / total) * 100) : (building?.contactCoverage || 0);
-    
+    const verifiedUnits = buildingStats.unitsCount || building?.unitsCount || (unitsSet.size > 0 ? unitsSet.size : totalOwners);
+    const withPhone = buildingStats.contactsCount != null && buildingStats.contactsCount > 0 
+      ? buildingStats.contactsCount 
+      : (building?.contactsCount != null && building?.contactsCount > 0 ? building.contactsCount : owners.filter(o => o.hasPhone).length);
+    const phoneCoverage = buildingStats.contactCoverage != null && buildingStats.contactCoverage > 0
+      ? buildingStats.contactCoverage
+      : (building?.contactCoverage != null && building?.contactCoverage > 0 ? building.contactCoverage : (totalOwners > 0 ? Math.round((withPhone / totalOwners) * 100) : 0));
+
     return {
-      totalOwners: total || building?.ownersCount || 0,
-      verifiedUnits: unitsCount,
-      withPhone: withPhone || building?.contactsCount || 0,
-      phoneCoverage: phoneCoverage
+      totalOwners,
+      verifiedUnits,
+      withPhone,
+      phoneCoverage
     };
-  }, [owners, building]);
+  }, [owners, building, buildingStats]);
 
   // Filter & Sort
   const filteredOwners = useMemo(() => {
