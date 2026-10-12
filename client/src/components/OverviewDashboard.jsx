@@ -151,7 +151,7 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── 2. TOP 4 KEY METRIC CARDS ──────────────────────────────────────── */}
+      {/* ─── 2. TOP 4 KEY METRIC CARDS (Zero Duplication) ──────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Card 1: Total Leads */}
@@ -167,113 +167,48 @@ export default function OverviewDashboard({ onNavigate }) {
           </div>
         </div>
 
-        {/* Card 2: Total Calls Made Today */}
+        {/* Card 2: Calls Dialed */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
           className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40 group hover:border-[#385175] transition-all cursor-pointer"
         >
           <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
-            TOTAL CALLS MADE TODAY
+            CALLS DIALED TODAY
           </div>
           <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
             {voiceData.totalCallsToday.toLocaleString()}
           </div>
         </div>
 
-        {/* Card 3: Qualified Leads Today */}
+        {/* Card 3: Connected */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
           className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40 group hover:border-[#385175] transition-all cursor-pointer"
         >
           <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
-            QUALIFIED LEADS TODAY
+            CONNECTED CALLS
+          </div>
+          <div className="text-3xl sm:text-4xl font-extrabold text-emerald-400 tracking-tight my-1.5 font-mono">
+            {Number(voiceData.answeredCallsToday || 0).toLocaleString()}
+          </div>
+        </div>
+
+        {/* Card 4: Qualified Leads */}
+        <div 
+          onClick={() => onNavigate && onNavigate('voice')}
+          className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40 group hover:border-[#385175] transition-all cursor-pointer"
+        >
+          <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
+            QUALIFIED LEADS
           </div>
           <div className="text-3xl sm:text-4xl font-extrabold text-amber-300 tracking-tight my-1.5 font-mono">
             {voiceData.qualifiedLeadsToday.toLocaleString()}
           </div>
         </div>
 
-        {/* Card 4: Voice Agents */}
-        <div 
-          onClick={() => onNavigate && onNavigate('voice')}
-          className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40 group hover:border-[#385175] transition-all cursor-pointer"
-        >
-          <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">
-            VOICE AGENTS
-          </div>
-          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight my-1.5 font-mono">
-            3 Online
-          </div>
-        </div>
-
       </div>
 
-      {/* ─── 3. HORIZONTAL PIPELINE BANNER ──────────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40">
-        <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-4">
-          CALL PIPELINE
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[#233549] gap-y-4 sm:gap-y-0">
-          
-          <div className="px-2 sm:px-4 first:pl-0">
-            <div className="text-xs text-slate-400 font-medium mb-1">
-              Calls Dialed
-            </div>
-            <div className="text-2xl font-bold text-white tracking-tight font-mono">
-              {voiceData.totalCallsToday.toLocaleString()}
-            </div>
-          </div>
-
-          <div className="px-2 sm:px-4">
-            <div className="text-xs text-slate-400 font-medium mb-1">
-              Connected
-            </div>
-            <div className="text-2xl font-bold text-emerald-400 tracking-tight font-mono">
-              {Number(voiceData.answeredCallsToday || 0).toLocaleString()}
-            </div>
-          </div>
-
-          <div className="px-2 sm:px-4">
-            <div className="text-xs text-slate-400 font-medium mb-1">
-              Qualified Leads
-            </div>
-            <div className="text-2xl font-bold text-sky-400 tracking-tight font-mono">
-              {Number(voiceData.qualifiedLeadsToday || 0).toLocaleString()}
-            </div>
-          </div>
-
-          <div className="px-2 sm:px-4">
-            <div className="text-xs text-slate-400 font-medium mb-1">
-              Qualified
-            </div>
-            <div className="text-2xl font-bold text-sky-400 tracking-tight font-mono">
-              {Number(voiceData.qualifiedLeadsToday || 0).toLocaleString()}
-            </div>
-          </div>
-
-          <div className="px-2 sm:px-4">
-            <div className="text-xs text-slate-400 font-medium mb-1">
-              High Intent
-            </div>
-            <div className="text-2xl font-bold text-amber-400 tracking-tight font-mono">
-              {voiceData.qualifiedLeadsToday > 0 ? Math.max(1, Math.round(voiceData.qualifiedLeadsToday * 0.4)).toLocaleString() : '0'}
-            </div>
-          </div>
-
-          <div className="px-2 sm:px-4">
-            <div className="text-xs text-slate-400 font-medium mb-1">
-              Transferred
-            </div>
-            <div className="text-2xl font-bold text-rose-400 tracking-tight font-mono">
-              {voiceData.qualifiedLeadsToday > 0 ? Math.max(1, Math.round(voiceData.qualifiedLeadsToday * 0.8)).toLocaleString() : '0'}
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* ─── 4. IMMEDIATE ACTIVITY ───────────────────────────────────────────── */}
+      {/* ─── 3. IMMEDIATE ACTIVITY ───────────────────────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -352,7 +287,7 @@ export default function OverviewDashboard({ onNavigate }) {
         )}
       </div>
 
-      {/* ─── 5. VOICE AGENTS ─────────────────────────────────────────────────── */}
+      {/* ─── 4. VOICE AGENTS ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 pt-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -479,7 +414,7 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── 6. AUTOMATED WORKFLOWS ─────────────────────────────────────────── */}
+      {/* ─── 5. AUTOMATED WORKFLOWS ─────────────────────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
