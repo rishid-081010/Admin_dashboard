@@ -147,7 +147,7 @@ export default function App() {
             <ReviewQueue onNavigateToBuilding={() => setActiveTab('buildings')} />
           )}
 
-          {activeTab === 'comparison' && <DatasetComparison />}
+          {activeTab === 'workflows' && <WorkflowsDirectory />}
 
           {activeTab === 'sources' && <SourcesDirectory />}
 
