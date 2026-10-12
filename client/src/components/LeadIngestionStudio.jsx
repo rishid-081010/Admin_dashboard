@@ -173,14 +173,21 @@ export default function LeadIngestionStudio() {
       });
 
       if (res.data) {
-        // Validate backend response: If backend used BuildingNameEn or returned 'Property Owner' fallback, keep authentic client names!
-        const bName = res.data.mapping_used?.name || res.data.mapping_used?.NAME || '';
-        const isBadBackendMapping = /building|project|procedure/i.test(bName);
-        const sampleLead = res.data.clean_leads?.[0];
-        const isDefaultFallback = sampleLead && sampleLead.owner_name === 'Property Owner';
-
-        if (!isBadBackendMapping && !isDefaultFallback) {
-          setPreviewData(res.data);
+        // Safeguard backend response: preserve headers count and prevent invalid overrides
+        const bCleanCount = res.data.clean_leads?.length || 0;
+        const cCleanCount = clientResult?.clean_leads?.length || 0;
+        
+        // If client-side processing yielded valid clean leads and backend produced 0 or had a failure, preserve client data!
+        if (cCleanCount > 0 && bCleanCount === 0 && !isBadBackendMapping) {
+          console.warn('Preserving client-side clean result as backend returned 0 clean leads');
+        } else if (!isBadBackendMapping && !isDefaultFallback) {
+          const mergedData = {
+            ...res.data,
+            original_headers: res.data.original_headers || clientResult?.original_headers || [],
+            headers: res.data.headers || clientResult?.headers || [],
+            total_columns: res.data.total_columns || clientResult?.total_columns || (res.data.original_headers?.length || 0)
+          };
+          setPreviewData(mergedData);
           setActiveTab('clean');
         }
       }

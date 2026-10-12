@@ -3,9 +3,15 @@ import * as XLSX from 'xlsx';
 import OpenAI from 'openai';
 import { supabase } from './supabase.js';
 
-export const DUMMY_STRINGS = ['null', 'n/a', 'na', 'none', '-', '--', '0', 'undefined', 'nil', 'unknown', '.', 'n.a', 'not available'];
+export const DUMMY_STRINGS = new Set([
+  'null', 'n/a', 'na', 'none', '-', '--', '0', 'undefined', 'nil', 'unknown',
+  '.', 'n.a', 'not available', 'table 1', 'unnamed', 'owner', 'tenant', 'nan'
+]);
 
-// Negative disqualifier keywords: Any column containing these words CANNOT be the owner's name
+export const ACRONYMS_UPPERCASE = new Set([
+  'LLC', 'PJSC', 'P.J.S.C', 'FZ-LLC', 'FZCO', 'DMCC', 'FZE', 'LTD'
+]);
+
 export const NEGATIVE_NAME_TERMS = [
   'building', 'project', 'procedure', 'type', 'community', 'tower',
   'location', 'plot', 'amount', 'size', 'beds', 'status', 'usage',
@@ -39,7 +45,6 @@ export function parseCSV(text) {
   let inQuotes = false;
   let i = 0;
 
-  // Normalize line breaks
   const str = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   while (i < str.length) {
@@ -95,7 +100,6 @@ export function parseExcelBuffer(buffer) {
     throw new Error('Excel workbook has no sheets.');
   }
 
-  // Find sheet with the largest data range to avoid missing lead data in multi-sheet exports
   let bestSheetName = workbook.SheetNames[0];
   let maxRows = 0;
   for (const sheetName of workbook.SheetNames) {
@@ -118,81 +122,234 @@ export function parseExcelBuffer(buffer) {
 export function cleanTxt(txt) {
   if (txt === null || txt === undefined) return '';
   let t = String(txt).trim();
-  // Normalize Arabic numerals to standard Latin digits
   t = t.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
-  if (DUMMY_STRINGS.includes(t.toLowerCase())) return '';
+  if (DUMMY_STRINGS.has(t.toLowerCase())) return '';
   return t;
 }
 
+// ─── 1. BULLETPROOF PHONE NORMALIZER ───
 export function cleanPhone(raw) {
-  let p = cleanTxt(raw);
-  if (!p) return { valid: false, reason: 'Empty phone number' };
+  if (!raw) return { valid: false, reason: 'Empty phone number' };
+  let str = String(raw).trim();
 
-  // Normalize UAE & vendor country code delimiters (e.g. 971|50..., 971/50..., +971|50...)
-  p = p.replace(/^(?:\+?971|00971)[\s|/\\-]+/i, '971');
-  p = p.replace(/^0(\d{2})[\s|/\\-]+/i, '0$1');
+  // Convert Arabic-Indic numerals
+  str = str.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
 
-  // Split multiple numbers in one cell
-  const parts = p.split(/[\/,;&\n]+/);
-  let primary = (parts[0] || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/\D/g, '');
-  const secondary = parts[1] ? parts[1].replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/\D/g, '') : null;
+  // Fast reject non-phone junk
+  if (/[a-z]/i.test(str) && !/(?:ext|tel|mob|phone)/i.test(str)) {
+    return { valid: false, reason: 'Contains alphabetic characters' };
+  }
+  if (str.includes(':') || (str.split('-').length > 3 && str.includes('00:00'))) {
+    return { valid: false, reason: 'Timestamp or date detected in phone column' };
+  }
 
-  if (primary.length < 7) return { valid: false, reason: 'Too few digits (< 7)' };
-  if (primary.length > 15) return { valid: false, reason: 'Too many digits (> 15)' };
-  if (/^0+$/.test(primary)) return { valid: false, reason: 'Invalid all zeros' };
+  // Normalize vendor delimiters (+971|, 971/, 00971|, etc.)
+  str = str.replace(/^(?:\+?00971|\+?971|00971)[\s|/\\-]+0?/gi, '971');
+  
+  // Fix +97104... and +97105... (redundant 0 after country code)
+  str = str.replace(/^\+?9710([2-9])/g, '971$1');
 
-  // Strip international prefixes (00 or +)
+  // Normalize local 0xx prefix with separators (050-..., 04-...)
+  str = str.replace(/^0([2-9])[\s|/\\-]+/g, '0$1');
+
+  // Split multiple phone numbers in one cell
+  const parts = str.split(/[,;\n\r/|&]+/).map(p => p.trim()).filter(Boolean);
+  let primaryRaw = parts[0] || '';
+  const secondaryRaw = parts[1] || null;
+
+  let primary = primaryRaw.replace(/\D/g, '');
+
+  // Strip international prefixes (00)
   if (primary.startsWith('00')) {
     primary = primary.slice(2);
   }
 
-  // 1. UAE Local Mobile Normalization (05x -> 9715x, 5x -> 9715x)
+  // Redundant 0 after 971: e.g. 9710552222519 -> 971552222519, 971043211442 -> 97143211442
+  if (primary.startsWith('9710') && primary.length === 13) {
+    primary = '971' + primary.slice(4);
+  }
+
+  // UAE local mobile normalization (05x -> 9715x, 5x -> 9715x)
   if (primary.startsWith('05') && primary.length === 10) {
     primary = '971' + primary.slice(1);
   } else if (primary.startsWith('5') && primary.length === 9) {
     primary = '971' + primary;
   }
 
-  // 2. UAE Landline Detection
-  const isUaeLandline = 
-    primary.startsWith('9714') || 
-    primary.startsWith('9712') || 
-    primary.startsWith('9716') || 
-    primary.startsWith('9717') || 
-    primary.startsWith('9719') ||
-    ((primary.startsWith('04') || primary.startsWith('02') || primary.startsWith('06') || primary.startsWith('07') || primary.startsWith('09')) && primary.length === 9);
+  // UAE local landline normalization (04xxxxxxx -> 9714xxxxxxx, etc.)
+  if (/^0[234679]\d{7}$/.test(primary)) {
+    primary = '971' + primary.slice(1);
+  }
+
+  // UAE Landline Detection
+  const isUaeLandline = /^971[234679]\d{7}$/.test(primary);
 
   if (isUaeLandline) {
     return {
       valid: false,
       primary,
-      vapi_e164: `+${primary.startsWith('0') ? '971' + primary.slice(1) : primary}`,
-      secondary,
+      vapi_e164: `+${primary}`,
+      secondary: secondaryRaw ? cleanSecondaryPhone(secondaryRaw) : null,
       is_landline: true,
-      reason: 'UAE Landline (Cannot receive voice AI outbound call)',
+      reason: 'UAE Landline (Cannot receive outbound Voice AI call)',
     };
   }
 
-  // 3. International Buyer & GCC Country Recognition
-  if (primary.startsWith('0') && primary.length > 10) {
-    primary = primary.slice(1);
-  }
+  if (primary.length < 7) return { valid: false, reason: 'Too few digits (< 7)' };
+  if (primary.length > 15) return { valid: false, reason: 'Too many digits (> 15)' };
+  if (/^0+$/.test(primary)) return { valid: false, reason: 'Invalid all zeros' };
 
   return {
     valid: true,
     primary,
     vapi_e164: `+${primary}`,
-    secondary,
+    secondary: secondaryRaw ? cleanSecondaryPhone(secondaryRaw) : null,
     is_landline: false,
   };
 }
 
+function cleanSecondaryPhone(rawSec) {
+  if (!rawSec) return null;
+  let digits = String(rawSec).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/\D/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('9710') && digits.length === 13) digits = '971' + digits.slice(4);
+  if (digits.startsWith('05') && digits.length === 10) digits = '971' + digits.slice(1);
+  else if (digits.startsWith('5') && digits.length === 9) digits = '971' + digits;
+  if (/^0[234679]\d{7}$/.test(digits)) digits = '971' + digits.slice(1);
+  if (digits.length >= 7 && digits.length <= 15 && !/^0+$/.test(digits)) {
+    return `+${digits}`;
+  }
+  return null;
+}
+
+// ─── 2. BULLETPROOF OWNER NAME SANITIZER ───
+export function cleanOwnerName(raw) {
+  if (!raw) return 'Property Owner';
+  let name = String(raw).trim();
+
+  // Strip non-name content (emails, phones, plot numbers, dummy strings)
+  if (name.includes('@') && /\.[a-z]{2,}/i.test(name)) return 'Property Owner';
+  if (/^\+?\d{6,}$/.test(name.replace(/[\s\-_]/g, ''))) return 'Property Owner';
+  if (DUMMY_STRINGS.has(name.toLowerCase())) return 'Property Owner';
+
+  // Strip vendor reference codes (e.g. "NR/NHO,", "REF-", "ID:")
+  name = name.replace(/^(?:NR\/NHO|REF|ID|CODE)[\s,:\-_]+/gi, '');
+
+  // Strip attached tower/unit suffixes (e.g. "-Kempinski C12", "-Tower B")
+  name = name.replace(/-(?:Kempinski|Tower|Building|Villa|Flat|Unit|TH)[\s\w]*$/gi, '');
+
+  // Normalize corporate suffixes (e.g. "( L L C", "L L C", "L.L.C.")
+  name = name.replace(/\bL\s+L\s+C\b/gi, 'LLC');
+  name = name.replace(/\bL\.L\.C\.?\b/gi, 'LLC');
+  name = name.replace(/\bP\.J\.S\.C\.?\b/gi, 'P.J.S.C');
+
+  // Strip noise symbols (backslashes, brackets, weird slashes, unclosed parens)
+  name = name.replace(/[\\/\[\]{}()_]/g, ' ');
+
+  // Clean floating hyphens
+  name = name.replace(/\s+-\s+/g, ' ');
+
+  // Strip leading and trailing punctuation (commas, hyphens, periods, colons, spaces)
+  name = name.replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, '');
+
+  // Handle "LastName, FirstName"
+  if (name.includes(',')) {
+    const parts = name.split(',').map(p => p.trim()).filter(Boolean);
+    const upper = name.toUpperCase();
+    const hasCorp = Array.from(ACRONYMS_UPPERCASE).some(s => upper.includes(s)) ||
+      /(\bLLC\b|\bLIMITED\b|\bLTD\b|\bPROPERTIES\b|\bDEVELOPMENT\b|\bHOLDING\b)/i.test(name);
+    
+    if (parts.length === 2 && !hasCorp && !upper.includes('&') && !upper.includes(' AND ')) {
+      name = `${parts[1]} ${parts[0]}`;
+    } else {
+      name = parts.join(' ');
+    }
+  }
+
+  // Handle semicolons in joint names
+  name = name.replace(/;/g, ' ');
+
+  // Collapse spaces
+  name = name.replace(/\s+/g, ' ').trim();
+  if (!name || DUMMY_STRINGS.has(name.toLowerCase())) return 'Property Owner';
+
+  // Title Case, preserving recognized corporate acronyms in uppercase
+  const words = name.split(' ');
+  const formatted = words.map((w) => {
+    const cleanWord = w.replace(/[^a-zA-Z.]/g, '');
+    const upperWord = cleanWord.toUpperCase();
+    if (ACRONYMS_UPPERCASE.has(upperWord)) {
+      return upperWord === 'PJSC' ? 'P.J.S.C' : upperWord;
+    }
+    const lowerWord = w.toLowerCase();
+    if (['al', 'el'].includes(lowerWord)) return 'Al';
+    if (['bin', 'ibn'].includes(lowerWord)) return 'Bin';
+    if (['bint'].includes(lowerWord)) return 'Bint';
+    if (['abu'].includes(lowerWord)) return 'Abu';
+
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  });
+
+  return formatted.join(' ') || 'Property Owner';
+}
+
+// ─── 3. BULLETPROOF UNIT NUMBER EXTRACTOR ───
+export function cleanUnitNumber(rawUnit, buildingName = '') {
+  if (!rawUnit) return '';
+  let u = String(rawUnit).trim();
+
+  // Strip trailing dashes, slashes, whitespace
+  u = u.replace(/[\s\-_/]+$/g, '').trim();
+
+  // Strip leading prefixes like "Unit ", "Flat ", "Villa ", "Apartment "
+  u = u.replace(/^(?:Unit|Flat|Villa|Apartment|Apt|Suite|Door)\s+/i, '');
+
+  // Handle DEWA Premise strings
+  if (u.includes('|')) {
+    const segments = u.split('|').map(s => s.trim()).filter(Boolean);
+    const aptSeg = segments.find(s => /^(?:Apartment|Flat|Unit|Villa|TH)\s+\d+/i.test(s));
+    if (aptSeg) {
+      return aptSeg.replace(/^(?:Apartment|Flat|Unit|Villa|TH)\s+/i, '').trim();
+    }
+    return segments[segments.length - 1] || u;
+  }
+
+  // If unit starts with building name, extract the specific unit suffix
+  if (buildingName && buildingName.length > 3) {
+    const bUpper = buildingName.trim().toUpperCase();
+    if (u.toUpperCase().startsWith(bUpper)) {
+      const stripped = u.slice(bUpper.length).replace(/^[\s\-_/]+/, '').trim();
+      if (stripped.length > 0) return stripped;
+    }
+    const m = u.match(/(TH-[\w-]+|V-[\w-]+|PH-[\w-]+|APT-[\w-]+|\b[A-Z0-9]+-[A-Z0-9]+)$/i);
+    if (m) {
+      return m[1];
+    }
+  }
+
+  return u;
+}
+
+// ─── 4. BULLETPROOF EMAIL CLEANER ───
+export function cleanEmail(raw) {
+  if (!raw) return { primary: null, secondary: null };
+  const str = String(raw).trim();
+  if (DUMMY_STRINGS.has(str.toLowerCase())) return { primary: null, secondary: null };
+
+  const parts = str.split(/[,;\s]+/).map(p => p.trim()).filter(p => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p));
+  return {
+    primary: parts[0] ? parts[0].toLowerCase() : null,
+    secondary: parts[1] ? parts[1].toLowerCase() : null
+  };
+}
+
+// ─── 5. HEURISTIC COLUMN DETECTION (10 ROWS SCORING) ───
 export function detectColumnsFallback(headers, sampleRows = []) {
   const lowerHeaders = headers.map(h => (h || '').toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
   const colMap = {};
   const mappingUsed = {};
 
-  // 1. Detect Name Column (Strict ranking with negative keyword protection and data verification)
+  // 1. Detect Name Column
   const nameCandidates = [];
   headers.forEach((h, idx) => {
     if (!h) return;
@@ -205,15 +362,15 @@ export function detectColumnsFallback(headers, sampleRows = []) {
       score = (clean === 'ownername' || clean === 'nameen') ? 140 : 100;
     } else if (clean.includes('owner') || clean.includes('client') || clean.includes('customer')) {
       score = 80;
-    } else if (clean.endsWith('name') || clean.includes('name')) {
+    } else if (clean.endsWith('name') || clean.includes('name') || clean === 'table1') {
       score = 60;
     }
 
     if (score > 0) {
       let dataBonus = 0;
-      for (const r of sampleRows) {
+      for (const r of sampleRows.slice(0, 10)) {
         const val = cleanTxt(r[idx]);
-        if (val && /[a-zA-Z]/.test(val) && val.length > 2 && !DUMMY_STRINGS.includes(val.toLowerCase())) {
+        if (val && /[a-zA-Z]/.test(val) && val.length > 2 && !DUMMY_STRINGS.has(val.toLowerCase()) && !val.includes('@')) {
           dataBonus += 15;
         }
       }
@@ -235,17 +392,17 @@ export function detectColumnsFallback(headers, sampleRows = []) {
     let score = 0;
     if (['mobile', 'mobile1', 'phone', 'phone1', 'contactnumber', 'mobilenumber', 'contact'].includes(clean)) {
       score = 100;
-    } else if (['mobile2', 'phone2', 'secondarymobile', 'tel', 'whatsapp', 'cell'].includes(clean)) {
+    } else if (['mobile2', 'phone2', 'secondarymobile', 'tel', 'whatsapp', 'cell', 'unnamed2', 'unnamed3'].includes(clean)) {
       score = 70;
-    } else if (clean.includes('mobile') || clean.includes('phone') || clean.includes('contact')) {
+    } else if (clean.includes('mobile') || clean.includes('phone') || clean.includes('contact') || clean.includes('number')) {
       score = 50;
     }
 
     if (score > 0) {
       let dataBonus = 0;
-      for (const r of sampleRows) {
+      for (const r of sampleRows.slice(0, 10)) {
         const val = cleanTxt(r[idx]);
-        if (val && /\d{6,}/.test(val.replace(/\D/g, '')) && !DUMMY_STRINGS.includes(val.toLowerCase())) {
+        if (val && /\d{7,}/.test(val.replace(/\D/g, '')) && !DUMMY_STRINGS.has(val.toLowerCase())) {
           dataBonus += 15;
         }
       }
@@ -259,7 +416,7 @@ export function detectColumnsFallback(headers, sampleRows = []) {
     mappingUsed['phone'] = phoneCandidates[0].header;
   }
 
-  // 3. Detect Unit Column (DATA-DRIVEN SCORING: Accurately picks property_number when populated over empty UnitNumber)
+  // 3. Detect Unit Column
   const unitCandidates = [];
   headers.forEach((h, idx) => {
     if (!h) return;
@@ -275,16 +432,16 @@ export function detectColumnsFallback(headers, sampleRows = []) {
       score = 90;
     } else if (['unit', 'flat', 'villa', 'property', 'plot'].includes(clean)) {
       score = 70;
-    } else if (UNIT_TERMS.some(t => clean.includes(t)) || clean.includes('unit') || clean.includes('flat') || clean.includes('villa') || clean.includes('suite') || clean.includes('door') || clean.includes('plot')) {
+    } else if (UNIT_TERMS.some(t => clean.includes(t)) || clean.includes('unit') || clean.includes('flat') || clean.includes('villa') || clean.includes('suite') || clean.includes('door') || clean.includes('plot') || clean === 'unnamed5') {
       score = 50;
     }
 
     if (score > 0) {
       let dataBonus = 0;
-      for (const r of sampleRows) {
+      for (const r of sampleRows.slice(0, 10)) {
         const val = cleanTxt(r[idx]);
-        if (val && !DUMMY_STRINGS.includes(val.toLowerCase())) {
-          dataBonus += 15; // Real populated data gives strong bonus!
+        if (val && !DUMMY_STRINGS.has(val.toLowerCase())) {
+          dataBonus += 15;
         }
       }
       unitCandidates.push({ idx, header: h.trim(), score: score + dataBonus });
@@ -336,8 +493,8 @@ export function detectColumnsFallback(headers, sampleRows = []) {
   return { colMap, mappingUsed };
 }
 
-export async function detectColumnsAI(headers, sampleRow, sampleRows = []) {
-  // Always run data-driven heuristic to establish ground truth
+// ─── 6. AI-POWERED 10-ROW COLUMN MATCHER ───
+export async function detectColumnsAI(headers, sampleRows = []) {
   const heuristic = detectColumnsFallback(headers, sampleRows);
   
   const apiKey = process.env.OPENAI_API_KEY;
@@ -345,20 +502,42 @@ export async function detectColumnsAI(headers, sampleRow, sampleRows = []) {
     return heuristic;
   }
 
+  // Format full 10-row samples per column
+  const headerSamples = {};
+  headers.forEach((h, idx) => {
+    headerSamples[h] = sampleRows.slice(0, 10).map(r => cleanTxt(r[idx])).filter(Boolean);
+  });
+
   const openai = new OpenAI({ apiKey });
-  const prompt = `You are an expert real estate data engineer.
-Identify core columns from these raw headers:
+  const prompt = `You are a senior real estate data architect specializing in Dubai Land Department (DLD) and UAE CRM datasets.
+Map each column header in the uploaded file to exactly ONE canonical field from the CANONICAL ROSTER, or null if irrelevant.
+
+CANONICAL ROSTER:
 - 'name': The buyer/seller/client/owner person's name (NEVER building name or project!)
-- 'phone': Primary mobile/phone number
-- 'unit': Property/unit/villa identifier (e.g. 'property_number', 'UnitNumber', 'Flat No', 'Villa No')
+- 'phone': Primary mobile/phone number (e.g. 050..., 971..., +9715...)
+- 'unit': Property/unit/villa identifier (e.g. 'property_number', 'UnitNumber', 'Flat No', 'Villa No', 'TS HYT TH-V-367-')
 - 'project': Project, Tower, Building, or Community name
 - 'location': Master location or Area
 - 'property_type': Type of property (Villa, Apartment, Commercial, etc.)
+- 'email': Email address
 
-Raw headers: ${JSON.stringify(headers)}
-Sample data values: ${JSON.stringify(sampleRow)}
+CRITICAL DUBAI REAL ESTATE DOMAIN EXCEPTIONS:
+1. Unit Number Exceptions:
+   - A unit number column may contain building prefixes like 'TS HYT TH-V-367-', 'JI24M311', 'B1X01'. This MUST be mapped to 'unit'.
+   - 'property_number' containing villa codes (e.g. 'JI24M311') is 'unit'.
+   - Do NOT confuse 'plot_number' / 'LandNumber' with 'unit'.
+2. Generic / Unnamed Headers:
+   - Header 'Table 1' with person name samples (e.g. 'Lyudmila, Lesunova') MUST be mapped to 'name'.
+   - Header 'Unnamed: 1' with emails MUST be mapped to 'email'.
+   - Header 'Unnamed: 2' with phone numbers MUST be mapped to 'phone'.
+   - Header 'Unnamed: 5' with DEWA pipes MUST be mapped to 'unit'.
+3. Name Protection:
+   - Columns named 'PROJECT', 'BUILDING NAME', 'DEVELOPMENT' must NEVER be mapped to 'name'.
 
-CRITICAL: Return ONLY a JSON object with:
+INPUT DATA (Headers and first 10 sample values):
+${JSON.stringify(headerSamples, null, 2)}
+
+CRITICAL: Return ONLY a JSON object:
 {
   "name_header": "Header Name or null",
   "phone_header": "Header Name or null",
@@ -380,10 +559,6 @@ CRITICAL: Return ONLY a JSON object with:
     const colMap = { ...heuristic.colMap };
     const mappingUsed = { ...heuristic.mappingUsed };
 
-    // Validate and apply AI mappings safely
-    const lowerHeaders = headers.map(h => (h || '').toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
-
-    // Name validation
     if (parsed.name_header) {
       const idx = headers.findIndex(h => h === parsed.name_header || h.trim() === parsed.name_header.trim());
       if (idx !== -1) {
@@ -396,20 +571,15 @@ CRITICAL: Return ONLY a JSON object with:
       }
     }
 
-    // Unit validation: Only accept if the column actually has populated data
     if (parsed.unit_header) {
       const idx = headers.findIndex(h => h === parsed.unit_header || h.trim() === parsed.unit_header.trim());
       if (idx !== -1) {
-        const nonDummyCount = sampleRows.filter(r => cleanTxt(r[idx]) && !DUMMY_STRINGS.includes(cleanTxt(r[idx]).toLowerCase())).length;
-        if (nonDummyCount > 0) {
-          colMap['unit'] = idx;
-          mappingUsed['UNIT'] = headers[idx];
-          mappingUsed['unit'] = headers[idx];
-        }
+        colMap['unit'] = idx;
+        mappingUsed['UNIT'] = headers[idx];
+        mappingUsed['unit'] = headers[idx];
       }
     }
 
-    // Phone validation
     if (parsed.phone_header) {
       const idx = headers.findIndex(h => h === parsed.phone_header || h.trim() === parsed.phone_header.trim());
       if (idx !== -1) {
@@ -421,11 +591,12 @@ CRITICAL: Return ONLY a JSON object with:
 
     return { colMap, mappingUsed };
   } catch (e) {
-    console.error('AI column detection warning:', e);
+    console.error('AI column detection fallback to heuristic:', e.message);
     return heuristic;
   }
 }
 
+// ─── 7. PROCESS LEADS PREVIEW (SERVER-SIDE) ───
 export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartment', filename = 'file.csv') {
   const rows = parseCSV(rawCsvText);
   if (!rows || rows.length < 2) {
@@ -434,10 +605,9 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
 
   const originalHeaders = rows[0].map(h => (h !== null && h !== undefined ? String(h).trim() : ''));
   const dataRows = rows.slice(1);
-  const sampleRows = dataRows.slice(0, 15);
-  const sampleRow = sampleRows[0] || [];
+  const sampleRows = dataRows.slice(0, 10);
 
-  const { colMap, mappingUsed } = await detectColumnsAI(originalHeaders, sampleRow, sampleRows);
+  const { colMap, mappingUsed } = await detectColumnsAI(originalHeaders, sampleRows);
   const lowerHeaders = originalHeaders.map(h => (h || '').toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
 
   // Collect candidate fallback indices across all columns
@@ -449,10 +619,10 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
 
   originalHeaders.forEach((h, idx) => {
     const hl = lowerHeaders[idx];
-    if (['mobile', 'mobile1', 'mobile2', 'phone', 'phone1', 'phone2', 'secondarymobile', 'contact', 'tel', 'whatsapp'].some(t => hl.includes(t))) {
+    if (['mobile', 'mobile1', 'mobile2', 'phone', 'phone1', 'phone2', 'secondarymobile', 'contact', 'tel', 'whatsapp', 'number', 'unnamed2'].some(t => hl.includes(t))) {
       allPhoneIndices.push(idx);
     }
-    if (!NEGATIVE_NAME_TERMS.some(neg => hl.includes(neg)) && (NAME_TIER_1.some(t => hl.includes(t.replace(/[^a-z0-9]/g, ''))) || hl.includes('name'))) {
+    if (!NEGATIVE_NAME_TERMS.some(neg => hl.includes(neg)) && (NAME_TIER_1.some(t => hl.includes(t.replace(/[^a-z0-9]/g, ''))) || hl.includes('name') || hl.includes('table1'))) {
       allNameIndices.push(idx);
     }
     if (!['propertytype', 'transaction', 'amount', 'size', 'plotsize', 'builtup', 'date', 'price', 'status', 'bed', 'beds'].some(neg => hl.includes(neg))) {
@@ -477,7 +647,7 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
   dataRows.forEach((row, rowIdx) => {
     const rowNum = rowIdx + 2;
 
-    // 1. Phone extraction with alternative column fallback
+    // 1. Phone extraction
     let rawPhone = colMap.phone !== undefined ? row[colMap.phone] || '' : '';
     if (!cleanTxt(rawPhone)) {
       for (const pIdx of allPhoneIndices) {
@@ -488,7 +658,7 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
       }
     }
 
-    // 2. Name extraction with multi-column fallback (NEVER default to Property Owner if name exists in any column)
+    // 2. Name extraction
     let rawName = colMap.name !== undefined ? row[colMap.name] || '' : '';
     if (!cleanTxt(rawName)) {
       for (const nIdx of allNameIndices) {
@@ -500,19 +670,7 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
       }
     }
 
-    // 3. Unit extraction with multi-column fallback (Checks property_number, unit_number, etc.)
-    let rawUnit = colMap.unit !== undefined ? cleanTxt(row[colMap.unit]) : '';
-    if (!rawUnit || DUMMY_STRINGS.includes(rawUnit.toLowerCase())) {
-      for (const uIdx of allUnitIndices) {
-        const cand = cleanTxt(row[uIdx]);
-        if (cand && !DUMMY_STRINGS.includes(cand.toLowerCase())) {
-          rawUnit = cand;
-          break;
-        }
-      }
-    }
-
-    // 4. Project extraction with fallback
+    // 3. Project extraction
     let rawProject = colMap.project !== undefined ? cleanTxt(row[colMap.project]) : '';
     if (!rawProject) {
       for (const prIdx of allProjectIndices) {
@@ -521,7 +679,19 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
       }
     }
 
-    // 5. Location extraction with fallback
+    // 4. Unit extraction with building context
+    let rawUnit = colMap.unit !== undefined ? cleanTxt(row[colMap.unit]) : '';
+    if (!rawUnit || DUMMY_STRINGS.has(rawUnit.toLowerCase())) {
+      for (const uIdx of allUnitIndices) {
+        const cand = cleanTxt(row[uIdx]);
+        if (cand && !DUMMY_STRINGS.has(cand.toLowerCase())) {
+          rawUnit = cand;
+          break;
+        }
+      }
+    }
+
+    // 5. Location extraction
     let rawLocation = colMap.location !== undefined ? cleanTxt(row[colMap.location]) : '';
     if (!rawLocation) {
       for (const lIdx of allLocationIndices) {
@@ -532,11 +702,12 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
 
     const rawPropType = colMap.property_type !== undefined ? cleanTxt(row[colMap.property_type]) : '';
 
+    // Apply enterprise sanitizers
     const phoneRes = cleanPhone(rawPhone);
-    const rawNameClean = cleanTxt(rawName);
-    const cleanName = rawNameClean ? rawNameClean.replace(/\b\w/g, c => c.toUpperCase()) : 'Property Owner';
-    
-    // ─── Build Lead Item: PRESERVE 100% OF ALL ORIGINAL COLUMNS ───
+    const cleanName = cleanOwnerName(rawName);
+    const cleanUnit = cleanUnitNumber(rawUnit, rawProject);
+
+    // Build Lead Item (100% of original columns preserved)
     const item = {
       row_num: rowNum,
       vapi_e164: phoneRes.vapi_e164,
@@ -544,26 +715,24 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
       source_file: filename,
     };
 
-    // Store EVERY single original raw column with its original header name
     originalHeaders.forEach((origH, idx) => {
       item[origH] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '';
     });
 
-    // Attach standardized clean fields for direct consumption
     item.owner_name = cleanName;
     item.contact_number = phoneRes.primary || rawPhone;
-    item.unit_number = rawUnit || '';
+    item.unit_number = cleanUnit || '';
     item.project_name = rawProject || '';
     item.location = rawLocation || '';
     item.property_type = rawPropType || defaultPropType;
 
     item['Owner Name'] = cleanName;
     item['Contact Number'] = phoneRes.primary || rawPhone;
-    item['Unit Number'] = rawUnit || '';
+    item['Unit Number'] = cleanUnit || '';
     item['Project'] = rawProject || '';
     item['Location'] = rawLocation || '';
     item['Property Type'] = rawPropType || defaultPropType;
-    item['Cleaned Unit Number'] = rawUnit || '';
+    item['Cleaned Unit Number'] = cleanUnit || '';
     item['Cleaned Phone (E.164)'] = phoneRes.vapi_e164 || (phoneRes.primary ? `+${phoneRes.primary}` : '');
 
     if (!phoneRes.valid) {
@@ -588,7 +757,7 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
     cleanCandidates.push(item);
   });
 
-  // Tier 2: Check Supabase CRM index in chunked batches
+  // Check Supabase CRM index in chunked batches
   const duplicatesInDb = [];
   const cleanLeads = [];
   const existingDbNumbers = new Set();
@@ -673,7 +842,7 @@ export async function getLeadStats() {
   };
 }
 
-// ─── Export Cleaned CSV with 100% of all original columns preserved ───
+// ─── 8. EXPORT CLEANED CSV ───
 export function generateCleanCSV(leads, originalHeaders = null) {
   if (!leads || leads.length === 0) return '';
 
@@ -688,7 +857,6 @@ export function generateCleanCSV(leads, originalHeaders = null) {
     baseHeaders = Object.keys(sample).filter(k => !internal.has(k));
   }
 
-  // Guarantee clean standardized columns are included at the end
   const exportHeaders = [...baseHeaders];
   if (!exportHeaders.includes('Cleaned Owner Name')) exportHeaders.push('Cleaned Owner Name');
   if (!exportHeaders.includes('Cleaned Phone (E.164)')) exportHeaders.push('Cleaned Phone (E.164)');
