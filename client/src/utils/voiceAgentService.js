@@ -136,7 +136,8 @@ export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedM
   }
 
   if (timeFilter === 'Daily') {
-    const dStr = selectedDate || '2026-10-11'; // default to today's live activity
+    const todayDubai = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
+    const dStr = selectedDate || todayDubai; // dynamically default to present day's live activity
     const start = `${dStr}T00:00:00.000Z`;
     // Next day
     const d = new Date(dStr);
@@ -272,6 +273,7 @@ export async function fetchVoiceOverview(filterParams) {
   const sampleRatio = calls.length > 0 ? (totalCallsCount / calls.length) : 1;
   const scaledDrops = Math.round(dropsCount * sampleRatio);
   const scaledQualified = Math.round(qualifiedCount * sampleRatio);
+  const scaledAnswered = Math.round(answeredCount * sampleRatio);
   const scaledCost = totalCostUsd * sampleRatio;
   const avgDuration = durationSamples > 0 ? Math.round(totalDurationSec / durationSamples) : 0;
 
@@ -307,6 +309,8 @@ export async function fetchVoiceOverview(filterParams) {
     label,
     totalCalls: totalCallsCount.toLocaleString(),
     rawTotalCalls: totalCallsCount,
+    answeredCalls: scaledAnswered.toLocaleString(),
+    rawAnsweredCalls: scaledAnswered,
     drops: scaledDrops.toLocaleString(),
     rawDrops: scaledDrops,
     qualifiedLeads: scaledQualified.toLocaleString(),
