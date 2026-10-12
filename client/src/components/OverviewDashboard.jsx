@@ -421,143 +421,72 @@ export default function OverviewDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* ─── 4. TWO-COLUMN SECTION (Property Allocation + Immediate Activity) ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Left Column: PROPERTY ASSET ALLOCATION */}
-        <div className="lg:col-span-5 bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+      {/* ─── 4. IMMEDIATE ACTIVITY (HOT LEADS FEED) ─── */}
+      <div className="bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-5">
-              PROPERTY ASSET ALLOCATION
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-amber-400" />
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Immediate Activity
+              </h3>
             </div>
-
-            <div className="space-y-4">
-              {/* Apartments */}
-              <div>
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-slate-300 font-medium">Apartments</span>
-                  <span className="text-white font-bold font-mono">598,253</span>
-                </div>
-                <div className="h-2 w-full bg-[#00284b] rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: '75%' }}></div>
-                </div>
-              </div>
-
-              {/* Villas */}
-              <div>
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-slate-300 font-medium">Villas</span>
-                  <span className="text-white font-bold font-mono">89,897</span>
-                </div>
-                <div className="h-2 w-full bg-[#00284b] rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 rounded-full" style={{ width: '28%' }}></div>
-                </div>
-              </div>
-
-              {/* Commercial */}
-              <div>
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-slate-300 font-medium">Commercial</span>
-                  <span className="text-white font-bold font-mono">68,344</span>
-                </div>
-                <div className="h-2 w-full bg-[#00284b] rounded-full overflow-hidden">
-                  <div className="h-full bg-cyan-400 rounded-full" style={{ width: '22%' }}></div>
-                </div>
-              </div>
-
-              {/* Land & Plots */}
-              <div>
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-slate-300 font-medium">Land & Plots</span>
-                  <span className="text-white font-bold font-mono">142,762</span>
-                </div>
-                <div className="h-2 w-full bg-[#00284b] rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-400 rounded-full" style={{ width: '45%' }}></div>
-                </div>
-              </div>
-            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              High-intent buyers & sellers requiring immediate broker action.
+            </p>
           </div>
 
-          <div className="pt-5 mt-5 border-t border-[#00284b] flex items-center justify-between text-xs text-slate-400">
-            <span>Portfolio Coverage</span>
-            <span className="text-emerald-400 font-bold font-mono">899,256 Register Units</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
+              6 Hot Leads
+            </span>
+            <button
+              onClick={() => onNavigate && onNavigate('owners')}
+              className="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-[#00284b]/60 border border-[#00386b] hover:bg-[#00284b] transition-all flex items-center gap-1.5"
+            >
+              <span>View all</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
-        {/* Right Column: IMMEDIATE ACTIVITY (Hot Leads Feed formatted cleanly) */}
-        <div className="lg:col-span-7 bg-[#001830] border border-[#00284b] rounded-2xl p-6 shadow-lg flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
+        {/* List of immediate hot leads */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {IMMEDIATE_ACTIVITIES.map((act) => (
+            <div
+              key={act.id}
+              onClick={() => onNavigate && onNavigate(act.targetTab)}
+              className="p-4 bg-[#001020] border border-[#00284b] rounded-xl hover:border-[#00407a] hover:bg-[#00162e] transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+            >
               <div>
-                <div className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-base font-bold text-white tracking-tight">
-                    Immediate Activity
-                  </h3>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <h4 className="font-semibold text-white text-xs truncate group-hover:text-blue-300 transition-colors">
+                    {act.title}
+                  </h4>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${act.badgeStyle}`}>
+                    {act.badge}
+                  </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  High-intent buyers & sellers requiring immediate broker action.
+
+                <div className="text-xs text-amber-200/90 font-medium mb-1">
+                  {act.subtitle}
+                </div>
+                <p className="text-[11.5px] text-slate-400 line-clamp-2 leading-relaxed">
+                  {act.description}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
-                  6 Hot Leads
+              <div className="flex items-center justify-between pt-2 border-t border-[#00284b]/60 text-[11px]">
+                <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px]">
+                  <Bot className="w-3.5 h-3.5 text-blue-400" /> {act.agent}
                 </span>
-                <button
-                  onClick={() => onNavigate && onNavigate('owners')}
-                  className="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-[#00284b]/60 border border-[#00386b] hover:bg-[#00284b] transition-all flex items-center gap-1.5"
-                >
-                  <span>View all</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  {act.time}
+                </span>
               </div>
             </div>
-
-            {/* List of immediate hot leads */}
-            <div className="space-y-3">
-              {IMMEDIATE_ACTIVITIES.slice(0, 4).map((act) => (
-                <div
-                  key={act.id}
-                  onClick={() => onNavigate && onNavigate(act.targetTab)}
-                  className="p-3.5 bg-[#001020] border border-[#00284b] rounded-xl hover:border-[#00407a] hover:bg-[#00162e] transition-all cursor-pointer flex flex-col gap-1.5 group"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <h4 className="font-semibold text-white text-xs truncate group-hover:text-blue-300 transition-colors">
-                        {act.title}
-                      </h4>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${act.badgeStyle}`}>
-                        {act.badge}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-mono shrink-0">
-                      {act.time}
-                    </span>
-                  </div>
-
-                  <div className="text-xs text-amber-200/90 font-medium">
-                    {act.subtitle}
-                  </div>
-                  <p className="text-[11.5px] text-slate-400 line-clamp-1 leading-relaxed">
-                    {act.description}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-[#00284b]/60 text-[11px]">
-                    <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px]">
-                      <Bot className="w-3.5 h-3.5 text-blue-400" /> {act.agent}
-                    </span>
-                    <button className="px-2.5 py-0.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-[11px] font-semibold flex items-center gap-1 transition-all">
-                      <span>{act.actionLabel}</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
-
       </div>
 
       {/* ─── 5. SCROLL DOWN CONTENT: AGENTS FLEET DETAIL & WORKFLOW HEALTH ─── */}
