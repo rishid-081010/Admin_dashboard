@@ -220,8 +220,9 @@ export default function OverviewDashboard({ onNavigate }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">
-              {loadingActivities ? 'Syncing...' : `${immediateActivities.length} Qualified Hot Leads`}
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              {loadingActivities ? 'Syncing...' : `${immediateActivities.length} Hot Leads · No Action Performed Yet`}
             </span>
             <button
               onClick={() => onNavigate && onNavigate('voice')}
@@ -266,8 +267,14 @@ export default function OverviewDashboard({ onNavigate }) {
                     </span>
                   </div>
 
-                  <div className="text-xs text-amber-200/90 font-medium mb-1.5 truncate" title={act.subtitle}>
-                    {act.subtitle}
+                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                    <div className="text-xs text-amber-200/90 font-medium truncate" title={act.subtitle}>
+                      {act.subtitle}
+                    </div>
+                    <span className="text-[9.5px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono shrink-0 flex items-center gap-1 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                      No Action Yet
+                    </span>
                   </div>
                   <p className="text-[11.5px] text-slate-300 line-clamp-2 leading-relaxed" title={act.description}>
                     {act.description}

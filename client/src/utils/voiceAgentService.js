@@ -381,30 +381,51 @@ export async function fetchVoiceAgent360(assistantId, filterParams, page = 1, pa
 function extractBuildingContext(dbBuilding, dbArea, note, summary) {
   const combined = `${note || ''} ${summary || ''}`.toLowerCase();
   
-  if (combined.includes('act 1 act 2') || combined.includes('act one act two')) return 'Act One Act Two Tower 1';
-  if (combined.includes('peninsula 1')) return 'Peninsula 1';
-  if (combined.includes('paramount tower')) return 'Paramount Tower Hotel & Residences';
-  if (combined.includes('azizi shista') || combined.includes('azizi shaista')) return 'Azizi Shaista Residence';
-  if (combined.includes('cordoba palace')) return 'Cordoba Palace';
-  if (combined.includes('29 blvd')) return '29 Boulevard Tower 1';
-  if (combined.includes('upper crest')) return 'Upper Crest';
-  if (combined.includes('elite business bay')) return 'Elite Business Bay Residence';
-  if (combined.includes('jules residence')) return 'Jules Residence';
-  if (combined.includes('moss tower') || combined.includes('mas tower')) return 'MAS Tower';
-  if (combined.includes('sol bay')) return 'Sol Bay';
-  if (combined.includes('star\'s tower') || combined.includes('starz tower')) return 'Starz Tower 2';
+  if (combined.includes('act 1 act 2') || combined.includes('act one act two')) {
+    return { building: 'Act One Act Two Tower 1', area: 'Burj Khalifa' };
+  }
+  if (combined.includes('peninsula 1')) {
+    return { building: 'Peninsula 1', area: 'Business Bay' };
+  }
+  if (combined.includes('paramount tower')) {
+    return { building: 'Paramount Tower Hotel & Residences', area: 'Business Bay' };
+  }
+  if (combined.includes('azizi shista') || combined.includes('azizi shaista')) {
+    return { building: 'Azizi Shaista Residence', area: 'Al Furjan' };
+  }
+  if (combined.includes('cordoba palace')) {
+    return { building: 'Cordoba Palace', area: 'Cordoba Palace' };
+  }
+  if (combined.includes('29 blvd')) {
+    return { building: '29 Boulevard Tower 1', area: 'Burj Khalifa' };
+  }
+  if (combined.includes('upper crest')) {
+    return { building: 'Upper Crest', area: 'Downtown Dubai' };
+  }
+  if (combined.includes('elite business bay')) {
+    return { building: 'Elite Business Bay Residence', area: 'Business Bay' };
+  }
+  if (combined.includes('jules residence')) {
+    return { building: 'Jules Residence', area: 'Arjan' };
+  }
+  if (combined.includes('moss tower') || combined.includes('mas tower')) {
+    return { building: 'MAS Tower', area: 'Dubai' };
+  }
+  if (combined.includes('sol bay')) {
+    return { building: 'Sol Bay', area: 'Business Bay' };
+  }
+  if (combined.includes('star\'s tower') || combined.includes('starz tower')) {
+    return { building: 'Starz Tower 2', area: 'Al Furjan' };
+  }
 
-  if (dbBuilding && dbBuilding.length > 2 && !/^\d+$/.test(dbBuilding)) {
-    return dbBuilding;
-  }
-  if (dbArea && dbArea.length > 2 && !/^\d+$/.test(dbArea)) {
-    return dbArea;
-  }
-  return 'Dubai Prime Property';
+  const b = dbBuilding && dbBuilding.length > 2 && !/^\d+$/.test(dbBuilding) ? dbBuilding : 'Dubai Prime Property';
+  const a = dbArea && dbArea.length > 2 && !/^\d+$/.test(dbArea) ? dbArea : 'Dubai';
+  return { building: b, area: a };
 }
 
 // Fetch Live Actionable Hot Leads from Supabase vapi_call_logs joined with owner_intelligence_leads
 // Strictly filters for leads who are interested, ready to buy or sell/rent, and require human broker intervention
+// Guarantees only hot leads where NO action has been performed yet
 export async function fetchImmediateActivities() {
   const headers = {
     'apikey': SUPABASE_KEY,
@@ -499,7 +520,7 @@ export async function fetchImmediateActivities() {
       );
 
       if (hasIntent && needsIntervention) {
-        // Deduplicate so the same phone never appears twice
+        // Deduplicate so the same phone never appears twice (keeps the latest call)
         const phoneKey = c.customer_phone || c.id;
         if (!seenPhones.has(phoneKey)) {
           seenPhones.add(phoneKey);
@@ -510,7 +531,7 @@ export async function fetchImmediateActivities() {
 
     if (qualifiedCalls.length === 0) return [];
 
-    // Limit to top 6 most actionable leads
+    // Limit to top 6 most actionable hot leads where no action has been performed yet
     const topCalls = qualifiedCalls.slice(0, 6);
 
     // 3. Fetch owner intelligence details for matching customer phone numbers
@@ -527,10 +548,10 @@ export async function fetchImmediateActivities() {
           const owners = await ownersRes.json();
           (owners || []).forEach(o => {
             if (o.phone_normalized) {
-              const existing = ownersMap[o.phone_normalized];
-              if (!existing || (!existing.unit_number && o.unit_number) || (!existing.building_name && o.building_name)) {
-                ownersMap[o.phone_normalized] = o;
+              if (!ownersMap[o.phone_normalized]) {
+                ownersMap[o.phone_normalized] = [];
               }
+              ownersMap[o.phone_normalized].push(o);
             }
           });
         }
@@ -539,18 +560,30 @@ export async function fetchImmediateActivities() {
       }
     }
 
-    // 4. Format into actionable hot lead cards
+    // 4. Format into actionable hot lead cards where no action has been performed yet
     return topCalls.map((c) => {
-      const owner = ownersMap[c.customer_phone] || {};
+      const ownerList = ownersMap[c.customer_phone] || [];
+      const callText = `${c.note || ''} ${c.summary || ''}`.toLowerCase();
+
+      // Intelligently select the specific property mentioned in the conversation
+      let owner = ownerList.find(o => {
+        if (!o.building_name || o.building_name.length <= 2) return false;
+        const bClean = o.building_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cClean = callText.replace(/[^a-z0-9]/g, '');
+        return cClean.includes(bClean);
+      }) || ownerList.find(o => o.unit_number && callText.includes(String(o.unit_number).toLowerCase()))
+         || ownerList[0] || {};
+
       const agentConfig = AGENTS_CONFIG[c.assistantId];
       const agentName = agentConfig ? `${agentConfig.name} (${agentConfig.line.split(' ')[0]})` : 'Sarah (Line 1)';
       const durSec = Number(c.duration_seconds) || 0;
       const durStr = durSec > 0 ? formatDuration(durSec) : 'Connected';
 
-      const buildingName = extractBuildingContext(owner.building_name, owner.master_area, c.note, c.summary);
+      const ctx = extractBuildingContext(owner.building_name, owner.master_area, c.note, c.summary);
+      const buildingName = ctx.building;
+      const masterArea = owner.master_area && !/^\d+$/.test(owner.master_area) ? owner.master_area : ctx.area;
       const unitNumber = owner.unit_number && !owner.unit_number.includes('Joy') && owner.unit_number !== '1' ? owner.unit_number : '';
       const ownerName = owner.full_name || c.customer_name || 'Property Owner';
-      const masterArea = owner.master_area && !/^\d+$/.test(owner.master_area) ? owner.master_area : 'Dubai';
 
       // Title & Subtitle
       const title = `${buildingName}${unitNumber ? ` · Unit ${unitNumber}` : ''}`;
@@ -633,6 +666,8 @@ export async function fetchImmediateActivities() {
         badge,
         badgeStyle,
         actionType,
+        actionStatus: 'Pending Action',
+        statusLabel: 'No action performed yet',
         description,
         time,
         agent: `${agentName} · ${durStr}`,
