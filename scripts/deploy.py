@@ -1,4 +1,4 @@
-﻿import requests
+import requests
 import os
 import sys
 
@@ -74,6 +74,8 @@ def upload_file(local_path, remote_rel_path):
     }
     r_patch = requests.patch(real_patch_url, headers=patch_headers, data=file_bytes, timeout=30)
     print(f"Uploaded {remote_rel_path} ({size} bytes): status {r_patch.status_code}")
+    if r_patch.status_code not in (200, 204):
+        print(f"PATCH ERROR for {remote_rel_path}: {r_patch.status_code} - {r_patch.text} - {r_patch.headers}")
     return r_patch.status_code in (200, 204)
 
 success = True
