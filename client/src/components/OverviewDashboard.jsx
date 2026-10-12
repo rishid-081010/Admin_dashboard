@@ -224,83 +224,101 @@ export default function OverviewDashboard({ onNavigate }) {
       </div>
 
       {/* ─── 3. IMMEDIATE ACTION REQUIRED ───────────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-amber-400" />
-            <h3 className="text-base font-bold text-white tracking-tight">
-              Immediate Action Required
-            </h3>
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 sm:p-7 shadow-xl shadow-black/40">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[#1c2e42]">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+              <Flame className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Immediate Action Required
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                High-intent qualified leads awaiting senior broker contact or mandate agreement
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               {loadingActivities ? 'Syncing...' : `${immediateActivities.length} Hot Leads · No Action Performed Yet`}
             </span>
             <button
               onClick={() => onNavigate && onNavigate('voice')}
-              className="px-3 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] transition-all flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] transition-all flex items-center gap-1.5 shadow-sm"
             >
               <span>View all</span>
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* List of immediate hot leads */}
         {loadingActivities ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl animate-pulse h-40 flex flex-col justify-between">
-                <div className="h-4 bg-slate-800 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-slate-800/60 rounded w-1/2 mb-2"></div>
-                <div className="h-10 bg-slate-800/40 rounded w-full"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="p-6 bg-[#06111e] border border-[#1a2c42] rounded-2xl animate-pulse h-52 flex flex-col justify-between">
+                <div>
+                  <div className="h-5 bg-slate-800 rounded w-2/3 mb-3"></div>
+                  <div className="h-4 bg-slate-800/60 rounded w-1/2 mb-4"></div>
+                  <div className="h-14 bg-slate-800/40 rounded-xl w-full"></div>
+                </div>
+                <div className="h-8 bg-slate-800/40 rounded-lg w-full mt-3"></div>
               </div>
             ))}
           </div>
         ) : immediateActivities.length === 0 ? (
-          <div className="p-8 text-center bg-[#06111e] border border-[#1a2c42] rounded-xl text-slate-400 text-xs">
-            No pending hot leads requiring human intervention at this moment.
+          <div className="p-12 text-center bg-[#06111e] border border-[#1a2c42] rounded-2xl text-slate-400 text-sm flex flex-col items-center justify-center gap-2">
+            <CheckCircle2 className="w-8 h-8 text-emerald-400/80 mb-1" />
+            <p className="font-semibold text-white">All Clear — No Pending Action Required</p>
+            <p className="text-xs text-slate-400">All hot leads have been handled or moved to next pipeline stages.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {immediateActivities.map((act) => (
               <div
                 key={act.id}
                 onClick={() => onNavigate && onNavigate(act.targetTab || 'voice')}
-                className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl hover:border-[#2a4363] hover:bg-[#091728] transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+                className="p-6 bg-[#081322] border border-[#1d3047] rounded-2xl hover:border-[#33537b] hover:bg-[#0b1a2e] transition-all cursor-pointer flex flex-col justify-between gap-4 group shadow-lg shadow-black/20"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <h4 className="font-semibold text-white text-xs truncate group-hover:text-blue-300 transition-colors" title={act.title}>
+                  {/* Row 1: Property Name & Action Badge */}
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h4 className="font-bold text-white text-base sm:text-[17px] leading-snug group-hover:text-blue-300 transition-colors tracking-tight" title={act.title}>
                       {act.title}
                     </h4>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${act.badgeStyle}`}>
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold border shrink-0 tracking-wide shadow-sm ${act.badgeStyle}`}>
                       {act.badge}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <div className="text-xs text-amber-200/90 font-medium truncate" title={act.subtitle}>
+                  {/* Row 2: Owner Details & Pending Status Badge */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+                    <div className="text-sm text-amber-200/90 font-semibold" title={act.subtitle}>
                       {act.subtitle}
                     </div>
-                    <span className="text-[9.5px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono shrink-0 flex items-center gap-1 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-md font-mono shrink-0 flex items-center gap-1.5 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
                       No Action Yet
                     </span>
                   </div>
-                  <p className="text-[11.5px] text-slate-300 line-clamp-2 leading-relaxed" title={act.description}>
+
+                  {/* Row 3: Spacious Lead Summary Box */}
+                  <div className="p-4 rounded-xl bg-[#050d18] border border-[#16273c] text-[13px] sm:text-[13.5px] text-slate-200 leading-relaxed font-normal shadow-inner">
                     {act.description}
-                  </p>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2.5 border-t border-[#1a2c42] text-[11px]">
-                  <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px]">
-                    <Bot className="w-3.5 h-3.5 text-blue-400" /> {act.agent}
+                {/* Row 4: Footer with Agent & Generous Action Buttons */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3.5 border-t border-[#1a2c42]">
+                  <span className="text-slate-400 flex items-center gap-2 font-mono text-xs">
+                    <Bot className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>{act.agent}</span>
                   </span>
                   
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2 shrink-0">
                     {act.cleanPhone && (
                       <a
                         href={`https://wa.me/${act.cleanPhone}`}
@@ -308,9 +326,9 @@ export default function OverviewDashboard({ onNavigate }) {
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
                         title="Send WhatsApp message"
-                        className="p-1 px-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 text-[10px] font-medium transition-all"
+                        className="px-3.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 text-xs font-semibold transition-all shadow-sm"
                       >
-                        <MessageSquare className="w-3 h-3" />
+                        <MessageSquare className="w-3.5 h-3.5 shrink-0" />
                         <span>WhatsApp</span>
                       </a>
                     )}
@@ -319,9 +337,9 @@ export default function OverviewDashboard({ onNavigate }) {
                         href={`tel:${act.phone}`}
                         onClick={(e) => e.stopPropagation()}
                         title="Call owner directly"
-                        className="p-1 px-1.5 rounded bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 flex items-center gap-1 text-[10px] font-medium transition-all"
+                        className="px-3.5 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 flex items-center gap-1.5 text-xs font-semibold transition-all shadow-sm"
                       >
-                        <Phone className="w-3 h-3" />
+                        <Phone className="w-3.5 h-3.5 shrink-0" />
                         <span>Call</span>
                       </a>
                     )}
@@ -329,9 +347,9 @@ export default function OverviewDashboard({ onNavigate }) {
                       type="button"
                       onClick={(e) => handleCompleteLead(act.id, act.phone, e)}
                       title="Mark as completed & remove from queue"
-                      className="p-1 px-2 rounded bg-slate-800/90 hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:text-emerald-300 text-slate-300 border border-slate-700/80 flex items-center gap-1 text-[10px] font-medium transition-all group/done"
+                      className="px-3.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-emerald-500/25 hover:border-emerald-500/40 hover:text-emerald-300 text-slate-200 border border-slate-700/80 flex items-center gap-1.5 text-xs font-semibold transition-all group/done shadow-sm"
                     >
-                      <Check className="w-3 h-3 text-slate-400 group-hover/done:text-emerald-400 transition-colors" />
+                      <Check className="w-3.5 h-3.5 text-slate-400 group-hover/done:text-emerald-400 transition-colors shrink-0" />
                       <span>Done</span>
                     </button>
                   </div>
