@@ -15,7 +15,7 @@ export default function DataHealth() {
         <div className="text-[10px] font-mono tracking-widest text-white/40 uppercase mb-1">
           A SQUARED / SYSTEM
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1" style={{ fontFamily: "Georgia, serif" }}>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1">
           Data Quality
         </h1>
         <p className="text-white/60 text-xs sm:text-sm font-medium">
@@ -62,7 +62,7 @@ export default function DataHealth() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 flex-1 min-h-0">
         {/* Left Panel */}
         <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-5 sm:p-6 flex flex-col shadow-2xl min-h-0 overflow-hidden group hover:border-white/20 transition-all">
-          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight mb-4 flex items-center gap-2 shrink-0" style={{ fontFamily: "Georgia, serif" }}>
+          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight mb-4 flex items-center gap-2 shrink-0">
             Data Processing Status
           </h3>
           <div className="flex-1 border border-white/10 rounded-xl bg-black/25 flex items-center justify-center relative overflow-hidden min-h-0 p-6">
@@ -78,7 +78,7 @@ export default function DataHealth() {
 
         {/* Right Panel */}
         <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-5 sm:p-6 flex flex-col shadow-2xl min-h-0 overflow-hidden group hover:border-white/20 transition-all">
-          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight mb-2 shrink-0" style={{ fontFamily: "Georgia, serif" }}>
+          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight mb-2 shrink-0">
             Validation &amp; Formatting Rules
           </h3>
           <p className="text-white/60 text-xs mb-5">
@@ -86,7 +86,7 @@ export default function DataHealth() {
           </p>
 
           <div className="border-t border-white/10 pt-4 mt-auto">
-            <h4 className="text-sm font-bold text-white tracking-wide mb-2" style={{ fontFamily: "Georgia, serif" }}>
+            <h4 className="text-sm font-bold text-white tracking-wide mb-2">
               Duplicate Prevention Policy
             </h4>
             <p className="text-white/60 text-xs leading-relaxed">

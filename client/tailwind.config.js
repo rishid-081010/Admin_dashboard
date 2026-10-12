@@ -34,8 +34,8 @@ export default {
         }
       },
       fontFamily: {
-        serif: ['Cinzel', 'Playfair Display', 'Denton', 'Georgia', 'serif'],
-        sans: ['Inter', 'Plus Jakarta Sans', 'sans-serif'],
+        serif: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       }
     },
   },

@@ -619,7 +619,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
       {/* Main Header */}
       <div className="flex flex-col items-center justify-center mt-2 mb-5 shrink-0">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1" style={{ fontFamily: "Georgia, serif" }}>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1">
           SEARCH DATABASE
         </h1>
         <p className="text-white/50 text-xs sm:text-sm text-center">
@@ -1042,7 +1042,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 <span className="text-[10.5px] uppercase font-mono font-bold tracking-wider text-amber-400">
                   COMMUNITY EXPLORER
                 </span>
-                <h3 className="text-lg font-bold text-white tracking-wide" style={{ fontFamily: "Georgia, serif" }}>
+                <h3 className="text-lg font-bold text-white tracking-wide">
                   {selectedArea.name}
                 </h3>
                 <p className="text-xs text-white/50">

@@ -56,7 +56,7 @@ export default function MyActivity({ globalAgent }) {
     <div className="w-full flex flex-col h-full animate-fade-in text-white/80">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
             MY TASKS &amp; DEALS
           </h1>
           <p className="text-white/60 text-[15px]">

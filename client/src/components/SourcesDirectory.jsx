@@ -90,8 +90,7 @@ export default function SourcesDirectory() {
           A SQUARED / INTELLIGENCE
         </div>
         <h1 
-          className="text-3xl md:text-4xl text-[#0f172a] font-normal tracking-tight mb-1" 
-          style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
+          className="text-3xl md:text-4xl text-[#0f172a] font-bold tracking-tight mb-1" 
         >
           Data library
         </h1>

@@ -11,7 +11,7 @@ import OverviewDashboard from './components/OverviewDashboard';
 import Buildings from './components/Buildings';
 import OmniSearch from './components/OmniSearch';
 import ReviewQueue from './components/ReviewQueue';
-import DatasetComparison from './components/DatasetComparison';
+import WorkflowsDirectory from './components/WorkflowsDirectory';
 import SourcesDirectory from './components/SourcesDirectory';
 import MyActivity from './components/MyActivity';
 import VoiceAgent from './components/VoiceAgent';
@@ -30,7 +30,7 @@ const ROUTE_MAP = {
   sources: '/dashboard/datalibrary',
   settings: '/dashboard/settings',
   reviews: '/dashboard/reviews',
-  comparison: '/dashboard/comparison',
+  workflows: '/dashboard/workflows',
   new: '/dashboard/new-listing',
   detail: '/dashboard/listing-detail'
 };
@@ -53,7 +53,7 @@ function getTabFromUrl() {
   if (target === 'listing') return 'listing';
   if (target === 'settings') return 'settings';
   if (target === 'reviews') return 'reviews';
-  if (target === 'comparison') return 'comparison';
+  if (target === 'workflows' || target === 'workflow') return 'workflows';
   if (target === 'new-listing') return 'new';
   if (target === 'listing-detail') return 'detail';
   return 'overview';
@@ -123,7 +123,9 @@ export default function App() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Main Glassmorphic Container */}
-        <main className="flex-1 bg-[#021024]/60 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl p-4 lg:p-5 overflow-hidden relative flex flex-col min-h-0">
+        <main className={`flex-1 bg-[#021024]/60 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl p-4 lg:p-6 relative flex flex-col min-h-0 ${
+          activeTab === 'overview' ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden'
+        }`}>
           {/* Tab Views */}
           {activeTab === 'overview' && (
             <OverviewDashboard onNavigate={(tab) => setActiveTab(tab)} />

@@ -91,16 +91,19 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           </span>
         </button>
 
-        {/* 6. Dataset Comparison (Pre-Purchase Benchmark) */}
+        {/* 6. Workflows (n8n Automations) */}
         <button 
-          onClick={() => setActiveTab('comparison')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'comparison' 
+          onClick={() => setActiveTab('workflows')} 
+          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'workflows' 
               ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Dataset Comparison</span>
+          <span>Workflows</span>
+          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full">
+            n8n
+          </span>
         </button>
 
         {/* 7. Data Cleaning */}

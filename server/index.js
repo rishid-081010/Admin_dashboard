@@ -2268,3 +2268,171 @@ app.get('/api/kpis', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// --- N8N LIVE WORKFLOWS & EXECUTIONS API ---
+let cachedN8nSession = { cookie: null, expiresAt: 0 };
+let cachedN8nTelemetry = { data: null, expiresAt: 0 };
+
+async function getN8nCookieNode() {
+  if (cachedN8nSession.cookie && cachedN8nSession.expiresAt > Date.now()) {
+    return cachedN8nSession.cookie;
+  }
+  const https = await import('https');
+  const agent = new https.Agent({ rejectUnauthorized: false });
+  const postData = JSON.stringify({ emailOrLdapLoginId: process.env.N8N_EMAIL || 'akarshrarora@gmail.com', password: process.env.N8N_PASSWORD || 'Asquared@1234' });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request('https://n8n.asquared.ae/rest/login', {
+      method: 'POST',
+      agent,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    }, res => {
+      let b = '';
+      res.on('data', d => b += d);
+      res.on('end', () => {
+        if (res.statusCode !== 200) return reject(new Error(`n8n login failed ${res.statusCode}: ${b}`));
+        const raw = res.headers['set-cookie'];
+        if (!raw || !raw[0]) return reject(new Error('No cookie returned from n8n'));
+        const cookie = raw[0].split(';')[0];
+        cachedN8nSession = { cookie, expiresAt: Date.now() + 6 * 24 * 3600 * 1000 };
+        resolve(cookie);
+      });
+    });
+    req.on('error', reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
+async function fetchFromN8nNode(cookie, endpoint) {
+  const https = await import('https');
+  const agent = new https.Agent({ rejectUnauthorized: false });
+  return new Promise((resolve, reject) => {
+    https.get(`https://n8n.asquared.ae${endpoint}`, { agent, headers: { Cookie: cookie } }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(d)); } catch (e) { reject(e); }
+      });
+    }).on('error', reject);
+  });
+}
+
+app.get('/api/n8n/workflows', async (req, res) => {
+  try {
+    if (cachedN8nTelemetry.data && cachedN8nTelemetry.expiresAt > Date.now() && req.query.refresh !== 'true') {
+      return res.json(cachedN8nTelemetry.data);
+    }
+
+    const cookie = await getN8nCookieNode();
+    const [workflowsJson, executionsJson] = await Promise.all([
+      fetchFromN8nNode(cookie, '/rest/workflows'),
+      fetchFromN8nNode(cookie, '/rest/executions?limit=250')
+    ]);
+
+    const workflows = workflowsJson.data || [];
+    const executions = (executionsJson.data && executionsJson.data.results) ? executionsJson.data.results : [];
+
+    const today = new Date().toISOString().split('T')[0];
+    const statsByWf = {};
+    let totalExecToday = 0;
+    let totalErrToday = 0;
+    let totalSuccToday = 0;
+
+    executions.forEach(ex => {
+      const wid = ex.workflowId;
+      const status = (ex.status || '').toLowerCase();
+      const isToday = (ex.createdAt || '').startsWith(today);
+
+      if (!statsByWf[wid]) {
+        statsByWf[wid] = {
+          executionsToday: 0,
+          successToday: 0,
+          errorToday: 0,
+          runningToday: 0,
+          latestStatus: status,
+          lastExecutedAt: ex.startedAt || ex.createdAt
+        };
+      }
+
+      if (isToday) {
+        statsByWf[wid].executionsToday++;
+        totalExecToday++;
+        if (status === 'success') { statsByWf[wid].successToday++; totalSuccToday++; }
+        else if (status === 'error') { statsByWf[wid].errorToday++; totalErrToday++; }
+        else if (status === 'running') { statsByWf[wid].runningToday++; }
+      }
+    });
+
+    let activeCount = 0;
+    let healthyCount = 0;
+    let errorCount = 0;
+
+    const list = workflows.map(w => {
+      const wid = w.id;
+      const isActive = Boolean(w.active);
+      if (isActive) activeCount++;
+      const st = statsByWf[wid] || { executionsToday: 0, successToday: 0, errorToday: 0, runningToday: 0, latestStatus: 'idle', lastExecutedAt: null };
+
+      let status = 'idle';
+      if (st.runningToday > 0 || st.latestStatus === 'running') {
+        status = 'running';
+      } else if (st.errorToday > 0 || st.latestStatus === 'error') {
+        status = 'error';
+        errorCount++;
+      } else if (st.successToday > 0 || st.latestStatus === 'success') {
+        status = 'healthy';
+        healthyCount++;
+      } else if (isActive) {
+        status = 'healthy';
+        healthyCount++;
+      } else {
+        status = 'paused';
+      }
+
+      return {
+        id: wid,
+        name: w.name,
+        active: isActive,
+        status,
+        executionsToday: st.executionsToday,
+        successToday: st.successToday,
+        errorToday: st.errorToday,
+        lastExecutedAt: st.lastExecutedAt,
+        updatedAt: w.updatedAt,
+        n8nUrl: `https://n8n.asquared.ae/workflow/${wid}`
+      };
+    });
+
+    list.sort((a, b) => {
+      if (a.active !== b.active) return b.active ? 1 : -1;
+      if (a.executionsToday !== b.executionsToday) return b.executionsToday - a.executionsToday;
+      return a.name.localeCompare(b.name);
+    });
+
+    const result = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      summary: {
+        totalWorkflows: workflows.length,
+        activeWorkflows: activeCount,
+        healthyWorkflows: healthyCount,
+        errorWorkflows: errorCount,
+        totalExecutionsToday: totalExecToday,
+        totalSuccessToday: totalSuccToday,
+        totalErrorsToday: totalErrToday
+      },
+      workflows: list
+    };
+
+    cachedN8nTelemetry = { data: result, expiresAt: Date.now() + 60000 };
+    res.json(result);
+  } catch (error) {
+    console.error('n8n API fetch error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+

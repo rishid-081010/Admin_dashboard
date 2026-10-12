@@ -17,9 +17,9 @@ export default function Navbar({ activeTab, setActiveTab }) {
                 x="50%" 
                 y="66%" 
                 textAnchor="middle" 
-                fontFamily="Cinzel, Denton, Georgia, serif" 
+                fontFamily="Inter, -apple-system, sans-serif" 
                 fontSize="46" 
-                fontWeight="700" 
+                fontWeight="800" 
                 fill="#3b82f6"
                 letterSpacing="-2"
               >
@@ -30,7 +30,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
           <div className="flex flex-col">
             <div className="flex items-center gap-2.5">
-              <span className="font-serif font-bold text-lg tracking-[0.15em] text-white group-hover:text-blue-300 transition-colors">
+              <span className="font-bold text-lg tracking-[0.15em] text-white group-hover:text-blue-300 transition-colors">
                 A SQUARED
               </span>
               <span className="px-2 py-0.5 text-[9px] font-bold tracking-widest uppercase bg-blue-500/10 text-blue-400 border border-blue-500/25 rounded-md flex items-center gap-1 backdrop-blur-sm">

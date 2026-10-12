@@ -127,7 +127,7 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
               Data Integrity &amp; Quality Control
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1" style={{ fontFamily: "Georgia, serif" }}>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1">
             REVIEW QUEUE
           </h1>
           <p className="text-white/60 text-xs sm:text-sm">
@@ -191,7 +191,7 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
         {filteredItems.length === 0 ? (
           <div className="text-center py-20 bg-white/[0.02] border border-white/10 rounded-2xl p-8">
             <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-60" />
-            <h3 className="text-lg font-bold text-white mb-1" style={{ fontFamily: "Georgia, serif" }}>Queue Cleared</h3>
+            <h3 className="text-lg font-bold text-white mb-1">Queue Cleared</h3>
             <p className="text-xs text-white/50 max-w-sm mx-auto">
               All flagged records in this category have been verified against canonical database entities.
             </p>
@@ -230,7 +230,7 @@ export default function ReviewQueue({ onNavigateToBuilding }) {
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-white mb-1" style={{ fontFamily: "Georgia, serif" }}>
+                  <h3 className="text-base font-bold text-white mb-1">
                     {item.title}
                   </h3>
                   <p className="text-xs text-white/60 mb-2 leading-relaxed">

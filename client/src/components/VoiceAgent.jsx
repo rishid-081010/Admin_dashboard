@@ -75,7 +75,7 @@ export default function VoiceAgent() {
               Supabase Cluster (81,597 calls)
             </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white" style={{ fontFamily: "Georgia, serif" }}>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
             VOICE AGENT CENTRE
           </h1>
           <p className="text-white/60 text-[14px]">
