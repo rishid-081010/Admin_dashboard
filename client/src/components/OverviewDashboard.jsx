@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Database, PhoneCall, Flame, Bot, CheckCircle2, 
   Activity, ChevronRight, ArrowRight, RefreshCw, Zap,
-  Building2, Radio, ExternalLink, ChevronDown, Check
+  Building2, Radio, ExternalLink, ChevronDown, Check,
+  Phone, MessageSquare
 } from 'lucide-react';
 import { fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount } from '../utils/voiceAgentService';
 import { fetchN8nWorkflows } from '../utils/n8nService';
@@ -26,15 +27,6 @@ export default function OverviewDashboard({ onNavigate }) {
   // Live Immediate Activities from Supabase
   const [immediateActivities, setImmediateActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
-  const [copiedPhone, setCopiedPhone] = useState(null);
-
-  const handleCopyPhone = (e, phone) => {
-    e.stopPropagation();
-    if (!phone) return;
-    navigator.clipboard.writeText(phone);
-    setCopiedPhone(phone);
-    setTimeout(() => setCopiedPhone(null), 2000);
-  };
 
   // Live n8n Workflows
   const [n8nData, setN8nData] = useState({
@@ -225,15 +217,11 @@ export default function OverviewDashboard({ onNavigate }) {
             <h3 className="text-base font-bold text-white tracking-tight">
               Immediate Action Required
             </h3>
-            <span className="text-xs text-slate-400 hidden sm:inline font-normal">
-              · High-Intent Leads Requiring Broker Follow-Up
-            </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-              {loadingActivities ? 'Syncing...' : `${immediateActivities.length} Hot Leads`}
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">
+              {loadingActivities ? 'Syncing...' : `${immediateActivities.length} Qualified Hot Leads`}
             </span>
             <button
               onClick={() => onNavigate && onNavigate('voice')}
@@ -249,16 +237,16 @@ export default function OverviewDashboard({ onNavigate }) {
         {loadingActivities ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl animate-pulse h-36 flex flex-col justify-between">
+              <div key={i} className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl animate-pulse h-40 flex flex-col justify-between">
                 <div className="h-4 bg-slate-800 rounded w-3/4 mb-2"></div>
                 <div className="h-3 bg-slate-800/60 rounded w-1/2 mb-2"></div>
-                <div className="h-8 bg-slate-800/40 rounded w-full"></div>
+                <div className="h-10 bg-slate-800/40 rounded w-full"></div>
               </div>
             ))}
           </div>
         ) : immediateActivities.length === 0 ? (
           <div className="p-8 text-center bg-[#06111e] border border-[#1a2c42] rounded-xl text-slate-400 text-xs">
-            No hot leads requiring human intervention logged today yet.
+            No pending hot leads requiring human intervention at this moment.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -266,7 +254,7 @@ export default function OverviewDashboard({ onNavigate }) {
               <div
                 key={act.id}
                 onClick={() => onNavigate && onNavigate(act.targetTab || 'voice')}
-                className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl hover:border-amber-500/40 hover:bg-[#091728] transition-all cursor-pointer flex flex-col justify-between gap-3 group relative overflow-hidden"
+                className="p-4 bg-[#06111e] border border-[#1a2c42] rounded-xl hover:border-[#2a4363] hover:bg-[#091728] transition-all cursor-pointer flex flex-col justify-between gap-3 group"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -278,42 +266,44 @@ export default function OverviewDashboard({ onNavigate }) {
                     </span>
                   </div>
 
-                  <div className="text-xs text-amber-200/90 font-medium mb-1 truncate" title={act.subtitle}>
+                  <div className="text-xs text-amber-200/90 font-medium mb-1.5 truncate" title={act.subtitle}>
                     {act.subtitle}
                   </div>
-                  <p className="text-[11.5px] text-slate-400 line-clamp-2 leading-relaxed" title={act.description}>
+                  <p className="text-[11.5px] text-slate-300 line-clamp-2 leading-relaxed" title={act.description}>
                     {act.description}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-[#1a2c42] text-[11px] gap-2">
-                  <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px] truncate">
-                    <Bot className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {act.agent}
+                <div className="flex items-center justify-between pt-2.5 border-t border-[#1a2c42] text-[11px]">
+                  <span className="text-slate-400 flex items-center gap-1 font-mono text-[10.5px]">
+                    <Bot className="w-3.5 h-3.5 text-blue-400" /> {act.agent}
                   </span>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {act.phone && (
-                      <button
-                        onClick={(e) => handleCopyPhone(e, act.phone)}
-                        className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/25 text-[10px] font-mono flex items-center gap-1 transition-all"
-                        title="Click to copy phone number"
+                  
+                  <div className="flex items-center gap-1.5">
+                    {act.cleanPhone && (
+                      <a
+                        href={`https://wa.me/${act.cleanPhone}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Send WhatsApp message"
+                        className="p-1 px-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 text-[10px] font-medium transition-all"
                       >
-                        {copiedPhone === act.phone ? (
-                          <>
-                            <Check className="w-2.5 h-2.5 text-emerald-400" />
-                            <span className="text-emerald-400 font-bold">Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <PhoneCall className="w-2.5 h-2.5 text-blue-400" />
-                            <span>Copy</span>
-                          </>
-                        )}
-                      </button>
+                        <MessageSquare className="w-3 h-3" />
+                        <span>WhatsApp</span>
+                      </a>
                     )}
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      {act.time}
-                    </span>
+                    {act.phone && (
+                      <a
+                        href={`tel:${act.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        title="Call owner directly"
+                        className="p-1 px-1.5 rounded bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 flex items-center gap-1 text-[10px] font-medium transition-all"
+                      >
+                        <Phone className="w-3 h-3" />
+                        <span>Call</span>
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
