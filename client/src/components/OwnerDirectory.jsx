@@ -281,9 +281,17 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       if (Array.isArray(response.data)) {
         const mapped = response.data.map(row => {
           let cleanName = (row.full_name ? String(row.full_name).trim() : '');
-          if (!cleanName || cleanName === '_' || cleanName === '-' || cleanName === '--' || cleanName.toLowerCase() === 'null') {
+          cleanName = cleanName.replace(/^[\s,.;:\-_~?!@#$%^&*+/\\|]+/, '').replace(/[\s,.;:\-_~?!@#$%^&*+/\\|]+$/, '').trim();
+
+          const isDummy = !cleanName || 
+            /^[\s,.;:\-_~?!@#$%^&*()[\]{}"'/\\]+$/.test(cleanName) ||
+            /\?{2,}/.test(cleanName) ||
+            ['null', 'n/a', 'na', 'none', 'unknown', 'nil', 'undefined', 'nan', '-ls', '1 nos', 'nos'].includes(cleanName.toLowerCase());
+
+          if (isDummy) {
             if (row.building_name && row.unit_number) {
-              cleanName = `Owner (${row.building_name} Unit ${row.unit_number})`;
+              const uClean = String(row.unit_number).replace(/[\s\-_/]+$/, '').trim();
+              cleanName = `Owner (${row.building_name} Unit ${uClean})`;
             } else if (row.building_name) {
               cleanName = `Property Owner (${row.building_name})`;
             } else {
@@ -300,7 +308,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
           email: row.email ? String(row.email) : 'N/A',
           units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
-          unit_number: row.unit_number ? String(row.unit_number) : null,
+          unit_number: row.unit_number ? String(row.unit_number).replace(/[\s\-_/]+$/, '').trim() : null,
           property_type: row.reported_property_type || null,
           property_category: row.property_category || (row.reported_property_type && /commercial|office|shop|warehouse|industrial|hotel|showroom|store|workshop|factory/i.test(row.reported_property_type) ? 'Commercial' : 'Residential'),
           nationality: row.nationality || null,
@@ -936,7 +944,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       <td className="px-5 py-4 font-medium text-white">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs shrink-0">
-                            {owner.name ? String(owner.name).charAt(0) : 'O'}
+                            {owner.name ? (String(owner.name).match(/[a-zA-Z0-9]/) || ['O'])[0].toUpperCase() : 'O'}
                           </div>
                           <div>
                             <div className="font-semibold text-white/95 group-hover:text-blue-400 transition-colors">
@@ -1144,7 +1152,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2.5">
                             <div className="w-9 h-9 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs">
-                              {owner.name ? String(owner.name).charAt(0) : 'O'}
+                              {owner.name ? (String(owner.name).match(/[a-zA-Z0-9]/) || ['O'])[0].toUpperCase() : 'O'}
                             </div>
                             <div>
                               <h3 className="font-bold text-white text-sm group-hover:text-blue-400 transition-colors line-clamp-1">

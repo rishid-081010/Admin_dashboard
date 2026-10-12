@@ -47,7 +47,9 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
 
   const getInitials = (name) => {
     if (!name) return 'OW';
-    const parts = name.trim().split(/\s+/);
+    const clean = String(name).replace(/^[^a-zA-Z0-9]+/, '').trim();
+    if (!clean) return 'OW';
+    const parts = clean.split(/\s+/);
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
