@@ -362,55 +362,68 @@ export default function OverviewDashboard({ onNavigate }) {
 
       {/* ─── 4. VOICE AGENTS ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 pt-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <PhoneCall className="w-4 h-4 text-purple-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">
-              Voice Agents
-            </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400">
+              <PhoneCall className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white tracking-tight">
+                Voice Agents
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                AI outbound acquisition dialers screening owner registries and booking qualified callbacks
+              </p>
+            </div>
           </div>
 
           <button
             onClick={() => onNavigate && onNavigate('voice')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow-md"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow-md self-start sm:self-auto"
           >
-            <span>View all</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>View all dialers</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Agent 1: Sarah */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-6 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
+            className="p-7 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
           >
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-xs font-bold">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-base font-bold shadow-inner">
                     1
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
+                    <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-blue-300 transition-colors tracking-tight">
                       Sarah
                     </h4>
-                    <span className="text-[10px] text-slate-400">Line 1</span>
+                    <span className="text-xs text-slate-400 font-medium">Line 1 · Acquisition Specialist</span>
                   </div>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   {voiceData.agent1.health}
                 </span>
               </div>
 
-              <div className="text-2xl font-black text-white my-2 font-mono">
-                {voiceData.agent1.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
+              {/* Metric Box */}
+              <div className="my-4 p-4 rounded-xl bg-[#06101c] border border-[#16273c]">
+                <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight">
+                  {voiceData.agent1.callsToday.toLocaleString()}
+                </div>
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mt-1">
+                  Calls Dialed Today
+                </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-blue-300 font-medium">
-              <span>View calls</span>
+            <div className="pt-4 border-t border-[#1a2c42] flex items-center justify-between text-xs sm:text-sm text-blue-300 font-semibold group-hover:text-blue-200 transition-colors">
+              <span>Inspect Call Activity</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
@@ -418,34 +431,40 @@ export default function OverviewDashboard({ onNavigate }) {
           {/* Agent 2: James */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-6 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
+            className="p-7 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
           >
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 text-xs font-bold">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 text-base font-bold shadow-inner">
                     2
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
+                    <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-purple-300 transition-colors tracking-tight">
                       James
                     </h4>
-                    <span className="text-[10px] text-slate-400">Line 2</span>
+                    <span className="text-xs text-slate-400 font-medium">Line 2 · Investor Outreach</span>
                   </div>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   {voiceData.agent2.health}
                 </span>
               </div>
 
-              <div className="text-2xl font-black text-white my-2 font-mono">
-                {voiceData.agent2.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
+              {/* Metric Box */}
+              <div className="my-4 p-4 rounded-xl bg-[#06101c] border border-[#16273c]">
+                <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight">
+                  {voiceData.agent2.callsToday.toLocaleString()}
+                </div>
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mt-1">
+                  Calls Dialed Today
+                </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-purple-300 font-medium">
-              <span>View calls</span>
+            <div className="pt-4 border-t border-[#1a2c42] flex items-center justify-between text-xs sm:text-sm text-purple-300 font-semibold group-hover:text-purple-200 transition-colors">
+              <span>Inspect Call Activity</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
@@ -453,34 +472,40 @@ export default function OverviewDashboard({ onNavigate }) {
           {/* Agent 3: Aisha */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-6 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
+            className="p-7 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
           >
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 text-xs font-bold">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 text-base font-bold shadow-inner">
                     3
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                    <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-emerald-300 transition-colors tracking-tight">
                       Aisha
                     </h4>
-                    <span className="text-[10px] text-slate-400">Line 3</span>
+                    <span className="text-xs text-slate-400 font-medium">Line 3 · Prime Specialist</span>
                   </div>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   {voiceData.agent3.health}
                 </span>
               </div>
 
-              <div className="text-2xl font-black text-white my-2 font-mono">
-                {voiceData.agent3.callsToday.toLocaleString()} <span className="text-slate-400 text-xs font-normal">calls today</span>
+              {/* Metric Box */}
+              <div className="my-4 p-4 rounded-xl bg-[#06101c] border border-[#16273c]">
+                <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight">
+                  {voiceData.agent3.callsToday.toLocaleString()}
+                </div>
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mt-1">
+                  Calls Dialed Today
+                </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#1a2c42] flex items-center justify-between text-xs text-emerald-300 font-medium">
-              <span>View calls</span>
+            <div className="pt-4 border-t border-[#1a2c42] flex items-center justify-between text-xs sm:text-sm text-emerald-300 font-semibold group-hover:text-emerald-200 transition-colors">
+              <span>Inspect Call Activity</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
@@ -488,27 +513,35 @@ export default function OverviewDashboard({ onNavigate }) {
       </div>
 
       {/* ─── 5. AUTOMATED WORKFLOWS ─────────────────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-base font-bold text-white tracking-tight">
-              Automated Workflows
-            </h3>
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 sm:p-7 shadow-xl shadow-black/40">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[#1c2e42]">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Automated Workflows
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Live background n8n pipelines syncing CRM deals, updating logs, and routing alerts
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               {loadingN8n ? 'Loading...' : `${n8nData.summary.activeWorkflows} Active · ${n8nData.summary.totalExecutionsToday} Runs Today`}
             </span>
             <a
               href="https://n8n.asquared.ae"
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 rounded-lg bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] text-slate-400 hover:text-white transition-all text-xs flex items-center gap-1"
+              className="px-3 py-1.5 rounded-xl bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm"
               title="Open n8n Console"
             >
+              <span>n8n Console</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
@@ -516,59 +549,50 @@ export default function OverviewDashboard({ onNavigate }) {
 
         {/* Active Workflows Grid */}
         {loadingN8n ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="p-3.5 bg-[#06111e] border border-[#1a2c42] rounded-xl animate-pulse h-20"></div>
+              <div key={i} className="p-5 bg-[#06111e] border border-[#1a2c42] rounded-2xl animate-pulse h-28"></div>
             ))}
           </div>
         ) : n8nData.workflows.length === 0 ? (
-          <div className="p-6 text-center bg-[#06111e] border border-[#1a2c42] rounded-xl text-slate-400 text-xs">
+          <div className="p-8 text-center bg-[#06111e] border border-[#1a2c42] rounded-2xl text-slate-400 text-sm">
             No workflows found.
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5">
               {(showAllWorkflows ? n8nData.workflows : n8nData.workflows.slice(0, 8)).map((wf) => (
                 <a
                   key={wf.id}
                   href={wf.n8nUrl || `https://n8n.asquared.ae/workflow/${wf.id}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="p-3.5 bg-[#06111e] border border-[#1a2c42] rounded-xl flex items-center justify-between gap-3 hover:border-[#2a4363] hover:bg-[#091728] transition-all group"
+                  className="p-5 sm:p-5.5 bg-[#081322] border border-[#1d3047] hover:border-[#33537b] hover:bg-[#0b1a2e] rounded-2xl flex flex-col justify-between gap-3.5 transition-all shadow-md group"
                 >
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 ${
-                      wf.status === 'healthy' 
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                        : wf.status === 'running'
-                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
-                        : wf.status === 'error'
-                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                        : 'bg-slate-500/10 border-slate-500/20 text-slate-400'
-                    }`}>
-                      <Zap className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-white text-xs font-semibold truncate group-hover:text-blue-300 transition-colors" title={wf.name}>
-                        {wf.name}
-                      </h4>
-                      <div className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-2">
-                        <span>Last run: {formatTimeAgo(wf.lastExecutedAt)}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border mt-0.5 ${
+                        wf.status === 'healthy' 
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                          : wf.status === 'running'
+                          ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                          : wf.status === 'error'
+                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                          : 'bg-slate-500/10 border-slate-500/20 text-slate-400'
+                      }`}>
+                        <Zap className="w-5 h-5" />
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0 text-right">
-                    <div>
-                      <div className="text-xs font-bold text-white font-mono">
-                        {wf.executionsToday} <span className="text-[10px] text-slate-400 font-normal">runs today</span>
-                      </div>
-                      <div className="text-[9.5px] text-slate-400 font-mono">
-                        {wf.successToday > 0 ? `${wf.successToday} ok` : 'standby'}
+                      <div className="min-w-0">
+                        <h4 className="text-white text-sm sm:text-base font-bold leading-snug group-hover:text-blue-300 transition-colors break-words" title={wf.name}>
+                          {wf.name}
+                        </h4>
+                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-2 font-mono">
+                          <span>Last run: {formatTimeAgo(wf.lastExecutedAt)}</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+                    <div className={`px-3 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 shrink-0 shadow-sm ${
                       wf.status === 'healthy'
                         ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                         : wf.status === 'running'
@@ -577,28 +601,39 @@ export default function OverviewDashboard({ onNavigate }) {
                         ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
                         : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
+                      <span className={`w-2 h-2 rounded-full ${
                         wf.status === 'healthy' ? 'bg-emerald-400 animate-pulse' :
                         wf.status === 'running' ? 'bg-blue-400 animate-pulse' :
                         wf.status === 'error' ? 'bg-rose-400' : 'bg-slate-400'
                       }`} />
                       <span className="capitalize">{wf.status || 'Active'}</span>
                     </div>
+                  </div>
 
-                    <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-colors" />
+                  {/* Workflow Execution Stats & Link Footer */}
+                  <div className="pt-3 border-t border-[#16273c] flex items-center justify-between text-xs">
+                    <span className="text-slate-300 font-mono font-medium flex items-center gap-2">
+                      <span className="text-white font-bold">{wf.executionsToday}</span> runs today
+                      <span className="text-slate-500">·</span>
+                      <span className="text-emerald-400">{wf.successToday > 0 ? `${wf.successToday} ok` : 'standby'}</span>
+                    </span>
+                    <span className="text-blue-400 group-hover:text-blue-300 font-semibold flex items-center gap-1 transition-colors">
+                      <span>Open workflow</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </span>
                   </div>
                 </a>
               ))}
             </div>
 
             {n8nData.workflows.length > 8 && (
-              <div className="mt-3.5 text-center">
+              <div className="mt-5 text-center">
                 <button
                   onClick={() => setShowAllWorkflows(!showAllWorkflows)}
-                  className="px-4 py-2 rounded-xl bg-[#06111e] border border-[#1a2c42] hover:bg-[#091728] hover:border-[#2a4363] text-xs font-semibold text-slate-300 hover:text-white transition-all inline-flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl bg-[#06111e] border border-[#1a2c42] hover:bg-[#091728] hover:border-[#2a4363] text-xs font-semibold text-slate-300 hover:text-white transition-all inline-flex items-center gap-2 shadow-sm"
                 >
                   <span>{showAllWorkflows ? 'Show Less' : `Show All (${n8nData.workflows.length})`}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllWorkflows ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showAllWorkflows ? 'rotate-180' : ''}`} />
                 </button>
               </div>
             )}
