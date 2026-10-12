@@ -56,6 +56,22 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
   const isAvailablePhone = owner.phone && owner.phone !== 'N/A' && owner.phone !== 'null';
   const assignedAgent = globalAgentName || 'Mayank';
 
+  const primaryPropertyName = (() => {
+    const bldg = (owner.building && owner.building !== 'N/A' && owner.building !== 'null') 
+      ? owner.building 
+      : (relatedProperties[0]?.building_name || relatedProperties[0]?.building || 'Primary Asset');
+    const unit = owner.unit_number || relatedProperties[0]?.unit_number;
+    return unit ? `${bldg} · Unit ${unit}` : bldg;
+  })();
+
+  const phoneNumber = isAvailablePhone ? owner.phone : 'Unlisted Phone';
+
+  const sourceFileName = owner.vendor_source_file 
+    || relatedProperties[0]?.vendor_source_file 
+    || owner.source_file 
+    || owner.rawRecord?.vendor_source_file 
+    || 'MASTER DUBAI REGISTER.xlsx';
+
   // Format purchase price or portfolio
   const formatPrice = (val) => {
     if (!val) return null;
@@ -91,7 +107,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
         </div>
       </div>
 
-            {/* --- Profile Header Widget (Clean Display Only) --- */}
+      {/* --- Profile Header Widget (Clean Display Only) --- */}
       <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 sm:p-5 mb-6 shadow-xl relative overflow-hidden backdrop-blur-xl flex items-center gap-4">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
@@ -125,37 +141,55 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
         </div>
       </div>
 
-{/* ─── 4 Metric Cards ─────────────────────────────── */}
+      {/* ─── 4 Metric Cards ─────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         
-        {/* Card 1: Properties Owned */}
+        {/* Card 1: Property Owned */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Properties Owned</span>
+            <span>Property Owned</span>
             <Building2 className="w-4 h-4 text-blue-400" />
           </div>
           <div>
-            <div className="text-3xl font-bold text-white tracking-tight">
-              {propertiesCount}
+            <div 
+              className="text-xl font-bold text-white tracking-tight truncate"
+              title={primaryPropertyName}
+            >
+              {primaryPropertyName}
             </div>
-            <div className="text-[11px] text-white/40 mt-1">
-              Registered properties &amp; units
+            <div className="text-[11px] text-white/40 mt-1 flex items-center justify-between">
+              <span>{propertiesCount} registered unit{propertiesCount > 1 ? 's' : ''}</span>
+              <span className="text-blue-400/80">{owner.area || 'Dubai'}</span>
             </div>
           </div>
         </div>
 
-        {/* Card 2: Phone Status */}
+        {/* Card 2: Phone Number */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Phone Status</span>
-            <Users className="w-4 h-4 text-emerald-400" />
+            <span>Phone Number</span>
+            <Phone className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
-            <div className={`text-2xl font-bold tracking-tight ${isAvailablePhone ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {isAvailablePhone ? 'Available' : 'Unverified'}
+            <div className="flex items-center justify-between">
+              <span 
+                className={`text-xl font-bold font-mono tracking-tight truncate ${isAvailablePhone ? 'text-emerald-400' : 'text-amber-400'}`}
+                title={phoneNumber}
+              >
+                {phoneNumber}
+              </span>
+              {isAvailablePhone && (
+                <button
+                  onClick={() => copyToClipboard(owner.phone, 'phone_card')}
+                  className="p-1 rounded-md hover:bg-white/10 text-white/50 hover:text-white transition-all ml-1 shrink-0"
+                  title="Copy Phone"
+                >
+                  {copiedField === 'phone_card' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              )}
             </div>
             <div className="text-[11px] text-white/40 mt-1">
-              {isAvailablePhone ? 'Mobile number verified' : 'Unverified phone'}
+              {isAvailablePhone ? 'Mobile number verified' : 'No mobile on record'}
             </div>
           </div>
         </div>
@@ -167,7 +201,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             <UserCheck className="w-4 h-4 text-purple-400" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-white tracking-tight truncate">
+            <div className="text-xl font-bold text-white tracking-tight truncate" title={assignedAgent}>
               {assignedAgent}
             </div>
             <div className="text-[11px] text-white/40 mt-1">
@@ -176,18 +210,22 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
           </div>
         </div>
 
-        {/* Card 4: Source Records */}
+        {/* Card 4: Source File */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between hover:border-white/20 transition-all">
           <div className="flex items-center justify-between text-xs text-white/50 font-medium mb-3">
-            <span>Source Records</span>
+            <span>Source File</span>
             <FileText className="w-4 h-4 text-amber-400" />
           </div>
           <div>
-            <div className="text-3xl font-bold text-white tracking-tight">
-              {propertiesCount}
+            <div 
+              className="text-sm font-bold font-mono text-white tracking-tight truncate" 
+              title={sourceFileName}
+            >
+              {sourceFileName}
             </div>
-            <div className="text-[11px] text-white/40 mt-1">
-              Linked registry files
+            <div className="text-[11px] text-white/40 mt-1 flex items-center justify-between">
+              <span>Linked registry file</span>
+              <span className="text-emerald-400/80 font-mono text-[10px]">Verified</span>
             </div>
           </div>
         </div>
