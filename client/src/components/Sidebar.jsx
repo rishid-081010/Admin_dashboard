@@ -10,20 +10,17 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const isLeadsActive = activeTab === 'leads';
 
   return (
-    <aside className="w-[220px] shrink-0 bg-[#021024]/80 backdrop-blur-2xl border border-white/[0.1] rounded-2xl p-2.5 flex flex-col h-full shadow-2xl select-none overflow-hidden transition-all hidden md:flex">
+    <aside className="w-[250px] shrink-0 bg-[#021024]/80 backdrop-blur-2xl border border-white/[0.1] rounded-2xl p-2.5 flex flex-col h-full shadow-2xl select-none overflow-hidden transition-all hidden md:flex">
       {/* Brand Header */}
       <div 
         onClick={() => setActiveTab('overview')}
-        className="brand-logo flex flex-col items-center justify-center pt-1.5 pb-2.5 px-2 cursor-pointer select-none group border-b border-white/[0.06] shrink-0"
+        className="brand-logo flex flex-col items-center justify-center py-2 px-1 cursor-pointer select-none group border-b border-white/[0.06] shrink-0"
       >
         <img 
           src="./asquared-logo.png" 
           alt="A SQUARED REAL ESTATE" 
-          className="w-36 h-auto object-contain transition-transform group-hover:scale-[1.03]"
+          className="w-[220px] max-w-full h-auto object-contain transition-transform group-hover:scale-[1.03]"
         />
-        <div className="text-[9.5px] font-mono tracking-widest uppercase text-blue-400/80 mt-1">
-          OWNERS INTELLIGENCE
-        </div>
       </div>
 
       {/* Navigation Links evenly distributed across the entire vertical widget height */}
