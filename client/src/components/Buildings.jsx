@@ -449,7 +449,7 @@ export default function Buildings() {
           <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <Layers className="w-4 h-4 text-emerald-400" />
             <div>
-              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Units in DB</div>
+              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Units</div>
               <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">{totalStats.totalUnits.toLocaleString()}</div>
             </div>
           </div>
@@ -457,7 +457,7 @@ export default function Buildings() {
           <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <Users className="w-4 h-4 text-sky-400" />
             <div>
-              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Linked Profiles</div>
+              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Owners</div>
               <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">{totalStats.totalOwners.toLocaleString()}</div>
             </div>
           </div>
@@ -528,7 +528,7 @@ export default function Buildings() {
           {/* Refresh Button */}
           <button 
             onClick={fetchBuildingsData}
-            title="Refresh buildings database"
+            title="Refresh buildings"
             className="p-2.5 bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] rounded-xl text-slate-400 hover:text-white transition-all flex-shrink-0"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
@@ -541,7 +541,7 @@ export default function Buildings() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-white/40">
             <RefreshCw className="w-8 h-8 animate-spin text-blue-400 mb-3" />
-            <p className="text-[15px] font-medium">Aggregating live building profiles from Supabase...</p>
+            <p className="text-[15px] font-medium">Loading buildings...</p>
           </div>
         ) : filteredBuildings.length === 0 ? (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center text-white/50 max-w-lg mx-auto mt-12">
@@ -582,21 +582,19 @@ export default function Buildings() {
                     {b.name}
                   </h3>
 
-                  {/* Subtitle with Separator */}
-                  <div className="text-xs text-slate-400 font-normal pb-4 border-b border-[#1a2c42] flex items-center gap-1.5">
+                  {/* Subtitle */}
+                  <div className="text-xs text-slate-400 font-normal pb-4 border-b border-[#1a2c42]">
                     <span>{b.propertyType}</span>
-                    <span>•</span>
-                    <span className="text-emerald-400">Verified in owners data</span>
                   </div>
 
-                  {/* 2-Column Key Metrics (Units in workspace & Linked profiles) */}
+                  {/* 2-Column Key Metrics */}
                   <div className="grid grid-cols-2 gap-4 py-4">
                     <div>
                       <div className="text-2xl sm:text-3xl font-bold font-serif text-white leading-none">
                         {b.unitsCount}
                       </div>
                       <div className="text-xs text-slate-400 font-medium mt-1">
-                        Units in workspace
+                        Units
                       </div>
                     </div>
                     <div>
@@ -604,7 +602,7 @@ export default function Buildings() {
                         {b.ownersCount}
                       </div>
                       <div className="text-xs text-slate-400 font-medium mt-1">
-                        Linked profiles
+                        Owners
                       </div>
                     </div>
                   </div>
@@ -689,7 +687,7 @@ export default function Buildings() {
                     {selectedBuilding.name}
                   </h2>
                   <p className="text-xs text-white/50 mt-0.5">
-                    {selectedBuilding.propertyType} • Verified in owners data
+                    {selectedBuilding.propertyType}
                   </p>
                 </div>
               </div>
@@ -705,13 +703,13 @@ export default function Buildings() {
             {/* Quick Metrics Bar inside Drawer */}
             <div className="grid grid-cols-3 gap-3 p-4 bg-black/20 border-b border-white/10">
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Verified Units</div>
+                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Units</div>
                 <div className="text-xl font-bold font-serif text-white mt-0.5">
                   {selectedBuilding.unitsCount}
                 </div>
               </div>
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Verified Owners</div>
+                <div className="text-[11px] text-white/40 uppercase font-mono font-medium">Owners</div>
                 <div className="text-xl font-bold font-serif text-white mt-0.5">
                   {selectedBuilding.ownersCount}
                 </div>
@@ -795,7 +793,7 @@ export default function Buildings() {
               {loadingBuildingOwners ? (
                 <div className="flex flex-col items-center justify-center py-16 text-white/40">
                   <RefreshCw className="w-6 h-6 animate-spin text-blue-400 mb-2" />
-                  <p className="text-xs">Fetching verified owner records...</p>
+                  <p className="text-xs">Loading owner records...</p>
                 </div>
               ) : filteredDrawerOwners.length === 0 ? (
                 <div className="text-center py-12 text-white/40">
@@ -823,10 +821,6 @@ export default function Buildings() {
                         </div>
                         <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-white/50">
                           <span className="font-mono text-white/40">{owner.lead_id}</span>
-                          <span>•</span>
-                          <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                            <ShieldCheck className="w-3 h-3" /> Verified Owner
-                          </span>
                           <span>•</span>
                           <span className="text-blue-300 font-mono font-medium">
                             {owner.sqm} sqm · {owner.sqft.toLocaleString()} sqft
@@ -901,7 +895,7 @@ export default function Buildings() {
             {/* Drawer Footer */}
             <div className="p-4 border-t border-white/10 bg-[#03152d]/90 flex items-center justify-between text-xs text-white/50">
               <span>
-                Showing {filteredDrawerOwners.length} verified owner records in {selectedBuilding.name}
+                Showing {filteredDrawerOwners.length} owner records in {selectedBuilding.name}
               </span>
               <button
                 onClick={() => setSelectedBuilding(null)}
@@ -987,13 +981,10 @@ export default function Buildings() {
                 </div>
               </div>
 
-              {/* Linked Owner Profile */}
+              {/* Owner Profile */}
               <div className="bg-[#03152d]/80 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
-                <h3 className="text-xs font-mono uppercase tracking-wider text-white/50 mb-2.5 font-semibold flex items-center justify-between">
-                  <span>Linked Owner Profile</span>
-                  <span className="text-emerald-400 text-[11px] font-normal flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> Verified Match
-                  </span>
+                <h3 className="text-xs font-mono uppercase tracking-wider text-white/50 mb-2.5 font-semibold">
+                  Owner Details
                 </h3>
 
                 <div className="flex items-start justify-between gap-3">

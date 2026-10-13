@@ -825,7 +825,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         </div>
                         <div>
                           <div className="text-sm font-extrabold text-blue-300">{area.totalUnits}</div>
-                          <div className="text-[9.5px] text-white/40 uppercase">Units in DB</div>
+                          <div className="text-[9.5px] text-white/40 uppercase">Units</div>
                         </div>
                         <div>
                           <div className="text-sm font-extrabold text-emerald-300">{area.phoneCoverage}%</div>
@@ -904,7 +904,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                          <strong className="text-white">{b.unitsCount}</strong> Units in DB
+                          <strong className="text-white">{b.unitsCount}</strong> Units
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1 text-emerald-400">

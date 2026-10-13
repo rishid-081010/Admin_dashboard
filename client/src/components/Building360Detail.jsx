@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Building2, ArrowLeft, Search, Download, Phone, Check, ShieldCheck, 
+  Building2, ArrowLeft, Search, Download, Phone, Check, 
   Layers, Users, ChevronRight, Filter, Sparkles, Copy, ExternalLink, 
   RefreshCw, MapPin, CheckCircle2, ChevronLeft, ArrowUpRight, Hash,
   LayoutGrid, ListFilter
@@ -298,7 +298,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           </button>
 
           <div className="flex items-center gap-2 text-xs text-white/40 font-mono truncate">
-            <span>DATABASE</span>
+            <span>BUILDINGS</span>
             <span>/</span>
             <span className="text-white/60 uppercase">{building.area || 'DUBAI'}</span>
             <span>/</span>
@@ -342,13 +342,6 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                 <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-mono uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">
                   {building.area || 'DUBAI'}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-mono uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold inline-flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" />
-                  Verified Registry
-                </span>
-                <span className="text-[11px] font-mono text-slate-400">
-                  BUILDING 360
-                </span>
               </div>
 
               <h1 
@@ -367,14 +360,14 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           {/* Right: 4 Key Metrics Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:max-w-xl w-full">
             <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 text-center">
-              <div className="text-[10px] uppercase font-mono text-slate-400 font-medium">Verified Units</div>
+              <div className="text-[10px] uppercase font-mono text-slate-400 font-medium">Units</div>
               <div className="text-xl sm:text-2xl font-bold font-serif text-white mt-0.5">
                 {metrics.verifiedUnits.toLocaleString()}
               </div>
             </div>
 
             <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 text-center">
-              <div className="text-[10px] uppercase font-mono text-slate-400 font-medium">Verified Owners</div>
+              <div className="text-[10px] uppercase font-mono text-slate-400 font-medium">Owners</div>
               <div className="text-xl sm:text-2xl font-bold font-serif text-white mt-0.5">
                 {metrics.totalOwners.toLocaleString()}
               </div>
@@ -382,7 +375,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
 
             <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 text-center col-span-2 sm:col-span-2">
               <div className="text-[10px] uppercase font-mono text-slate-400 font-medium flex items-center justify-center gap-1.5">
-                <span>With Direct Phone</span>
+                <span>With Phone</span>
                 <span className="text-emerald-400 font-bold">({metrics.phoneCoverage}%)</span>
               </div>
               <div className="text-xl sm:text-2xl font-bold font-serif text-emerald-400 mt-0.5">
@@ -486,8 +479,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
         {loading ? (
           <div className="py-24 text-center text-slate-400 flex flex-col items-center justify-center flex-1">
             <RefreshCw className="w-8 h-8 animate-spin text-blue-400 mb-3" />
-            <p className="text-sm font-semibold">Loading verified unit ownership records from Supabase...</p>
-            <span className="text-xs text-slate-500 font-mono mt-1">Connecting to {building.name} registry</span>
+            <p className="text-sm font-semibold">Loading unit records...</p>
           </div>
         ) : filteredOwners.length === 0 ? (
           <div className="py-20 text-center text-slate-400 flex flex-col items-center justify-center flex-1">
@@ -532,10 +524,6 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                     <td className="py-3 px-4">
                       <div className="font-bold text-white group-hover:text-blue-300 transition-colors text-[13px] truncate max-w-[280px]">
                         {owner.name}
-                      </div>
-                      <div className="text-[10.5px] text-emerald-400/90 flex items-center gap-1 mt-0.5 font-medium">
-                        <ShieldCheck className="w-3 h-3" />
-                        <span>Verified Deed Match</span>
                       </div>
                     </td>
 
@@ -651,7 +639,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
         {/* ── 5. Pagination Bar ───────────────────────────────────────── */}
         <div className="p-3.5 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3 shrink-0">
           <div>
-            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredOwners.length)} of {filteredOwners.length.toLocaleString()} verified unit records
+            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredOwners.length)} of {filteredOwners.length.toLocaleString()} units
           </div>
 
           <div className="flex items-center gap-2">
