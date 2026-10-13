@@ -17,7 +17,7 @@ const puppeteer = require('c:/Users/Rishi D/.antigravity/extensions/dubai-real-e
   await page.goto('https://admin.asquared.ae/dashboard/#search', { waitUntil: 'networkidle2' });
   
   const input = await page.$('input[type="text"]');
-  await input.type('lead 1433897', { delay: 20 });
+  await input.type('1433897', { delay: 20 });
   await input.press('Enter');
   await new Promise(r => setTimeout(r, 3000));
 
@@ -29,6 +29,7 @@ const puppeteer = require('c:/Users/Rishi D/.antigravity/extensions/dubai-real-e
     });
   });
 
-  console.log('All filter with lead 1433897 cards:', cards);
+  console.log('All filter with raw 1433897 cards count:', cards.length);
+  cards.forEach(c => console.log(' -', c.name, c.badges.join(' | ')));
   await browser.close();
 })();

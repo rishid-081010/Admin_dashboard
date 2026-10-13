@@ -265,8 +265,11 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
     const fetchPhone = () => {
       const cleanDigits = q.replace(/[^0-9]/g, '');
-      const phoneTerm = cleanDigits.length >= 3 ? cleanDigits : q;
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(phone_normalized.ilike.*${encodeURIComponent(phoneTerm)}*,phone_raw.ilike.*${encodeURIComponent(phoneTerm)}*)&select=*&limit=100`);
+      const pExact = q.trim().startsWith('+') ? q.trim() : `+${cleanDigits}`;
+      const pUae = cleanDigits.startsWith('05') ? `+971${cleanDigits.slice(1)}` : (cleanDigits.startsWith('971') ? `+${cleanDigits}` : null);
+      const orClauses = [`phone_normalized.eq.${encodeURIComponent(pExact)}`];
+      if (pUae) orClauses.push(`phone_normalized.eq.${encodeURIComponent(pUae)}`);
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${Array.from(new Set(orClauses)).join(',')})&select=*&limit=100`);
     };
 
     const fetchLeadId = () => {
@@ -377,7 +380,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         const isPureId = parsed && (parsed.intent !== 'any' || (cleanDigits.length >= 4 && !/[a-zA-Z]/.test(q.replace(/^(id|#|no\.?)\s*/i, ''))));
         const shouldRunTextSearch = !isPureId;
         const hasIdCheck = !!parsed;
-        const hasPhoneCheck = cleanDigits.length >= 7 || q.trim().startsWith('+');
+        const hasPhoneCheck = q.trim().startsWith('+') || (cleanDigits.length >= 9 && (cleanDigits.startsWith('05') || cleanDigits.startsWith('971') || cleanDigits.startsWith('04') || cleanDigits.startsWith('02')));
 
         const [bldgRows, areaRows, ownerRows, idRows, phoneRows] = await Promise.all([
           shouldRunTextSearch ? fetchBuildings() : Promise.resolve([]),
