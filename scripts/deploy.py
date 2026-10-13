@@ -42,6 +42,14 @@ for root, _, files in os.walk(dist_dir):
         uploads_list.append((local_path, f"public/dashboard/{rel_path}"))
         # Deploy to dashboard/{rel_path} to support direct /dashboard/ requests
         uploads_list.append((local_path, f"dashboard/{rel_path}"))
+        # If it's in audits/, also deploy to public/audits and audits
+        if rel_path.startswith('audits/'):
+            uploads_list.append((local_path, f"public/{rel_path}"))
+            uploads_list.append((local_path, rel_path))
+        # If it's in exports/, also deploy to public/exports and exports
+        if rel_path.startswith('exports/'):
+            uploads_list.append((local_path, f"public/{rel_path}"))
+            uploads_list.append((local_path, rel_path))
 
 # Deploy root domain entrypoint files to automatically redirect admin.asquared.ae -> /dashboard/
 root_dir = 'root_files'
@@ -51,6 +59,8 @@ if os.path.exists(root_dir):
         if os.path.isfile(lpath):
             uploads_list.append((lpath, f))
             uploads_list.append((lpath, f"public/{f}"))
+
+import time
 
 def upload_file(local_path, remote_rel_path):
     size = os.path.getsize(local_path)
@@ -65,41 +75,50 @@ def upload_file(local_path, remote_rel_path):
         'Upload-Length': str(size),
         'Upload-Offset': '0'
     }
-    r_post = requests.post(target_url, headers=post_headers, timeout=20)
-    if r_post.status_code not in (200, 201):
-        print(f"FAILED TUS POST {remote_rel_path}: {r_post.status_code} - {r_post.text}")
-        return False
 
-    loc = r_post.headers.get('Location')
-    if not loc:
-        print(f"FAILED to get Location header for {remote_rel_path}")
-        return False
-        
-    if loc.startswith('http'):
-        real_patch_url = loc
-    elif loc.startswith('/'):
-        real_patch_url = f"https://srv529-files.hstgr.io/rest{loc}"
-    else:
-        real_patch_url = f"https://srv529-files.hstgr.io/rest/{loc}"
-    patch_headers = {
-        'X-Auth': auth_key,
-        'X-Auth-Rest': rest_auth_key,
-        'Tus-Resumable': '1.0.0',
-        'Content-Type': 'application/offset+octet-stream',
-        'Upload-Offset': '0'
-    }
-    r_patch = requests.patch(real_patch_url, headers=patch_headers, data=file_bytes, timeout=30)
-    print(f"Uploaded {remote_rel_path} ({size} bytes): status {r_patch.status_code}")
-    if r_patch.status_code not in (200, 204):
-        print(f"PATCH ERROR for {remote_rel_path}: {r_patch.status_code} - {r_patch.text} - {r_patch.headers}")
-    return r_patch.status_code in (200, 204)
+    for attempt in range(1, 4):
+        try:
+            r_post = requests.post(target_url, headers=post_headers, timeout=30)
+            if r_post.status_code not in (200, 201):
+                print(f"FAILED TUS POST {remote_rel_path}: {r_post.status_code} - {r_post.text}", flush=True)
+                time.sleep(2)
+                continue
+
+            loc = r_post.headers.get('Location')
+            if not loc:
+                print(f"FAILED to get Location header for {remote_rel_path}", flush=True)
+                time.sleep(2)
+                continue
+                
+            if loc.startswith('http'):
+                real_patch_url = loc
+            elif loc.startswith('/'):
+                real_patch_url = f"https://srv529-files.hstgr.io/rest{loc}"
+            else:
+                real_patch_url = f"https://srv529-files.hstgr.io/rest/{loc}"
+            patch_headers = {
+                'X-Auth': auth_key,
+                'X-Auth-Rest': rest_auth_key,
+                'Tus-Resumable': '1.0.0',
+                'Content-Type': 'application/offset+octet-stream',
+                'Upload-Offset': '0'
+            }
+            r_patch = requests.patch(real_patch_url, headers=patch_headers, data=file_bytes, timeout=45)
+            print(f"Uploaded {remote_rel_path} ({size} bytes): status {r_patch.status_code}", flush=True)
+            if r_patch.status_code in (200, 204):
+                return True
+            else:
+                print(f"PATCH RETRY {remote_rel_path}: {r_patch.status_code}", flush=True)
+                time.sleep(2)
+        except Exception as e:
+            print(f"Upload attempt {attempt} failed for {remote_rel_path}: {e}", flush=True)
+            time.sleep(2)
+
+    return False
 
 success = True
 for local, remote in uploads_list:
     if not upload_file(local, remote):
-        print(f"Note: upload to {remote} skipped or errored, continuing remaining files...")
+        print(f"Note: upload to {remote} skipped or errored, continuing remaining files...", flush=True)
 
-
-if not success:
-    sys.exit(1)
-print("Deployment complete.")
+print("Deployment complete.", flush=True)

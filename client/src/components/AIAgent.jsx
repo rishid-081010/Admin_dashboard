@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CornerDownLeft, Trash2, ArrowUpRight, Play, ExternalLink, RefreshCw, Download, FileText, Volume2 } from 'lucide-react';
+import { Send, CornerDownLeft, Trash2, ArrowUpRight, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table } from 'lucide-react';
 import { sendAgentMessage } from '../utils/aiAgentService';
 
 const SUGGESTED_PROMPTS = [
   'Download today\'s call audit PDF',
   'Get latest call recording audio',
+  'Export 5 Marina owners to CSV',
   'Average 2-bed price in Business Bay',
-  'Find 3 uncontacted Marina owners with phone numbers',
   'Check n8n workflow health and errors'
 ];
 
@@ -108,9 +108,57 @@ function PdfAuditCard({ label, url }) {
   );
 }
 
+function CsvExportCard({ label, url }) {
+  const filename = url.split('/').pop()?.split('?')[0] || 'asquared_owners_export.csv';
+  return (
+    <div className="my-2.5 p-3.5 bg-[#06111e] border border-emerald-500/30 rounded-xl flex flex-col gap-2.5 shadow-lg shadow-black/30">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+            <Table className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white tracking-wide">
+              {label || 'Exported Real Estate Dataset'}
+            </div>
+            <div className="text-[11px] font-mono text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-md">
+              {filename}
+            </div>
+          </div>
+        </div>
+        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 shrink-0">
+          CSV Export
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2 pt-1 border-t border-[#1b2b3d]/60">
+        <a
+          href={url}
+          download={filename}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all shadow-md shadow-emerald-600/25 cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>Download CSV (.csv)</span>
+        </a>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0c1829] hover:bg-[#152538] text-slate-300 hover:text-white border border-[#233549] text-xs transition-colors cursor-pointer"
+        >
+          <ExternalLink className="w-3 h-3" />
+          <span>Open Direct</span>
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function detectMedia(line) {
   // Check markdown link: [label](url)
-  const mdMatch = line.match(/\[([^\]]+)\]\((https?:\/\/[^\)]+|\/[^\)]+)\)/);
+  const mdMatch = line.match(/\[([^\]]+)\]\((https?:\/\/[^\)]+|\/[^\)]+|data:[^\)]+)\)/);
   if (mdMatch) {
     const label = mdMatch[1];
     const url = mdMatch[2];
@@ -119,6 +167,9 @@ function detectMedia(line) {
     }
     if (url.endsWith('.pdf') || url.includes('/audits/')) {
       return { type: 'pdf', label, url };
+    }
+    if (url.endsWith('.csv') || url.includes('/exports/') || url.startsWith('data:text/csv')) {
+      return { type: 'csv', label, url };
     }
   }
 
@@ -131,6 +182,9 @@ function detectMedia(line) {
     }
     if (url.endsWith('.pdf') || url.includes('/audits/')) {
       return { type: 'pdf', label: 'Daily Call Audit (PDF)', url };
+    }
+    if (url.endsWith('.csv') || url.includes('/exports/')) {
+      return { type: 'csv', label: 'Owners Dataset (CSV)', url };
     }
   }
   return null;
@@ -188,6 +242,20 @@ function renderInline(text) {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-xs font-medium transition-colors my-0.5"
+          >
+            <Download className="w-3 h-3" />
+            <span>{label}</span>
+          </a>
+        );
+      } else if (url.endsWith('.csv') || url.includes('/exports/') || url.startsWith('data:text/csv')) {
+        parts.push(
+          <a
+            key={idx++}
+            href={url}
+            download={url.split('/').pop() || 'dataset.csv'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 hover:bg-emerald-600 hover:text-white border border-emerald-500/30 text-xs font-medium transition-colors my-0.5"
           >
             <Download className="w-3 h-3" />
             <span>{label}</span>
@@ -330,7 +398,7 @@ function FormattedMessage({ content }) {
       continue;
     }
 
-    // Media Card Detection (Audio Recordings & Daily Audit PDFs)
+    // Media Card Detection (Audio Recordings, Daily Audit PDFs & CSV Exports)
     const media = detectMedia(line);
     if (media) {
       flushList();
@@ -338,6 +406,8 @@ function FormattedMessage({ content }) {
         elements.push(<AudioPlayerCard key={elKey++} label={media.label} url={media.url} />);
       } else if (media.type === 'pdf') {
         elements.push(<PdfAuditCard key={elKey++} label={media.label} url={media.url} />);
+      } else if (media.type === 'csv') {
+        elements.push(<CsvExportCard key={elKey++} label={media.label} url={media.url} />);
       }
       continue;
     }

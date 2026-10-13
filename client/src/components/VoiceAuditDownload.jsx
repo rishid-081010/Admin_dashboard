@@ -59,24 +59,32 @@ export default function VoiceAuditDownload({
     try {
       const cleanDate = dateStr.replace(/-/g, '');
       const pdfFileName = `AS_PROPERTIES_DAILY_CALL_AUDIT_${cleanDate}.pdf`;
-      const pdfUrl = `./audits/${pdfFileName}`;
+      const candidates = [
+        `/audits/${pdfFileName}`,
+        `./audits/${pdfFileName}`,
+        `audits/${pdfFileName}`,
+        dateStr === '2026-10-13' ? '/audits/AS_PROPERTIES_EVERY_CALL_AUDIT_OCT13.pdf' : null
+      ].filter(Boolean);
 
       // Check if official PDF exists
       let downloaded = false;
-      try {
-        const headRes = await fetch(pdfUrl, { method: 'HEAD' });
-        if (headRes.ok) {
-          const link = document.createElement('a');
-          link.href = pdfUrl;
-          link.setAttribute('download', pdfFileName);
-          link.target = '_blank';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          downloaded = true;
+      for (const targetUrl of candidates) {
+        try {
+          const res = await fetch(targetUrl, { method: 'HEAD' });
+          if (res.ok) {
+            const link = document.createElement('a');
+            link.href = targetUrl;
+            link.setAttribute('download', pdfFileName);
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            downloaded = true;
+            break;
+          }
+        } catch (err) {
+          console.warn('PDF check failed for', targetUrl, err);
         }
-      } catch (err) {
-        console.warn('PDF HEAD check failed, trying direct anchor:', err);
       }
 
       if (downloaded) {
