@@ -4,6 +4,7 @@ import {
   BarChart3, Sparkles, PhoneCall, FileSpreadsheet, Layers, 
   ExternalLink, Settings, Activity, FileCheck
 } from 'lucide-react';
+import N8nLogo from './N8nLogo';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const isListingActive = activeTab === 'listing' || activeTab === 'dashboard' || activeTab === 'new' || activeTab === 'detail';
@@ -88,13 +89,19 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         {/* 6. Workflows (n8n Automations) */}
         <button 
           onClick={() => setActiveTab('workflows')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left group ${
             activeTab === 'workflows' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              ? 'bg-[#183153] text-white border border-[#ff6d5a]/40 shadow-sm' 
               : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
           }`}
         >
-          <span>Workflows</span>
+          <div className="flex items-center gap-2.5">
+            <N8nLogo className="w-3.5 h-3.5 shrink-0" color={activeTab === 'workflows' ? '#FF6D5A' : '#f97316'} />
+            <span>Workflows</span>
+          </div>
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-[#ff6d5a]/15 text-[#ff6d5a] border border-[#ff6d5a]/30">
+            n8n
+          </span>
         </button>
 
         {/* 7. Data Cleaning */}

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount, markLeadAsCompleted } from '../utils/voiceAgentService';
 import { fetchN8nWorkflows } from '../utils/n8nService';
+import N8nLogo from './N8nLogo';
 
 export default function OverviewDashboard({ onNavigate }) {
   const getTodayDubai = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
@@ -515,30 +516,44 @@ export default function OverviewDashboard({ onNavigate }) {
       {/* ─── 5. AUTOMATED WORKFLOWS ─────────────────────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 sm:p-7 shadow-xl shadow-black/40">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[#1c2e42]">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
-              <Activity className="w-5 h-5" />
+          <div className="flex items-center gap-3">
+            {/* n8n Official Brand Logo in place of generic pulse icon (Image 2 & 3) */}
+            <div className="p-2.5 rounded-xl bg-[#ff6d5a]/15 border border-[#ff6d5a]/30 shadow-sm shadow-[#ff6d5a]/10 flex items-center justify-center shrink-0">
+              <N8nLogo className="w-5 h-5" color="#FF6D5A" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">
-                Automated Workflows
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  Automated Workflows
+                </h3>
+                <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-md bg-[#ff6d5a]/15 text-[#ff6d5a] border border-[#ff6d5a]/30 tracking-wider">
+                  n8n engine
+                </span>
+              </div>
               <p className="text-xs text-slate-400 mt-0.5">
                 Live background n8n pipelines syncing CRM deals, updating logs, and routing alerts
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              {loadingN8n ? 'Loading...' : `${n8nData.summary.activeWorkflows} Active · ${n8nData.summary.totalExecutionsToday} Runs Today`}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs px-3 py-1.5 rounded-full bg-[#ff6d5a]/10 text-orange-300 border border-[#ff6d5a]/25 font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#ff6d5a] animate-pulse"></span>
+              {loadingN8n ? 'Syncing...' : `${n8nData.summary.activeWorkflows} Active · ${n8nData.summary.totalExecutionsToday} Runs Today`}
             </span>
+            <button
+              onClick={() => onNavigate && onNavigate('workflows')}
+              className="px-3.5 py-1.5 rounded-xl bg-[#141d28] hover:bg-[#1a2535] border border-[#26374a] hover:border-[#ff6d5a]/40 text-slate-200 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Open Workflows Sidetab"
+            >
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
             <a
               href="https://n8n.asquared.ae"
               target="_blank"
               rel="noreferrer"
-              className="px-3 py-1.5 rounded-xl bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-1.5 rounded-xl bg-[#ff6d5a] hover:bg-[#ff553d] text-white transition-all text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#ff6d5a]/25 cursor-pointer"
               title="Open n8n Console"
             >
               <span>n8n Console</span>
@@ -567,23 +582,23 @@ export default function OverviewDashboard({ onNavigate }) {
                   href={wf.n8nUrl || `https://n8n.asquared.ae/workflow/${wf.id}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="p-5 sm:p-5.5 bg-[#081322] border border-[#1d3047] hover:border-[#33537b] hover:bg-[#0b1a2e] rounded-2xl flex flex-col justify-between gap-3.5 transition-all shadow-md group"
+                  className="p-5 sm:p-5.5 bg-[#0b1522] hover:bg-[#0f1d2e] border border-[#1d3047] hover:border-[#ff6d5a]/50 rounded-2xl flex flex-col justify-between gap-3.5 transition-all shadow-md group"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
                       <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border mt-0.5 ${
                         wf.status === 'healthy' 
-                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                          ? 'bg-[#ff6d5a]/10 border-[#ff6d5a]/25 text-[#ff6d5a]' 
                           : wf.status === 'running'
                           ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
                           : wf.status === 'error'
                           ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                           : 'bg-slate-500/10 border-slate-500/20 text-slate-400'
                       }`}>
-                        <Zap className="w-5 h-5" />
+                        <N8nLogo className="w-5 h-5" color={wf.status === 'error' ? '#f43f5e' : '#FF6D5A'} />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-white text-sm sm:text-base font-bold leading-snug group-hover:text-blue-300 transition-colors break-words" title={wf.name}>
+                        <h4 className="text-white text-sm sm:text-base font-bold leading-snug group-hover:text-orange-300 transition-colors break-words" title={wf.name}>
                           {wf.name}
                         </h4>
                         <div className="text-xs text-slate-400 mt-1 flex items-center gap-2 font-mono">
@@ -611,13 +626,13 @@ export default function OverviewDashboard({ onNavigate }) {
                   </div>
 
                   {/* Workflow Execution Stats & Link Footer */}
-                  <div className="pt-3 border-t border-[#16273c] flex items-center justify-between text-xs">
+                  <div className="pt-3 border-t border-[#18283a] flex items-center justify-between text-xs">
                     <span className="text-slate-300 font-mono font-medium flex items-center gap-2">
                       <span className="text-white font-bold">{wf.executionsToday}</span> runs today
                       <span className="text-slate-500">·</span>
                       <span className="text-emerald-400">{wf.successToday > 0 ? `${wf.successToday} ok` : 'standby'}</span>
                     </span>
-                    <span className="text-blue-400 group-hover:text-blue-300 font-semibold flex items-center gap-1 transition-colors">
+                    <span className="text-[#ff6d5a] group-hover:text-orange-300 font-semibold flex items-center gap-1 transition-colors">
                       <span>Open workflow</span>
                       <ExternalLink className="w-3.5 h-3.5" />
                     </span>
@@ -630,7 +645,7 @@ export default function OverviewDashboard({ onNavigate }) {
               <div className="mt-5 text-center">
                 <button
                   onClick={() => setShowAllWorkflows(!showAllWorkflows)}
-                  className="px-5 py-2.5 rounded-xl bg-[#06111e] border border-[#1a2c42] hover:bg-[#091728] hover:border-[#2a4363] text-xs font-semibold text-slate-300 hover:text-white transition-all inline-flex items-center gap-2 shadow-sm"
+                  className="px-5 py-2.5 rounded-xl bg-[#06111e] border border-[#1a2c42] hover:bg-[#091728] hover:border-[#ff6d5a]/40 text-xs font-semibold text-slate-300 hover:text-white transition-all inline-flex items-center gap-2 shadow-sm cursor-pointer"
                 >
                   <span>{showAllWorkflows ? 'Show Less' : `Show All (${n8nData.workflows.length})`}</span>
                   <ChevronDown className={`w-4 h-4 transition-transform ${showAllWorkflows ? 'rotate-180' : ''}`} />
