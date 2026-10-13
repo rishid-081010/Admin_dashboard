@@ -129,6 +129,18 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Voice Agent Centre</span>
         </button>
 
+        {/* 11. AI Agent */}
+        <button 
+          onClick={() => setActiveTab('agent')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'agent' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>AI Agent</span>
+        </button>
+
         {/* 11. My Activity */}
         <button 
           onClick={() => setActiveTab('activity')} 

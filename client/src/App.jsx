@@ -14,6 +14,7 @@ import WorkflowsDirectory from './components/WorkflowsDirectory';
 import SourcesDirectory from './components/SourcesDirectory';
 import MyActivity from './components/MyActivity';
 import VoiceAgent from './components/VoiceAgent';
+import AIAgent from './components/AIAgent';
 import AccountSettings from './components/AccountSettings';
 
 const ROUTE_MAP = {
@@ -25,6 +26,7 @@ const ROUTE_MAP = {
   leads: '/dashboard/datacleaning',
   listing: '/dashboard/listing',
   voice: '/dashboard/voiceagent',
+  agent: '/dashboard/agent',
   buildings: '/dashboard/buildings',
   sources: '/dashboard/datalibrary',
   settings: '/dashboard/settings',
@@ -44,6 +46,7 @@ function getTabFromUrl() {
   if (target === 'datalibrary' || target === 'sources') return 'sources';
   if (target === 'datacleaning' || target === 'leads') return 'leads';
   if (target === 'voiceagent' || target === 'voice') return 'voice';
+  if (target === 'agent' || target === 'ai-agent') return 'agent';
   if (target === 'owners') return 'owners';
   if (target === 'buildings') return 'buildings';
   if (target === 'search') return 'search';
@@ -212,6 +215,8 @@ export default function App() {
             {activeTab === 'activity' && <MyActivity globalAgent="6" />}
 
             {activeTab === 'voice' && <VoiceAgent />}
+
+            {activeTab === 'agent' && <AIAgent setActiveTab={setActiveTab} />}
 
             {activeTab === 'leads' && (
               <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><LeadIngestionStudio /></div>
