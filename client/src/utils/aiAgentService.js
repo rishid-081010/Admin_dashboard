@@ -363,7 +363,9 @@ const TOOLS_SCHEMA = [
       description: 'Returns lead hygiene statistics: total leads cleaned, UAE phone numbers normalized, duplicate records merged, and quarantined errors.',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {
+          scope: { type: 'string', enum: ['all', 'hygiene'], description: 'Metric scope filter' }
+        }
       }
     }
   },
