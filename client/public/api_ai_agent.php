@@ -434,7 +434,6 @@ if (!empty($toolCalls)) {
         $formattedMessages[] = [
             'role' => 'tool',
             'tool_call_id' => $callId,
-            'name' => $fnName,
             'content' => json_encode($toolResult)
         ];
     }
