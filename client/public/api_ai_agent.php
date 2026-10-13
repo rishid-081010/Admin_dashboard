@@ -245,7 +245,7 @@ if (!empty($toolCalls)) {
 
         if ($fnName === 'search_owners') {
             $limit = min((int)($fnArgs['limit'] ?? 5), 15);
-            $url = $supabaseUrl . "/owners_data?select=id,lead_id,full_name,building_name,unit_number,master_area,phone_normalized,email,verified_purchase_price,property_category,bitrix_id,assigned_agent&limit={$limit}";
+            $url = $supabaseUrl . "/owners_data?select=owner_id,lead_id,full_name,building_name,unit_number,master_area,phone_normalized,email,verified_purchase_price,property_category,bitrix_id,assigned_agent&limit={$limit}";
             
             if (!empty($fnArgs['area'])) {
                 $area = rawurlencode($fnArgs['area']);
@@ -286,7 +286,7 @@ if (!empty($toolCalls)) {
 
         } elseif ($fnName === 'get_lead_details') {
             $leadId = urlencode($fnArgs['lead_id']);
-            $url = $supabaseUrl . "/owners_data?or=(lead_id.eq.{$leadId},id.eq.{$leadId},bitrix_id.eq.{$leadId})&limit=1";
+            $url = $supabaseUrl . "/owners_data?or=(lead_id.eq.{$leadId},owner_id.eq.{$leadId},bitrix_id.eq.{$leadId})&limit=1";
             $sbRes = makeCurlRequest($url, 'GET', [
                 "apikey: {$supabaseKey}",
                 "Authorization: Bearer {$supabaseKey}"

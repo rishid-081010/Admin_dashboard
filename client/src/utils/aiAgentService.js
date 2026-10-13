@@ -140,7 +140,7 @@ async function executeClientTool(name, args) {
   try {
     if (name === 'search_owners') {
       const limit = Math.min(args.limit || 5, 10);
-      let url = `${SUPABASE_BASE_URL}/owners_data?select=id,lead_id,full_name,building_name,unit_number,master_area,phone_normalized,email,verified_purchase_price,property_category,bitrix_id,assigned_agent&limit=${limit}`;
+      let url = `${SUPABASE_BASE_URL}/owners_data?select=owner_id,lead_id,full_name,building_name,unit_number,master_area,phone_normalized,email,verified_purchase_price,property_category,bitrix_id,assigned_agent&limit=${limit}`;
       if (args.area) url += `&master_area=ilike.*${encodeURIComponent(args.area)}*`;
       if (args.building) url += `&building_name=ilike.*${encodeURIComponent(args.building)}*`;
       if (args.bedrooms !== undefined) url += `&bedrooms=eq.${args.bedrooms}`;
@@ -155,7 +155,7 @@ async function executeClientTool(name, args) {
 
     if (name === 'get_lead_details') {
       const q = encodeURIComponent(args.lead_id);
-      const url = `${SUPABASE_BASE_URL}/owners_data?or=(lead_id.eq.${q},id.eq.${q},bitrix_id.eq.${q})&limit=1`;
+      const url = `${SUPABASE_BASE_URL}/owners_data?or=(lead_id.eq.${q},owner_id.eq.${q},bitrix_id.eq.${q})&limit=1`;
       const res = await axios.get(url, { headers: sbHeaders });
       return res.data?.[0] || { error: 'Lead not found' };
     }
