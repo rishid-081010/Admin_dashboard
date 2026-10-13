@@ -1,375 +1,195 @@
 import React, { useState } from 'react';
-import { 
-  Calendar as CalendarIcon, ChevronLeft, ChevronRight, 
-  CalendarRange, CalendarDays, Sparkles, Clock, Check
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 export default function VoiceDateFilter({
   timeFilter,
   setTimeFilter,
   selectedDate,
   setSelectedDate,
-  selectedYear,
-  setSelectedYear,
-  selectedMonth,
-  setSelectedMonth,
-  selectedWeek,
-  setSelectedWeek,
-  activeLabel,
   loading
 }) {
-  const [showCalendarDropdown, setShowCalendarDropdown] = useState(false);
+  // Parse initial selected date for month view (default to Oct 2026)
+  const initialDate = selectedDate ? new Date(selectedDate + 'T00:00:00Z') : new Date('2026-10-13T00:00:00Z');
+  const [viewYear, setViewYear] = useState(() => initialDate.getUTCFullYear() || 2026);
+  const [viewMonth, setViewMonth] = useState(() => (isNaN(initialDate.getUTCMonth()) ? 9 : initialDate.getUTCMonth())); // 0-indexed
 
-  // Parse current date
-  const parsedDate = new Date(selectedDate || '2026-10-10');
-  const calYear = parsedDate.getUTCFullYear() || 2026;
-  const calMonth = parsedDate.getUTCMonth(); // 0..11
-  const calDay = parsedDate.getUTCDate();
+  // Today reference in database context (October 13, 2026)
+  const TODAY_STR = '2026-10-13';
 
-  // Navigation for daily calendar month/year
+  // Navigate to previous month
   const handlePrevMonth = () => {
-    let newM = calMonth - 1;
-    let newY = calYear;
-    if (newM < 0) {
-      newM = 11;
-      newY -= 1;
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(y => y - 1);
+    } else {
+      setViewMonth(m => m - 1);
     }
-    const daysInNewM = new Date(Date.UTC(newY, newM + 1, 0)).getUTCDate();
-    const newDay = Math.min(calDay, daysInNewM);
-    const dateStr = `${newY}-${String(newM + 1).padStart(2, '0')}-${String(newDay).padStart(2, '0')}`;
-    setSelectedDate(dateStr);
   };
 
+  // Navigate to next month
   const handleNextMonth = () => {
-    let newM = calMonth + 1;
-    let newY = calYear;
-    if (newM > 11) {
-      newM = 0;
-      newY += 1;
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(y => y + 1);
+    } else {
+      setViewMonth(m => m + 1);
     }
-    const daysInNewM = new Date(Date.UTC(newY, newM + 1, 0)).getUTCDate();
-    const newDay = Math.min(calDay, daysInNewM);
-    const dateStr = `${newY}-${String(newM + 1).padStart(2, '0')}-${String(newDay).padStart(2, '0')}`;
-    setSelectedDate(dateStr);
   };
 
+  // Handle day selection
   const handleSelectDay = (day) => {
-    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    setSelectedDate(dateStr);
-    setShowCalendarDropdown(false);
+    const mStr = String(viewMonth + 1).padStart(2, '0');
+    const dStr = String(day).padStart(2, '0');
+    const newDateStr = `${viewYear}-${mStr}-${dStr}`;
+    setSelectedDate(newDateStr);
+    setTimeFilter('Daily');
   };
 
-  // Days in current calendar month
-  const totalDaysInMonth = new Date(Date.UTC(calYear, calMonth + 1, 0)).getUTCDate();
-  const firstDayOfWeek = new Date(Date.UTC(calYear, calMonth, 1)).getUTCDay(); // 0 = Sun
+  // Quick jump to today
+  const handleJumpToToday = () => {
+    setSelectedDate(TODAY_STR);
+    setViewYear(2026);
+    setViewMonth(9); // October
+    setTimeFilter('Daily');
+  };
+
+  // Days in month calculation
+  const totalDaysInMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0)).getUTCDate();
+  const firstDayOfWeek = new Date(Date.UTC(viewYear, viewMonth, 1)).getUTCDay(); // 0 = Sun
+
+  // Format active label
+  const formatSelectedLabel = () => {
+    if (timeFilter === 'All Time') {
+      return 'All Time';
+    }
+    if (!selectedDate) return 'No Date Selected';
+    try {
+      const parts = selectedDate.split('-');
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      const dateObj = new Date(Date.UTC(y, m, d));
+      return dateObj.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC'
+      });
+    } catch {
+      return selectedDate;
+    }
+  };
 
   return (
-    <div className="w-full bg-[#0c1829] border border-[#233549] rounded-2xl p-4 shadow-xl shadow-black/40 mb-6 flex flex-col gap-3">
-      {/* ─── Top Filter Tabs & Quick Date Badge ────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Filter Type Pills */}
-        <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] p-1 rounded-xl">
-          {[
-            { id: 'Daily', label: 'Daily', icon: CalendarIcon },
-            { id: 'Weekly', label: 'Weekly', icon: CalendarRange },
-            { id: 'Monthly', label: 'Monthly', icon: CalendarDays },
-            { id: 'All Time', label: 'All Time', icon: Sparkles }
-          ].map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => {
-                setTimeFilter(id);
-                setShowCalendarDropdown(false);
-              }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                timeFilter === id 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-400' 
-                  : 'text-slate-400 hover:text-white hover:bg-[#102035]'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
+    <div className="w-full max-w-sm sm:max-w-md mx-auto bg-[#0c1829] border border-[#233549] rounded-2xl p-5 sm:p-6 shadow-xl shadow-black/40 mb-6">
+      {/* ─── Header: Month Year + Chevrons ─────────────────────────── */}
+      <div className="flex items-center justify-between mb-5 px-1">
+        <button
+          onClick={handlePrevMonth}
+          className="p-1.5 rounded-full hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors"
+          title="Previous Month"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
 
-        {/* Current Active Scope Display / Quick Selector Trigger */}
-        <div className="flex items-center gap-2">
-          {loading && (
-            <span className="flex items-center gap-1.5 text-xs text-blue-400 font-mono animate-pulse bg-blue-500/10 px-2.5 py-1 rounded-lg border border-blue-500/20">
-              <Clock className="w-3.5 h-3.5 animate-spin" /> Querying Supabase...
-            </span>
-          )}
+        <h2 className="text-base font-semibold text-white tracking-wide">
+          {MONTH_NAMES[viewMonth]} {viewYear}
+        </h2>
 
-          <div className="text-xs font-medium text-slate-300 bg-[#06111e] border border-[#1b2b3d] px-3 py-1.5 rounded-xl flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-mono text-white text-xs">{activeLabel || 'Selected Scope'}</span>
-          </div>
-        </div>
+        <button
+          onClick={handleNextMonth}
+          className="p-1.5 rounded-full hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors"
+          title="Next Month"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
       </div>
 
-      {/* ─── DAILY MODE: Inbuilt Calendar & Stepper ─────────────────── */}
-      {timeFilter === 'Daily' && (
-        <div className="pt-2 border-t border-[#1b2b3d] flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Quick shortcuts */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mr-1">Quick Select:</span>
-              <button
-                onClick={() => setSelectedDate('2026-10-11')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
-                  selectedDate === '2026-10-11'
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
-                    : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#102035] border border-[#1b2b3d]'
-                }`}
-              >
-                ⚡ Today (Oct 11, 2026)
-              </button>
-              <button
-                onClick={() => setSelectedDate('2026-10-10')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
-                  selectedDate === '2026-10-10'
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
-                    : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#102035] border border-[#1b2b3d]'
-                }`}
-              >
-                Yesterday (Oct 10)
-              </button>
-              <button
-                onClick={() => setSelectedDate('2026-09-27')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
-                  selectedDate === '2026-09-27'
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
-                    : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#102035] border border-[#1b2b3d]'
-                }`}
-              >
-                Sep 27 High-Dial
-              </button>
-            </div>
+      {/* ─── Weekdays Row ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-7 text-center mb-2">
+        {WEEKDAYS.map((w) => (
+          <div key={w} className="text-xs font-medium text-slate-400 py-1">
+            {w}
+          </div>
+        ))}
+      </div>
 
-            {/* Toggle Calendar Grid Button */}
+      {/* ─── Calendar Days Grid ─────────────────────────────────────── */}
+      <div className="grid grid-cols-7 gap-y-2 text-center">
+        {/* Leading empty slots */}
+        {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+          <div key={`empty-${i}`} className="w-9 h-9 mx-auto" />
+        ))}
+
+        {/* Days of Month */}
+        {Array.from({ length: totalDaysInMonth }).map((_, idx) => {
+          const day = idx + 1;
+          const mStr = String(viewMonth + 1).padStart(2, '0');
+          const dStr = String(day).padStart(2, '0');
+          const currentCellDateStr = `${viewYear}-${mStr}-${dStr}`;
+
+          const isSelected = timeFilter === 'Daily' && selectedDate === currentCellDateStr;
+          const isToday = currentCellDateStr === TODAY_STR;
+
+          return (
             <button
-              onClick={() => setShowCalendarDropdown(!showCalendarDropdown)}
-              className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#06111e] hover:bg-[#102035] border border-[#1b2b3d] hover:border-[#385175] text-white transition-all ml-auto"
+              key={day}
+              onClick={() => handleSelectDay(day)}
+              className={`w-9 h-9 mx-auto rounded-full text-sm flex items-center justify-center transition-all ${
+                isSelected
+                  ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400/40'
+                  : isToday
+                  ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30'
+                  : 'text-slate-300 font-medium hover:text-white hover:bg-[#1b2b3d]'
+              }`}
             >
-              <CalendarIcon className="w-3.5 h-3.5 text-blue-400" />
-              <span>{showCalendarDropdown ? 'Hide Calendar' : 'Pick Day from Calendar'}</span>
+              {day}
             </button>
-          </div>
+          );
+        })}
+      </div>
 
-          {/* Interactive Month/Year Stepper + Grid */}
-          <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3.5 flex flex-col gap-3">
-            {/* Calendar Month & Year Bar */}
-            <div className="flex items-center justify-between px-1">
-              <button
-                onClick={handlePrevMonth}
-                className="p-1 rounded-lg bg-[#071322] hover:bg-[#102035] text-slate-300 hover:text-white border border-[#1b2b3d] transition-colors"
-                title="Previous Month"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white tracking-wide">
-                  {MONTH_NAMES[calMonth]} {calYear}
-                </span>
-                <span className="text-[10px] text-white/40 font-mono bg-white/5 px-2 py-0.5 rounded">
-                  Day {calDay}
-                </span>
-              </div>
-
-              <button
-                onClick={handleNextMonth}
-                className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-colors"
-                title="Next Month"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Inbuilt Days Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-                <div key={d} className="text-[10px] font-mono font-bold text-white/30 py-1 uppercase">
-                  {d}
-                </div>
-              ))}
-
-              {/* Leading blank slots */}
-              {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                <div key={`empty-${i}`} className="p-1" />
-              ))}
-
-              {/* Calendar Days */}
-              {Array.from({ length: totalDaysInMonth }).map((_, idx) => {
-                const dayNum = idx + 1;
-                const isSelected = dayNum === calDay;
-                // Highlight days that have known calls
-                const isKnownDataDay = 
-                  (calYear === 2026 && calMonth === 9 && (dayNum === 11 || dayNum === 10 || dayNum === 9 || dayNum === 8 || dayNum === 7 || dayNum === 6)) ||
-                  (calYear === 2026 && calMonth === 8 && dayNum >= 20);
-
-                return (
-                  <button
-                    key={dayNum}
-                    onClick={() => handleSelectDay(dayNum)}
-                    className={`py-1.5 rounded-lg text-xs font-mono transition-all relative flex flex-col items-center justify-center ${
-                      isSelected
-                        ? 'bg-blue-600 text-white font-bold ring-2 ring-blue-400 shadow-md shadow-blue-500/30'
-                        : isKnownDataDay
-                        ? 'bg-white/10 text-white hover:bg-blue-500/20 hover:text-blue-300 font-semibold'
-                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <span>{dayNum}</span>
-                    {isKnownDataDay && !isSelected && (
-                      <span className="w-1 h-1 rounded-full bg-blue-400 mt-0.5"></span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── WEEKLY MODE: Month & Week Picker ───────────────────────── */}
-      {timeFilter === 'Weekly' && (
-        <div className="pt-2 border-t border-[#1b2b3d] flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Year Selector */}
-            <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-xl px-2.5 py-1">
-              <span className="text-[11px] text-slate-500 font-mono">Year:</span>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer"
-              >
-                <option value="2026" className="bg-[#0c1829]">2026</option>
-                <option value="2025" className="bg-[#0c1829]">2025</option>
-              </select>
-            </div>
-
-            {/* Month Selector */}
-            <div className="flex items-center gap-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-xl px-2.5 py-1">
-              <span className="text-[11px] text-slate-500 font-mono">Month:</span>
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="bg-transparent text-white text-xs font-bold outline-none cursor-pointer"
-              >
-                {MONTH_NAMES.map((m, idx) => (
-                  <option key={m} value={idx + 1} className="bg-[#0c1829]">
-                    {m} {idx >= 4 && idx <= 9 ? '⚡' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <span className="text-slate-600">|</span>
-
-            {/* Week Pills */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {[
-                { w: 1, label: 'Week 1 (Days 1–7)' },
-                { w: 2, label: 'Week 2 (Days 8–14)' },
-                { w: 3, label: 'Week 3 (Days 15–21)' },
-                { w: 4, label: 'Week 4 (Days 22–28)' },
-                { w: 5, label: 'Week 5 (Days 29–End)' }
-              ].map(({ w, label }) => (
-                <button
-                  key={w}
-                  onClick={() => setSelectedWeek(w)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    selectedWeek === w
-                      ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25 ring-1 ring-blue-400'
-                      : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#102035] border border-[#1b2b3d]'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── MONTHLY MODE: Month Grid Picker ────────────────────────── */}
-      {timeFilter === 'Monthly' && (
-        <div className="pt-2 border-t border-[#1b2b3d] flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-mono uppercase tracking-wider">
-              Select Calendar Month ({selectedYear})
+      {/* ─── Footer: Selected Date Label & Quick Toggles ────────────── */}
+      <div className="mt-5 pt-3.5 border-t border-[#1b2b3d] flex items-center justify-between text-xs text-slate-400">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="text-white font-medium">
+            {formatSelectedLabel()}
+          </span>
+          {loading && (
+            <span className="text-[11px] text-blue-400 font-mono animate-pulse ml-1">
+              • Loading...
             </span>
-            <div className="flex items-center gap-1 text-xs">
-              <button 
-                onClick={() => setSelectedYear(selectedYear - 1)}
-                className="p-1 rounded bg-[#06111e] hover:bg-[#102035] text-slate-400 hover:text-white border border-[#1b2b3d]"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <span className="font-bold text-white font-mono px-1">{selectedYear}</span>
-              <button 
-                onClick={() => setSelectedYear(selectedYear + 1)}
-                className="p-1 rounded bg-[#06111e] hover:bg-[#102035] text-slate-400 hover:text-white border border-[#1b2b3d]"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {MONTH_NAMES.map((name, idx) => {
-              const mNum = idx + 1;
-              const isSelected = selectedMonth === mNum;
-              const callVolume = 
-                mNum === 10 ? '7.5k dials' :
-                mNum === 9 ? '27.3k dials' :
-                mNum === 8 ? '30.9k dials' :
-                mNum === 7 ? '8.2k dials' :
-                mNum === 5 ? '5.7k dials' : null;
-
-              return (
-                <button
-                  key={name}
-                  onClick={() => setSelectedMonth(mNum)}
-                  className={`p-2.5 rounded-xl text-left transition-all border ${
-                    isSelected
-                      ? 'bg-blue-600/30 border-blue-500 text-white shadow-lg shadow-blue-500/20 ring-1 ring-blue-400'
-                      : 'bg-[#06111e] border-[#1b2b3d] hover:border-[#385175] text-slate-300 hover:text-white hover:bg-[#102035]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold">{name}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-300" />}
-                  </div>
-                  {callVolume && (
-                    <span className="text-[10px] font-mono text-emerald-400/90 mt-1 block">
-                      ⚡ {callVolume}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          )}
         </div>
-      )}
 
-      {/* ─── ALL TIME MODE: Informational Banner ────────────────────── */}
-      {timeFilter === 'All Time' && (
-        <div className="pt-2 border-t border-[#1b2b3d] flex items-center justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-            <span>Displaying complete database history from May 2026 to October 2026</span>
-          </div>
-          <span className="font-mono text-slate-500">79,993 Recorded Calls Across 3 Lines</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleJumpToToday}
+            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-medium transition-colors"
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setTimeFilter('All Time')}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+              timeFilter === 'All Time'
+                ? 'bg-emerald-600 text-white font-semibold'
+                : 'bg-[#06111e] text-slate-400 hover:text-white border border-[#1b2b3d]'
+            }`}
+          >
+            All Time
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

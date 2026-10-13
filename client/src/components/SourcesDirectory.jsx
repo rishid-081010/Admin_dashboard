@@ -133,20 +133,20 @@ export default function SourcesDirectory() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col text-white -m-4 lg:-m-5 p-6 lg:p-8 overflow-y-auto custom-scrollbar font-sans select-text">
+    <div className="w-full h-full flex flex-col text-white font-sans select-text overflow-hidden gap-3.5 pr-1">
       
       {/* ─── Header: Clean, Classic, Minimalist ─────────────────────────── */}
-      <div className="mb-6">
+      <div className="shrink-0 flex items-center justify-between">
         <h1 
-          className="text-3xl md:text-4xl text-white font-bold tracking-tight" 
+          className="text-2xl sm:text-3xl text-white font-bold tracking-tight" 
         >
           Data library
         </h1>
       </div>
 
       {/* ─── Search & Filters Card ────────────────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 p-5 mb-6">
-        <div className="text-[12px] font-semibold text-slate-300 mb-2.5">
+      <div className="shrink-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 p-4 select-none">
+        <div className="text-[12px] font-semibold text-slate-300 mb-2">
           Find a source
         </div>
 
@@ -282,17 +282,17 @@ export default function SourcesDirectory() {
       </div>
 
       {/* ─── The Main Data Library Table ─────────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 overflow-hidden mb-6 flex-1 flex flex-col">
-        <div className="overflow-x-auto flex-1">
+      <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden">
+        <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#233549] bg-[#071322]">
-                <th className="py-3 px-5 text-xs font-semibold text-slate-400 w-[44%]">File</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[8%]">Tabs</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[14%]">Accepted rows</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[11%]">Quarantined</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[11%]">Status</th>
-                <th className="py-3 px-5 text-xs font-semibold text-slate-400 w-[12%]">Duplicate of</th>
+            <thead className="bg-[#071322] border-b border-[#233549] text-xs uppercase tracking-wider text-slate-400 sticky top-0 z-20 shadow-md shadow-black/40">
+              <tr>
+                <th className="py-3 px-5 text-xs font-semibold text-slate-400 w-[44%] bg-[#071322]">File</th>
+                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[8%] bg-[#071322]">Tabs</th>
+                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[14%] bg-[#071322]">Accepted rows</th>
+                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[11%] bg-[#071322]">Quarantined</th>
+                <th className="py-3 px-4 text-xs font-semibold text-slate-400 w-[11%] bg-[#071322]">Status</th>
+                <th className="py-3 px-5 text-xs font-semibold text-slate-400 w-[12%] bg-[#071322]">Duplicate of</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1b2b3d]/60">
