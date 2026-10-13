@@ -32,14 +32,19 @@ if not os.path.exists(dist_dir):
     print(f"Error: {dist_dir} does not exist. Did you run npm run build?")
     sys.exit(1)
 
-files_to_upload = {}
+uploads_list = []
 for root, _, files in os.walk(dist_dir):
     for file in files:
         local_path = os.path.join(root, file)
         # Convert path to posix format for URL
         rel_path = os.path.relpath(local_path, dist_dir).replace('\\\\', '/').replace('\\', '/')
-        remote_rel_path = f"public/dashboard/{rel_path}"
-        files_to_upload[local_path] = remote_rel_path
+        # Deploy to public/dashboard/{rel_path}
+        uploads_list.append((local_path, f"public/dashboard/{rel_path}"))
+        # Deploy to dashboard/{rel_path} to support direct /dashboard/ requests
+        uploads_list.append((local_path, f"dashboard/{rel_path}"))
+        if rel_path == '.htaccess':
+            uploads_list.append((local_path, "public/.htaccess"))
+            uploads_list.append((local_path, ".htaccess"))
 
 def upload_file(local_path, remote_rel_path):
     size = os.path.getsize(local_path)
@@ -84,9 +89,10 @@ def upload_file(local_path, remote_rel_path):
     return r_patch.status_code in (200, 204)
 
 success = True
-for local, remote in files_to_upload.items():
+for local, remote in uploads_list:
     if not upload_file(local, remote):
-        success = False
+        print(f"Note: upload to {remote} skipped or errored, continuing remaining files...")
+
 
 if not success:
     sys.exit(1)

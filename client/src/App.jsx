@@ -67,22 +67,47 @@ export default function App() {
   const setActiveTab = (newTab, pushState = true) => {
     setActiveTabState(newTab);
     if (pushState && typeof window !== 'undefined') {
-      const route = ROUTE_MAP[newTab] || '/dashboard/overview';
-      const isDashboardBase = window.location.pathname.startsWith('/dashboard');
-      const basePath = isDashboardBase ? '/dashboard' : '';
-      const subpath = route.replace('/dashboard', '');
-      const finalUrl = `${basePath}${subpath}` || '/dashboard/';
+      const isDashboardBase = window.location.pathname.startsWith('/public/dashboard')
+        ? '/public/dashboard/'
+        : window.location.pathname.startsWith('/dashboard')
+        ? '/dashboard/'
+        : '/';
+      const finalUrl = `${isDashboardBase}#${newTab}`;
       window.history.pushState({ tab: newTab }, '', finalUrl);
     }
   };
 
   useEffect(() => {
-    const handlePopState = () => {
+    const handleUrlChange = () => {
       const tabFromUrl = getTabFromUrl();
       setActiveTabState(tabFromUrl);
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, []);
+
+  // Normalize legacy pathname route (e.g. /dashboard/overview) to resilient hash URL to prevent 404 on refresh
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const currentTab = getTabFromUrl();
+    const isPathRoute = window.location.pathname.includes('/overview') ||
+                        window.location.pathname.includes('/workflows') ||
+                        window.location.pathname.includes('/owners') ||
+                        window.location.pathname.includes('/buildings') ||
+                        window.location.pathname.includes('/myactivity') ||
+                        window.location.pathname.includes('/search') ||
+                        window.location.pathname.includes('/voiceagent') ||
+                        window.location.pathname.includes('/settings');
+    if (isPathRoute) {
+      const basePath = window.location.pathname.startsWith('/public/dashboard')
+        ? '/public/dashboard/'
+        : '/dashboard/';
+      window.history.replaceState({ tab: currentTab }, '', `${basePath}#${currentTab}`);
+    }
   }, []);
 
   // Global Keyboard Shortcut: Ctrl + F6 or Cmd + F6 (and Ctrl + K / Cmd + K)
