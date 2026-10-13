@@ -4,6 +4,7 @@ import {
   Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Play, User, RefreshCw
 } from 'lucide-react';
 import VoiceDateFilter from './VoiceDateFilter';
+import VoiceAuditDownload from './VoiceAuditDownload';
 import VoiceAgent360 from './VoiceAgent360';
 import { fetchVoiceOverview } from '../utils/voiceAgentService';
 
@@ -90,21 +91,28 @@ export default function VoiceAgent() {
         </button>
       </div>
 
-      {/* ─── Date & Calendar Controls ──────────────────────────────── */}
-      <VoiceDateFilter
-        timeFilter={timeFilter}
-        setTimeFilter={setTimeFilter}
-        selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
-        selectedYear={selectedYear}
-        setSelectedYear={setSelectedYear}
-        selectedMonth={selectedMonth}
-        setSelectedMonth={setSelectedMonth}
-        selectedWeek={selectedWeek}
-        setSelectedWeek={setSelectedWeek}
-        activeLabel={overviewData?.label}
-        loading={loading}
-      />
+      {/* ─── Filter & Audit Download Controls (Side-by-Side) ───────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch">
+        <VoiceDateFilter
+          timeFilter={timeFilter}
+          setTimeFilter={setTimeFilter}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+          selectedWeek={selectedWeek}
+          setSelectedWeek={setSelectedWeek}
+          activeLabel={overviewData?.label}
+          loading={loading}
+        />
+
+        <VoiceAuditDownload
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+        />
+      </div>
 
       {/* ─── 4 Hero KPI Cards ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

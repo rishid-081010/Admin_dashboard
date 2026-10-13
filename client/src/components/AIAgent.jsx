@@ -10,6 +10,204 @@ const SUGGESTED_PROMPTS = [
   'Show quarantined files in data library'
 ];
 
+// Tokenize inline markdown (bold, italic, code, links)
+function renderInline(text) {
+  if (!text) return null;
+  const regex = /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  let idx = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={idx++}>{text.substring(lastIndex, match.index)}</span>);
+    }
+    if (match[2]) {
+      parts.push(<strong key={idx++} className="text-white font-semibold">{match[2]}</strong>);
+    } else if (match[3]) {
+      parts.push(<em key={idx++} className="italic text-slate-300">{match[3]}</em>);
+    } else if (match[4]) {
+      parts.push(
+        <code key={idx++} className="font-mono text-xs px-1.5 py-0.5 rounded bg-[#06111e] text-blue-300 border border-blue-500/20">
+          {match[4]}
+        </code>
+      );
+    } else if (match[5] && match[6]) {
+      parts.push(
+        <a
+          key={idx++}
+          href={match[6]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 underline font-medium inline-flex items-center gap-0.5"
+        >
+          <span>{match[5]}</span>
+          <ExternalLink className="w-3 h-3 inline" />
+        </a>
+      );
+    }
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(<span key={idx++}>{text.substring(lastIndex)}</span>);
+  }
+  return parts;
+}
+
+// Block markdown formatter
+function FormattedMessage({ content }) {
+  if (!content) return null;
+  const lines = content.split('\n');
+  const elements = [];
+  let currentList = null;
+  let currentTable = null;
+  let elKey = 0;
+
+  const flushList = () => {
+    if (currentList) {
+      elements.push(
+        <div key={elKey++} className="space-y-1.5 my-2">
+          {currentList.map((item, i) => (
+            <div key={i} className="flex items-start gap-2 text-[13px] text-slate-200 leading-snug">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+              <div className="flex-1">{renderInline(item)}</div>
+            </div>
+          ))}
+        </div>
+      );
+      currentList = null;
+    }
+  };
+
+  const flushTable = () => {
+    if (currentTable) {
+      const headerRow = currentTable[0];
+      const bodyRows = currentTable.slice(1);
+      elements.push(
+        <div key={elKey++} className="my-3 overflow-x-auto rounded-lg border border-[#233549] bg-[#06111e]">
+          <table className="w-full text-left text-xs border-collapse">
+            {headerRow && (
+              <thead>
+                <tr className="border-b border-[#233549] bg-[#0c1829]">
+                  {headerRow.map((cell, cIdx) => (
+                    <th key={cIdx} className="px-3 py-2 font-semibold text-slate-300">
+                      {renderInline(cell)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {bodyRows.map((row, rIdx) => (
+                <tr key={rIdx} className="border-b border-[#1b2b3d]/50 hover:bg-[#0f2136]/50">
+                  {row.map((cell, cIdx) => (
+                    <td key={cIdx} className="px-3 py-2 text-slate-300">
+                      {renderInline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      currentTable = null;
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushList();
+      flushTable();
+      continue;
+    }
+
+    // Markdown Table row
+    if (line.startsWith('|') && line.endsWith('|')) {
+      flushList();
+      if (/^\|[\s\-:|]+\|$/.test(line)) {
+        continue;
+      }
+      const cells = line.slice(1, -1).split('|').map(c => c.trim());
+      if (!currentTable) currentTable = [];
+      currentTable.push(cells);
+      continue;
+    } else {
+      flushTable();
+    }
+
+    // Headings
+    if (line.startsWith('### ')) {
+      flushList();
+      elements.push(
+        <h4 key={elKey++} className="text-sm font-bold text-white tracking-wide mt-3 mb-1.5 pb-1 border-b border-[#1b2b3d]">
+          {renderInline(line.replace(/^###\s+/, ''))}
+        </h4>
+      );
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      flushList();
+      elements.push(
+        <h3 key={elKey++} className="text-[15px] font-bold text-white tracking-wide mt-3.5 mb-1.5 pb-1 border-b border-[#233549]">
+          {renderInline(line.replace(/^##\s+/, ''))}
+        </h3>
+      );
+      continue;
+    }
+    if (line.startsWith('# ')) {
+      flushList();
+      elements.push(
+        <h2 key={elKey++} className="text-base font-bold text-white tracking-tight mt-4 mb-2">
+          {renderInline(line.replace(/^#\s+/, ''))}
+        </h2>
+      );
+      continue;
+    }
+
+    // Audio Link
+    if (line.includes('http') && (line.includes('.mp3') || line.includes('.wav') || line.includes('api.vapi.ai'))) {
+      const urlMatch = line.match(/(https?:\/\/[^\s\)]+)/);
+      if (urlMatch && (urlMatch[1].endsWith('.mp3') || urlMatch[1].endsWith('.wav') || urlMatch[1].includes('vapi'))) {
+        flushList();
+        elements.push(
+          <div key={elKey++} className="my-2 p-2.5 bg-[#06111e] border border-[#233549] rounded-xl flex flex-col gap-1.5">
+            <span className="text-[11px] font-mono text-slate-400">Audio Recording:</span>
+            <audio controls src={urlMatch[1]} className="w-full h-8" />
+          </div>
+        );
+        continue;
+      }
+    }
+
+    // List item
+    const listMatch = line.match(/^(\*|-|\d+\.)\s+(.+)$/);
+    if (listMatch) {
+      if (!currentList) currentList = [];
+      currentList.push(listMatch[2]);
+      continue;
+    } else {
+      flushList();
+    }
+
+    // Regular paragraph
+    elements.push(
+      <p key={elKey++} className="text-[13px] leading-relaxed text-slate-200 my-1">
+        {renderInline(line)}
+      </p>
+    );
+  }
+
+  flushList();
+  flushTable();
+
+  return <div className="space-y-1">{elements}</div>;
+}
+
 export default function AIAgent({ setActiveTab }) {
   const [messages, setMessages] = useState([
     {
@@ -169,8 +367,12 @@ export default function AIAgent({ setActiveTab }) {
                   )}
 
                   {/* Message Content rendered with clean typography */}
-                  <div className="space-y-2 whitespace-pre-wrap select-text font-normal">
-                    {msg.content}
+                  <div className="select-text font-normal">
+                    {isUser ? (
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                    ) : (
+                      <FormattedMessage content={msg.content} />
+                    )}
                   </div>
                 </div>
               </div>

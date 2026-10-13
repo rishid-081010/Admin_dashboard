@@ -35,9 +35,12 @@ You have direct, real-time access to the entire company stack: Supabase (3M+ own
    - Dubai Marina = Marsa Dubai
    - Downtown = Burj Khalifa Area
    - JVC = Jumeirah Village Circle
-4. FORMATTING:
+4. LEAD & ID LOOKUPS:
+   - When the user asks about an owner or lead by ID or number (e.g., '1763175', 'lead 1763175', '#1763175', 'LEAD-1763175', 'OWN-1763175'), immediately pass the identifier or raw digits to get_lead_details or get_lead_call_intelligence.
+   - The system automatically handles prefix resolution (LEAD- and OWN-). Never ask the user to provide a specific prefix or format.
+5. FORMATTING:
    - Lead & Call Transcripts: Provide an executive summary, turn-by-turn dialogue, audio links, and next steps.
-   - Analytics: State the headline figure in bold (e.g. AED 2.45M), cite the sample size of verified units, and provide bedroom breakdown.
+   - Analytics: State the headline figure in bold (e.g. **AED 2.45M**), cite the sample size of verified units, and provide bedroom breakdown.
    - Keep answers clean, concise, executive, and zero AI filler.";
 
 // Tool Definitions
@@ -50,7 +53,7 @@ $tools = [
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
-                    'query' => ['type' => 'string', 'description' => 'Fuzzy search term for name, phone, or building'],
+                    'query' => ['type' => 'string', 'description' => 'Fuzzy search term for name, phone, building, or ID'],
                     'area' => ['type' => 'string', 'description' => 'Master community name (e.g. Dubai Marina, Business Bay, Downtown, JVC)'],
                     'building' => ['type' => 'string', 'description' => 'Specific building name'],
                     'bedrooms' => ['type' => 'number', 'description' => 'Bedrooms count (0 for studio)'],
@@ -65,11 +68,11 @@ $tools = [
         'type' => 'function',
         'function' => [
             'name' => 'get_lead_details',
-            'description' => 'Fetches the complete 360 profile of an owner/lead from Supabase by lead_id or owner_id.',
+            'description' => 'Fetches the complete 360 profile of an owner/lead from Supabase by lead_id, owner_id, or raw numeric ID.',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
-                    'lead_id' => ['type' => 'string', 'description' => 'The lead ID (e.g. 89042, OWN-1092)']
+                    'lead_id' => ['type' => 'string', 'description' => 'The lead or owner ID, or raw number (e.g. 1763175, LEAD-1763175, OWN-1763175)']
                 ],
                 'required' => ['lead_id']
             ]
@@ -260,8 +263,16 @@ if (!empty($toolCalls)) {
                 $url .= "&bedrooms=eq.{$beds}";
             }
             if (!empty($fnArgs['query'])) {
-                $q = rawurlencode($fnArgs['query']);
-                $url .= "&or=(full_name.ilike.*{$q}*,phone_normalized.ilike.*{$q}*,building_name.ilike.*{$q}*)";
+                $rawQ = trim($fnArgs['query']);
+                $digits = preg_replace('/[^\d]/', '', $rawQ);
+                $q = rawurlencode($rawQ);
+                $orParts = ["full_name.ilike.*{$q}*", "phone_normalized.ilike.*{$q}*", "building_name.ilike.*{$q}*"];
+                if (!empty($digits)) {
+                    $orParts[] = "lead_id.ilike.*{$digits}*";
+                    $orParts[] = "owner_id.ilike.*{$digits}*";
+                    $orParts[] = "bitrix_id.eq.{$digits}";
+                }
+                $url .= "&or=(" . implode(',', $orParts) . ")";
             }
             if (isset($fnArgs['has_phone']) && $fnArgs['has_phone']) {
                 $url .= "&phone_normalized=not.is.null&phone_normalized=neq.''";
@@ -285,21 +296,81 @@ if (!empty($toolCalls)) {
             $executedActions[] = ['tool' => 'search_owners', 'count' => $toolResult['count']];
 
         } elseif ($fnName === 'get_lead_details') {
-            $leadId = urlencode($fnArgs['lead_id']);
-            $url = $supabaseUrl . "/owners_data?or=(lead_id.eq.{$leadId},owner_id.eq.{$leadId},bitrix_id.eq.{$leadId})&limit=1";
-            $sbRes = makeCurlRequest($url, 'GET', [
-                "apikey: {$supabaseKey}",
-                "Authorization: Bearer {$supabaseKey}"
-            ]);
-            $toolResult = $sbRes['data'][0] ?? ['error' => 'Lead not found'];
-            $executedActions[] = ['tool' => 'get_lead_details', 'lead_id' => $fnArgs['lead_id']];
+            $raw = trim($fnArgs['lead_id']);
+            $digits = preg_replace('/[^\d]/', '', $raw);
+            $isExplicitOwner = stripos($raw, 'OWN') === 0;
+
+            $matchedLead = null;
+            if (!empty($digits)) {
+                if ($isExplicitOwner) {
+                    $u1 = $supabaseUrl . "/owners_data?owner_id=eq.OWN-{$digits}&limit=1";
+                    $r1 = makeCurlRequest($u1, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                    if (!empty($r1['data'][0])) {
+                        $matchedLead = $r1['data'][0];
+                    }
+                } else {
+                    $u1 = $supabaseUrl . "/owners_data?lead_id=eq.LEAD-{$digits}&limit=1";
+                    $r1 = makeCurlRequest($u1, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                    if (!empty($r1['data'][0])) {
+                        $matchedLead = $r1['data'][0];
+                    }
+                }
+            }
+
+            if (!$matchedLead && !empty($digits)) {
+                $u2 = $supabaseUrl . "/owners_data?or=(lead_id.eq.LEAD-{$digits},owner_id.eq.OWN-{$digits},lead_id.eq.{$digits},owner_id.eq.{$digits},bitrix_id.eq.{$digits},lead_id.ilike.*{$digits}*,owner_id.ilike.*{$digits}*)&limit=1";
+                $r2 = makeCurlRequest($u2, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                if (!empty($r2['data'][0])) {
+                    $matchedLead = $r2['data'][0];
+                }
+            }
+
+            if (!$matchedLead) {
+                $clean = rawurlencode($raw);
+                $u3 = $supabaseUrl . "/owners_data?or=(lead_id.eq.{$clean},owner_id.eq.{$clean},bitrix_id.eq.{$clean})&limit=1";
+                $r3 = makeCurlRequest($u3, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                $matchedLead = $r3['data'][0] ?? null;
+            }
+
+            $toolResult = $matchedLead ?? ['error' => "Lead {$raw} not found in database."];
+            $executedActions[] = ['tool' => 'get_lead_details', 'lead_id' => $raw];
 
         } elseif ($fnName === 'get_lead_call_intelligence') {
-            $leadId = urlencode($fnArgs['lead_id']);
-            // First find owner phone
-            $ownerUrl = $supabaseUrl . "/owners_data?lead_id=eq.{$leadId}&select=lead_id,full_name,building_name,unit_number,phone_normalized&limit=1";
-            $ownerRes = makeCurlRequest($ownerUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
-            $owner = $ownerRes['data'][0] ?? null;
+            $raw = trim($fnArgs['lead_id']);
+            $digits = preg_replace('/[^\d]/', '', $raw);
+            $isExplicitOwner = stripos($raw, 'OWN') === 0;
+
+            $owner = null;
+            if (!empty($digits)) {
+                if ($isExplicitOwner) {
+                    $u1 = $supabaseUrl . "/owners_data?owner_id=eq.OWN-{$digits}&select=owner_id,lead_id,full_name,building_name,unit_number,phone_normalized&limit=1";
+                    $r1 = makeCurlRequest($u1, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                    if (!empty($r1['data'][0])) {
+                        $owner = $r1['data'][0];
+                    }
+                } else {
+                    $u1 = $supabaseUrl . "/owners_data?lead_id=eq.LEAD-{$digits}&select=owner_id,lead_id,full_name,building_name,unit_number,phone_normalized&limit=1";
+                    $r1 = makeCurlRequest($u1, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                    if (!empty($r1['data'][0])) {
+                        $owner = $r1['data'][0];
+                    }
+                }
+            }
+
+            if (!$owner && !empty($digits)) {
+                $u2 = $supabaseUrl . "/owners_data?or=(lead_id.eq.LEAD-{$digits},owner_id.eq.OWN-{$digits},lead_id.eq.{$digits},owner_id.eq.{$digits},lead_id.ilike.*{$digits}*,owner_id.ilike.*{$digits}*)&select=owner_id,lead_id,full_name,building_name,unit_number,phone_normalized&limit=1";
+                $r2 = makeCurlRequest($u2, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                if (!empty($r2['data'][0])) {
+                    $owner = $r2['data'][0];
+                }
+            }
+
+            if (!$owner) {
+                $clean = rawurlencode($raw);
+                $u3 = $supabaseUrl . "/owners_data?or=(lead_id.eq.{$clean},owner_id.eq.{$clean})&select=owner_id,lead_id,full_name,building_name,unit_number,phone_normalized&limit=1";
+                $r3 = makeCurlRequest($u3, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                $owner = $r3['data'][0] ?? null;
+            }
 
             if ($owner && !empty($owner['phone_normalized'])) {
                 $cleanPhone = preg_replace('/[^\d]/', '', $owner['phone_normalized']);
@@ -324,10 +395,10 @@ if (!empty($toolCalls)) {
             } else {
                 $toolResult = [
                     'found' => false,
-                    'message' => "Lead {$fnArgs['lead_id']} found but has no phone on record to link calls."
+                    'message' => "Lead {$raw} found but has no phone on record to link calls."
                 ];
             }
-            $executedActions[] = ['tool' => 'get_lead_call_intelligence', 'lead_id' => $fnArgs['lead_id']];
+            $executedActions[] = ['tool' => 'get_lead_call_intelligence', 'lead_id' => $raw];
 
         } elseif ($fnName === 'get_market_statistics') {
             $area = urlencode($fnArgs['area']);

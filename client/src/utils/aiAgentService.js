@@ -31,11 +31,11 @@ const TOOLS_SCHEMA = [
     type: 'function',
     function: {
       name: 'get_lead_details',
-      description: 'Fetches the 360 profile of an owner/lead from Supabase by lead_id.',
+      description: 'Fetches the complete 360 profile of an owner/lead from Supabase by lead_id, owner_id, or raw numeric ID.',
       parameters: {
         type: 'object',
         properties: {
-          lead_id: { type: 'string', description: 'The lead ID (e.g. 89042)' }
+          lead_id: { type: 'string', description: 'The lead or owner ID, or raw number (e.g. 1763175, LEAD-1763175, OWN-1763175)' }
         },
         required: ['lead_id']
       }
@@ -45,11 +45,11 @@ const TOOLS_SCHEMA = [
     type: 'function',
     function: {
       name: 'get_lead_call_intelligence',
-      description: 'Fetches recorded AI Voice Agent call transcript, executive summary, duration, and audio recording URL for a lead ID.',
+      description: 'Fetches recorded AI Voice Agent call transcript, executive summary, duration, and audio recording URL for a lead ID or phone number.',
       parameters: {
         type: 'object',
         properties: {
-          lead_id: { type: 'string', description: 'The lead ID (e.g. 89042)' }
+          lead_id: { type: 'string', description: 'The lead or owner ID, or raw number (e.g. 1763175, LEAD-1763175)' }
         },
         required: ['lead_id']
       }
@@ -125,7 +125,10 @@ You have direct, real-time access to the entire company stack: Supabase (3M+ own
    - Dubai Marina = Marsa Dubai
    - Downtown = Burj Khalifa Area
    - JVC = Jumeirah Village Circle
-4. FORMATTING:
+4. LEAD & ID LOOKUPS:
+   - When the user asks about an owner or lead by ID or number (e.g., '1763175', 'lead 1763175', '#1763175', 'LEAD-1763175', 'OWN-1763175'), immediately pass the identifier or raw digits to get_lead_details or get_lead_call_intelligence.
+   - The system automatically handles prefix resolution (LEAD- and OWN-). Never ask the user to provide a specific prefix or format.
+5. FORMATTING:
    - Lead & Call Transcripts: Provide an executive summary, turn-by-turn dialogue, audio links, and next steps.
    - Analytics: State the headline figure in bold (e.g. **AED 2.45M**), cite the sample size of verified units, and provide bedroom breakdown.
    - Keep answers clean, concise, executive, and zero AI filler.`;
@@ -144,7 +147,18 @@ async function executeClientTool(name, args) {
       if (args.area) url += `&master_area=ilike.*${encodeURIComponent(args.area)}*`;
       if (args.building) url += `&building_name=ilike.*${encodeURIComponent(args.building)}*`;
       if (args.bedrooms !== undefined) url += `&bedrooms=eq.${args.bedrooms}`;
-      if (args.query) url += `&or=(full_name.ilike.*${encodeURIComponent(args.query)}*,phone_normalized.ilike.*${encodeURIComponent(args.query)}*,building_name.ilike.*${encodeURIComponent(args.query)}*)`;
+      if (args.query) {
+        const rawQ = String(args.query).trim();
+        const digits = rawQ.replace(/[^\d]/g, '');
+        const q = encodeURIComponent(rawQ);
+        const orParts = [`full_name.ilike.*${q}*`, `phone_normalized.ilike.*${q}*`, `building_name.ilike.*${q}*`];
+        if (digits) {
+          orParts.push(`lead_id.ilike.*${digits}*`);
+          orParts.push(`owner_id.ilike.*${digits}*`);
+          orParts.push(`bitrix_id.eq.${digits}`);
+        }
+        url += `&or=(${orParts.join(',')})`;
+      }
       if (args.has_phone) url += `&phone_normalized=not.is.null&phone_normalized=neq.''`;
       if (args.bitrix_synced !== undefined) {
         url += args.bitrix_synced ? `&bitrix_id=not.is.null` : `&bitrix_id=is.null`;
@@ -154,21 +168,73 @@ async function executeClientTool(name, args) {
     }
 
     if (name === 'get_lead_details') {
-      const q = encodeURIComponent(args.lead_id);
-      const url = `${SUPABASE_BASE_URL}/owners_data?or=(lead_id.eq.${q},owner_id.eq.${q},bitrix_id.eq.${q})&limit=1`;
-      const res = await axios.get(url, { headers: sbHeaders });
-      return res.data?.[0] || { error: 'Lead not found' };
+      const raw = String(args.lead_id || '').trim();
+      const digits = raw.replace(/[^\d]/g, '');
+      const isExplicitOwner = raw.toUpperCase().startsWith('OWN');
+
+      let matchedLead = null;
+      if (digits) {
+        if (isExplicitOwner) {
+          const u1 = `${SUPABASE_BASE_URL}/owners_data?owner_id=eq.OWN-${digits}&limit=1`;
+          const r1 = await axios.get(u1, { headers: sbHeaders });
+          if (r1.data?.[0]) matchedLead = r1.data[0];
+        } else {
+          const u1 = `${SUPABASE_BASE_URL}/owners_data?lead_id=eq.LEAD-${digits}&limit=1`;
+          const r1 = await axios.get(u1, { headers: sbHeaders });
+          if (r1.data?.[0]) matchedLead = r1.data[0];
+        }
+      }
+
+      if (!matchedLead && digits) {
+        const u2 = `${SUPABASE_BASE_URL}/owners_data?or=(lead_id.eq.LEAD-${digits},owner_id.eq.OWN-${digits},lead_id.eq.${digits},owner_id.eq.${digits},bitrix_id.eq.${digits},lead_id.ilike.*${digits}*,owner_id.ilike.*${digits}*)&limit=1`;
+        const r2 = await axios.get(u2, { headers: sbHeaders });
+        if (r2.data?.[0]) matchedLead = r2.data[0];
+      }
+
+      if (!matchedLead) {
+        const clean = encodeURIComponent(raw);
+        const u3 = `${SUPABASE_BASE_URL}/owners_data?or=(lead_id.eq.${clean},owner_id.eq.${clean},bitrix_id.eq.${clean})&limit=1`;
+        const r3 = await axios.get(u3, { headers: sbHeaders });
+        matchedLead = r3.data?.[0] || null;
+      }
+
+      return matchedLead || { error: `Lead ${raw} not found in database.` };
     }
 
     if (name === 'get_lead_call_intelligence') {
-      const q = encodeURIComponent(args.lead_id);
-      const oUrl = `${SUPABASE_BASE_URL}/owners_data?lead_id=eq.${q}&select=lead_id,full_name,building_name,unit_number,phone_normalized&limit=1`;
-      const oRes = await axios.get(oUrl, { headers: sbHeaders });
-      const owner = oRes.data?.[0];
+      const raw = String(args.lead_id || '').trim();
+      const digits = raw.replace(/[^\d]/g, '');
+      const isExplicitOwner = raw.toUpperCase().startsWith('OWN');
+
+      let owner = null;
+      if (digits) {
+        if (isExplicitOwner) {
+          const u1 = `${SUPABASE_BASE_URL}/owners_data?owner_id=eq.OWN-${digits}&select=owner_id,lead_id,full_name,building_name,unit_number,phone_normalized&limit=1`;
+          const r1 = await axios.get(u1, { headers: sbHeaders });
+          if (r1.data?.[0]) owner = r1.data[0];
+        } else {
+          const u1 = `${SUPABASE_BASE_URL}/owners_data?lead_id=eq.LEAD-${digits}&select=owner_id,lead_id,full_name,building_name,unit_number,phone_normalized&limit=1`;
+          const r1 = await axios.get(u1, { headers: sbHeaders });
+          if (r1.data?.[0]) owner = r1.data[0];
+        }
+      }
+
+      if (!owner && digits) {
+        const u2 = `${SUPABASE_BASE_URL}/owners_data?or=(lead_id.eq.LEAD-${digits},owner_id.eq.OWN-${digits},lead_id.eq.${digits},owner_id.eq.${digits},lead_id.ilike.*${digits}*,owner_id.ilike.*${digits}*)&select=owner_id,lead_id,full_name,building_name,unit_number,phone_normalized&limit=1`;
+        const r2 = await axios.get(u2, { headers: sbHeaders });
+        if (r2.data?.[0]) owner = r2.data[0];
+      }
+
+      if (!owner) {
+        const clean = encodeURIComponent(raw);
+        const u3 = `${SUPABASE_BASE_URL}/owners_data?or=(lead_id.eq.${clean},owner_id.eq.${clean})&select=owner_id,lead_id,full_name,building_name,unit_number,phone_normalized&limit=1`;
+        const r3 = await axios.get(u3, { headers: sbHeaders });
+        owner = r3.data?.[0] || null;
+      }
 
       if (owner && owner.phone_normalized) {
         const cleanPhone = String(owner.phone_normalized).replace(/[^\d]/g, '').slice(-8);
-        const cUrl = `${SUPABASE_BASE_URL}/vapi_call_logs?customer_phone=ilike.*${cleanPhone}*&order=created_at.desc.nullslast&limit=1`;
+        const cUrl = `${SUPABASE_BASE_URL}/vapi_call_logs?customer_phone=ilike.*${cleanPhone}*&order=created_at.desc.nullslast&limit=2`;
         const cRes = await axios.get(cUrl, { headers: sbHeaders });
         const call = cRes.data?.[0];
 
@@ -176,16 +242,17 @@ async function executeClientTool(name, args) {
           found: true,
           owner,
           call: call ? {
+            call_id: call.id || null,
             date: call.created_at,
             duration_seconds: call.duration_seconds || 0,
             status: call.voice_call_status || call.status || 'completed',
-            summary: call.summary || 'Outbound call executed.',
-            transcript: call.transcript || 'No transcript text on record.',
+            summary: call.summary || 'Call recorded.',
+            transcript: call.transcript || 'No text transcript available.',
             recording_url: call.recording_url || null
           } : null
         };
       }
-      return { found: false, message: `Lead ${args.lead_id} has no phone on record.` };
+      return { found: false, message: `Lead ${raw} found but has no phone on record to link calls.` };
     }
 
     if (name === 'get_market_statistics') {

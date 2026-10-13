@@ -199,8 +199,9 @@ export default function VoiceDateFilter({
     timeFilter === 'Monthly' ? 'Month' : 'All Time';
 
   return (
-    <div className="w-full max-w-sm sm:max-w-md mx-auto bg-[#0c1829] border border-[#233549] rounded-2xl p-5 sm:p-6 shadow-xl shadow-black/40 mb-6">
-      {/* ─── Mode Selector Pills (Day / Week / Month / All Time) ───── */}
+    <div className="w-full h-full bg-[#0c1829] border border-[#233549] rounded-2xl p-5 sm:p-6 shadow-xl shadow-black/40 flex flex-col justify-between">
+      <div>
+        {/* ─── Mode Selector Pills (Day / Week / Month / All Time) ───── */}
       <div className="flex items-center justify-center mb-5">
         <div className="bg-[#06111e] border border-[#1b2b3d] p-1 rounded-xl flex items-center gap-1 w-full max-w-xs justify-between">
           {[
@@ -451,6 +452,7 @@ export default function VoiceDateFilter({
           </div>
         </div>
       )}
+      </div>
 
       {/* ─── Footer: Active Scope Label & Quick Jump ────────────────── */}
       <div className="mt-5 pt-3.5 border-t border-[#1b2b3d] flex items-center justify-between text-xs text-slate-400">
