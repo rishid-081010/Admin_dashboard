@@ -1,6 +1,44 @@
 import React, { useState, useMemo } from 'react';
-import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { SOURCES_DATA } from '../data/sourcesData';
+
+const escRegex = (s) => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+function getMatchScore(item, query) {
+  const q = query.trim().toLowerCase();
+  const l = (item.filename || '').toLowerCase();
+  const clean = l.replace(/^[\d\s._-]+/, '');
+  
+  // 1. Exact match (without extension)
+  const base = l.replace(/\.[^/.]+$/, '');
+  const cleanBase = clean.replace(/\.[^/.]+$/, '');
+  if (base === q || cleanBase === q) return 10000;
+
+  // 2. Filename starts directly with search query (e.g. "Al Satwa...")
+  if (l.startsWith(q)) return 8000;
+
+  // 3. Clean filename (after leading digits like 01_, 12._) starts with search query
+  if (clean.startsWith(q)) return 6000;
+
+  // 4. Multi-term boundary checks
+  const terms = q.split(/\s+/).filter(Boolean);
+  
+  // Every term in query starts on a word boundary (e.g. "Burj Al Nojoom", "akg building al quoz")
+  const allTermsOnWordBoundary = terms.every(t => 
+    new RegExp('(?:^|[^a-z0-9])' + escRegex(t), 'i').test(l)
+  );
+  if (allTermsOnWordBoundary) return 4000;
+
+  // Primary (first) term starts on a word boundary
+  const firstTermOnWordBoundary = new RegExp('(?:^|[^a-z0-9])' + escRegex(terms[0]), 'i').test(l);
+  if (firstTermOnWordBoundary) return 2000;
+
+  // 5. Substring match in filename (e.g. "al" in "Palm", "California")
+  if (l.includes(q)) return 500;
+
+  // 6. Match in status or duplicate_of only
+  return 100;
+}
 
 export default function SourcesDirectory() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,9 +54,10 @@ export default function SourcesDirectory() {
 
   // Filtered & Sorted files strictly using authentic filesystem properties
   const filteredAndSorted = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+
     let result = SOURCES_DATA.filter(item => {
       // 1. Exact filename or status search
-      const q = searchTerm.trim().toLowerCase();
       const matchesSearch = !q || 
         item.filename.toLowerCase().includes(q) || 
         (item.status && item.status.toLowerCase().includes(q)) ||
@@ -51,6 +90,18 @@ export default function SourcesDirectory() {
       if (sortBy === 'rows_asc') return (a.accepted_rows || 0) - (b.accepted_rows || 0);
       if (sortBy === 'size_desc') return b.size_bytes - a.size_bytes;
       if (sortBy === 'size_asc') return a.size_bytes - b.size_bytes;
+      
+      // When Default Order is selected AND user has entered a search term:
+      // Prioritize files starting with the query (e.g. "Al Satwa", "Al Barsha" appear first)
+      if (q) {
+        const scoreA = getMatchScore(a, q);
+        const scoreB = getMatchScore(b, q);
+        if (scoreB !== scoreA) {
+          return scoreB - scoreA;
+        }
+        return a.filename.localeCompare(b.filename);
+      }
+
       return 0; // Default order matches Image 1
     });
 
@@ -100,24 +151,52 @@ export default function SourcesDirectory() {
         </div>
 
         {/* Search input + Dark Search button */}
-        <div className="flex items-center gap-3">
-          <input 
-            type="text"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Search filename or processing status"
-            className="flex-1 bg-[#06111e] border border-[#1b2b3d] rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#385175] transition-all shadow-none"
-          />
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            setCurrentPage(1);
+          }}
+          className="flex items-center gap-3"
+        >
+          <div className="relative flex-1 flex items-center">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+            <input 
+              type="text"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setCurrentPage(1);
+                }
+              }}
+              placeholder="Search filename or status (e.g. al, satwa, palm)..."
+              className="w-full bg-[#06111e] border border-[#1b2b3d] rounded-xl pl-10 pr-9 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/70 transition-all shadow-none"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setCurrentPage(1);
+                }}
+                className="absolute right-3 text-slate-400 hover:text-white p-1 transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           <button 
-            onClick={() => setCurrentPage(1)}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-7 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-blue-500/25 shrink-0"
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-7 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-blue-500/25 shrink-0 cursor-pointer"
           >
             Search
           </button>
-        </div>
+        </form>
 
         {/* Minimalist Filter Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-4 mt-4 border-t border-[#233549] text-xs text-slate-400">
@@ -174,7 +253,9 @@ export default function SourcesDirectory() {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="bg-transparent text-white outline-none cursor-pointer font-medium"
               >
-                <option value="default" className="bg-[#0c1829]">Default Order</option>
+                <option value="default" className="bg-[#0c1829]">
+                  {searchTerm.trim() ? "Relevance (Best Match)" : "Default Order"}
+                </option>
                 <option value="name_asc" className="bg-[#0c1829]">File Name (A–Z)</option>
                 <option value="name_desc" className="bg-[#0c1829]">File Name (Z–A)</option>
                 <option value="rows_desc" className="bg-[#0c1829]">Accepted Rows (High to Low)</option>

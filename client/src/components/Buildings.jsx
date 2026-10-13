@@ -53,16 +53,22 @@ function formatBuildingName(name) {
 function getBuildingCommunity(name, rawArea) {
   const n = (name || '').toLowerCase();
   if (n.includes('burlington')) return 'BUSINESS BAY';
-  if (n.includes('burj khalifa') || n.includes('burj vista') || n.includes('downtown')) return 'DOWNTOWN DUBAI';
+  if (n.includes('burj khalifa') || n.includes('burj vista') || n.includes('downtown') || n.includes('st. regis')) return 'DOWNTOWN DUBAI';
   if (n.includes('marina') || n.includes('beach vista') || n.includes('oceana')) return 'DUBAI MARINA';
+  if (n.includes('palm') || n.includes('atlantis') || n.includes('the 8')) return 'PALM JUMEIRAH';
+  if (n.includes('riviera') || n.includes('azizi') || n.includes('meydan') || n.includes('al merkadh')) return 'MEYDAN';
+  if (n.includes('sobha') || n.includes('hartland')) return 'SOBHA HARTLAND';
+  if (n.includes('town square') || n.includes('townsquare') || n.includes('rawda') || n.includes('safi') || n.includes('maha townhouses')) return 'TOWN SQUARE';
+  if (n.includes('motor city') || n.includes('control tower') || n.includes('detroit')) return 'MOTOR CITY';
   if (n.includes('belgravia') || n.includes('bloom') || n.includes('binghatti amber') || n.includes('beverly')) return 'JUMEIRAH VILLAGE CIRCLE';
-  if (n.includes('damac hills') || n.includes('akoya') || n.includes('vardon')) return 'DAMAC HILLS';
-  if (n.includes('palm') || n.includes('atlantis')) return 'PALM JUMEIRAH';
-  if (n.includes('business central') || n.includes('almas')) return 'BUSINESS BAY';
+  if (n.includes('damac hills 2') || n.includes('akoya')) return 'DAMAC HILLS 2';
+  if (n.includes('damac hills') || n.includes('vardon')) return 'DAMAC HILLS';
+  if (n.includes('business central') || n.includes('almas') || n.includes('peninsula') || n.includes('churchill')) return 'BUSINESS BAY';
   if (n.includes('creek')) return 'DUBAI CREEK HARBOUR';
   if (n.includes('hills estate')) return 'DUBAI HILLS ESTATE';
+  if (n.includes('district one') || n.includes('district 1')) return 'DISTRICT ONE';
   
-  if (rawArea && !DUMMY_BUILDINGS.has(rawArea.toLowerCase())) {
+  if (rawArea && !DUMMY_BUILDINGS.has(rawArea.toLowerCase()) && !/^\d+(\.\d+)?$/.test(rawArea.trim())) {
     return rawArea.toUpperCase();
   }
   return 'BUSINESS BAY';
@@ -71,14 +77,17 @@ function getBuildingCommunity(name, rawArea) {
 // Determine property classification
 function getBuildingType(name, rawType) {
   const n = (name || '').toLowerCase();
-  if (n.includes('burlington') || n.includes('office') || n.includes('business central') || n.includes('almas') || n.includes('commercial')) {
+  if (n.includes('burlington') || n.includes('office') || n.includes('business central') || n.includes('almas') || n.includes('commercial') || n.includes('control tower')) {
     return 'Office';
   }
-  if (n.includes('villa') || n.includes('mansion') || n.includes('ranches')) {
+  if (n.includes('villa') || n.includes('mansion') || n.includes('ranches') || n.includes('townhouse') || n.includes('townhouses')) {
     return 'Luxury Villa';
   }
   if (n.includes('penthouse')) {
     return 'Penthouse';
+  }
+  if (n.includes('riviera') || n.includes('residence') || n.includes('tower') || n.includes('apartments') || n.includes('waves')) {
+    return 'Residential';
   }
   if (rawType && !['owner', 'unknown', 'n/a', 'flat'].includes(rawType.toLowerCase())) {
     return rawType.charAt(0).toUpperCase() + rawType.slice(1);
