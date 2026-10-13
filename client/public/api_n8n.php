@@ -216,17 +216,22 @@ foreach ($workflows as $w) {
         ? round(array_sum($st['durations']) / count($st['durations']), 2)
         : null;
 
+    $folderName = isset($w['parentFolder']['name']) ? $w['parentFolder']['name'] : 'General';
+
     $formattedWorkflows[] = [
         'id' => $wid,
         'name' => $w['name'],
         'active' => $isActive,
         'status' => $healthStatus,
+        'folder' => $folderName,
         'executionsToday' => $st['executionsToday'],
         'successToday' => $st['successToday'],
         'errorToday' => $st['errorToday'],
         'avgDurationSec' => $avgDuration,
         'lastExecutedAt' => $st['lastExecutedAt'],
+        'createdAt' => isset($w['createdAt']) ? $w['createdAt'] : null,
         'updatedAt' => isset($w['updatedAt']) ? $w['updatedAt'] : null,
+        'tags' => isset($w['tags']) ? $w['tags'] : [],
         'n8nUrl' => $n8nUrl . '/workflow/' . $wid,
         'recentLogs' => $st['recentLogs']
     ];

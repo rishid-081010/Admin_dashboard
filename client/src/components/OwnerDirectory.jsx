@@ -269,17 +269,33 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       if (isSearching) {
         const queryTerm = searchTerm.trim();
         const cleanDigits = queryTerm.replace(/[^0-9]/g, '');
+        const upper = queryTerm.toUpperCase();
         
         if (queryTerm.startsWith('+') || (cleanDigits.length >= 7 && /^[+0-9\s-]+$/.test(queryTerm))) {
           const pExact = queryTerm.startsWith('+') ? queryTerm : `+${cleanDigits}`;
           url += `&or=(phone_normalized.eq.${encodeURIComponent(pExact)},bitrix_id.eq.${encodeURIComponent(cleanDigits)},lead_id.eq.${encodeURIComponent(queryTerm)})`;
-        } else if (queryTerm.toUpperCase().startsWith('LEAD-')) {
-          url += `&lead_id.ilike.*${encodeURIComponent(queryTerm)}*`;
+        } else if (upper.startsWith('LEAD-')) {
+          const variants = [upper, queryTerm];
+          if (cleanDigits) {
+            variants.push(`LEAD-${cleanDigits}`);
+            variants.push(`LEAD-${cleanDigits.padStart(7, '0')}`);
+          }
+          const unique = Array.from(new Set(variants));
+          url += `&or=(${unique.map(v => `lead_id.eq.${encodeURIComponent(v)}`).join(',')})`;
+        } else if (upper.startsWith('OWN-')) {
+          const variants = [upper, queryTerm];
+          if (cleanDigits) {
+            variants.push(`OWN-${cleanDigits}`);
+            variants.push(`OWN-${cleanDigits.padStart(7, '0')}`);
+          }
+          const unique = Array.from(new Set(variants));
+          url += `&or=(${unique.map(v => `owner_id.eq.${encodeURIComponent(v)}`).join(',')})`;
         } else if (cleanDigits.length > 0 && queryTerm.length < 8 && !/[a-zA-Z]/.test(queryTerm)) {
-          url += `&or=(bitrix_id.eq.${encodeURIComponent(cleanDigits)},lead_id.ilike.*${encodeURIComponent(queryTerm)}*,unit_number.eq.${encodeURIComponent(queryTerm)})`;
+          const padded = cleanDigits.padStart(7, '0');
+          url += `&or=(lead_id.eq.LEAD-${cleanDigits},lead_id.eq.LEAD-${padded},owner_id.eq.OWN-${cleanDigits},owner_id.eq.OWN-${padded},bitrix_id.eq.${encodeURIComponent(cleanDigits)},unit_number.eq.${encodeURIComponent(queryTerm)})`;
         } else {
           const enc = encodeURIComponent(queryTerm);
-          url += `&or=(full_name.ilike.*${enc}*,building_name.ilike.*${enc}*,lead_id.ilike.*${enc}*,assigned_agent.ilike.*${enc}*)`;
+          url += `&or=(full_name.ilike.*${enc}*,building_name.ilike.*${enc}*,assigned_agent.ilike.*${enc}*)`;
         }
       }
 
@@ -1159,7 +1175,11 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           {/* Pagination Footer */}
           <div className="p-4 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-400">
             <span>
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + owners.length} of {totalCount.toLocaleString()} owner records (Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()})
+              {isSearching ? (
+                `Found ${owners.length} matching owner record${owners.length === 1 ? '' : 's'}`
+              ) : (
+                `Showing ${((currentPage - 1) * itemsPerPage) + 1} to ${((currentPage - 1) * itemsPerPage) + owners.length} of ${totalCount.toLocaleString()} owner records (Page ${currentPage.toLocaleString()} of ${totalPages.toLocaleString()})`
+              )}
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button 
@@ -1414,7 +1434,11 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           {/* Grid View Pagination Footer */}
           <div className="p-3 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
             <span>
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {((currentPage - 1) * itemsPerPage) + owners.length} of {totalCount.toLocaleString()} owners (Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()})
+              {isSearching ? (
+                `Found ${owners.length} matching owner record${owners.length === 1 ? '' : 's'}`
+              ) : (
+                `Showing ${((currentPage - 1) * itemsPerPage) + 1} to ${((currentPage - 1) * itemsPerPage) + owners.length} of {totalCount.toLocaleString()} owners (Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()})`
+              )}
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button 

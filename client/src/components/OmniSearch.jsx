@@ -255,27 +255,64 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(phone_normalized.ilike.*${encodeURIComponent(phoneTerm)}*,phone_raw.ilike.*${encodeURIComponent(phoneTerm)}*)&select=*&limit=100`);
     };
 
-    const fetchIds = () => {
+    const fetchLeadId = () => {
       const cleanTerm = q.trim();
       const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
       const variants = [cleanTerm, cleanTerm.toUpperCase()];
       if (rawDigits) {
-        variants.push(rawDigits);
         variants.push(`LEAD-${rawDigits}`);
         variants.push(`LEAD-${rawDigits.padStart(7, '0')}`);
+      }
+      const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
+      const orClauses = uniqueVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`);
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+    };
+
+    const fetchBitrixId = () => {
+      const cleanDigits = q.replace(/[^0-9]/g, '') || q.trim();
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(cleanDigits)}&select=*&limit=50`);
+    };
+
+    const fetchSupabaseId = () => {
+      const cleanTerm = q.trim();
+      const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
+      const variants = [cleanTerm, cleanTerm.toUpperCase()];
+      if (rawDigits) {
         variants.push(`OWN-${rawDigits}`);
         variants.push(`OWN-${rawDigits.padStart(7, '0')}`);
       }
       const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
-      const orClauses = [];
-      uniqueVariants.forEach(v => {
-        orClauses.push(`lead_id.eq.${encodeURIComponent(v)}`);
-        orClauses.push(`owner_id.eq.${encodeURIComponent(v)}`);
-      });
-      if (rawDigits && rawDigits.length >= 2 && rawDigits.length <= 8) {
-        orClauses.push(`bitrix_id.eq.${encodeURIComponent(rawDigits)}`);
-      }
+      const orClauses = uniqueVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`);
       return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+    };
+
+    const fetchAllIds = () => {
+      const cleanTerm = q.trim();
+      const upper = cleanTerm.toUpperCase();
+      const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
+
+      // Explicit Lead ID format: query ONLY lead_id
+      if (upper.startsWith('LEAD-')) {
+        return fetchLeadId();
+      }
+      // Explicit Owner ID format: query ONLY owner_id
+      if (upper.startsWith('OWN-')) {
+        return fetchSupabaseId();
+      }
+      // Pure numeric / mixed ID: query matching variants across ID systems
+      if (rawDigits) {
+        const orClauses = [
+          `lead_id.eq.LEAD-${rawDigits}`,
+          `lead_id.eq.LEAD-${rawDigits.padStart(7, '0')}`,
+          `owner_id.eq.OWN-${rawDigits}`,
+          `owner_id.eq.OWN-${rawDigits.padStart(7, '0')}`
+        ];
+        if (rawDigits.length >= 2 && rawDigits.length <= 8) {
+          orClauses.push(`bitrix_id.eq.${encodeURIComponent(rawDigits)}`);
+        }
+        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+      }
+      return Promise.resolve([]);
     };
 
     try {
@@ -303,12 +340,26 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setIdResults([]);
         const rows = await fetchPhone();
         setOwnerResults(rows);
-      } else if (currentFilter === 'Lead ID' || currentFilter === 'Bitrix ID' || currentFilter === 'Supabase ID') {
+      } else if (currentFilter === 'Lead ID') {
         setBuildingResults([]);
         setAreaResults([]);
         setIdResults([]);
         setOwnerResults([]);
-        const rows = await fetchIds();
+        const rows = await fetchLeadId();
+        setIdResults(rows);
+      } else if (currentFilter === 'Bitrix ID') {
+        setBuildingResults([]);
+        setAreaResults([]);
+        setIdResults([]);
+        setOwnerResults([]);
+        const rows = await fetchBitrixId();
+        setIdResults(rows);
+      } else if (currentFilter === 'Supabase ID') {
+        setBuildingResults([]);
+        setAreaResults([]);
+        setIdResults([]);
+        setOwnerResults([]);
+        const rows = await fetchSupabaseId();
         setIdResults(rows);
       } else {
         // ── 'All' FILTER: Unified Intelligent Multi-Entity Search ──
@@ -327,7 +378,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
         if (hasDigits || isIdPattern) {
           hasIdCheck = true;
-          promises.push(fetchIds());
+          promises.push(fetchAllIds());
           if (hasDigits) {
             hasPhoneCheck = true;
             promises.push(fetchPhone());

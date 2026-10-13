@@ -1,53 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Activity, Zap, CheckCircle2, AlertTriangle, RefreshCw, 
-  Search, ExternalLink, Clock, Play, Pause, ShieldCheck, 
-  ArrowRight, Layers, Filter, Check, Copy, Flame, Database,
-  Timer, ChevronRight, X
+  Search, RefreshCw, ExternalLink, Check, Copy, 
+  ArrowUpDown, Layers, X, Clock, Activity, 
+  CheckCircle2, AlertTriangle, Layers3
 } from 'lucide-react';
 import axios from 'axios';
-import N8nLogo from './N8nLogo';
-
-// Embedded initial real snapshot from live n8n instance
-const FALLBACK_SNAPSHOT = {
-  summary: {
-    totalWorkflows: 99,
-    activeWorkflows: 30,
-    healthyWorkflows: 30,
-    errorWorkflows: 0,
-    totalExecutionsToday: 100,
-    totalSuccessToday: 100,
-    totalErrorsToday: 0,
-    avgRuntimeSec: 1.73
-  },
-  workflows: [
-    { id: 'RjoR4RSnyHp4CDCV', name: 'NEW | To master_leads', active: true, status: 'healthy', executionsToday: 22, successToday: 22, errorToday: 0, avgDurationSec: 0.18, lastExecutedAt: new Date(Date.now() - 2 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/RjoR4RSnyHp4CDCV' },
-    { id: 'AsqCommentStage1', name: 'P0 - Lead Card Autofill + Comment Routing', active: true, status: 'healthy', executionsToday: 22, successToday: 22, errorToday: 0, avgDurationSec: 0.22, lastExecutedAt: new Date(Date.now() - 4 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/AsqCommentStage1' },
-    { id: 'E4uIwGuaMh4Q76a4', name: 'P0 - Agent Comment CRM Updates V3', active: true, status: 'healthy', executionsToday: 21, successToday: 21, errorToday: 0, avgDurationSec: 0.19, lastExecutedAt: new Date(Date.now() - 4 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/E4uIwGuaMh4Q76a4' },
-    { id: 'RPCok7VJoYydBMPh', name: 'Call Scheduler', active: true, status: 'healthy', executionsToday: 9, successToday: 9, errorToday: 0, avgDurationSec: 0.68, lastExecutedAt: new Date(Date.now() - 5 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/RPCok7VJoYydBMPh' },
-    { id: 'B8h1gU8g6f5d4e3c', name: 'ASQ - Inactive Owner Guard - Melanie Fallback', active: true, status: 'healthy', executionsToday: 5, successToday: 5, errorToday: 0, avgDurationSec: 0.45, lastExecutedAt: new Date(Date.now() - 6 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/B8h1gU8g6f5d4e3c' },
-    { id: 'xso9YTjUXiF0CEgC', name: 'P1 - Bitrix Lead Scoring', active: true, status: 'healthy', executionsToday: 5, successToday: 5, errorToday: 0, avgDurationSec: 0.31, lastExecutedAt: new Date(Date.now() - 6 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/xso9YTjUXiF0CEgC' },
-    { id: 'IRPoVUaagkNAPlNJ', name: 'P0 - Dead Letter and Failure Alert', active: true, status: 'healthy', executionsToday: 4, successToday: 4, errorToday: 0, avgDurationSec: 0.15, lastExecutedAt: new Date(Date.now() - 7 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/IRPoVUaagkNAPlNJ' },
-    { id: '4eRAJz9trbCO2Lch', name: 'P0 - Lead SLA and High Value Monitor', active: true, status: 'healthy', executionsToday: 3, successToday: 3, errorToday: 0, avgDurationSec: 0.28, lastExecutedAt: new Date(Date.now() - 11 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/4eRAJz9trbCO2Lch' },
-    { id: 'jpfL1YiaNA4gw6Cl', name: 'Call reply Trigger', active: true, status: 'healthy', executionsToday: 2, successToday: 2, errorToday: 0, avgDurationSec: 0.35, lastExecutedAt: new Date(Date.now() - 18 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/jpfL1YiaNA4gw6Cl' },
-    { id: 'O89wCzFEOCbc0REX', name: 'WA Reply trigger', active: true, status: 'healthy', executionsToday: 2, successToday: 2, errorToday: 0, avgDurationSec: 0.40, lastExecutedAt: new Date(Date.now() - 25 * 60000).toISOString(), n8nUrl: 'https://n8n.asquared.ae/workflow/O89wCzFEOCbc0REX' },
-    { id: 'mx6IsFWrq5Csdc29', name: 'ASQ AI Sales Manager — Strict Accountability', active: true, status: 'healthy', executionsToday: 0, successToday: 0, errorToday: 0, avgDurationSec: null, lastExecutedAt: null, n8nUrl: 'https://n8n.asquared.ae/workflow/mx6IsFWrq5Csdc29' },
-    { id: 'B2hVdT1mPogdWaSU', name: 'Owner Voice Reachout', active: true, status: 'healthy', executionsToday: 0, successToday: 0, errorToday: 0, avgDurationSec: null, lastExecutedAt: null, n8nUrl: 'https://n8n.asquared.ae/workflow/B2hVdT1mPogdWaSU' },
-    { id: 'K9BFBRZ31VzdDeRr', name: 'PROD - ASQ Bitrix Master Business Automation', active: true, status: 'healthy', executionsToday: 0, successToday: 0, errorToday: 0, avgDurationSec: null, lastExecutedAt: null, n8nUrl: 'https://n8n.asquared.ae/workflow/K9BFBRZ31VzdDeRr' }
-  ]
-};
+import initialTelemetry from '../../public/n8n_telemetry.json';
 
 export default function WorkflowsDirectory() {
-  const [data, setData] = useState(FALLBACK_SNAPSHOT);
+  const [data, setData] = useState(initialTelemetry || null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'healthy', 'error', 'paused'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'published', 'unpublished', 'executed', 'errors'
+  const [folderFilter, setFolderFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('updated'); // 'updated', 'created', 'name-asc', 'name-desc', 'executions'
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
-  const [secondsUntilNextRefresh, setSecondsUntilNextRefresh] = useState(300); // 5 minutes = 300s
   const [copiedId, setCopiedId] = useState(null);
-  const [selectedWorkflowLogs, setSelectedWorkflowLogs] = useState(null);
 
-  // Fetch live n8n telemetry with multiple redundant fallback paths
+  // Fetch live n8n telemetry from API endpoint or static json
   const fetchTelemetry = async (manual = false) => {
     try {
       setLoading(true);
@@ -77,10 +47,9 @@ export default function WorkflowsDirectory() {
       if (fetchedData) {
         setData(fetchedData);
         setLastRefreshed(new Date());
-        setSecondsUntilNextRefresh(300);
       }
     } catch (err) {
-      console.warn('Could not reach live n8n endpoint, displaying authenticated telemetry:', err.message);
+      console.warn('Could not refresh n8n telemetry:', err.message);
     } finally {
       setLoading(false);
     }
@@ -91,22 +60,13 @@ export default function WorkflowsDirectory() {
     fetchTelemetry(false);
   }, []);
 
-  // 5-Minute Auto-Refresh Interval (300,000 ms)
+  // 5-Minute Auto-Refresh Interval
   useEffect(() => {
     const interval = setInterval(() => {
       fetchTelemetry(false);
-    }, 300000); // exactly 5 minutes
+    }, 300000); // 5 minutes
 
     return () => clearInterval(interval);
-  }, []);
-
-  // 1-Second Countdown Timer for visible 5-minute schedule
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsUntilNextRefresh(prev => (prev <= 1 ? 300 : prev - 1));
-    }, 1000);
-
-    return () => clearInterval(timer);
   }, []);
 
   // Copy workflow ID
@@ -117,42 +77,109 @@ export default function WorkflowsDirectory() {
     setTimeout(() => setCopiedId(null), 1800);
   };
 
-  // Filtered workflows
-  const filteredWorkflows = useMemo(() => {
+  const summary = useMemo(() => {
+    const workflows = data?.workflows || [];
+    const totalWorkflows = workflows.length;
+    const publishedCount = workflows.filter(w => w.active).length;
+    const unpublishedCount = totalWorkflows - publishedCount;
+    const executedTodayCount = workflows.filter(w => (w.executionsToday || 0) > 0).length;
+    const errorsCount = workflows.filter(w => (w.errorToday || 0) > 0 || w.status === 'error').length;
+    const totalExecutionsToday = workflows.reduce((acc, w) => acc + (w.executionsToday || 0), 0);
+    const totalSuccessToday = workflows.reduce((acc, w) => acc + (w.successToday || 0), 0);
+    const totalErrorsToday = workflows.reduce((acc, w) => acc + (w.errorToday || 0), 0);
+
+    const latencies = workflows.map(w => w.avgDurationSec).filter(v => typeof v === 'number' && v > 0);
+    const avgRuntimeSec = latencies.length > 0 
+      ? Number((latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(2))
+      : (data?.summary?.avgRuntimeSec || 1.73);
+
+    return {
+      totalWorkflows,
+      publishedCount,
+      unpublishedCount,
+      executedTodayCount,
+      errorsCount,
+      totalExecutionsToday,
+      totalSuccessToday,
+      totalErrorsToday,
+      avgRuntimeSec
+    };
+  }, [data]);
+
+  // Dynamic Folders extracted from workflows
+  const folders = useMemo(() => {
     const list = data?.workflows || [];
-    return list.filter(w => {
-      if (statusFilter === 'active' && !w.active) return false;
-      if (statusFilter === 'healthy' && w.status !== 'healthy') return false;
-      if (statusFilter === 'running' && w.status !== 'running') return false;
-      if (statusFilter === 'error' && w.status !== 'error') return false;
-      if (statusFilter === 'paused' && w.active) return false;
-
-      if (!searchTerm.trim()) return true;
-      const q = searchTerm.toLowerCase();
-      return (
-        w.name.toLowerCase().includes(q) ||
-        w.id.toLowerCase().includes(q) ||
-        (w.status && w.status.toLowerCase().includes(q))
-      );
+    const counts = {};
+    list.forEach(w => {
+      const folderName = w.folder || 'General';
+      counts[folderName] = (counts[folderName] || 0) + 1;
     });
-  }, [data, searchTerm, statusFilter]);
 
-  const summary = data?.summary || {
-    totalWorkflows: 99,
-    activeWorkflows: 30,
-    healthyWorkflows: 30,
-    errorWorkflows: 0,
-    totalExecutionsToday: 100,
-    totalSuccessToday: 100,
-    totalErrorsToday: 0,
-    avgRuntimeSec: 1.73
-  };
+    return Object.keys(counts)
+      .sort((a, b) => counts[b] - counts[a])
+      .map(folderName => ({
+        name: folderName,
+        count: counts[folderName]
+      }));
+  }, [data]);
 
-  const formatCountdown = (sec) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}m ${String(s).padStart(2, '0')}s`;
-  };
+  // Filtered & Sorted workflows
+  const filteredWorkflows = useMemo(() => {
+    let list = (data?.workflows || []).slice();
+
+    // 1. Status Filter
+    if (statusFilter === 'published') {
+      list = list.filter(w => w.active);
+    } else if (statusFilter === 'unpublished') {
+      list = list.filter(w => !w.active);
+    } else if (statusFilter === 'executed') {
+      list = list.filter(w => (w.executionsToday || 0) > 0);
+    } else if (statusFilter === 'errors') {
+      list = list.filter(w => (w.errorToday || 0) > 0 || w.status === 'error');
+    }
+
+    // 2. Folder Filter
+    if (folderFilter !== 'all') {
+      list = list.filter(w => (w.folder || 'General') === folderFilter);
+    }
+
+    // 3. Search Term
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase().trim();
+      list = list.filter(w => 
+        (w.name && w.name.toLowerCase().includes(q)) ||
+        (w.id && w.id.toLowerCase().includes(q)) ||
+        (w.folder && w.folder.toLowerCase().includes(q)) ||
+        (Array.isArray(w.tags) && w.tags.some(t => (t.name || t).toLowerCase().includes(q)))
+      );
+    }
+
+    // 4. Sorting
+    list.sort((a, b) => {
+      if (sortBy === 'updated') {
+        const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.lastExecutedAt ? new Date(a.lastExecutedAt).getTime() : 0);
+        const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.lastExecutedAt ? new Date(b.lastExecutedAt).getTime() : 0);
+        return timeB - timeA;
+      }
+      if (sortBy === 'created') {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      }
+      if (sortBy === 'name-asc') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      if (sortBy === 'name-desc') {
+        return (b.name || '').localeCompare(a.name || '');
+      }
+      if (sortBy === 'executions') {
+        return (b.executionsToday || 0) - (a.executionsToday || 0);
+      }
+      return 0;
+    });
+
+    return list;
+  }, [data, statusFilter, folderFilter, searchTerm, sortBy]);
 
   const formatTimeAgo = (isoDate) => {
     if (!isoDate) return 'Awaiting trigger';
@@ -165,61 +192,41 @@ export default function WorkflowsDirectory() {
     return `${Math.floor(diffSec / 2592000)}mo ago`;
   };
 
+  const hasActiveFilters = statusFilter !== 'all' || folderFilter !== 'all' || searchTerm.trim() !== '';
+
+  const resetFilters = () => {
+    setStatusFilter('all');
+    setFolderFilter('all');
+    setSearchTerm('');
+  };
+
   return (
     <div className="w-full flex flex-col h-full animate-fade-in text-white/90 gap-4 overflow-y-auto custom-scrollbar select-text pr-1 -mr-1">
       
-      {/* ── 1. Top Header Bar: n8n Brand Theme ─────────────────────────────────────────── */}
+      {/* ── 1. Top Header Bar: Clean & Minimal ────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 pt-1">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#ff6d5a]/15 border border-[#ff6d5a]/35 flex items-center justify-center shrink-0 shadow-lg shadow-[#ff6d5a]/15">
-            <N8nLogo className="w-7 h-7" color="#FF6D5A" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h1 
-                className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white" 
-                style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
-              >
-                N8N WORKFLOWS
-              </h1>
-              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#ff6d5a]/15 text-[#ff6d5a] border border-[#ff6d5a]/30">
-                LIVE HUB
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Real-time telemetry and execution logs synced directly from n8n every 5 minutes
-            </p>
-          </div>
+        <div>
+          <h1 
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white" 
+            style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
+          >
+            Workflows
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Workflow execution telemetry and automations
+          </p>
         </div>
 
-        {/* Live Refresh & Console Controls */}
-        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-          {/* 5-minute countdown pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0b1522] border border-[#1f3044] text-xs font-mono text-slate-300 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-[#ff6d5a] animate-pulse"></span>
-            <span>Sync in {formatCountdown(secondsUntilNextRefresh)}</span>
-          </div>
-
+        {/* Console & Refresh Controls */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={() => fetchTelemetry(true)}
             disabled={loading}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#ff6d5a] hover:bg-[#ff553d] text-white text-xs font-bold transition-all shadow-md shadow-[#ff6d5a]/25 disabled:opacity-50 cursor-pointer"
-            title="Force immediate telemetry pull from n8n"
+            className="p-2 rounded-xl bg-[#0c1829] hover:bg-[#132238] border border-[#233549] text-slate-400 hover:text-white transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+            title="Refresh telemetry"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>{loading ? 'Pulling Logs...' : 'Sync Logs'}</span>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-
-          <a
-            href="https://n8n.asquared.ae/executions"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0c1829] hover:bg-[#132238] text-slate-200 hover:text-white border border-[#233549] text-xs font-semibold transition-all shadow-sm cursor-pointer"
-            title="Open live executions history in n8n"
-          >
-            <span>Live Executions</span>
-            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-          </a>
 
           <a
             href="https://n8n.asquared.ae"
@@ -234,7 +241,7 @@ export default function WorkflowsDirectory() {
         </div>
       </div>
 
-      {/* ── 2. Top Metric Cards (Blending n8n Warm Grey & Orange with Dashboard Dark Base) ─── */}
+      {/* ── 2. Top Metric Cards ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 shrink-0">
         
         {/* Card 1: Total Workflows */}
@@ -247,22 +254,21 @@ export default function WorkflowsDirectory() {
             {summary.totalWorkflows}
           </div>
           <div className="text-[11px] text-slate-400 mt-1 font-mono">
-            {summary.totalWorkflows - summary.activeWorkflows} sleeping · {summary.activeWorkflows} active
+            {summary.unpublishedCount} unpublished · {summary.publishedCount} published
           </div>
         </div>
 
-        {/* Card 2: Active Automations */}
-        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#ff6d5a]/40 transition-all flex flex-col justify-between group">
+        {/* Card 2: Published */}
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#ff6d5a] font-bold">Active Pipelines</span>
-            <N8nLogo className="w-4 h-4" color="#FF6D5A" />
+            <span className="text-[11px] uppercase font-mono tracking-wider text-slate-400 font-bold">Published</span>
+            <Activity className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-[#ff6d5a] font-mono mt-1">
-            {summary.activeWorkflows}
+          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono mt-1">
+            {summary.publishedCount}
           </div>
-          <div className="text-[11px] text-emerald-400 mt-1 font-mono flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>{summary.healthyWorkflows} Healthy operational</span>
+          <div className="text-[11px] text-slate-400 mt-1 font-mono">
+            Active automations
           </div>
         </div>
 
@@ -270,13 +276,13 @@ export default function WorkflowsDirectory() {
         <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[11px] uppercase font-mono tracking-wider text-slate-400 font-bold">Executions Today</span>
-            <Activity className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono mt-1">
             {summary.totalExecutionsToday.toLocaleString()}
           </div>
           <div className="text-[11px] text-slate-400 mt-1 font-mono flex items-center gap-2">
-            <span className="text-emerald-400 font-semibold">{summary.totalSuccessToday} ok</span>
+            <span className="text-emerald-400 font-semibold">{summary.totalSuccessToday} successful</span>
             <span>·</span>
             <span className={summary.totalErrorsToday > 0 ? "text-rose-400 font-semibold" : "text-slate-500"}>
               {summary.totalErrorsToday} errors
@@ -284,87 +290,147 @@ export default function WorkflowsDirectory() {
           </div>
         </div>
 
-        {/* Card 4: Run time (avg.) — Exact match to Image 2 */}
-        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#ff6d5a]/40 transition-all flex flex-col justify-between">
+        {/* Card 4: Average Latency */}
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-slate-400 font-bold">Run time (avg.)</span>
-            <Timer className="w-4 h-4 text-[#ff6d5a]" />
+            <span className="text-[11px] uppercase font-mono tracking-wider text-slate-400 font-bold">Average Latency</span>
+            <Clock className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="flex items-baseline gap-2 mt-1">
-            <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
-              {summary.avgRuntimeSec ? `${summary.avgRuntimeSec}s` : '1.73s'}
-            </div>
-            <span className="text-xs text-emerald-400 font-mono font-semibold">
-              ^ 0.59s
-            </span>
+          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono mt-1">
+            {summary.avgRuntimeSec ? `${summary.avgRuntimeSec}s` : '—'}
           </div>
           <div className="text-[11px] text-slate-400 mt-1 font-mono">
-            Optimized execution latency
+            Mean workflow runtime
           </div>
         </div>
 
       </div>
 
-      {/* ── 3. Search & Filter Bar (n8n Orange Active Pill) ───────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 shadow-xl shadow-black/40 shrink-0 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      {/* ── 3. Search & Filter Bar ─────────────────────────────────────────────── */}
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 shadow-xl shadow-black/40 shrink-0 flex flex-col gap-3">
         
-        {/* Search input */}
-        <div className="flex-1 flex items-center bg-[#071322] border border-[#1e2f42] rounded-xl px-3.5 py-2.5 focus-within:border-[#ff6d5a]/70 focus-within:ring-1 focus-within:ring-[#ff6d5a]/30 transition-all">
-          <Search className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search workflows by name, ID, or trigger (e.g. Master, Bitrix, Call Scheduler)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-transparent text-xs text-white placeholder-slate-400 outline-none"
-          />
+        {/* Top Filter Row: Search & Status Tabs */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          
+          {/* Search input */}
+          <div className="flex-1 flex items-center bg-[#071322] border border-[#1e2f42] rounded-xl px-3.5 py-2 focus-within:border-blue-500/70 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
+            <Search className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search workflows by name, folder, or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-transparent text-xs text-white placeholder-slate-400 outline-none"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="text-slate-400 hover:text-white p-0.5 ml-1"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Status Tabs matching n8n */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+            {[
+              { id: 'all', label: `All (${summary.totalWorkflows})` },
+              { id: 'published', label: `Published (${summary.publishedCount})` },
+              { id: 'unpublished', label: `Unpublished (${summary.unpublishedCount})` },
+              { id: 'executed', label: `Executed Today (${summary.executedTodayCount})` },
+              { id: 'errors', label: `Errors (${summary.errorsCount})` }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  statusFilter === tab.id
+                    ? 'bg-[#183153] text-white border border-white/20 shadow-sm'
+                    : 'bg-[#071322] text-slate-400 hover:text-white border border-[#1e2f42] hover:bg-[#0b1929]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Filter Pills with n8n Orange Active Highlight */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {[
-            { id: 'all', label: `All (${data?.workflows?.length || 0})` },
-            { id: 'active', label: `Active (${summary.activeWorkflows})` },
-            { id: 'healthy', label: `Healthy (${summary.healthyWorkflows})` },
-            { id: 'error', label: summary.errorWorkflows > 0 ? `Errors (${summary.errorWorkflows})` : 'Errors (0)' },
-            { id: 'paused', label: 'Sleeping / Inactive' }
-          ].map(tab => (
+        {/* Bottom Filter Row: Folders Dropdown, Sort Dropdown & Reset */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1b2b3d]">
+          
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Folder Filter Dropdown */}
+            <div className="flex items-center gap-2 bg-[#071322] border border-[#1e2f42] rounded-xl px-3 py-1.5 text-xs text-slate-300">
+              <Layers3 className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-slate-400">Folder:</span>
+              <select
+                value={folderFilter}
+                onChange={(e) => setFolderFilter(e.target.value)}
+                className="bg-transparent text-white font-medium outline-none cursor-pointer pr-1"
+              >
+                <option value="all" className="bg-[#071322] text-white">All Folders ({summary.totalWorkflows})</option>
+                {folders.map(f => (
+                  <option key={f.name} value={f.name} className="bg-[#071322] text-white">
+                    {f.name} ({f.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort Dropdown matching n8n options */}
+            <div className="flex items-center gap-2 bg-[#071322] border border-[#1e2f42] rounded-xl px-3 py-1.5 text-xs text-slate-300">
+              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-slate-400">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-transparent text-white font-medium outline-none cursor-pointer pr-1"
+              >
+                <option value="updated" className="bg-[#071322] text-white">Sort by last updated</option>
+                <option value="created" className="bg-[#071322] text-white">Sort by last created</option>
+                <option value="name-asc" className="bg-[#071322] text-white">Sort by name (A-Z)</option>
+                <option value="name-desc" className="bg-[#071322] text-white">Sort by name (Z-A)</option>
+                <option value="executions" className="bg-[#071322] text-white">Sort by executions today</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Reset Filters button if any active */}
+          {hasActiveFilters && (
             <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                statusFilter === tab.id
-                  ? 'bg-[#ff6d5a] text-white shadow-md shadow-[#ff6d5a]/25'
-                  : 'bg-[#071322] text-slate-300 hover:text-white border border-[#1e2f42] hover:bg-[#0b1929]'
-              }`}
+              onClick={resetFilters}
+              className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer"
             >
-              {tab.label}
+              <X className="w-3.5 h-3.5" />
+              <span>Reset filters</span>
             </button>
-          ))}
+          )}
+
         </div>
 
       </div>
 
-      {/* ── 4. Main Workflows Table ────────────────────────────────────────────────── */}
+      {/* ── 4. Main Workflows Table ────────────────────────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 overflow-hidden flex-1 flex flex-col min-h-0">
         <div className="overflow-x-auto flex-1 custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#233549] bg-[#071322] text-[11px] uppercase font-mono text-slate-400 tracking-wider">
-                <th className="py-3.5 px-4 w-[7%] align-middle">State</th>
-                <th className="py-3.5 px-5 w-[33%] align-middle">Workflow Name</th>
-                <th className="py-3.5 px-4 w-[15%] align-middle">Runs Today</th>
-                <th className="py-3.5 px-4 w-[11%] align-middle">Avg Latency</th>
-                <th className="py-3.5 px-4 w-[11%] align-middle">Status</th>
-                <th className="py-3.5 px-4 w-[15%] align-middle">Execution & Saved</th>
-                <th className="py-3.5 px-4 w-[8%] text-right align-middle">Action</th>
+                <th className="py-3 px-4 w-[11%] align-middle">Status</th>
+                <th className="py-3 px-5 w-[37%] align-middle">Workflow Name</th>
+                <th className="py-3 px-4 w-[14%] align-middle">Runs Today</th>
+                <th className="py-3 px-4 w-[11%] align-middle">Latency</th>
+                <th className="py-3 px-4 w-[18%] align-middle">Last Run / Saved</th>
+                <th className="py-3 px-4 w-[9%] text-right align-middle">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1b2b3d] text-xs">
               {filteredWorkflows.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-12 text-center text-slate-400">
-                    No workflows match the selected filter.
+                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                    No workflows match the selected criteria.
                   </td>
                 </tr>
               ) : filteredWorkflows.map((wf) => (
@@ -373,28 +439,29 @@ export default function WorkflowsDirectory() {
                   className="hover:bg-[#102035] transition-colors group cursor-pointer"
                   onClick={() => window.open(wf.n8nUrl, '_blank')}
                 >
-                  {/* Active / Inactive switch badge */}
+                  {/* Status: Published vs Unpublished */}
                   <td className="py-3.5 px-4 align-middle">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium font-mono border ${
                       wf.active 
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/35' 
-                        : 'bg-white/5 text-slate-400 border-white/10'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' 
+                        : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
                     }`}>
-                      {wf.active ? 'ACTIVE' : 'SLEEP'}
+                      <span className={`w-1.5 h-1.5 rounded-full ${wf.active ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
+                      <span>{wf.active ? 'Published' : 'Unpublished'}</span>
                     </span>
                   </td>
 
-                  {/* Workflow Name & ID with n8n Logo icon */}
+                  {/* Workflow Name, Folder, and ID */}
                   <td className="py-3.5 px-5 align-middle">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-[#ff6d5a]/10 border border-[#ff6d5a]/25 flex items-center justify-center shrink-0">
-                        <N8nLogo className="w-4 h-4" color="#FF6D5A" />
-                      </div>
-                      <h4 className="font-semibold text-white text-[13.5px] group-hover:text-orange-300 transition-colors truncate max-w-[340px]">
+                    <div>
+                      <h4 className="font-semibold text-white text-[13.5px] group-hover:text-blue-300 transition-colors truncate max-w-[380px]" title={wf.name}>
                         {wf.name}
                       </h4>
                     </div>
-                    <div className="flex items-center gap-2 text-[10.5px] text-slate-400 font-mono mt-0.5 ml-9.5">
+                    <div className="flex items-center gap-2 text-[10.5px] text-slate-400 font-mono mt-1 flex-wrap">
+                      <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 font-sans">
+                        {wf.folder || 'General'}
+                      </span>
                       <span>ID: {wf.id}</span>
                       <button 
                         onClick={(e) => copyId(wf.id, e)}
@@ -409,11 +476,11 @@ export default function WorkflowsDirectory() {
                   {/* Executions Today */}
                   <td className="py-3.5 px-4 font-mono align-middle">
                     <div className="text-[13px] font-bold text-white">
-                      {wf.executionsToday.toLocaleString()} <span className="text-[11px] text-slate-400 font-normal">runs</span>
+                      {(wf.executionsToday || 0).toLocaleString()} <span className="text-[11px] text-slate-400 font-normal">runs</span>
                     </div>
-                    {wf.executionsToday > 0 ? (
+                    {(wf.executionsToday || 0) > 0 ? (
                       <div className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
-                        <span>✓ {wf.successToday || wf.executionsToday} ok</span>
+                        <span>{wf.successToday || wf.executionsToday} ok</span>
                         {wf.errorToday > 0 && <span className="text-rose-400">• {wf.errorToday} err</span>}
                       </div>
                     ) : (
@@ -425,38 +492,14 @@ export default function WorkflowsDirectory() {
 
                   {/* Latency */}
                   <td className="py-3.5 px-4 font-mono align-middle text-slate-300">
-                    {wf.avgDurationSec !== null ? (
+                    {wf.avgDurationSec !== null && wf.avgDurationSec !== undefined ? (
                       <span className="text-xs">{wf.avgDurationSec}s</span>
                     ) : (
                       <span className="text-slate-500 text-xs">—</span>
                     )}
                   </td>
 
-                  {/* Real-time Status: Healthy, Running, Error, Standby */}
-                  <td className="py-3.5 px-4 align-middle">
-                    {wf.status === 'running' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                        <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />
-                        <span>Running</span>
-                      </span>
-                    ) : wf.status === 'error' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                        <AlertTriangle className="w-3 h-3 text-rose-400" />
-                        <span>Error</span>
-                      </span>
-                    ) : wf.status === 'healthy' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>Healthy</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/5 text-slate-400 border border-white/10">
-                        <span>Standby</span>
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Execution & Saved */}
+                  {/* Last Run / Saved */}
                   <td className="py-3.5 px-4 font-mono text-[11.5px] align-middle">
                     <div>
                       {wf.lastExecutedAt ? (
@@ -468,8 +511,8 @@ export default function WorkflowsDirectory() {
                               target="_blank"
                               rel="noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="px-1.5 py-0.5 rounded bg-[#ff6d5a]/15 hover:bg-[#ff6d5a]/30 text-[#ff6d5a] border border-[#ff6d5a]/35 text-[10px] font-bold transition-all inline-flex items-center gap-0.5"
-                              title={`Open Live Execution #${wf.recentLogs[0].id} in n8n`}
+                              className="px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 text-[10px] font-bold transition-all inline-flex items-center gap-0.5"
+                              title={`Open Execution #${wf.recentLogs[0].id} in n8n`}
                             >
                               <span>#{wf.recentLogs[0].id}</span>
                               <ExternalLink className="w-2.5 h-2.5" />
@@ -477,25 +520,25 @@ export default function WorkflowsDirectory() {
                           )}
                         </div>
                       ) : (
-                        <span className="text-slate-500 italic">No recent run</span>
+                        <span className="text-slate-500 italic">No runs today</span>
                       )}
                     </div>
                     {wf.updatedAt && (
-                      <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1" title="When workflow was last saved in n8n canvas (matches 'Last updated' in n8n)">
-                        <span className="text-slate-500">n8n saved:</span>
+                      <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1" title="Last saved in n8n">
+                        <span className="text-slate-500">Saved:</span>
                         <span className="text-slate-300">{formatTimeAgo(wf.updatedAt)}</span>
                       </div>
                     )}
                   </td>
 
-                  {/* Action Link to n8n in Orange Theme */}
+                  {/* Action Link to n8n */}
                   <td className="py-3.5 px-4 text-right align-middle">
                     <a
                       href={wf.n8nUrl}
                       target="_blank"
                       rel="noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#ff6d5a]/15 hover:bg-[#ff6d5a] text-[#ff6d5a] hover:text-white border border-[#ff6d5a]/30 inline-flex items-center gap-1 transition-all shadow-sm"
+                      className="px-3 py-1 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 inline-flex items-center gap-1 transition-all"
                     >
                       <span>Open</span>
                       <ExternalLink className="w-3 h-3" />
@@ -507,21 +550,13 @@ export default function WorkflowsDirectory() {
           </table>
         </div>
 
-        {/* Table Footer */}
-        <div className="p-4 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400 shrink-0">
-          <div className="flex items-center gap-2">
-            <N8nLogo className="w-4 h-4" color="#FF6D5A" />
-            <span>
-              Showing {filteredWorkflows.length} of {data?.workflows?.length || 0} n8n pipelines
-            </span>
+        {/* Table Footer: Minimal and Clean */}
+        <div className="p-3.5 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400 shrink-0">
+          <div>
+            Showing {filteredWorkflows.length} of {summary.totalWorkflows} workflows
           </div>
-          <div className="flex items-center gap-3 font-mono text-[11px]">
-            <span className="text-emerald-400/90 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              Live n8n REST Bridge Connected
-            </span>
-            <span className="text-slate-500">·</span>
-            <span>Last sync: {lastRefreshed.toLocaleTimeString()}</span>
+          <div className="font-mono text-[11px] text-slate-500">
+            Last updated: {lastRefreshed.toLocaleTimeString()}
           </div>
         </div>
       </div>

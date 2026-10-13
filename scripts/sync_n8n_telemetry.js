@@ -251,12 +251,15 @@ function syncTelemetry(onComplete) {
             name: w.name,
             active: isActive,
             status: healthStatus,
+            folder: w.parentFolder?.name || 'General',
             executionsToday: st.executionsToday,
             successToday: st.successToday,
             errorToday: st.errorToday,
             avgDurationSec: avgDuration,
             lastExecutedAt: st.lastExecutedAt,
+            createdAt: w.createdAt || null,
             updatedAt: w.updatedAt || null,
+            tags: w.tags || [],
             n8nUrl: `${N8N_URL}/workflow/${wid}`,
             recentLogs: st.recentLogs
           };
