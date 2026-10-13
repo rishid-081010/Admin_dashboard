@@ -1,14 +1,140 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CornerDownLeft, Trash2, ArrowUpRight, Play, ExternalLink, RefreshCw } from 'lucide-react';
+import { Send, CornerDownLeft, Trash2, ArrowUpRight, Play, ExternalLink, RefreshCw, Download, FileText, Volume2 } from 'lucide-react';
 import { sendAgentMessage } from '../utils/aiAgentService';
 
 const SUGGESTED_PROMPTS = [
+  'Download today\'s call audit PDF',
+  'Get latest call recording audio',
   'Average 2-bed price in Business Bay',
   'Find 3 uncontacted Marina owners with phone numbers',
-  'Give me call transcript for lead 89042',
-  'Check n8n workflow health and errors',
-  'Show quarantined files in data library'
+  'Check n8n workflow health and errors'
 ];
+
+function AudioPlayerCard({ label, url }) {
+  const filename = url.split('/').pop()?.split('?')[0] || 'call_recording.wav';
+  return (
+    <div className="my-2.5 p-3.5 bg-[#06111e] border border-blue-500/30 rounded-xl flex flex-col gap-2.5 shadow-lg shadow-black/30">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+            <Volume2 className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white tracking-wide">
+              {label || 'AI Telephony Call Recording'}
+            </div>
+            <div className="text-[11px] font-mono text-slate-400 truncate max-w-xs sm:max-w-md">
+              {filename}
+            </div>
+          </div>
+        </div>
+        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-300 border border-blue-500/25 shrink-0">
+          Stereo WAV
+        </span>
+      </div>
+
+      <audio controls src={url} className="w-full h-8 accent-blue-500 rounded bg-[#0a1829]" />
+
+      <div className="flex items-center gap-2 pt-1 border-t border-[#1b2b3d]/60">
+        <a
+          href={url}
+          download={filename}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>Download Audio (.wav)</span>
+        </a>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0c1829] hover:bg-[#152538] text-slate-300 hover:text-white border border-[#233549] text-xs transition-colors cursor-pointer"
+        >
+          <ExternalLink className="w-3 h-3" />
+          <span>Open Direct</span>
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function PdfAuditCard({ label, url }) {
+  const filename = url.split('/').pop()?.split('?')[0] || 'AS_PROPERTIES_DAILY_CALL_AUDIT.pdf';
+  return (
+    <div className="my-2.5 p-3.5 bg-[#06111e] border border-rose-500/30 rounded-xl flex flex-col gap-2.5 shadow-lg shadow-black/30">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 mt-0.5">
+            <FileText className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white tracking-wide">
+              {label || 'Daily Telephony Call Audit Report'}
+            </div>
+            <div className="text-[11px] font-mono text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-md">
+              {filename}
+            </div>
+          </div>
+        </div>
+        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/15 text-rose-300 border border-rose-500/25 shrink-0">
+          Official Audit PDF
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2 pt-1 border-t border-[#1b2b3d]/60">
+        <a
+          href={url}
+          download={filename}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition-all shadow-md shadow-rose-600/25 cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>Download Audit (PDF)</span>
+        </a>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0c1829] hover:bg-[#152538] text-slate-300 hover:text-white border border-[#233549] text-xs transition-colors cursor-pointer"
+        >
+          <ExternalLink className="w-3 h-3" />
+          <span>View in Browser</span>
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function detectMedia(line) {
+  // Check markdown link: [label](url)
+  const mdMatch = line.match(/\[([^\]]+)\]\((https?:\/\/[^\)]+|\/[^\)]+)\)/);
+  if (mdMatch) {
+    const label = mdMatch[1];
+    const url = mdMatch[2];
+    if (url.endsWith('.wav') || url.endsWith('.mp3') || url.endsWith('.ogg') || url.endsWith('.m4a') || url.includes('call_recordings')) {
+      return { type: 'audio', label, url };
+    }
+    if (url.endsWith('.pdf') || url.includes('/audits/')) {
+      return { type: 'pdf', label, url };
+    }
+  }
+
+  // Check bare URL
+  const rawMatch = line.match(/(https?:\/\/[^\s\)]+)/);
+  if (rawMatch) {
+    const url = rawMatch[1];
+    if (url.endsWith('.wav') || url.endsWith('.mp3') || url.includes('call_recordings')) {
+      return { type: 'audio', label: 'Call Recording (WAV)', url };
+    }
+    if (url.endsWith('.pdf') || url.includes('/audits/')) {
+      return { type: 'pdf', label: 'Daily Call Audit (PDF)', url };
+    }
+  }
+  return null;
+}
 
 // Tokenize inline markdown (bold, italic, code, links)
 function renderInline(text) {
@@ -34,18 +160,53 @@ function renderInline(text) {
         </code>
       );
     } else if (match[5] && match[6]) {
-      parts.push(
-        <a
-          key={idx++}
-          href={match[6]}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-400 hover:text-blue-300 underline font-medium inline-flex items-center gap-0.5"
-        >
-          <span>{match[5]}</span>
-          <ExternalLink className="w-3 h-3 inline" />
-        </a>
-      );
+      const label = match[5];
+      const url = match[6];
+      const isAudio = url.endsWith('.wav') || url.endsWith('.mp3') || url.includes('call_recordings');
+      const isPdf = url.endsWith('.pdf') || url.includes('/audits/');
+
+      if (isAudio) {
+        parts.push(
+          <a
+            key={idx++}
+            href={url}
+            download="recording.wav"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 hover:bg-blue-600 hover:text-white border border-blue-500/30 text-xs font-medium transition-colors my-0.5"
+          >
+            <Download className="w-3 h-3" />
+            <span>{label}</span>
+          </a>
+        );
+      } else if (isPdf) {
+        parts.push(
+          <a
+            key={idx++}
+            href={url}
+            download={url.split('/').pop()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-xs font-medium transition-colors my-0.5"
+          >
+            <Download className="w-3 h-3" />
+            <span>{label}</span>
+          </a>
+        );
+      } else {
+        parts.push(
+          <a
+            key={idx++}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 underline font-medium inline-flex items-center gap-0.5"
+          >
+            <span>{label}</span>
+            <ExternalLink className="w-3 h-3 inline" />
+          </a>
+        );
+      }
     }
     lastIndex = regex.lastIndex;
   }
@@ -169,19 +330,16 @@ function FormattedMessage({ content }) {
       continue;
     }
 
-    // Audio Link
-    if (line.includes('http') && (line.includes('.mp3') || line.includes('.wav') || line.includes('api.vapi.ai'))) {
-      const urlMatch = line.match(/(https?:\/\/[^\s\)]+)/);
-      if (urlMatch && (urlMatch[1].endsWith('.mp3') || urlMatch[1].endsWith('.wav') || urlMatch[1].includes('vapi'))) {
-        flushList();
-        elements.push(
-          <div key={elKey++} className="my-2 p-2.5 bg-[#06111e] border border-[#233549] rounded-xl flex flex-col gap-1.5">
-            <span className="text-[11px] font-mono text-slate-400">Audio Recording:</span>
-            <audio controls src={urlMatch[1]} className="w-full h-8" />
-          </div>
-        );
-        continue;
+    // Media Card Detection (Audio Recordings & Daily Audit PDFs)
+    const media = detectMedia(line);
+    if (media) {
+      flushList();
+      if (media.type === 'audio') {
+        elements.push(<AudioPlayerCard key={elKey++} label={media.label} url={media.url} />);
+      } else if (media.type === 'pdf') {
+        elements.push(<PdfAuditCard key={elKey++} label={media.label} url={media.url} />);
       }
+      continue;
     }
 
     // List item
