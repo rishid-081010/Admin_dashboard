@@ -8,6 +8,7 @@ import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
 import SearchableCombobox from './SearchableCombobox';
 import ownerFiltersMetadata from '../data/ownerFiltersMetadata.json';
+import { parseIdQuery } from '../utils/idParser';
 
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
@@ -269,31 +270,31 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       // 1. Search Query
       if (isSearching) {
         const queryTerm = searchTerm.trim();
-        const cleanDigits = queryTerm.replace(/[^0-9]/g, '');
-        const upper = queryTerm.toUpperCase();
-        
-        if (queryTerm.startsWith('+') || (cleanDigits.length >= 7 && /^[+0-9\s-]+$/.test(queryTerm))) {
-          const pExact = queryTerm.startsWith('+') ? queryTerm : `+${cleanDigits}`;
-          url += `&or=(phone_normalized.eq.${encodeURIComponent(pExact)},bitrix_id.eq.${encodeURIComponent(cleanDigits)},lead_id.eq.${encodeURIComponent(queryTerm)})`;
-        } else if (upper.startsWith('LEAD-')) {
-          const variants = [upper, queryTerm];
-          if (cleanDigits) {
-            variants.push(`LEAD-${cleanDigits}`);
-            variants.push(`LEAD-${cleanDigits.padStart(7, '0')}`);
+        const parsed = parseIdQuery(queryTerm);
+
+        if (parsed) {
+          if (parsed.intent === 'lead') {
+            url += `&or=(${parsed.leadVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`).join(',')})`;
+          } else if (parsed.intent === 'owner') {
+            url += `&or=(${parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`).join(',')})`;
+          } else if (parsed.intent === 'bitrix') {
+            url += `&or=(${parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`).join(',')})`;
+          } else if (parsed.intent === 'phone') {
+            const pExact = queryTerm.startsWith('+') ? queryTerm : `+${parsed.digits}`;
+            url += `&phone_normalized=eq.${encodeURIComponent(pExact)}`;
+          } else {
+            // 'any': Search across Lead ID, Bitrix ID, and Master Leads ID (owner_id)
+            const orClauses = [
+              ...parsed.leadVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`),
+              ...parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`),
+              ...parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`)
+            ];
+            if (parsed.digits.length >= 7) {
+              const pExact = queryTerm.startsWith('+') ? queryTerm : `+${parsed.digits}`;
+              orClauses.push(`phone_normalized.eq.${encodeURIComponent(pExact)}`);
+            }
+            url += `&or=(${Array.from(new Set(orClauses)).join(',')})`;
           }
-          const unique = Array.from(new Set(variants));
-          url += `&or=(${unique.map(v => `lead_id.eq.${encodeURIComponent(v)}`).join(',')})`;
-        } else if (upper.startsWith('OWN-')) {
-          const variants = [upper, queryTerm];
-          if (cleanDigits) {
-            variants.push(`OWN-${cleanDigits}`);
-            variants.push(`OWN-${cleanDigits.padStart(7, '0')}`);
-          }
-          const unique = Array.from(new Set(variants));
-          url += `&or=(${unique.map(v => `owner_id.eq.${encodeURIComponent(v)}`).join(',')})`;
-        } else if (cleanDigits.length > 0 && queryTerm.length < 8 && !/[a-zA-Z]/.test(queryTerm)) {
-          const padded = cleanDigits.padStart(7, '0');
-          url += `&or=(lead_id.eq.LEAD-${cleanDigits},lead_id.eq.LEAD-${padded},owner_id.eq.OWN-${cleanDigits},owner_id.eq.OWN-${padded},bitrix_id.eq.${encodeURIComponent(cleanDigits)},unit_number.eq.${encodeURIComponent(queryTerm)})`;
         } else {
           const enc = encodeURIComponent(queryTerm);
           url += `&or=(full_name.ilike.*${enc}*,building_name.ilike.*${enc}*,assigned_agent.ilike.*${enc}*)`;
@@ -406,6 +407,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
           return {
             id: row.owner_id ? String(row.owner_id) : 'UnknownID',
+            owner_id: row.owner_id ? String(row.owner_id) : null,
             lead_id: row.lead_id ? String(row.lead_id) : (row.owner_id ? String(row.owner_id) : 'LEAD-0000000'),
             name: cleanName,
             building: cleanBuilding,
@@ -1053,10 +1055,15 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                             <div className="font-semibold text-white/95 group-hover:text-blue-400 transition-colors truncate text-sm leading-snug">
                               {owner.name}
                             </div>
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold tracking-tight">
                                 {owner.lead_id}
                               </span>
+                              {owner.owner_id && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-medium tracking-tight" title="Master Leads ID">
+                                  {owner.owner_id}
+                                </span>
+                              )}
                               {owner.property_type && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider font-semibold truncate max-w-[140px]">
                                   {owner.property_type}
@@ -1342,9 +1349,16 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                               <h3 className="font-bold text-white text-sm group-hover:text-blue-400 transition-colors line-clamp-1">
                                 {owner.name}
                               </h3>
-                              <span className="text-[10px] font-mono text-blue-400 font-bold">
-                                {owner.lead_id}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-mono text-blue-400 font-bold">
+                                  {owner.lead_id}
+                                </span>
+                                {owner.owner_id && (
+                                  <span className="text-[9px] font-mono text-purple-300 bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20" title="Master Leads ID">
+                                    {owner.owner_id}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
 

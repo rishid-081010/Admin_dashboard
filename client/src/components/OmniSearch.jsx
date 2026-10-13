@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Owner360Detail from './Owner360Detail';
 import Building360Detail from './Building360Detail';
+import { parseIdQuery, isIdMatched } from '../utils/idParser';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
@@ -181,14 +182,18 @@ const SEARCH_FILTER_PILLS = [
   'Phone Numbers',
   'Lead ID',
   'Bitrix ID',
-  'Supabase ID'
+  'Master Leads ID'
 ];
 
 export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose }) {
   const [query, setQuery] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchedQuery, setSearchedQuery] = useState('');
+  const [searchedFilter, setSearchedFilter] = useState('All');
   const inputRef = useRef(null);
+  const searchSeqRef = useRef(0);
   
   // Results
   const [ownerResults, setOwnerResults] = useState([]);
@@ -221,8 +226,17 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
   const handleSearch = async (overrideFilter, overrideQuery) => {
     const q = (overrideQuery !== undefined ? overrideQuery : query).trim();
     const currentFilter = overrideFilter || filterType;
-    if (q.length < 1) return;
+    if (q.length < 1) {
+      setOwnerResults([]);
+      setBuildingResults([]);
+      setAreaResults([]);
+      setIdResults([]);
+      setHasSearched(false);
+      setSearchedQuery('');
+      return;
+    }
 
+    const seq = ++searchSeqRef.current;
     setLoading(true);
     const headers = { 
       apikey: SUPABASE_API_KEY, 
@@ -256,63 +270,56 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
     };
 
     const fetchLeadId = () => {
-      const cleanTerm = q.trim();
-      const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
-      const variants = [cleanTerm, cleanTerm.toUpperCase()];
-      if (rawDigits) {
-        variants.push(`LEAD-${rawDigits}`);
-        variants.push(`LEAD-${rawDigits.padStart(7, '0')}`);
+      const parsed = parseIdQuery(q);
+      if (parsed) {
+        const orClauses = parsed.leadVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`);
+        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
       }
-      const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
-      const orClauses = uniqueVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`);
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?lead_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`);
     };
 
     const fetchBitrixId = () => {
-      const cleanDigits = q.replace(/[^0-9]/g, '') || q.trim();
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(cleanDigits)}&select=*&limit=50`);
+      const parsed = parseIdQuery(q);
+      if (parsed) {
+        const orClauses = parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`);
+        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+      }
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`);
     };
 
     const fetchSupabaseId = () => {
-      const cleanTerm = q.trim();
-      const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
-      const variants = [cleanTerm, cleanTerm.toUpperCase()];
-      if (rawDigits) {
-        variants.push(`OWN-${rawDigits}`);
-        variants.push(`OWN-${rawDigits.padStart(7, '0')}`);
+      const parsed = parseIdQuery(q);
+      if (parsed) {
+        const orClauses = parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`);
+        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
       }
-      const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
-      const orClauses = uniqueVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`);
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?owner_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`);
     };
 
     const fetchAllIds = () => {
-      const cleanTerm = q.trim();
-      const upper = cleanTerm.toUpperCase();
-      const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
+      const parsed = parseIdQuery(q);
+      if (!parsed) return Promise.resolve([]);
 
-      // Explicit Lead ID format: query ONLY lead_id
-      if (upper.startsWith('LEAD-')) {
+      if (parsed.intent === 'lead') {
         return fetchLeadId();
       }
-      // Explicit Owner ID format: query ONLY owner_id
-      if (upper.startsWith('OWN-')) {
+      if (parsed.intent === 'owner') {
         return fetchSupabaseId();
       }
-      // Pure numeric / mixed ID: query matching variants across ID systems
-      if (rawDigits) {
-        const orClauses = [
-          `lead_id.eq.LEAD-${rawDigits}`,
-          `lead_id.eq.LEAD-${rawDigits.padStart(7, '0')}`,
-          `owner_id.eq.OWN-${rawDigits}`,
-          `owner_id.eq.OWN-${rawDigits.padStart(7, '0')}`
-        ];
-        if (rawDigits.length >= 2 && rawDigits.length <= 8) {
-          orClauses.push(`bitrix_id.eq.${encodeURIComponent(rawDigits)}`);
-        }
-        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+      if (parsed.intent === 'bitrix') {
+        return fetchBitrixId();
       }
-      return Promise.resolve([]);
+      // 'any': Search across Lead ID, Bitrix ID, and Master Leads ID (owner_id)
+      const orClauses = [
+        ...parsed.leadVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`),
+        ...parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`),
+        ...parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`)
+      ];
+      if (parsed.digits.length >= 7) {
+        const pExact = q.trim().startsWith('+') ? q.trim() : `+${parsed.digits}`;
+        orClauses.push(`phone_normalized.eq.${encodeURIComponent(pExact)}`);
+      }
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${Array.from(new Set(orClauses)).join(',')})&select=*&limit=50`);
     };
 
     try {
@@ -354,7 +361,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setOwnerResults([]);
         const rows = await fetchBitrixId();
         setIdResults(rows);
-      } else if (currentFilter === 'Supabase ID') {
+      } else if (currentFilter === 'Master Leads ID' || currentFilter === 'Supabase ID') {
         setBuildingResults([]);
         setAreaResults([]);
         setIdResults([]);
@@ -363,37 +370,25 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setIdResults(rows);
       } else {
         // ── 'All' FILTER: Unified Intelligent Multi-Entity Search ──
+        const parsed = parseIdQuery(q);
         const cleanDigits = q.replace(/[^0-9]/g, '');
-        const hasDigits = cleanDigits.length >= 4;
-        const isIdPattern = /^(\+?\d+|LEAD-|OWN-|#\d+)/i.test(q.trim());
+        
+        // Skip unindexed text table scans (3.5s timeouts) if the query is strictly an ID or numeric code
+        const isPureId = parsed && (parsed.intent !== 'any' || (cleanDigits.length >= 4 && !/[a-zA-Z]/.test(q.replace(/^(id|#|no\.?)\s*/i, ''))));
+        const shouldRunTextSearch = !isPureId;
+        const hasIdCheck = !!parsed;
+        const hasPhoneCheck = cleanDigits.length >= 7 || q.trim().startsWith('+');
 
-        const promises = [
-          fetchBuildings(),
-          fetchAreas(),
-          fetchOwners()
-        ];
+        const [bldgRows, areaRows, ownerRows, idRows, phoneRows] = await Promise.all([
+          shouldRunTextSearch ? fetchBuildings() : Promise.resolve([]),
+          shouldRunTextSearch ? fetchAreas() : Promise.resolve([]),
+          shouldRunTextSearch ? fetchOwners() : Promise.resolve([]),
+          hasIdCheck ? fetchAllIds() : Promise.resolve([]),
+          hasPhoneCheck ? fetchPhone() : Promise.resolve([])
+        ]);
 
-        let hasIdCheck = false;
-        let hasPhoneCheck = false;
-
-        if (hasDigits || isIdPattern) {
-          hasIdCheck = true;
-          promises.push(fetchAllIds());
-          if (hasDigits) {
-            hasPhoneCheck = true;
-            promises.push(fetchPhone());
-          }
-        }
-
-        const results = await Promise.all(promises);
-        const bldgRows = results[0] || [];
-        const areaRows = results[1] || [];
-        const ownerRows = results[2] || [];
-        const idRows = hasIdCheck ? results[3] : [];
-        const phoneRows = hasPhoneCheck ? results[4] : [];
-
-        setBuildingResults(aggregateBuildings(bldgRows));
-        setAreaResults(aggregateAreas(areaRows));
+        setBuildingResults(aggregateBuildings(bldgRows || []));
+        setAreaResults(aggregateAreas(areaRows || []));
 
         // Combine owners with any phone matches
         const combinedOwners = Array.isArray(ownerRows) ? [...ownerRows] : [];
@@ -410,12 +405,57 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setOwnerResults(combinedOwners);
         setIdResults(Array.isArray(idRows) ? idRows : []);
       }
+
+      if (seq !== searchSeqRef.current) return;
+      setHasSearched(true);
+      setSearchedQuery(q);
+      setSearchedFilter(currentFilter);
     } catch (err) {
       console.error('OmniSearch error:', err);
     } finally {
-      setLoading(false);
+      if (seq === searchSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
+
+  // Immediate search on clipboard paste
+  const handlePaste = (e) => {
+    const pasted = e.clipboardData?.getData('text')?.trim();
+    if (pasted) {
+      setQuery(pasted);
+      handleSearch(filterType, pasted);
+    }
+  };
+
+  // Debounced auto-search when query or filter changes
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setOwnerResults([]);
+      setBuildingResults([]);
+      setAreaResults([]);
+      setIdResults([]);
+      setHasSearched(false);
+      setSearchedQuery('');
+      return;
+    }
+
+    // Skip if already searched for this exact query & filter
+    if (trimmed.toLowerCase() === searchedQuery.trim().toLowerCase() && filterType === searchedFilter) {
+      return;
+    }
+
+    // Faster debounce for ID patterns (150ms), smooth debounce for text (350ms)
+    const isIdLike = /^(lead|own|bitrix|#)?[-\s]?\d+/i.test(trimmed);
+    const delay = isIdLike ? 150 : 350;
+
+    const timer = setTimeout(() => {
+      handleSearch(filterType, trimmed);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [query, filterType, searchedQuery, searchedFilter]);
 
   const handleFilterPillClick = (f) => {
     setFilterType(f);
@@ -604,13 +644,14 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       case 'Phone Numbers':
         return 'Search phone number digits (e.g. 971501234567)...';
       case 'Lead ID':
-        return 'Type exact Lead ID (e.g. LEAD-0399904 or 0399904)...';
+        return 'Type Lead ID in any format (e.g. LEAD-1433897, lead 1433897, or 1433897)...';
       case 'Bitrix ID':
-        return 'Type CRM Bitrix ID (e.g. 12480)...';
+        return 'Type CRM Bitrix ID in any format (e.g. 33271, bitrix 33271, or crm 33271)...';
+      case 'Master Leads ID':
       case 'Supabase ID':
-        return 'Type Supabase Row ID (e.g. 408192)...';
+        return 'Type Master Leads ID in any format (e.g. OWN-2723960, master 2723960, or 2723960)...';
       default:
-        return 'Search owner name, building, area, phone, or Lead ID...';
+        return 'Search anything: owner, building, area, phone, Lead ID, Bitrix ID, or Master ID...';
     }
   };
 
@@ -658,16 +699,38 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             placeholder={getSearchPlaceholder()}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="w-full bg-[#0c1829] border-2 border-[#233549] focus:border-[#3b82f6] rounded-2xl pl-14 sm:pl-16 pr-14 sm:pr-16 py-3.5 sm:py-4 text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/20 transition-all shadow-2xl"
+            className="w-full bg-[#0c1829] border-2 border-[#233549] focus:border-[#3b82f6] rounded-2xl pl-14 sm:pl-16 pr-24 sm:pr-28 py-3.5 sm:py-4 text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/20 transition-all shadow-2xl"
           />
-          <button 
-            onClick={() => handleSearch()} 
-            className="absolute right-3 top-1/2 -translate-y-1/2 bg-[#3b82f6] hover:bg-[#2563eb] text-white p-2 sm:p-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/30 cursor-pointer"
-            title="Search"
-          >
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            {query && (
+              <button 
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setOwnerResults([]);
+                  setBuildingResults([]);
+                  setAreaResults([]);
+                  setIdResults([]);
+                  setHasSearched(false);
+                  setSearchedQuery('');
+                  inputRef.current?.focus();
+                }}
+                className="text-slate-400 hover:text-white p-1.5 transition-colors cursor-pointer rounded-lg hover:bg-white/5"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            <button 
+              onClick={() => handleSearch()} 
+              className="bg-[#3b82f6] hover:bg-[#2563eb] text-white p-2 sm:p-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/30 cursor-pointer"
+              title="Search"
+            >
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
         </div>
 
         {/* 8 Filter Pills */}
@@ -702,7 +765,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             </div>
           )}
 
-          {!loading && query && totalResultsCount === 0 && (
+          {!loading && hasSearched && searchedQuery.trim().toLowerCase() === query.trim().toLowerCase() && totalResultsCount === 0 && (
             <div className="text-center py-16 border border-white/5 rounded-2xl bg-white/[0.02]">
               <Search className="w-10 h-10 text-white/20 mx-auto mb-3" />
               <h3 className="text-lg font-bold text-white mb-1">No matching results found</h3>
@@ -737,12 +800,31 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         <span className="text-base font-bold text-white truncate group-hover:text-emerald-300 transition-colors">
                           {item.full_name || 'Verified Owner'}
                         </span>
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded border border-emerald-500/30 font-bold">
-                          {item.lead_id || `ID: ${item.owner_id}`}
-                        </span>
+                        {item.lead_id && (
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                            isIdMatched(item.lead_id, query)
+                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm'
+                              : 'bg-blue-500/20 text-blue-300 border-blue-500/30 font-medium'
+                          }`}>
+                            Lead ID: {item.lead_id}
+                          </span>
+                        )}
+                        {item.owner_id && (
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                            isIdMatched(item.owner_id, query)
+                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm'
+                              : 'bg-purple-500/20 text-purple-300 border-purple-500/30 font-medium'
+                          }`} title="Master Leads ID">
+                            Master ID: {item.owner_id}
+                          </span>
+                        )}
                         {item.bitrix_id && (
-                          <span className="text-[10px] bg-blue-500/20 text-blue-300 font-mono px-2 py-0.5 rounded border border-blue-500/30">
-                            Bitrix: #{item.bitrix_id}
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                            isIdMatched(item.bitrix_id, query)
+                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm'
+                              : 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-medium'
+                          }`}>
+                            Bitrix #{item.bitrix_id}
                           </span>
                         )}
                         {item.property_category && (
