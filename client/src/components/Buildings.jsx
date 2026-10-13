@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Building2, MapPin, Users, PhoneCall, ChevronRight, Search, 
   ArrowLeft, X, ExternalLink, ShieldCheck, Phone, Check, Copy,
@@ -9,6 +9,7 @@ import {
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
 import Building360Detail from './Building360Detail';
+import SearchableCombobox from './SearchableCombobox';
 
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
@@ -151,6 +152,8 @@ export default function Buildings() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24;
+  const [customPageInput, setCustomPageInput] = useState('');
+  const customPageInputRef = useRef(null);
 
   useEffect(() => {
     fetchBuildingsData();
@@ -327,6 +330,14 @@ export default function Buildings() {
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredBuildings.length / itemsPerPage);
+  const handleCustomPageSubmit = () => {
+    const pageNum = parseInt(customPageInput, 10);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum);
+      setCustomPageInput('');
+    }
+  };
+
   const currentBuildings = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredBuildings.slice(start, start + itemsPerPage);
@@ -489,25 +500,21 @@ export default function Buildings() {
           )}
         </div>
 
-        {/* Community Dropdown Filter */}
+        {/* Community Searchable Combobox Filter */}
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative w-full md:w-56">
-            <select
-              value={selectedCommunity}
-              onChange={(e) => {
-                setSelectedCommunity(e.target.value);
+          <div className="w-full md:w-64">
+            <SearchableCombobox
+              value={selectedCommunity === 'All' ? `All Communities (${buildings.length})` : selectedCommunity}
+              onChange={(val) => {
+                setSelectedCommunity(val.startsWith('All') || val === 'All' ? 'All' : val);
                 setCurrentPage(1);
               }}
-              className="w-full bg-[#06111e] border border-[#1a2c42] text-white text-[13px] rounded-xl px-3.5 py-2.5 appearance-none focus:outline-none focus:border-blue-500/60 cursor-pointer font-medium"
-            >
-              <option value="All" className="bg-[#0c1829]">All Communities ({buildings.length})</option>
-              {communitiesList.filter(c => c !== 'All').map(comm => (
-                <option key={comm} value={comm} className="bg-[#0c1829]">
-                  {comm}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+              options={communitiesList.filter(c => c !== 'All')}
+              placeholder="Search community..."
+              allLabel={`All Communities (${buildings.length})`}
+              className="w-full"
+              triggerClassName="w-full bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-white text-[13px] rounded-xl px-3.5 py-2.5 font-medium"
+            />
           </div>
 
           {/* Sort By Dropdown */}
@@ -637,7 +644,7 @@ export default function Buildings() {
               Showing <span className="text-white font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-white font-medium">{Math.min(currentPage * itemsPerPage, filteredBuildings.length)}</span> of <span className="text-white font-medium">{filteredBuildings.length.toLocaleString()}</span> buildings
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -646,9 +653,13 @@ export default function Buildings() {
                 <ChevronLeft className="w-3.5 h-3.5" /> Previous
               </button>
 
-              <div className="text-xs font-mono px-3 text-slate-300">
-                Page <span className="text-white font-bold">{currentPage}</span> / {totalPages}
-              </div>
+              <button
+                onClick={() => customPageInputRef.current?.focus()}
+                title="Click to jump to custom page"
+                className="text-xs font-mono px-3 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              >
+                Page <span className="text-white font-bold">{currentPage}</span> of {totalPages}
+              </button>
 
               <button
                 disabled={currentPage === totalPages}
@@ -657,6 +668,31 @@ export default function Buildings() {
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />
               </button>
+
+              {/* Custom Page Input Box */}
+              <div className="flex items-center gap-1.5 ml-2 pl-2.5 border-l border-[#233549]">
+                <span className="text-xs text-slate-400 whitespace-nowrap font-medium">Go to:</span>
+                <input
+                  ref={customPageInputRef}
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={customPageInput}
+                  onChange={(e) => setCustomPageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCustomPageSubmit();
+                  }}
+                  placeholder="Page #"
+                  className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  onClick={handleCustomPageSubmit}
+                  disabled={!customPageInput || isNaN(parseInt(customPageInput, 10))}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm cursor-pointer"
+                >
+                  Go
+                </button>
+              </div>
             </div>
           </div>
         )}

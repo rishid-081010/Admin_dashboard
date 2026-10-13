@@ -8,7 +8,8 @@ export default function SearchableCombobox({
   options = [],
   placeholder = 'Search...',
   allLabel = 'Any',
-  className = ''
+  className = '',
+  triggerClassName = ''
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,7 +56,7 @@ export default function SearchableCombobox({
     setIsOpen(false);
   };
 
-  const isSelectedAny = !value || value === allLabel;
+  const isSelectedAny = !value || value === allLabel || value === 'All' || value === 'Any';
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
@@ -68,12 +69,15 @@ export default function SearchableCombobox({
       {/* Trigger Button */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-[#0b162c] hover:bg-[#0f1d3a] border ${
-          isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-white/15'
-        } rounded-xl px-3.5 py-2.5 text-sm font-medium text-white flex items-center justify-between cursor-pointer transition-all select-none shadow-sm`}
+        className={triggerClassName 
+          ? `${triggerClassName} ${isOpen ? '!border-blue-500 ring-2 ring-blue-500/20' : ''} flex items-center justify-between cursor-pointer transition-all select-none shadow-sm`
+          : `w-full bg-[#0b162c] hover:bg-[#0f1d3a] border ${
+              isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-white/15'
+            } rounded-xl px-3.5 py-2.5 text-sm font-medium text-white flex items-center justify-between cursor-pointer transition-all select-none shadow-sm`
+        }
       >
-        <span className={`truncate mr-2 ${isSelectedAny ? 'text-white/70' : 'text-blue-300 font-semibold'}`}>
-          {value || allLabel}
+        <span className={`truncate mr-2 ${isSelectedAny ? 'text-white' : 'text-blue-300 font-semibold'}`}>
+          {isSelectedAny ? allLabel : value}
         </span>
         <div className="flex items-center gap-1.5 shrink-0">
           {!isSelectedAny && (
@@ -141,7 +145,7 @@ export default function SearchableCombobox({
                     : 'text-white/70 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <span>{allLabel} (All)</span>
+                <span>{allLabel.includes('All') ? allLabel : `${allLabel} (All)`}</span>
                 {isSelectedAny && <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
               </button>
             )}

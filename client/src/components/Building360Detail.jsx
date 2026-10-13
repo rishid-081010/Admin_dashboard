@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Building2, ArrowLeft, Search, Download, Phone, Check, 
   Layers, Users, ChevronRight, Filter, Sparkles, Copy, ExternalLink, 
@@ -55,6 +55,8 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
+  const [customPageInput, setCustomPageInput] = useState('');
+  const customPageInputRef = useRef(null);
 
   // Fetch verified unit roster and building stats from Supabase
   useEffect(() => {
@@ -218,6 +220,14 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
 
   // Paginated records
   const totalPages = Math.ceil(filteredOwners.length / pageSize) || 1;
+  const handleCustomPageSubmit = () => {
+    const pageNum = parseInt(customPageInput, 10);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum);
+      setCustomPageInput('');
+    }
+  };
+
   const paginatedOwners = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredOwners.slice(start, start + pageSize);
@@ -642,7 +652,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
             Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredOwners.length)} of {filteredOwners.length.toLocaleString()} units
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -651,9 +661,13 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
               <ChevronLeft className="w-3.5 h-3.5" /> Previous
             </button>
 
-            <span className="px-2.5 py-1 text-slate-400 font-mono text-xs">
-              Page {currentPage} of {totalPages}
-            </span>
+            <button
+              onClick={() => customPageInputRef.current?.focus()}
+              title="Click to jump to custom page"
+              className="px-2.5 py-1 text-slate-400 hover:text-white font-mono text-xs transition-colors cursor-pointer"
+            >
+              Page <span className="text-white font-bold">{currentPage}</span> of {totalPages}
+            </button>
 
             <button
               disabled={currentPage === totalPages}
@@ -662,6 +676,31 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
             >
               Next <ChevronRight className="w-3.5 h-3.5" />
             </button>
+
+            {/* Custom Page Input Box */}
+            <div className="flex items-center gap-1.5 ml-2 pl-2.5 border-l border-[#233549]">
+              <span className="text-xs text-slate-400 whitespace-nowrap font-medium">Go to:</span>
+              <input
+                ref={customPageInputRef}
+                type="number"
+                min={1}
+                max={totalPages}
+                value={customPageInput}
+                onChange={(e) => setCustomPageInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCustomPageSubmit();
+                }}
+                placeholder="Page #"
+                className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                onClick={handleCustomPageSubmit}
+                disabled={!customPageInput || isNaN(parseInt(customPageInput, 10))}
+                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm cursor-pointer"
+              >
+                Go
+              </button>
+            </div>
           </div>
         </div>
 
