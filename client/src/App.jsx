@@ -10,9 +10,7 @@ import OwnerDirectory from './components/OwnerDirectory';
 import OverviewDashboard from './components/OverviewDashboard';
 import Buildings from './components/Buildings';
 import OmniSearch from './components/OmniSearch';
-import ReviewQueue from './components/ReviewQueue';
 import WorkflowsDirectory from './components/WorkflowsDirectory';
-import SourcesDirectory from './components/SourcesDirectory';
 import MyActivity from './components/MyActivity';
 import VoiceAgent from './components/VoiceAgent';
 import AccountSettings from './components/AccountSettings';
@@ -29,7 +27,6 @@ const ROUTE_MAP = {
   buildings: '/dashboard/buildings',
   sources: '/dashboard/datalibrary',
   settings: '/dashboard/settings',
-  reviews: '/dashboard/reviews',
   workflows: '/dashboard/workflows',
   new: '/dashboard/new-listing',
   detail: '/dashboard/listing-detail'
@@ -52,7 +49,6 @@ function getTabFromUrl() {
   if (target === 'team') return 'team';
   if (target === 'listing') return 'listing';
   if (target === 'settings') return 'settings';
-  if (target === 'reviews') return 'reviews';
   if (target === 'workflows' || target === 'workflow') return 'workflows';
   if (target === 'new-listing') return 'new';
   if (target === 'listing-detail') return 'detail';
@@ -168,9 +164,6 @@ export default function App() {
 
           {activeTab === 'search' && <OmniSearch />}
 
-          {activeTab === 'reviews' && (
-            <ReviewQueue onNavigateToBuilding={() => setActiveTab('buildings')} />
-          )}
 
           {activeTab === 'workflows' && <WorkflowsDirectory />}
 

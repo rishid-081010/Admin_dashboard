@@ -1,9 +1,5 @@
 import React from 'react';
-import { 
-  LayoutDashboard, Users, Building2, Search, AlertTriangle, 
-  BarChart3, Sparkles, PhoneCall, FileSpreadsheet, Layers, 
-  ExternalLink, Settings, Activity, FileCheck
-} from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import N8nLogo from './N8nLogo';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -72,18 +68,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           }`}
         >
           <span>Search Engine</span>
-        </button>
-
-        {/* 5. Review Queue */}
-        <button 
-          onClick={() => setActiveTab('reviews')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'reviews' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Review Queue</span>
         </button>
 
         {/* 6. Workflows (n8n Automations) */}
