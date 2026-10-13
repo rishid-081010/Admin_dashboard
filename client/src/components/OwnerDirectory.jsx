@@ -175,6 +175,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   const customPageInputRef = useRef(null);
   const totalCount = 3042722;
   const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const isSearching = searchTerm.trim().length > 1;
 
   const handleCustomPageSubmit = () => {
     const pageNum = parseInt(customPageInput, 10);
