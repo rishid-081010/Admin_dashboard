@@ -11,6 +11,7 @@ import OverviewDashboard from './components/OverviewDashboard';
 import Buildings from './components/Buildings';
 import OmniSearch from './components/OmniSearch';
 import WorkflowsDirectory from './components/WorkflowsDirectory';
+import SourcesDirectory from './components/SourcesDirectory';
 import MyActivity from './components/MyActivity';
 import VoiceAgent from './components/VoiceAgent';
 import AccountSettings from './components/AccountSettings';
@@ -53,6 +54,44 @@ function getTabFromUrl() {
   if (target === 'new-listing') return 'new';
   if (target === 'listing-detail') return 'detail';
   return 'overview';
+}
+
+class TabErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Tab view render error caught by TabErrorBoundary:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full p-8 text-center animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center text-rose-400 mb-4 shadow-lg shadow-rose-500/10 text-2xl">
+            ⚠️
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2 tracking-tight">View Encountered an Error</h2>
+          <p className="text-xs text-slate-400 max-w-md mb-5 font-mono bg-black/30 p-3 rounded-xl border border-white/5">
+            {this.state.error?.message || "An unexpected error occurred while rendering this subtab."}
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              if (this.props.onReset) this.props.onReset();
+            }}
+            className="px-5 py-2.5 bg-[#183153] hover:bg-[#224470] border border-white/20 text-white text-xs font-semibold rounded-xl transition-all shadow-md cursor-pointer"
+          >
+            Return to Overview
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 export default function App() {
@@ -147,68 +186,70 @@ export default function App() {
         <main className={`flex-1 bg-[#021024]/60 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-2xl p-4 lg:p-6 relative flex flex-col min-h-0 ${
           activeTab === 'overview' ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden'
         }`}>
-          {/* Tab Views */}
-          {activeTab === 'overview' && (
-            <OverviewDashboard onNavigate={(tab) => setActiveTab(tab)} />
-          )}
+          <TabErrorBoundary key={activeTab} onReset={() => setActiveTab('overview')}>
+            {/* Tab Views */}
+            {activeTab === 'overview' && (
+              <OverviewDashboard onNavigate={(tab) => setActiveTab(tab)} />
+            )}
 
-          {activeTab === 'owners' && (
-            <OwnerDirectory 
-              globalAgentId="6"
-              globalAgentName="Melanie Simsiman" 
-              agentsList={[]}
-            />
-          )}
-
-          {activeTab === 'buildings' && <Buildings />}
-
-          {activeTab === 'search' && <OmniSearch />}
-
-
-          {activeTab === 'workflows' && <WorkflowsDirectory />}
-
-          {activeTab === 'sources' && <SourcesDirectory />}
-
-          {activeTab === 'activity' && <MyActivity globalAgent="6" />}
-
-          {activeTab === 'voice' && <VoiceAgent />}
-
-          {activeTab === 'leads' && (
-            <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><LeadIngestionStudio /></div>
-          )}
-
-          {activeTab === 'listing' && (
-            <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Dashboard
-              onNewListingClick={() => setActiveTab('new')}
-              onSelectListing={handleSelectListing}
-            /></div>
-          )}
-
-          {activeTab === 'new' && (
-            <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><NewListing 
-              onListingCreated={handleListingCreated} 
-              onBack={() => setActiveTab('listing')}
-            /></div>
-          )}
-
-          {activeTab === 'detail' && (
-            <div className="h-full overflow-y-auto pr-2 custom-scrollbar">{selectedListingId ? (
-              <ListingDetail
-                listingId={selectedListingId}
-                onBack={() => {
-                  setActiveTab('listing');
-                  setSelectedListingId(null);
-                }}
+            {activeTab === 'owners' && (
+              <OwnerDirectory 
+                globalAgentId="6"
+                globalAgentName="Melanie Simsiman" 
+                agentsList={[]}
               />
-            ) : (
-              <Dashboard
+            )}
+
+            {activeTab === 'buildings' && <Buildings />}
+
+            {activeTab === 'search' && <OmniSearch />}
+
+
+            {activeTab === 'workflows' && <WorkflowsDirectory />}
+
+            {activeTab === 'sources' && <SourcesDirectory />}
+
+            {activeTab === 'activity' && <MyActivity globalAgent="6" />}
+
+            {activeTab === 'voice' && <VoiceAgent />}
+
+            {activeTab === 'leads' && (
+              <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><LeadIngestionStudio /></div>
+            )}
+
+            {activeTab === 'listing' && (
+              <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Dashboard
                 onNewListingClick={() => setActiveTab('new')}
                 onSelectListing={handleSelectListing}
-              />
-            )}</div>
-          )}
+              /></div>
+            )}
 
-          {activeTab === 'settings' && <AccountSettings />}
+            {activeTab === 'new' && (
+              <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><NewListing 
+                onListingCreated={handleListingCreated} 
+                onBack={() => setActiveTab('listing')}
+              /></div>
+            )}
+
+            {activeTab === 'detail' && (
+              <div className="h-full overflow-y-auto pr-2 custom-scrollbar">{selectedListingId ? (
+                <ListingDetail
+                  listingId={selectedListingId}
+                  onBack={() => {
+                    setActiveTab('listing');
+                    setSelectedListingId(null);
+                  }}
+                />
+              ) : (
+                <Dashboard
+                  onNewListingClick={() => setActiveTab('new')}
+                  onSelectListing={handleSelectListing}
+                />
+              )}</div>
+            )}
+
+            {activeTab === 'settings' && <AccountSettings />}
+          </TabErrorBoundary>
         </main>
       </div>
 
