@@ -20,13 +20,124 @@ const KNOWN_COMMUNITIES = [
 
 function formatBuildingName(name) {
   if (!name) return 'Dubai Residence';
-  let cleaned = name.replace(/_DEWA$|_PREMISE$|_FINAL$/i, '').trim();
-  cleaned = cleaned.replace(/^(Building|Tower|Villa|Residence|The)\s+/i, '').trim();
+  let cleaned = name.trim().replace(/^\[.*?\]\s*/, '');
+  cleaned = cleaned.replace(/_DEWA$|_PREMISE$|_FINAL$/i, '').trim();
+  cleaned = cleaned.replace(/^The\s+/i, '').trim();
+  const isAllCaps = cleaned === cleaned.toUpperCase();
+  if (!isAllCaps) return cleaned;
   return cleaned
+    .toLowerCase()
     .split(' ')
     .filter(Boolean)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+    .replace(/\bTower\b/i, 'Tower')
+    .replace(/\bTowers\b/i, 'Towers')
+    .replace(/\bJlt\b/i, 'JLT')
+    .replace(/\bJvc\b/i, 'JVC')
+    .replace(/\bJbr\b/i, 'JBR')
+    .replace(/\bDamac\b/i, 'DAMAC');
+}
+
+function aggregateBuildings(rows) {
+  if (!Array.isArray(rows)) return [];
+  const bMap = {};
+  rows.forEach(row => {
+    const rawBn = (row.building_name || '').trim();
+    if (!rawBn || rawBn.length < 2 || rawBn.toLowerCase() === 'null' || rawBn.toLowerCase() === 'n/a') return;
+    const displayName = formatBuildingName(rawBn);
+    const key = displayName.toLowerCase();
+    if (!bMap[key]) {
+      bMap[key] = {
+        rawName: rawBn,
+        name: displayName,
+        area: getBuildingCommunity(rawBn, row.master_area),
+        propertyType: row.property_category || getBuildingType(rawBn, row.reported_property_type),
+        unitsSet: new Set(),
+        ownersCount: 0,
+        contactsCount: 0,
+        sampleOwners: []
+      };
+    }
+    bMap[key].ownersCount++;
+    if (row.unit_number && String(row.unit_number).trim()) {
+      bMap[key].unitsSet.add(String(row.unit_number).trim());
+    }
+    if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) {
+      bMap[key].contactsCount++;
+    }
+    if (bMap[key].sampleOwners.length < 40) {
+      bMap[key].sampleOwners.push({
+        id: row.owner_id || row.lead_id,
+        lead_id: row.lead_id || `LEAD-${row.owner_id}`,
+        name: row.full_name || 'Property Owner',
+        unit: row.unit_number || 'N/A',
+        phone: row.phone_normalized || 'N/A',
+        area: bMap[key].area,
+        building: displayName,
+        type: bMap[key].propertyType
+      });
+    }
+  });
+
+  return Object.values(bMap).map(b => ({
+    ...b,
+    unitsCount: b.unitsSet.size > 0 ? b.unitsSet.size : b.ownersCount,
+    contactCoverage: b.ownersCount > 0 ? Math.round((b.contactsCount / b.ownersCount) * 100) : 0
+  })).sort((a, b) => b.ownersCount - a.ownersCount);
+}
+
+function aggregateAreas(rows) {
+  if (!Array.isArray(rows)) return [];
+  const aMap = {};
+  rows.forEach(row => {
+    const rawArea = (row.master_area || '').trim();
+    if (!rawArea || rawArea.length < 2 || rawArea.toLowerCase() === 'null') return;
+    const key = rawArea.toLowerCase();
+    if (!aMap[key]) {
+      aMap[key] = {
+        rawName: rawArea,
+        name: rawArea,
+        buildingsSet: new Set(),
+        unitsSet: new Set(),
+        ownersCount: 0,
+        phonesCount: 0,
+        residentialCount: 0,
+        commercialCount: 0,
+        sampleBuildings: new Set()
+      };
+    }
+    aMap[key].ownersCount++;
+    if (row.building_name && String(row.building_name).trim()) {
+      aMap[key].buildingsSet.add(String(row.building_name).trim());
+      if (aMap[key].sampleBuildings.size < 6) {
+        aMap[key].sampleBuildings.add(formatBuildingName(String(row.building_name).trim()));
+      }
+    }
+    if (row.unit_number && String(row.unit_number).trim()) {
+      aMap[key].unitsSet.add(String(row.unit_number).trim());
+    }
+    if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) {
+      aMap[key].phonesCount++;
+    }
+    if (row.property_category === 'Commercial') {
+      aMap[key].commercialCount++;
+    } else {
+      aMap[key].residentialCount++;
+    }
+  });
+
+  return Object.values(aMap).map(a => ({
+    rawName: a.rawName,
+    name: a.name,
+    totalBuildings: a.buildingsSet.size > 0 ? a.buildingsSet.size : 1,
+    totalUnits: a.unitsSet.size > 0 ? a.unitsSet.size : a.ownersCount,
+    totalOwners: a.ownersCount,
+    phoneCoverage: a.ownersCount > 0 ? Math.round((a.phonesCount / a.ownersCount) * 100) : 0,
+    sampleBuildings: Array.from(a.sampleBuildings),
+    residentialCount: a.residentialCount,
+    commercialCount: a.commercialCount
+  })).sort((a, b) => b.totalOwners - a.totalOwners);
 }
 
 function getBuildingCommunity(rawName, masterArea) {
@@ -118,275 +229,135 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       Authorization: `Bearer ${SUPABASE_API_KEY}` 
     };
 
+    // Safe fetch helper that always returns an Array and never throws
+    const safeGet = async (url) => {
+      try {
+        const res = await axios.get(url, { headers, timeout: 9000 });
+        return Array.isArray(res.data) ? res.data : [];
+      } catch (err) {
+        console.warn('Search query warning:', url, err?.message);
+        return [];
+      }
+    };
+
+    const fetchBuildings = () => 
+      safeGet(`${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(q)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,reported_property_type,property_category&limit=500`);
+
+    const fetchAreas = () => 
+      safeGet(`${SUPABASE_BASE_URL}/owners_data?master_area=ilike.*${encodeURIComponent(q)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,reported_property_type,property_category&limit=500`);
+
+    const fetchOwners = () => 
+      safeGet(`${SUPABASE_BASE_URL}/owners_data?full_name=ilike.*${encodeURIComponent(q)}*&select=*&limit=100`);
+
+    const fetchPhone = () => {
+      const cleanDigits = q.replace(/[^0-9]/g, '');
+      const phoneTerm = cleanDigits.length >= 3 ? cleanDigits : q;
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(phone_normalized.ilike.*${encodeURIComponent(phoneTerm)}*,phone_raw.ilike.*${encodeURIComponent(phoneTerm)}*)&select=*&limit=100`);
+    };
+
+    const fetchIds = () => {
+      const cleanTerm = q.trim();
+      const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
+      const variants = [cleanTerm, cleanTerm.toUpperCase()];
+      if (rawDigits) {
+        variants.push(rawDigits);
+        variants.push(`LEAD-${rawDigits}`);
+        variants.push(`LEAD-${rawDigits.padStart(7, '0')}`);
+        variants.push(`OWN-${rawDigits}`);
+        variants.push(`OWN-${rawDigits.padStart(7, '0')}`);
+      }
+      const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
+      const orClauses = [];
+      uniqueVariants.forEach(v => {
+        orClauses.push(`lead_id.eq.${encodeURIComponent(v)}`);
+        orClauses.push(`owner_id.eq.${encodeURIComponent(v)}`);
+      });
+      if (rawDigits && rawDigits.length >= 2 && rawDigits.length <= 8) {
+        orClauses.push(`bitrix_id.eq.${encodeURIComponent(rawDigits)}`);
+      }
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+    };
+
     try {
       if (currentFilter === 'Buildings') {
-        // ── 1. BUILDINGS ONLY: Search building_name, aggregate into distinct building entities
         setOwnerResults([]);
         setAreaResults([]);
         setIdResults([]);
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(q)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,reported_property_type,property_category&limit=250`;
-        const res = await axios.get(endpoint, { headers });
-
-        const bMap = {};
-        (res.data || []).forEach(row => {
-          const rawBn = (row.building_name || '').trim();
-          if (!rawBn || rawBn.length < 2 || rawBn.toLowerCase() === 'null' || rawBn.toLowerCase() === 'n/a') return;
-          const displayName = formatBuildingName(rawBn);
-          const key = displayName.toLowerCase();
-          if (!bMap[key]) {
-            bMap[key] = {
-              rawName: rawBn,
-              name: displayName,
-              area: getBuildingCommunity(rawBn, row.master_area),
-              propertyType: row.property_category || getBuildingType(rawBn, row.reported_property_type),
-              unitsSet: new Set(),
-              ownersCount: 0,
-              contactsCount: 0,
-              sampleOwners: []
-            };
-          }
-          bMap[key].ownersCount++;
-          if (row.unit_number && String(row.unit_number).trim()) bMap[key].unitsSet.add(String(row.unit_number).trim());
-          if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) bMap[key].contactsCount++;
-          if (bMap[key].sampleOwners.length < 40) {
-            bMap[key].sampleOwners.push({
-              id: row.owner_id || row.lead_id,
-              lead_id: row.lead_id || `LEAD-${row.owner_id}`,
-              name: row.full_name || 'Property Owner',
-              unit: row.unit_number || 'N/A',
-              phone: row.phone_normalized || 'N/A',
-              area: bMap[key].area,
-              building: displayName,
-              type: bMap[key].propertyType
-            });
-          }
-        });
-
-        const list = Object.values(bMap).map(b => ({
-          ...b,
-          unitsCount: b.unitsSet.size > 0 ? b.unitsSet.size : b.ownersCount,
-          contactCoverage: b.ownersCount > 0 ? Math.round((b.contactsCount / b.ownersCount) * 100) : 0
-        })).sort((a, b) => b.ownersCount - a.ownersCount);
-
-        setBuildingResults(list);
+        const rows = await fetchBuildings();
+        setBuildingResults(aggregateBuildings(rows));
       } else if (currentFilter === 'Area') {
-        // ── 2. AREA ONLY: Search master_area, aggregate community stats
         setOwnerResults([]);
         setBuildingResults([]);
         setIdResults([]);
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?master_area=ilike.*${encodeURIComponent(q)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,reported_property_type,property_category&limit=300`;
-        const res = await axios.get(endpoint, { headers });
-
-        const aMap = {};
-        (res.data || []).forEach(row => {
-          const rawArea = (row.master_area || '').trim();
-          if (!rawArea || rawArea.length < 2 || rawArea.toLowerCase() === 'null') return;
-          const key = rawArea.toLowerCase();
-          if (!aMap[key]) {
-            aMap[key] = {
-              rawName: rawArea,
-              name: rawArea,
-              buildingsSet: new Set(),
-              unitsSet: new Set(),
-              ownersCount: 0,
-              phonesCount: 0,
-              residentialCount: 0,
-              commercialCount: 0,
-              sampleBuildings: new Set()
-            };
-          }
-          aMap[key].ownersCount++;
-          if (row.building_name && String(row.building_name).trim()) {
-            aMap[key].buildingsSet.add(String(row.building_name).trim());
-            if (aMap[key].sampleBuildings.size < 6) {
-              aMap[key].sampleBuildings.add(formatBuildingName(String(row.building_name).trim()));
-            }
-          }
-          if (row.unit_number && String(row.unit_number).trim()) aMap[key].unitsSet.add(String(row.unit_number).trim());
-          if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) aMap[key].phonesCount++;
-          if (row.property_category === 'Commercial') aMap[key].commercialCount++;
-          else aMap[key].residentialCount++;
-        });
-
-        const list = Object.values(aMap).map(a => ({
-          rawName: a.rawName,
-          name: a.name,
-          totalBuildings: a.buildingsSet.size > 0 ? a.buildingsSet.size : 1,
-          totalUnits: a.unitsSet.size > 0 ? a.unitsSet.size : a.ownersCount,
-          totalOwners: a.ownersCount,
-          phoneCoverage: a.ownersCount > 0 ? Math.round((a.phonesCount / a.ownersCount) * 100) : 0,
-          sampleBuildings: Array.from(a.sampleBuildings),
-          residentialCount: a.residentialCount,
-          commercialCount: a.commercialCount
-        })).sort((a, b) => b.totalOwners - a.totalOwners);
-
-        setAreaResults(list);
-      } else if (currentFilter === 'Lead ID') {
-        // ── 3. LEAD ID ONLY: Exact or prefix match on generated Lead ID
-        setBuildingResults([]);
-        setAreaResults([]);
-        setIdResults([]);
-        setOwnerResults([]);
-        const cleanTerm = q.trim();
-        const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
-        const variants = [cleanTerm, cleanTerm.toUpperCase()];
-        if (rawDigits) {
-          variants.push(rawDigits);
-          variants.push(`LEAD-${rawDigits}`);
-          if (rawDigits.length < 7) {
-            variants.push(`LEAD-${rawDigits.padStart(7, '0')}`);
-          }
-        }
-        const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
-        const orClause = uniqueVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`).join(',');
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?or=(${orClause})&select=*&limit=50`;
-        const res = await axios.get(endpoint, { headers });
-        setIdResults(res.data || []);
-      } else if (currentFilter === 'Bitrix ID') {
-        // ── 4. BITRIX ID ONLY: CRM Bitrix ID match
-        setBuildingResults([]);
-        setAreaResults([]);
-        setIdResults([]);
-        setOwnerResults([]);
-        const cleanTerm = q.replace(/[^0-9]/g, '') || q.trim();
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(cleanTerm)}&select=*&limit=50`;
-        const res = await axios.get(endpoint, { headers });
-        setIdResults(res.data || []);
-      } else if (currentFilter === 'Supabase ID') {
-        // ── 5. SUPABASE ID ONLY: Primary key row ID match
-        setBuildingResults([]);
-        setAreaResults([]);
-        setIdResults([]);
-        setOwnerResults([]);
-        const cleanTerm = q.trim();
-        const rawDigits = cleanTerm.replace(/[^0-9]/g, '');
-        const variants = [cleanTerm, cleanTerm.toUpperCase()];
-        if (rawDigits) {
-          variants.push(rawDigits);
-          variants.push(`OWN-${rawDigits}`);
-          if (rawDigits.length < 7) {
-            variants.push(`OWN-${rawDigits.padStart(7, '0')}`);
-          }
-        }
-        const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
-        const orClause = uniqueVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`).join(',');
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?or=(${orClause})&select=*&limit=50`;
-        const res = await axios.get(endpoint, { headers });
-        setIdResults(res.data || []);
+        const rows = await fetchAreas();
+        setAreaResults(aggregateAreas(rows));
       } else if (currentFilter === 'Owners') {
-        // ── 6. OWNERS ONLY: Search full_name
         setBuildingResults([]);
         setAreaResults([]);
         setIdResults([]);
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?full_name=ilike.*${encodeURIComponent(q)}*&select=*&limit=50`;
-        const res = await axios.get(endpoint, { headers });
-        setOwnerResults(res.data || []);
+        const rows = await fetchOwners();
+        setOwnerResults(rows);
       } else if (currentFilter === 'Phone Numbers') {
-        // ── 7. PHONE NUMBERS ONLY
         setBuildingResults([]);
         setAreaResults([]);
         setIdResults([]);
-        const cleanDigits = q.replace(/[^0-9]/g, '');
-        const phoneTerm = cleanDigits.length >= 4 ? cleanDigits : q;
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?phone_normalized=ilike.*${encodeURIComponent(phoneTerm)}*&select=*&limit=50`;
-        const res = await axios.get(endpoint, { headers });
-        setOwnerResults(res.data || []);
-      } else {
-        // ── 8. ALL: Combined LinkedIn-style intelligent search across Area, Buildings, and Owners
-        // Run comprehensive multi-entity query
-        const combinedEndpoint = `${SUPABASE_BASE_URL}/owners_data?or=(full_name.ilike.*${encodeURIComponent(q)}*,building_name.ilike.*${encodeURIComponent(q)}*,master_area.ilike.*${encodeURIComponent(q)}*,lead_id.ilike.*${encodeURIComponent(q)}*)&select=*&limit=250`;
-        const res = await axios.get(combinedEndpoint, { headers });
-        const allData = res.data || [];
-
-        // 1. Matched Areas
-        const qLower = q.toLowerCase();
-        const aMap = {};
-        allData.forEach(row => {
-          const ma = (row.master_area || '').trim();
-          if (ma && ma.toLowerCase().includes(qLower)) {
-            const key = ma.toLowerCase();
-            if (!aMap[key]) {
-              aMap[key] = {
-                rawName: ma,
-                name: ma,
-                buildingsSet: new Set(),
-                unitsSet: new Set(),
-                ownersCount: 0,
-                phonesCount: 0,
-                sampleBuildings: new Set()
-              };
-            }
-            aMap[key].ownersCount++;
-            if (row.building_name) {
-              aMap[key].buildingsSet.add(row.building_name);
-              if (aMap[key].sampleBuildings.size < 4) aMap[key].sampleBuildings.add(formatBuildingName(row.building_name));
-            }
-            if (row.unit_number) aMap[key].unitsSet.add(row.unit_number);
-            if (row.phone_normalized) aMap[key].phonesCount++;
-          }
-        });
-        const matchedAreasList = Object.values(aMap).map(a => ({
-          rawName: a.rawName,
-          name: a.name,
-          totalBuildings: a.buildingsSet.size > 0 ? a.buildingsSet.size : 1,
-          totalUnits: a.unitsSet.size > 0 ? a.unitsSet.size : a.ownersCount,
-          totalOwners: a.ownersCount,
-          phoneCoverage: a.ownersCount > 0 ? Math.round((a.phonesCount / a.ownersCount) * 100) : 0,
-          sampleBuildings: Array.from(a.sampleBuildings)
-        })).sort((a, b) => b.totalOwners - a.totalOwners);
-        setAreaResults(matchedAreasList);
-
-        // 2. Matched Buildings
-        const bMap = {};
-        allData.forEach(row => {
-          const rawBn = (row.building_name || '').trim();
-          if (rawBn && rawBn.toLowerCase().includes(qLower)) {
-            const displayName = formatBuildingName(rawBn);
-            const key = displayName.toLowerCase();
-            if (!bMap[key]) {
-              bMap[key] = {
-                rawName: rawBn,
-                name: displayName,
-                area: getBuildingCommunity(rawBn, row.master_area),
-                propertyType: row.property_category || getBuildingType(rawBn, row.reported_property_type),
-                unitsSet: new Set(),
-                ownersCount: 0,
-                contactsCount: 0,
-                sampleOwners: []
-              };
-            }
-            bMap[key].ownersCount++;
-            if (row.unit_number && String(row.unit_number).trim()) bMap[key].unitsSet.add(String(row.unit_number).trim());
-            if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) bMap[key].contactsCount++;
-            if (bMap[key].sampleOwners.length < 20) {
-              bMap[key].sampleOwners.push({
-                id: row.owner_id || row.lead_id,
-                lead_id: row.lead_id || `LEAD-${row.owner_id}`,
-                name: row.full_name || 'Property Owner',
-                unit: row.unit_number || 'N/A',
-                phone: row.phone_normalized || 'N/A',
-                area: bMap[key].area,
-                building: displayName,
-                type: bMap[key].propertyType
-              });
-            }
-          }
-        });
-        const matchedBuildingsList = Object.values(bMap).map(b => ({
-          ...b,
-          unitsCount: b.unitsSet.size > 0 ? b.unitsSet.size : b.ownersCount,
-          contactCoverage: b.ownersCount > 0 ? Math.round((b.contactsCount / b.ownersCount) * 100) : 0
-        })).sort((a, b) => b.ownersCount - a.ownersCount);
-        setBuildingResults(matchedBuildingsList);
-
-        // 3. Matched Owners / Direct Leads
-        const matchedOwnersList = allData.filter(row => {
-          const fn = (row.full_name || '').toLowerCase();
-          const lid = (row.lead_id || '').toLowerCase();
-          return fn.includes(qLower) || lid.includes(qLower);
-        });
-        setOwnerResults(matchedOwnersList);
+        const rows = await fetchPhone();
+        setOwnerResults(rows);
+      } else if (currentFilter === 'Lead ID' || currentFilter === 'Bitrix ID' || currentFilter === 'Supabase ID') {
+        setBuildingResults([]);
+        setAreaResults([]);
         setIdResults([]);
+        setOwnerResults([]);
+        const rows = await fetchIds();
+        setIdResults(rows);
+      } else {
+        // ── 'All' FILTER: Unified Intelligent Multi-Entity Search ──
+        const cleanDigits = q.replace(/[^0-9]/g, '');
+        const hasDigits = cleanDigits.length >= 4;
+        const isIdPattern = /^(\+?\d+|LEAD-|OWN-|#\d+)/i.test(q.trim());
+
+        const promises = [
+          fetchBuildings(),
+          fetchAreas(),
+          fetchOwners()
+        ];
+
+        let hasIdCheck = false;
+        let hasPhoneCheck = false;
+
+        if (hasDigits || isIdPattern) {
+          hasIdCheck = true;
+          promises.push(fetchIds());
+          if (hasDigits) {
+            hasPhoneCheck = true;
+            promises.push(fetchPhone());
+          }
+        }
+
+        const results = await Promise.all(promises);
+        const bldgRows = results[0] || [];
+        const areaRows = results[1] || [];
+        const ownerRows = results[2] || [];
+        const idRows = hasIdCheck ? results[3] : [];
+        const phoneRows = hasPhoneCheck ? results[4] : [];
+
+        setBuildingResults(aggregateBuildings(bldgRows));
+        setAreaResults(aggregateAreas(areaRows));
+
+        // Combine owners with any phone matches
+        const combinedOwners = Array.isArray(ownerRows) ? [...ownerRows] : [];
+        if (Array.isArray(phoneRows) && phoneRows.length > 0) {
+          const existingIds = new Set(combinedOwners.map(o => o.owner_id || o.lead_id));
+          phoneRows.forEach(p => {
+            const id = p.owner_id || p.lead_id;
+            if (!existingIds.has(id)) {
+              existingIds.add(id);
+              combinedOwners.push(p);
+            }
+          });
+        }
+        setOwnerResults(combinedOwners);
+        setIdResults(Array.isArray(idRows) ? idRows : []);
       }
     } catch (err) {
       console.error('OmniSearch error:', err);
@@ -414,8 +385,8 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         Authorization: `Bearer ${SUPABASE_API_KEY}` 
       };
       const cleanTerm = (building.rawName || building.name).replace(/'/g, "''");
-      const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(cleanTerm)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,bitrix_id,bitrix_status&limit=250`;
-      const res = await axios.get(endpoint, { headers });
+      const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(cleanTerm)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,bitrix_id,bitrix_status&limit=500`;
+      const res = await axios.get(endpoint, { headers, timeout: 9000 });
       
       if (res.data && res.data.length > 0) {
         const mapped = res.data.map(r => ({
@@ -478,8 +449,8 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         Authorization: `Bearer ${SUPABASE_API_KEY}` 
       };
       const cleanArea = (area.rawName || area.name).replace(/'/g, "''");
-      const endpoint = `${SUPABASE_BASE_URL}/owners_data?master_area=ilike.*${encodeURIComponent(cleanArea)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,property_category,bitrix_id&limit=250`;
-      const res = await axios.get(endpoint, { headers });
+      const endpoint = `${SUPABASE_BASE_URL}/owners_data?master_area=ilike.*${encodeURIComponent(cleanArea)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,property_category,bitrix_id&limit=500`;
+      const res = await axios.get(endpoint, { headers, timeout: 9000 });
       
       if (res.data && res.data.length > 0) {
         // Aggregate buildings in this area

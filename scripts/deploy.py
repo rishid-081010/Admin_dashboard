@@ -42,9 +42,15 @@ for root, _, files in os.walk(dist_dir):
         uploads_list.append((local_path, f"public/dashboard/{rel_path}"))
         # Deploy to dashboard/{rel_path} to support direct /dashboard/ requests
         uploads_list.append((local_path, f"dashboard/{rel_path}"))
-        if rel_path == '.htaccess':
-            uploads_list.append((local_path, "public/.htaccess"))
-            uploads_list.append((local_path, ".htaccess"))
+
+# Deploy root domain entrypoint files to automatically redirect admin.asquared.ae -> /dashboard/
+root_dir = 'root_files'
+if os.path.exists(root_dir):
+    for f in os.listdir(root_dir):
+        lpath = os.path.join(root_dir, f)
+        if os.path.isfile(lpath):
+            uploads_list.append((lpath, f))
+            uploads_list.append((lpath, f"public/{f}"))
 
 def upload_file(local_path, remote_rel_path):
     size = os.path.getsize(local_path)
