@@ -248,11 +248,11 @@ if (!empty($toolCalls)) {
             $url = $supabaseUrl . "/owners_data?select=id,lead_id,full_name,building_name,unit_number,master_area,phone_normalized,email,verified_purchase_price,property_category,bitrix_id,assigned_agent&limit={$limit}";
             
             if (!empty($fnArgs['area'])) {
-                $area = urlencode($fnArgs['area']);
+                $area = rawurlencode($fnArgs['area']);
                 $url .= "&master_area=ilike.*{$area}*";
             }
             if (!empty($fnArgs['building'])) {
-                $bld = urlencode($fnArgs['building']);
+                $bld = rawurlencode($fnArgs['building']);
                 $url .= "&building_name=ilike.*{$bld}*";
             }
             if (isset($fnArgs['bedrooms'])) {
@@ -260,7 +260,7 @@ if (!empty($toolCalls)) {
                 $url .= "&bedrooms=eq.{$beds}";
             }
             if (!empty($fnArgs['query'])) {
-                $q = urlencode($fnArgs['query']);
+                $q = rawurlencode($fnArgs['query']);
                 $url .= "&or=(full_name.ilike.*{$q}*,phone_normalized.ilike.*{$q}*,building_name.ilike.*{$q}*)";
             }
             if (isset($fnArgs['has_phone']) && $fnArgs['has_phone']) {
