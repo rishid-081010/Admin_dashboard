@@ -1,15 +1,15 @@
 {
   "success": true,
-  "syncedAt": "2026-10-13T04:56:23.093Z",
+  "syncedAt": "2026-10-13T05:10:01.491Z",
   "summary": {
     "totalWorkflows": 99,
     "activeWorkflows": 30,
     "healthyWorkflows": 30,
     "errorWorkflows": 0,
     "totalExecutionsToday": 100,
-    "totalSuccessToday": 100,
+    "totalSuccessToday": 99,
     "totalErrorsToday": 0,
-    "avgRuntimeSec": 1.73
+    "avgRuntimeSec": 7.13
   },
   "workflows": [
     {
@@ -17,53 +17,53 @@
       "name": "NEW | To master_leads",
       "active": true,
       "status": "healthy",
-      "executionsToday": 22,
-      "successToday": 22,
+      "executionsToday": 20,
+      "successToday": 20,
       "errorToday": 0,
-      "avgDurationSec": 0.18,
-      "lastExecutedAt": "2026-10-13T04:54:53.011Z",
+      "avgDurationSec": 0.19,
+      "lastExecutedAt": "2026-10-13T05:08:53.013Z",
       "updatedAt": "2026-09-29T08:04:58.954Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/RjoR4RSnyHp4CDCV",
       "recentLogs": [
         {
-          "id": "270566",
+          "id": "270610",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:54:53.011Z",
-          "stoppedAt": "2026-10-13T04:54:53.193Z",
-          "durationSec": 0.18
+          "startedAt": "2026-10-13T05:08:53.013Z",
+          "stoppedAt": "2026-10-13T05:08:53.229Z",
+          "durationSec": 0.22
         },
         {
-          "id": "270563",
+          "id": "270605",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:52:53.012Z",
-          "stoppedAt": "2026-10-13T04:52:53.193Z",
-          "durationSec": 0.18
+          "startedAt": "2026-10-13T05:06:53.014Z",
+          "stoppedAt": "2026-10-13T05:06:53.235Z",
+          "durationSec": 0.22
         },
         {
-          "id": "270560",
+          "id": "270600",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:50:53.012Z",
-          "stoppedAt": "2026-10-13T04:50:53.192Z",
-          "durationSec": 0.18
+          "startedAt": "2026-10-13T05:04:53.022Z",
+          "stoppedAt": "2026-10-13T05:04:53.215Z",
+          "durationSec": 0.19
         },
         {
-          "id": "270553",
+          "id": "270596",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:48:53.016Z",
-          "stoppedAt": "2026-10-13T04:48:53.200Z",
-          "durationSec": 0.18
+          "startedAt": "2026-10-13T05:02:53.019Z",
+          "stoppedAt": "2026-10-13T05:02:53.218Z",
+          "durationSec": 0.2
         },
         {
-          "id": "270549",
+          "id": "270593",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:46:53.014Z",
-          "stoppedAt": "2026-10-13T04:46:53.194Z",
-          "durationSec": 0.18
+          "startedAt": "2026-10-13T05:00:53.011Z",
+          "stoppedAt": "2026-10-13T05:00:53.335Z",
+          "durationSec": 0.32
         }
       ]
     },
@@ -72,53 +72,53 @@
       "name": "P0 - Agent Comment CRM Updates V3",
       "active": true,
       "status": "healthy",
-      "executionsToday": 22,
-      "successToday": 22,
+      "executionsToday": 20,
+      "successToday": 20,
       "errorToday": 0,
-      "avgDurationSec": 1.73,
-      "lastExecutedAt": "2026-10-13T04:54:57.011Z",
+      "avgDurationSec": 2.26,
+      "lastExecutedAt": "2026-10-13T05:08:57.013Z",
       "updatedAt": "2026-10-10T22:25:22.016Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/E4uIwGuaMh4Q76a4",
       "recentLogs": [
         {
-          "id": "270567",
+          "id": "270611",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:54:57.011Z",
-          "stoppedAt": "2026-10-13T04:54:58.903Z",
-          "durationSec": 1.89
+          "startedAt": "2026-10-13T05:08:57.013Z",
+          "stoppedAt": "2026-10-13T05:09:00.523Z",
+          "durationSec": 3.51
         },
         {
-          "id": "270564",
+          "id": "270606",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:52:57.011Z",
-          "stoppedAt": "2026-10-13T04:52:58.916Z",
-          "durationSec": 1.91
+          "startedAt": "2026-10-13T05:06:57.012Z",
+          "stoppedAt": "2026-10-13T05:07:00.508Z",
+          "durationSec": 3.5
         },
         {
-          "id": "270561",
+          "id": "270601",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:50:57.025Z",
-          "stoppedAt": "2026-10-13T04:50:58.923Z",
-          "durationSec": 1.9
+          "startedAt": "2026-10-13T05:04:57.011Z",
+          "stoppedAt": "2026-10-13T05:05:01.509Z",
+          "durationSec": 4.5
         },
         {
-          "id": "270554",
+          "id": "270597",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:48:57.017Z",
-          "stoppedAt": "2026-10-13T04:48:58.088Z",
-          "durationSec": 1.07
+          "startedAt": "2026-10-13T05:02:57.021Z",
+          "stoppedAt": "2026-10-13T05:03:01.617Z",
+          "durationSec": 4.6
         },
         {
-          "id": "270550",
+          "id": "270594",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:46:57.011Z",
-          "stoppedAt": "2026-10-13T04:46:58.064Z",
-          "durationSec": 1.05
+          "startedAt": "2026-10-13T05:00:57.011Z",
+          "stoppedAt": "2026-10-13T05:01:01.670Z",
+          "durationSec": 4.66
         }
       ]
     },
@@ -127,53 +127,53 @@
       "name": "P0 - Lead Card Autofill + Comment Routing",
       "active": true,
       "status": "healthy",
-      "executionsToday": 21,
-      "successToday": 21,
+      "executionsToday": 20,
+      "successToday": 20,
       "errorToday": 0,
-      "avgDurationSec": 3.72,
-      "lastExecutedAt": "2026-10-13T04:54:48.013Z",
+      "avgDurationSec": 4.32,
+      "lastExecutedAt": "2026-10-13T05:08:48.014Z",
       "updatedAt": "2026-10-10T22:25:33.786Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/AsqCommentStage1",
       "recentLogs": [
         {
-          "id": "270565",
+          "id": "270609",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:54:48.013Z",
-          "stoppedAt": "2026-10-13T04:54:51.401Z",
-          "durationSec": 3.39
+          "startedAt": "2026-10-13T05:08:48.014Z",
+          "stoppedAt": "2026-10-13T05:08:54.330Z",
+          "durationSec": 6.32
         },
         {
-          "id": "270562",
+          "id": "270604",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:52:48.011Z",
-          "stoppedAt": "2026-10-13T04:52:51.473Z",
-          "durationSec": 3.46
+          "startedAt": "2026-10-13T05:06:48.011Z",
+          "stoppedAt": "2026-10-13T05:06:54.284Z",
+          "durationSec": 6.27
         },
         {
-          "id": "270559",
+          "id": "270599",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:50:48.011Z",
-          "stoppedAt": "2026-10-13T04:50:51.398Z",
-          "durationSec": 3.39
+          "startedAt": "2026-10-13T05:04:48.018Z",
+          "stoppedAt": "2026-10-13T05:04:54.403Z",
+          "durationSec": 6.38
         },
         {
-          "id": "270552",
+          "id": "270595",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:48:48.021Z",
-          "stoppedAt": "2026-10-13T04:48:51.427Z",
-          "durationSec": 3.41
+          "startedAt": "2026-10-13T05:02:48.068Z",
+          "stoppedAt": "2026-10-13T05:02:55.343Z",
+          "durationSec": 7.28
         },
         {
-          "id": "270548",
+          "id": "270592",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:46:48.015Z",
-          "stoppedAt": "2026-10-13T04:46:51.406Z",
-          "durationSec": 3.39
+          "startedAt": "2026-10-13T05:00:48.011Z",
+          "stoppedAt": "2026-10-13T05:00:54.661Z",
+          "durationSec": 6.65
         }
       ]
     },
@@ -182,14 +182,30 @@
       "name": "Call Scheduler",
       "active": true,
       "status": "healthy",
-      "executionsToday": 9,
-      "successToday": 9,
+      "executionsToday": 7,
+      "successToday": 6,
       "errorToday": 0,
-      "avgDurationSec": 0.48,
-      "lastExecutedAt": "2026-10-13T04:55:11.014Z",
+      "avgDurationSec": 44.6,
+      "lastExecutedAt": "2026-10-13T05:05:11.019Z",
       "updatedAt": "2026-10-06T05:17:14.329Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/RPCok7VJoYydBMPh",
       "recentLogs": [
+        {
+          "id": "270603",
+          "status": "waiting",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:05:11.019Z",
+          "stoppedAt": "2026-10-13T05:05:41.833Z",
+          "durationSec": 30.81
+        },
+        {
+          "id": "270585",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:11.038Z",
+          "stoppedAt": "2026-10-13T05:04:49.884Z",
+          "durationSec": 278.85
+        },
         {
           "id": "270569",
           "status": "success",
@@ -213,69 +229,108 @@
           "startedAt": "2026-10-13T04:45:11.013Z",
           "stoppedAt": "2026-10-13T04:45:11.539Z",
           "durationSec": 0.53
-        },
-        {
-          "id": "270534",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:40:11.014Z",
-          "stoppedAt": "2026-10-13T04:40:11.533Z",
-          "durationSec": 0.52
-        },
-        {
-          "id": "270523",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:35:11.014Z",
-          "stoppedAt": "2026-10-13T04:35:11.413Z",
-          "durationSec": 0.4
         }
       ]
     },
     {
-      "id": "wk3nfct379f8tecV",
-      "name": "ASQ - Inactive Owner Guard - Melanie Fallback",
+      "id": "WE6lD7hXpYL4MRkB",
+      "name": "INTRO",
+      "active": true,
+      "status": "healthy",
+      "executionsToday": 5,
+      "successToday": 5,
+      "errorToday": 0,
+      "avgDurationSec": 12.93,
+      "lastExecutedAt": "2026-10-13T05:00:46.042Z",
+      "updatedAt": "2026-10-12T06:26:12.624Z",
+      "n8nUrl": "https://n8n.asquared.ae/workflow/WE6lD7hXpYL4MRkB",
+      "recentLogs": [
+        {
+          "id": "270590",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:46.042Z",
+          "stoppedAt": "2026-10-13T05:00:46.437Z",
+          "durationSec": 0.4
+        },
+        {
+          "id": "270588",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:36.053Z",
+          "stoppedAt": "2026-10-13T05:00:36.513Z",
+          "durationSec": 0.46
+        },
+        {
+          "id": "270587",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:26.456Z",
+          "stoppedAt": "2026-10-13T05:00:26.989Z",
+          "durationSec": 0.53
+        },
+        {
+          "id": "270586",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:26.439Z",
+          "stoppedAt": "2026-10-13T05:00:26.911Z",
+          "durationSec": 0.47
+        },
+        {
+          "id": "270577",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:00.116Z",
+          "stoppedAt": "2026-10-13T05:01:02.914Z",
+          "durationSec": 62.8
+        }
+      ]
+    },
+    {
+      "id": "B2hVdT1mPogdWaSU",
+      "name": "Owner Voice Reachout",
       "active": true,
       "status": "healthy",
       "executionsToday": 4,
       "successToday": 4,
       "errorToday": 0,
-      "avgDurationSec": 0.65,
-      "lastExecutedAt": "2026-10-13T04:50:45.011Z",
-      "updatedAt": "2026-10-12T15:14:26.569Z",
-      "n8nUrl": "https://n8n.asquared.ae/workflow/wk3nfct379f8tecV",
+      "avgDurationSec": 23.28,
+      "lastExecutedAt": "2026-10-13T05:07:00.093Z",
+      "updatedAt": "2026-10-11T05:25:29.364Z",
+      "n8nUrl": "https://n8n.asquared.ae/workflow/B2hVdT1mPogdWaSU",
       "recentLogs": [
         {
-          "id": "270558",
+          "id": "270608",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:50:45.011Z",
-          "stoppedAt": "2026-10-13T04:50:45.663Z",
-          "durationSec": 0.65
+          "startedAt": "2026-10-13T05:07:00.093Z",
+          "stoppedAt": "2026-10-13T05:07:00.548Z",
+          "durationSec": 0.46
         },
         {
-          "id": "270535",
+          "id": "270607",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:40:45.015Z",
-          "stoppedAt": "2026-10-13T04:40:45.659Z",
-          "durationSec": 0.64
+          "startedAt": "2026-10-13T05:07:00.085Z",
+          "stoppedAt": "2026-10-13T05:07:00.580Z",
+          "durationSec": 0.49
         },
         {
-          "id": "270511",
+          "id": "270579",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:30:45.012Z",
-          "stoppedAt": "2026-10-13T04:30:45.655Z",
-          "durationSec": 0.64
+          "startedAt": "2026-10-13T05:00:00.130Z",
+          "stoppedAt": "2026-10-13T05:00:03.120Z",
+          "durationSec": 2.99
         },
         {
-          "id": "270487",
+          "id": "270578",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:20:45.011Z",
-          "stoppedAt": "2026-10-13T04:20:45.659Z",
-          "durationSec": 0.65
+          "startedAt": "2026-10-13T05:00:00.123Z",
+          "stoppedAt": "2026-10-13T05:01:29.315Z",
+          "durationSec": 89.19
         }
       ]
     },
@@ -287,11 +342,27 @@
       "executionsToday": 4,
       "successToday": 4,
       "errorToday": 0,
-      "avgDurationSec": 0.54,
-      "lastExecutedAt": "2026-10-13T04:50:00.057Z",
+      "avgDurationSec": 0.56,
+      "lastExecutedAt": "2026-10-13T05:10:00.100Z",
       "updatedAt": "2026-10-11T19:07:25.993Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/IRPoVUaagkNAPlNJ",
       "recentLogs": [
+        {
+          "id": "270612",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:10:00.100Z",
+          "stoppedAt": "2026-10-13T05:10:00.628Z",
+          "durationSec": 0.53
+        },
+        {
+          "id": "270580",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:00.135Z",
+          "stoppedAt": "2026-10-13T05:00:00.843Z",
+          "durationSec": 0.71
+        },
         {
           "id": "270555",
           "status": "success",
@@ -307,22 +378,45 @@
           "startedAt": "2026-10-13T04:40:00.054Z",
           "stoppedAt": "2026-10-13T04:40:00.607Z",
           "durationSec": 0.55
-        },
+        }
+      ]
+    },
+    {
+      "id": "wk3nfct379f8tecV",
+      "name": "ASQ - Inactive Owner Guard - Melanie Fallback",
+      "active": true,
+      "status": "healthy",
+      "executionsToday": 3,
+      "successToday": 3,
+      "errorToday": 0,
+      "avgDurationSec": 0.67,
+      "lastExecutedAt": "2026-10-13T05:00:45.018Z",
+      "updatedAt": "2026-10-12T15:14:26.569Z",
+      "n8nUrl": "https://n8n.asquared.ae/workflow/wk3nfct379f8tecV",
+      "recentLogs": [
         {
-          "id": "270507",
+          "id": "270589",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:30:00.110Z",
-          "stoppedAt": "2026-10-13T04:30:00.743Z",
-          "durationSec": 0.63
+          "startedAt": "2026-10-13T05:00:45.018Z",
+          "stoppedAt": "2026-10-13T05:00:45.741Z",
+          "durationSec": 0.72
         },
         {
-          "id": "270483",
+          "id": "270558",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:20:00.068Z",
-          "stoppedAt": "2026-10-13T04:20:00.582Z",
-          "durationSec": 0.51
+          "startedAt": "2026-10-13T04:50:45.011Z",
+          "stoppedAt": "2026-10-13T04:50:45.663Z",
+          "durationSec": 0.65
+        },
+        {
+          "id": "270535",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T04:40:45.015Z",
+          "stoppedAt": "2026-10-13T04:40:45.659Z",
+          "durationSec": 0.64
         }
       ]
     },
@@ -331,14 +425,22 @@
       "name": "P1 - Bitrix Lead Scoring",
       "active": true,
       "status": "healthy",
-      "executionsToday": 4,
-      "successToday": 4,
+      "executionsToday": 3,
+      "successToday": 3,
       "errorToday": 0,
-      "avgDurationSec": 3.99,
-      "lastExecutedAt": "2026-10-13T04:50:10.019Z",
+      "avgDurationSec": 8.14,
+      "lastExecutedAt": "2026-10-13T05:00:10.009Z",
       "updatedAt": "2026-10-12T19:45:22.612Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/xso9YTjUXiF0CEgC",
       "recentLogs": [
+        {
+          "id": "270583",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:10.009Z",
+          "stoppedAt": "2026-10-13T05:00:26.710Z",
+          "durationSec": 16.7
+        },
         {
           "id": "270556",
           "status": "success",
@@ -354,22 +456,37 @@
           "startedAt": "2026-10-13T04:40:10.012Z",
           "stoppedAt": "2026-10-13T04:40:13.610Z",
           "durationSec": 3.6
-        },
+        }
+      ]
+    },
+    {
+      "id": "jpfL1YiaNA4gw6Cl",
+      "name": "Call reply Trigger",
+      "active": true,
+      "status": "healthy",
+      "executionsToday": 2,
+      "successToday": 2,
+      "errorToday": 0,
+      "avgDurationSec": 0.78,
+      "lastExecutedAt": "2026-10-13T05:00:09.079Z",
+      "updatedAt": "2026-09-20T15:13:20.938Z",
+      "n8nUrl": "https://n8n.asquared.ae/workflow/jpfL1YiaNA4gw6Cl",
+      "recentLogs": [
         {
-          "id": "270509",
+          "id": "270582",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:30:10.013Z",
-          "stoppedAt": "2026-10-13T04:30:14.126Z",
-          "durationSec": 4.11
+          "startedAt": "2026-10-13T05:00:09.079Z",
+          "stoppedAt": "2026-10-13T05:00:10.103Z",
+          "durationSec": 1.02
         },
         {
-          "id": "270485",
+          "id": "270532",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:20:10.011Z",
-          "stoppedAt": "2026-10-13T04:20:14.131Z",
-          "durationSec": 4.12
+          "startedAt": "2026-10-13T04:40:09.020Z",
+          "stoppedAt": "2026-10-13T04:40:09.563Z",
+          "durationSec": 0.54
         }
       ]
     },
@@ -378,14 +495,22 @@
       "name": "owners data sentiment - Agent 4",
       "active": true,
       "status": "healthy",
-      "executionsToday": 3,
-      "successToday": 3,
+      "executionsToday": 2,
+      "successToday": 2,
       "errorToday": 0,
-      "avgDurationSec": 0.58,
-      "lastExecutedAt": "2026-10-13T04:47:00.080Z",
+      "avgDurationSec": 0.56,
+      "lastExecutedAt": "2026-10-13T05:04:00.092Z",
       "updatedAt": "2026-10-12T12:28:27.504Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/AHV7Ldx9kLB0LGtc",
       "recentLogs": [
+        {
+          "id": "270598",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:04:00.092Z",
+          "stoppedAt": "2026-10-13T05:04:00.672Z",
+          "durationSec": 0.58
+        },
         {
           "id": "270551",
           "status": "success",
@@ -393,22 +518,6 @@
           "startedAt": "2026-10-13T04:47:00.080Z",
           "stoppedAt": "2026-10-13T04:47:00.617Z",
           "durationSec": 0.54
-        },
-        {
-          "id": "270508",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:30:00.120Z",
-          "stoppedAt": "2026-10-13T04:30:00.779Z",
-          "durationSec": 0.66
-        },
-        {
-          "id": "270491",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:21:00.060Z",
-          "stoppedAt": "2026-10-13T04:21:00.611Z",
-          "durationSec": 0.55
         }
       ]
     },
@@ -417,10 +526,10 @@
       "name": "owners data sentiment - asquaredrealestate2026@gmail.com (followup 3/5 day)",
       "active": true,
       "status": "healthy",
-      "executionsToday": 3,
-      "successToday": 3,
+      "executionsToday": 2,
+      "successToday": 2,
       "errorToday": 0,
-      "avgDurationSec": 1.51,
+      "avgDurationSec": 1.99,
       "lastExecutedAt": "2026-10-13T04:55:00.059Z",
       "updatedAt": "2026-10-12T12:24:55.302Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/MJFdpNUScpXKxdaZ",
@@ -440,84 +549,6 @@
           "startedAt": "2026-10-13T04:38:00.107Z",
           "stoppedAt": "2026-10-13T04:38:00.781Z",
           "durationSec": 0.67
-        },
-        {
-          "id": "270505",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:29:00.075Z",
-          "stoppedAt": "2026-10-13T04:29:00.619Z",
-          "durationSec": 0.54
-        }
-      ]
-    },
-    {
-      "id": "4eRAJz9trbCO2Lch",
-      "name": "P0 - Lead SLA and High Value Monitor",
-      "active": true,
-      "status": "healthy",
-      "executionsToday": 3,
-      "successToday": 3,
-      "errorToday": 0,
-      "avgDurationSec": 0.26,
-      "lastExecutedAt": "2026-10-13T04:45:47.013Z",
-      "updatedAt": "2026-09-20T15:15:07.339Z",
-      "n8nUrl": "https://n8n.asquared.ae/workflow/4eRAJz9trbCO2Lch",
-      "recentLogs": [
-        {
-          "id": "270547",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:45:47.013Z",
-          "stoppedAt": "2026-10-13T04:45:47.268Z",
-          "durationSec": 0.26
-        },
-        {
-          "id": "270512",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:30:47.010Z",
-          "stoppedAt": "2026-10-13T04:30:47.269Z",
-          "durationSec": 0.26
-        },
-        {
-          "id": "270475",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:15:47.011Z",
-          "stoppedAt": "2026-10-13T04:15:47.266Z",
-          "durationSec": 0.26
-        }
-      ]
-    },
-    {
-      "id": "jpfL1YiaNA4gw6Cl",
-      "name": "Call reply Trigger",
-      "active": true,
-      "status": "healthy",
-      "executionsToday": 2,
-      "successToday": 2,
-      "errorToday": 0,
-      "avgDurationSec": 0.54,
-      "lastExecutedAt": "2026-10-13T04:40:09.020Z",
-      "updatedAt": "2026-09-20T15:13:20.938Z",
-      "n8nUrl": "https://n8n.asquared.ae/workflow/jpfL1YiaNA4gw6Cl",
-      "recentLogs": [
-        {
-          "id": "270532",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:40:09.020Z",
-          "stoppedAt": "2026-10-13T04:40:09.563Z",
-          "durationSec": 0.54
-        },
-        {
-          "id": "270484",
-          "status": "success",
-          "mode": "trigger",
-          "startedAt": "2026-10-13T04:20:09.018Z",
-          "stoppedAt": "2026-10-13T04:20:09.551Z",
-          "durationSec": 0.53
         }
       ]
     },
@@ -529,11 +560,19 @@
       "executionsToday": 2,
       "successToday": 2,
       "errorToday": 0,
-      "avgDurationSec": 0.83,
-      "lastExecutedAt": "2026-10-13T04:42:00.092Z",
+      "avgDurationSec": 0.56,
+      "lastExecutedAt": "2026-10-13T04:59:00.058Z",
       "updatedAt": "2026-10-12T12:26:49.215Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/ITmCC5W2lPY4ZUQw",
       "recentLogs": [
+        {
+          "id": "270576",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T04:59:00.058Z",
+          "stoppedAt": "2026-10-13T04:59:00.629Z",
+          "durationSec": 0.57
+        },
         {
           "id": "270539",
           "status": "success",
@@ -541,14 +580,37 @@
           "startedAt": "2026-10-13T04:42:00.092Z",
           "stoppedAt": "2026-10-13T04:42:00.651Z",
           "durationSec": 0.56
-        },
+        }
+      ]
+    },
+    {
+      "id": "4eRAJz9trbCO2Lch",
+      "name": "P0 - Lead SLA and High Value Monitor",
+      "active": true,
+      "status": "healthy",
+      "executionsToday": 2,
+      "successToday": 2,
+      "errorToday": 0,
+      "avgDurationSec": 0.3,
+      "lastExecutedAt": "2026-10-13T05:00:47.012Z",
+      "updatedAt": "2026-09-20T15:15:07.339Z",
+      "n8nUrl": "https://n8n.asquared.ae/workflow/4eRAJz9trbCO2Lch",
+      "recentLogs": [
         {
-          "id": "270476",
+          "id": "270591",
           "status": "success",
           "mode": "trigger",
-          "startedAt": "2026-10-13T04:16:00.062Z",
-          "stoppedAt": "2026-10-13T04:16:01.171Z",
-          "durationSec": 1.11
+          "startedAt": "2026-10-13T05:00:47.012Z",
+          "stoppedAt": "2026-10-13T05:00:47.361Z",
+          "durationSec": 0.35
+        },
+        {
+          "id": "270547",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T04:45:47.013Z",
+          "stoppedAt": "2026-10-13T04:45:47.268Z",
+          "durationSec": 0.26
         }
       ]
     },
@@ -557,14 +619,22 @@
       "name": "Sentiment Sweeper - recovers missed calls (all 3 VAPI accounts)",
       "active": true,
       "status": "healthy",
-      "executionsToday": 1,
-      "successToday": 1,
+      "executionsToday": 2,
+      "successToday": 2,
       "errorToday": 0,
-      "avgDurationSec": 17.61,
-      "lastExecutedAt": "2026-10-13T04:35:00.054Z",
+      "avgDurationSec": 17.88,
+      "lastExecutedAt": "2026-10-13T05:05:00.071Z",
       "updatedAt": "2026-10-07T17:58:49.368Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/T9n5vyrRxcGvZzgr",
       "recentLogs": [
+        {
+          "id": "270602",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:05:00.071Z",
+          "stoppedAt": "2026-10-13T05:05:18.215Z",
+          "durationSec": 18.14
+        },
         {
           "id": "270522",
           "status": "success",
@@ -572,6 +642,52 @@
           "startedAt": "2026-10-13T04:35:00.054Z",
           "stoppedAt": "2026-10-13T04:35:17.666Z",
           "durationSec": 17.61
+        }
+      ]
+    },
+    {
+      "id": "0QRmZEdyiThf7WlB",
+      "name": "P0 - Active Lead Activity Guard",
+      "active": true,
+      "status": "healthy",
+      "executionsToday": 1,
+      "successToday": 1,
+      "errorToday": 0,
+      "avgDurationSec": 31.44,
+      "lastExecutedAt": "2026-10-13T05:00:11.031Z",
+      "updatedAt": "2026-10-10T22:24:54.334Z",
+      "n8nUrl": "https://n8n.asquared.ae/workflow/0QRmZEdyiThf7WlB",
+      "recentLogs": [
+        {
+          "id": "270584",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:11.031Z",
+          "stoppedAt": "2026-10-13T05:00:42.475Z",
+          "durationSec": 31.44
+        }
+      ]
+    },
+    {
+      "id": "O89wCzFEOCbc0REX",
+      "name": "WA Reply trigger",
+      "active": true,
+      "status": "healthy",
+      "executionsToday": 1,
+      "successToday": 1,
+      "errorToday": 0,
+      "avgDurationSec": 2.6,
+      "lastExecutedAt": "2026-10-13T05:00:03.436Z",
+      "updatedAt": "2026-09-20T15:13:33.551Z",
+      "n8nUrl": "https://n8n.asquared.ae/workflow/O89wCzFEOCbc0REX",
+      "recentLogs": [
+        {
+          "id": "270581",
+          "status": "success",
+          "mode": "trigger",
+          "startedAt": "2026-10-13T05:00:03.436Z",
+          "stoppedAt": "2026-10-13T05:00:06.040Z",
+          "durationSec": 2.6
         }
       ]
     },
@@ -674,20 +790,6 @@
       "recentLogs": []
     },
     {
-      "id": "WE6lD7hXpYL4MRkB",
-      "name": "INTRO",
-      "active": true,
-      "status": "healthy",
-      "executionsToday": 0,
-      "successToday": 0,
-      "errorToday": 0,
-      "avgDurationSec": null,
-      "lastExecutedAt": null,
-      "updatedAt": "2026-10-12T06:26:12.624Z",
-      "n8nUrl": "https://n8n.asquared.ae/workflow/WE6lD7hXpYL4MRkB",
-      "recentLogs": []
-    },
-    {
       "id": "NgDdPbD7SLnRxlrf",
       "name": "NEW | Dashboard->Import_leads",
       "active": true,
@@ -702,20 +804,6 @@
       "recentLogs": []
     },
     {
-      "id": "B2hVdT1mPogdWaSU",
-      "name": "Owner Voice Reachout",
-      "active": true,
-      "status": "healthy",
-      "executionsToday": 0,
-      "successToday": 0,
-      "errorToday": 0,
-      "avgDurationSec": null,
-      "lastExecutedAt": null,
-      "updatedAt": "2026-10-11T05:25:29.364Z",
-      "n8nUrl": "https://n8n.asquared.ae/workflow/B2hVdT1mPogdWaSU",
-      "recentLogs": []
-    },
-    {
       "id": "4GoWriRIRPKLO5F6",
       "name": "owners data sentiment - akarsharora@gmail.com",
       "active": true,
@@ -727,20 +815,6 @@
       "lastExecutedAt": null,
       "updatedAt": "2026-10-12T12:21:49.307Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/4GoWriRIRPKLO5F6",
-      "recentLogs": []
-    },
-    {
-      "id": "0QRmZEdyiThf7WlB",
-      "name": "P0 - Active Lead Activity Guard",
-      "active": true,
-      "status": "healthy",
-      "executionsToday": 0,
-      "successToday": 0,
-      "errorToday": 0,
-      "avgDurationSec": null,
-      "lastExecutedAt": null,
-      "updatedAt": "2026-10-10T22:24:54.334Z",
-      "n8nUrl": "https://n8n.asquared.ae/workflow/0QRmZEdyiThf7WlB",
       "recentLogs": []
     },
     {
@@ -797,20 +871,6 @@
       "lastExecutedAt": null,
       "updatedAt": "2026-09-28T18:12:10.381Z",
       "n8nUrl": "https://n8n.asquared.ae/workflow/EEEjzk2JWJgTfU4R",
-      "recentLogs": []
-    },
-    {
-      "id": "O89wCzFEOCbc0REX",
-      "name": "WA Reply trigger",
-      "active": true,
-      "status": "healthy",
-      "executionsToday": 0,
-      "successToday": 0,
-      "errorToday": 0,
-      "avgDurationSec": null,
-      "lastExecutedAt": null,
-      "updatedAt": "2026-09-20T15:13:33.551Z",
-      "n8nUrl": "https://n8n.asquared.ae/workflow/O89wCzFEOCbc0REX",
       "recentLogs": []
     },
     {

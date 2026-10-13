@@ -143,8 +143,10 @@ foreach ($executions as $ex) {
             'successToday' => 0,
             'errorToday' => 0,
             'runningToday' => 0,
+            'durations' => [],
             'latestStatus' => $status,
-            'lastExecutedAt' => isset($ex['startedAt']) ? $ex['startedAt'] : $createdAt
+            'lastExecutedAt' => isset($ex['startedAt']) ? $ex['startedAt'] : $createdAt,
+            'recentLogs' => []
         ];
     }
 
@@ -160,6 +162,15 @@ foreach ($executions as $ex) {
         } elseif ($status === 'running') {
             $statsByWorkflow[$wid]['runningToday']++;
         }
+    }
+
+    if (count($statsByWorkflow[$wid]['recentLogs']) < 5) {
+        $statsByWorkflow[$wid]['recentLogs'][] = [
+            'id' => isset($ex['id']) ? $ex['id'] : '',
+            'status' => $status,
+            'mode' => isset($ex['mode']) ? $ex['mode'] : 'trigger',
+            'startedAt' => isset($ex['startedAt']) ? $ex['startedAt'] : $createdAt
+        ];
     }
 }
 
@@ -180,7 +191,8 @@ foreach ($workflows as $w) {
         'errorToday' => 0,
         'runningToday' => 0,
         'latestStatus' => 'idle',
-        'lastExecutedAt' => null
+        'lastExecutedAt' => null,
+        'recentLogs' => []
     ];
 
     // Determine health status: 'healthy', 'running', 'error', 'idle', 'paused'
@@ -200,6 +212,10 @@ foreach ($workflows as $w) {
         $healthStatus = 'paused';
     }
 
+    $avgDuration = (!empty($st['durations']))
+        ? round(array_sum($st['durations']) / count($st['durations']), 2)
+        : null;
+
     $formattedWorkflows[] = [
         'id' => $wid,
         'name' => $w['name'],
@@ -208,9 +224,11 @@ foreach ($workflows as $w) {
         'executionsToday' => $st['executionsToday'],
         'successToday' => $st['successToday'],
         'errorToday' => $st['errorToday'],
+        'avgDurationSec' => $avgDuration,
         'lastExecutedAt' => $st['lastExecutedAt'],
         'updatedAt' => isset($w['updatedAt']) ? $w['updatedAt'] : null,
-        'n8nUrl' => $n8nUrl . '/workflow/' . $wid
+        'n8nUrl' => $n8nUrl . '/workflow/' . $wid,
+        'recentLogs' => $st['recentLogs']
     ];
 }
 

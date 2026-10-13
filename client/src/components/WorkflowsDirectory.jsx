@@ -160,7 +160,9 @@ export default function WorkflowsDirectory() {
     if (diffSec < 60) return 'Just now';
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
     if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-    return `${Math.floor(diffSec / 86400)}d ago`;
+    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+    if (diffSec < 2592000) return `${Math.floor(diffSec / 604800)}w ago`;
+    return `${Math.floor(diffSec / 2592000)}mo ago`;
   };
 
   return (
@@ -209,10 +211,22 @@ export default function WorkflowsDirectory() {
           </button>
 
           <a
+            href="https://n8n.asquared.ae/executions"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0c1829] hover:bg-[#132238] text-slate-200 hover:text-white border border-[#233549] text-xs font-semibold transition-all shadow-sm cursor-pointer"
+            title="Open live executions history in n8n"
+          >
+            <span>Live Executions</span>
+            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+          </a>
+
+          <a
             href="https://n8n.asquared.ae"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0c1829] hover:bg-[#132238] text-slate-200 hover:text-white border border-[#233549] text-xs font-semibold transition-all shadow-sm cursor-pointer"
+            title="Open n8n Workflows Console"
           >
             <span>n8n Console</span>
             <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
@@ -337,13 +351,13 @@ export default function WorkflowsDirectory() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#233549] bg-[#071322] text-[11px] uppercase font-mono text-slate-400 tracking-wider">
-                <th className="py-3.5 px-4 w-[8%] align-middle">State</th>
-                <th className="py-3.5 px-5 w-[36%] align-middle">Workflow Name</th>
-                <th className="py-3.5 px-4 w-[16%] align-middle">Executions Today</th>
-                <th className="py-3.5 px-4 w-[12%] align-middle">Avg Latency</th>
-                <th className="py-3.5 px-4 w-[12%] align-middle">Status</th>
-                <th className="py-3.5 px-4 w-[14%] align-middle">Last Triggered</th>
-                <th className="py-3.5 px-4 w-[10%] text-right align-middle">Action</th>
+                <th className="py-3.5 px-4 w-[7%] align-middle">State</th>
+                <th className="py-3.5 px-5 w-[33%] align-middle">Workflow Name</th>
+                <th className="py-3.5 px-4 w-[15%] align-middle">Runs Today</th>
+                <th className="py-3.5 px-4 w-[11%] align-middle">Avg Latency</th>
+                <th className="py-3.5 px-4 w-[11%] align-middle">Status</th>
+                <th className="py-3.5 px-4 w-[15%] align-middle">Execution & Saved</th>
+                <th className="py-3.5 px-4 w-[8%] text-right align-middle">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1b2b3d] text-xs">
@@ -442,12 +456,35 @@ export default function WorkflowsDirectory() {
                     )}
                   </td>
 
-                  {/* Last Triggered */}
-                  <td className="py-3.5 px-4 font-mono text-[11.5px] text-slate-300 align-middle">
-                    {wf.lastExecutedAt ? (
-                      formatTimeAgo(wf.lastExecutedAt)
-                    ) : (
-                      <span className="text-slate-500 italic">No recent run</span>
+                  {/* Execution & Saved */}
+                  <td className="py-3.5 px-4 font-mono text-[11.5px] align-middle">
+                    <div>
+                      {wf.lastExecutedAt ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-white font-medium">{formatTimeAgo(wf.lastExecutedAt)}</span>
+                          {wf.recentLogs?.[0]?.id && (
+                            <a
+                              href={`https://n8n.asquared.ae/execution/${wf.recentLogs[0].id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="px-1.5 py-0.5 rounded bg-[#ff6d5a]/15 hover:bg-[#ff6d5a]/30 text-[#ff6d5a] border border-[#ff6d5a]/35 text-[10px] font-bold transition-all inline-flex items-center gap-0.5"
+                              title={`Open Live Execution #${wf.recentLogs[0].id} in n8n`}
+                            >
+                              <span>#{wf.recentLogs[0].id}</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 italic">No recent run</span>
+                      )}
+                    </div>
+                    {wf.updatedAt && (
+                      <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1" title="When workflow was last saved in n8n canvas (matches 'Last updated' in n8n)">
+                        <span className="text-slate-500">n8n saved:</span>
+                        <span className="text-slate-300">{formatTimeAgo(wf.updatedAt)}</span>
+                      </div>
                     )}
                   </td>
 

@@ -43,7 +43,9 @@ export default function OverviewDashboard({ onNavigate }) {
     if (diffSec < 60) return 'Just now';
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
     if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-    return `${Math.floor(diffSec / 86400)}d ago`;
+    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+    if (diffSec < 2592000) return `${Math.floor(diffSec / 604800)}w ago`;
+    return `${Math.floor(diffSec / 2592000)}mo ago`;
   };
 
   const updateVoiceStats = (res) => {
@@ -550,6 +552,16 @@ export default function OverviewDashboard({ onNavigate }) {
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
             <a
+              href="https://n8n.asquared.ae/executions"
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-1.5 rounded-xl bg-[#0c1829] hover:bg-[#132238] border border-[#233549] text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              title="Open live executions history in n8n"
+            >
+              <span>Executions Log</span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+            </a>
+            <a
               href="https://n8n.asquared.ae"
               target="_blank"
               rel="noreferrer"
@@ -601,8 +613,31 @@ export default function OverviewDashboard({ onNavigate }) {
                         <h4 className="text-white text-sm sm:text-base font-bold leading-snug group-hover:text-orange-300 transition-colors break-words" title={wf.name}>
                           {wf.name}
                         </h4>
-                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-2 font-mono">
-                          <span>Last run: {formatTimeAgo(wf.lastExecutedAt)}</span>
+                        <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-1.5 font-mono">
+                          <span className="text-slate-300 flex items-center gap-1">
+                            <span className="text-slate-500">Last run:</span>
+                            <span className="font-semibold text-white">{formatTimeAgo(wf.lastExecutedAt)}</span>
+                            {wf.recentLogs?.[0]?.id && (
+                              <span 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`https://n8n.asquared.ae/execution/${wf.recentLogs[0].id}`, '_blank');
+                                }}
+                                className="px-1.5 py-0.2 rounded bg-[#ff6d5a]/15 hover:bg-[#ff6d5a]/30 text-[#ff6d5a] border border-[#ff6d5a]/30 cursor-pointer text-[10px] font-bold transition-all"
+                                title={`Open Live Execution #${wf.recentLogs[0].id} in n8n`}
+                              >
+                                #{wf.recentLogs[0].id}
+                              </span>
+                            )}
+                          </span>
+                          {wf.updatedAt && (
+                            <>
+                              <span className="text-slate-600">·</span>
+                              <span className="text-slate-400" title="When workflow was last saved in n8n canvas (matches 'Last updated' in n8n)">
+                                Saved: {formatTimeAgo(wf.updatedAt)}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
