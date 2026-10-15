@@ -50,6 +50,10 @@ for root, _, files in os.walk(dist_dir):
         if rel_path.startswith('exports/'):
             uploads_list.append((local_path, f"public/{rel_path}"))
             uploads_list.append((local_path, rel_path))
+        # If it's a php endpoint, also deploy to public/ and root
+        if rel_path.endswith('.php'):
+            uploads_list.append((local_path, f"public/{rel_path}"))
+            uploads_list.append((local_path, rel_path))
 
 # Deploy root domain entrypoint files to automatically redirect admin.asquared.ae -> /dashboard/
 root_dir = 'root_files'

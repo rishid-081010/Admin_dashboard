@@ -11,7 +11,13 @@ const MONTH_SHORT = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function getDubaiToday() {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
+  } catch (e) {
+    return new Date().toISOString().split('T')[0];
+  }
+}
 
 export default function VoiceDateFilter({
   timeFilter,
@@ -27,11 +33,11 @@ export default function VoiceDateFilter({
   activeLabel,
   loading
 }) {
-  // Today reference in DB context (October 15, 2026)
-  const TODAY_STR = '2026-10-15';
+  // Today reference in DB context (Dubai GST)
+  const TODAY_STR = getDubaiToday();
 
   // Parse initial selected date for month/year view
-  const initialDate = selectedDate ? new Date(selectedDate + 'T00:00:00Z') : new Date('2026-10-15T00:00:00Z');
+  const initialDate = selectedDate ? new Date(selectedDate + 'T00:00:00Z') : new Date(TODAY_STR + 'T00:00:00Z');
   const [viewYear, setViewYear] = useState(() => selectedYear || initialDate.getUTCFullYear() || 2026);
   const [viewMonth, setViewMonth] = useState(() => (selectedMonth ? selectedMonth - 1 : (isNaN(initialDate.getUTCMonth()) ? 9 : initialDate.getUTCMonth()))); // 0-indexed
 

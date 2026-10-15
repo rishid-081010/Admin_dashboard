@@ -197,9 +197,44 @@ export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedM
   return { start: null, end: null, label: 'All Time' };
 }
 
+let lastSyncTimestamp = 0;
+export async function triggerBackgroundVapiSync(dateStr) {
+  const now = Date.now();
+  if (now - lastSyncTimestamp < 60000) return;
+  lastSyncTimestamp = now;
+
+  try {
+    const todayDubai = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
+    const target = dateStr || todayDubai;
+    const endpoints = [
+      `/dashboard/api_sync_vapi.php?date=${encodeURIComponent(target)}`,
+      `/api_sync_vapi.php?date=${encodeURIComponent(target)}`,
+      `https://admin.asquared.ae/dashboard/api_sync_vapi.php?date=${encodeURIComponent(target)}`
+    ];
+    for (const ep of endpoints) {
+      try {
+        const res = await fetch(ep);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            console.log('[Auto-Sync] Reconciled VAPI calls:', json.synced_to_supabase, 'for date', target);
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+  } catch (err) {}
+}
+
 // Fetch overview metrics from Supabase
 export async function fetchVoiceOverview(filterParams) {
   const { start, end, label } = getDateRange(filterParams);
+
+  // Auto-reconcile live calls for today in background if viewing Daily mode
+  const currentDubaiDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
+  if (filterParams?.timeFilter === 'Daily' && (!filterParams?.selectedDate || filterParams?.selectedDate === currentDubaiDate)) {
+    triggerBackgroundVapiSync(currentDubaiDate);
+  }
 
   // Build query
   let url = `${SUPABASE_BASE_URL}/vapi_call_logs?select=id,status,duration_seconds,cost_usd,voice_call_status,assistantId,created_at,started_at,customer_name,customer_phone,recording_url,summary`;

@@ -8,11 +8,25 @@ import VoiceAuditDownload from './VoiceAuditDownload';
 import VoiceAgent360 from './VoiceAgent360';
 import { fetchVoiceOverview } from '../utils/voiceAgentService';
 
+function getDubaiToday() {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
+  } catch (e) {
+    return new Date().toISOString().split('T')[0];
+  }
+}
+
 export default function VoiceAgent() {
+  const initialToday = useMemo(() => getDubaiToday(), []);
+  const initialParts = useMemo(() => {
+    const [y, m] = initialToday.split('-').map(Number);
+    return { year: y || 2026, month: m || 10 };
+  }, [initialToday]);
+
   const [timeFilter, setTimeFilter] = useState('Daily');
-  const [selectedDate, setSelectedDate] = useState('2026-10-15'); // Live today calls
-  const [selectedYear, setSelectedYear] = useState(2026);
-  const [selectedMonth, setSelectedMonth] = useState(10);
+  const [selectedDate, setSelectedDate] = useState(initialToday); // Dynamically live today calls in Dubai
+  const [selectedYear, setSelectedYear] = useState(initialParts.year);
+  const [selectedMonth, setSelectedMonth] = useState(initialParts.month);
   const [selectedWeek, setSelectedWeek] = useState(1);
   
   const [loading, setLoading] = useState(true);
