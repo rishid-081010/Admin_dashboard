@@ -20,10 +20,10 @@ $supabaseUrl = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs'
 $supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54';
 
 $vapiKeys = [
-    '5071858a-3602-4fc4-8025-a7ae89d1b6cf',
-    '87beea9a-0e9e-4e4b-972d-3b5666795f50',
-    'bcfc57a9-e8fe-4e00-84c4-7fa762a4b3bf',
-    '78799bbd-bb62-421d-9372-d5cb607d7274'
+    '30c267e1-fdfa-4c40-9c80-0e5bd97bcdbb',
+    '9137dbd0-c126-4632-948e-e0326ce26050',
+    'd9b21ab4-6b30-447c-962a-de2c1c460651',
+    '1fe2c0bd-014d-4251-a32e-229e7a475609'
 ];
 
 // Target date: Default to today in Dubai Time
@@ -42,10 +42,9 @@ function fetchAllCallsForDate($token, $startIso, $endIso) {
 
     while (true) {
         $url = 'https://api.vapi.ai/call?limit=100&createdAtGt=' . urlencode($startIso);
-        if (!empty($endIso)) {
-            $url .= '&createdAtLt=' . urlencode($createdAtLt ?? $endIso);
-        } elseif ($createdAtLt) {
-            $url .= '&createdAtLt=' . urlencode($createdAtLt);
+        $lt = $createdAtLt ?? $endIso;
+        if (!empty($lt)) {
+            $url .= '&createdAtLt=' . urlencode($lt);
         }
 
         $ch = curl_init();
