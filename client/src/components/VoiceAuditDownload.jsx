@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Check, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { downloadOrGenerateAuditPdf } from '../utils/clientAuditPdfGenerator';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -11,10 +12,6 @@ const MONTH_SHORT = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
-// Supabase endpoint for real on-demand audit export
-const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54';
-
 const AUDIT_CATEGORIES = [
   { id: 'all', label: 'All Calls' },
   { id: 'leads', label: 'Qualified Leads' },
@@ -22,13 +19,14 @@ const AUDIT_CATEGORIES = [
   { id: 'summary', label: 'Summary' }
 ];
 
-// Sample baseline metrics for recent 5 days
+// Baseline metrics for recent days (October 2026)
 const RECENT_DAYS = [
-  { date: '2026-10-13', dayName: 'Tue', isToday: true, allCalls: 679, leads: 115, drops: 372 },
+  { date: '2026-10-15', dayName: 'Thu', isToday: true, allCalls: 248, leads: 4, drops: 182 },
+  { date: '2026-10-14', dayName: 'Wed', isToday: false, allCalls: 306, leads: 2, drops: 214 },
+  { date: '2026-10-13', dayName: 'Tue', isToday: false, allCalls: 679, leads: 115, drops: 372 },
   { date: '2026-10-12', dayName: 'Mon', isToday: false, allCalls: 582, leads: 98, drops: 315 },
   { date: '2026-10-11', dayName: 'Sun', isToday: false, allCalls: 491, leads: 74, drops: 280 },
-  { date: '2026-10-10', dayName: 'Sat', isToday: false, allCalls: 512, leads: 82, drops: 296 },
-  { date: '2026-10-09', dayName: 'Fri', isToday: false, allCalls: 630, leads: 104, drops: 345 }
+  { date: '2026-10-10', dayName: 'Sat', isToday: false, allCalls: 512, leads: 82, drops: 296 }
 ];
 
 export default function VoiceAuditDownload({
@@ -36,7 +34,7 @@ export default function VoiceAuditDownload({
   setSelectedDate
 }) {
   const [activeCategory, setActiveCategory] = useState('all');
-  const [selectedAuditDate, setSelectedAuditDate] = useState(selectedDate || '2026-10-13');
+  const [selectedAuditDate, setSelectedAuditDate] = useState(selectedDate || '2026-10-15');
   const [downloadingDate, setDownloadingDate] = useState(null);
 
   // Sync if selectedDate from calendar changes
@@ -51,108 +49,13 @@ export default function VoiceAuditDownload({
   const viewYear = activeDateObj.getUTCFullYear() || 2026;
   const viewMonth = isNaN(activeDateObj.getUTCMonth()) ? 9 : activeDateObj.getUTCMonth();
 
-  // Trigger official PDF audit download
+  // Trigger official PDF audit download or on-demand generation
   const handleDownload = async (dateStr, e) => {
     if (e) e.stopPropagation();
     setDownloadingDate(dateStr);
 
     try {
-      const cleanDate = dateStr.replace(/-/g, '');
-      const pdfFileName = `AS_PROPERTIES_DAILY_CALL_AUDIT_${cleanDate}.pdf`;
-      const candidates = [
-        `/audits/${pdfFileName}`,
-        `./audits/${pdfFileName}`,
-        `audits/${pdfFileName}`,
-        dateStr === '2026-10-13' ? '/audits/AS_PROPERTIES_EVERY_CALL_AUDIT_OCT13.pdf' : null
-      ].filter(Boolean);
-
-      // Check if official PDF exists
-      let downloaded = false;
-      for (const targetUrl of candidates) {
-        try {
-          const res = await fetch(targetUrl, { method: 'HEAD' });
-          if (res.ok) {
-            const link = document.createElement('a');
-            link.href = targetUrl;
-            link.setAttribute('download', pdfFileName);
-            link.target = '_blank';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            downloaded = true;
-            break;
-          }
-        } catch (err) {
-          console.warn('PDF check failed for', targetUrl, err);
-        }
-      }
-
-      if (downloaded) {
-        setDownloadingDate(null);
-        return;
-      }
-
-      // If PDF not directly found, try fetching CSV from Supabase
-      const startIso = `${dateStr}T00:00:00.000Z`;
-      const endD = new Date(dateStr + 'T00:00:00.000Z');
-      endD.setUTCDate(endD.getUTCDate() + 1);
-      const endIso = endD.toISOString().split('T')[0] + 'T00:00:00.000Z';
-
-      const url = `${SUPABASE_BASE_URL}/vapi_call_logs?created_at=gte.${encodeURIComponent(startIso)}&created_at=lt.${encodeURIComponent(endIso)}&order=created_at.desc&limit=500`;
-      const res = await fetch(url, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-
-      let rows = [];
-      if (res.ok) {
-        rows = await res.json();
-      }
-
-      // Filter by category if leads or drops
-      if (activeCategory === 'leads') {
-        rows = rows.filter(r => {
-          const v = (r.voice_call_status || '').toLowerCase();
-          const s = (r.summary || '').toLowerCase();
-          return v.includes('interested') || v.includes('appointment') || s.includes('interested') || s.includes('sell') || s.includes('rent') || Number(r.duration_seconds) >= 25;
-        });
-      } else if (activeCategory === 'drops') {
-        rows = rows.filter(r => {
-          const st = (r.status || '').toLowerCase();
-          return st !== 'customer-ended-call' && st !== 'assistant-ended-call';
-        });
-      }
-
-      // Build CSV format
-      let csvContent = 'Call ID,Timestamp,Assistant ID,Status,Duration (sec),Cost (USD),Customer Phone,Summary,Recording URL\n';
-      if (rows.length > 0) {
-        rows.forEach(r => {
-          const line = [
-            `"${r.id || ''}"`,
-            `"${r.created_at || ''}"`,
-            `"${r.assistantId || ''}"`,
-            `"${r.status || ''}"`,
-            r.duration_seconds || 0,
-            r.cost_usd || 0,
-            `"${r.customer_phone || ''}"`,
-            `"${(r.summary || '').replace(/"/g, '""')}"`,
-            `"${r.recording_url || ''}"`
-          ].join(',');
-          csvContent += line + '\n';
-        });
-      }
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.setAttribute('download', `Voice_Audit_${dateStr}_${activeCategory}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
+      await downloadOrGenerateAuditPdf(dateStr, activeCategory);
     } catch (err) {
       console.error('Download audit error:', err);
     } finally {
@@ -328,14 +231,19 @@ export default function VoiceAuditDownload({
         <button
           onClick={() => handleDownload(selectedAuditDate)}
           disabled={downloadingDate === selectedAuditDate}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 font-semibold shadow-md shadow-emerald-600/20 transition-all text-xs"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 font-semibold shadow-md shadow-emerald-600/20 transition-all text-xs cursor-pointer"
         >
           {downloadingDate === selectedAuditDate ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Generating PDF...</span>
+            </>
           ) : (
-            <Download className="w-3.5 h-3.5" />
+            <>
+              <Download className="w-3.5 h-3.5" />
+              <span>Download PDF Audit</span>
+            </>
           )}
-          <span>Download PDF Audit</span>
         </button>
       </div>
     </div>

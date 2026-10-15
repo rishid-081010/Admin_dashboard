@@ -60,6 +60,21 @@ if os.path.exists(root_dir):
             uploads_list.append((lpath, f))
             uploads_list.append((lpath, f"public/{f}"))
 
+# Sort uploads_list to deploy index.html, assets, and core UI first
+def priority_key(item):
+    local_path, remote_path = item
+    if 'index.html' in remote_path:
+        return 0
+    if 'assets/' in remote_path:
+        return 1
+    if remote_path.endswith('.php') or remote_path.endswith('.htaccess'):
+        return 2
+    if 'audits/' in remote_path or 'exports/' in remote_path:
+        return 4
+    return 3
+
+uploads_list.sort(key=priority_key)
+
 import time
 
 def upload_file(local_path, remote_rel_path):

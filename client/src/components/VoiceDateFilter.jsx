@@ -27,11 +27,11 @@ export default function VoiceDateFilter({
   activeLabel,
   loading
 }) {
-  // Today reference in DB context (October 13, 2026)
-  const TODAY_STR = '2026-10-13';
+  // Today reference in DB context (October 15, 2026)
+  const TODAY_STR = '2026-10-15';
 
   // Parse initial selected date for month/year view
-  const initialDate = selectedDate ? new Date(selectedDate + 'T00:00:00Z') : new Date('2026-10-13T00:00:00Z');
+  const initialDate = selectedDate ? new Date(selectedDate + 'T00:00:00Z') : new Date('2026-10-15T00:00:00Z');
   const [viewYear, setViewYear] = useState(() => selectedYear || initialDate.getUTCFullYear() || 2026);
   const [viewMonth, setViewMonth] = useState(() => (selectedMonth ? selectedMonth - 1 : (isNaN(initialDate.getUTCMonth()) ? 9 : initialDate.getUTCMonth()))); // 0-indexed
 

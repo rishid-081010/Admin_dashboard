@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CornerDownLeft, Trash2, ArrowUpRight, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table } from 'lucide-react';
+import { Send, CornerDownLeft, Trash2, ArrowUpRight, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2 } from 'lucide-react';
 import { sendAgentMessage } from '../utils/aiAgentService';
+import { downloadOrGenerateAuditPdf } from '../utils/clientAuditPdfGenerator';
 
 const SUGGESTED_PROMPTS = [
   'Download today\'s call audit PDF',
@@ -62,6 +63,23 @@ function AudioPlayerCard({ label, url }) {
 
 function PdfAuditCard({ label, url }) {
   const filename = url.split('/').pop()?.split('?')[0] || 'AS_PROPERTIES_DAILY_CALL_AUDIT.pdf';
+  const [downloading, setDownloading] = useState(false);
+
+  const handlePdfDownload = async (e) => {
+    e.preventDefault();
+    setDownloading(true);
+    try {
+      const match = filename.match(/\d{8}/);
+      const dateStr = match ? `${match[0].slice(0, 4)}-${match[0].slice(4, 6)}-${match[0].slice(6, 8)}` : '2026-10-15';
+      await downloadOrGenerateAuditPdf(dateStr);
+    } catch (err) {
+      console.warn('Direct download error, opening link:', err);
+      window.open(url, '_blank');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="my-2.5 p-3.5 bg-[#06111e] border border-rose-500/30 rounded-xl flex flex-col gap-2.5 shadow-lg shadow-black/30">
       <div className="flex items-start justify-between gap-2">
@@ -84,16 +102,18 @@ function PdfAuditCard({ label, url }) {
       </div>
 
       <div className="flex items-center gap-2 pt-1 border-t border-[#1b2b3d]/60">
-        <a
-          href={url}
-          download={filename}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={handlePdfDownload}
+          disabled={downloading}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition-all shadow-md shadow-rose-600/25 cursor-pointer"
         >
-          <Download className="w-3.5 h-3.5" />
-          <span>Download Audit (PDF)</span>
-        </a>
+          {downloading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Download className="w-3.5 h-3.5" />
+          )}
+          <span>{downloading ? 'Downloading...' : 'Download Audit (PDF)'}</span>
+        </button>
         <a
           href={url}
           target="_blank"

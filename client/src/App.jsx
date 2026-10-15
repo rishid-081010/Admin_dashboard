@@ -16,6 +16,9 @@ import MyActivity from './components/MyActivity';
 import VoiceAgent from './components/VoiceAgent';
 import AIAgent from './components/AIAgent';
 import AccountSettings from './components/AccountSettings';
+import RolesManagement from './components/RolesManagement';
+import Login from './components/Login';
+import { authService } from './utils/authService';
 
 const ROUTE_MAP = {
   overview: '/dashboard/overview',
@@ -29,6 +32,7 @@ const ROUTE_MAP = {
   agent: '/dashboard/agent',
   buildings: '/dashboard/buildings',
   sources: '/dashboard/datalibrary',
+  roles: '/dashboard/roles',
   settings: '/dashboard/settings',
   workflows: '/dashboard/workflows',
   new: '/dashboard/new-listing',
@@ -52,6 +56,7 @@ function getTabFromUrl() {
   if (target === 'search') return 'search';
   if (target === 'team') return 'team';
   if (target === 'listing') return 'listing';
+  if (target === 'roles' || target === 'role') return 'roles';
   if (target === 'settings') return 'settings';
   if (target === 'workflows' || target === 'workflow') return 'workflows';
   if (target === 'new-listing') return 'new';
@@ -98,9 +103,15 @@ class TabErrorBoundary extends React.Component {
 }
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const [activeTab, setActiveTabState] = useState(() => getTabFromUrl());
   const [selectedListingId, setSelectedListingId] = useState(null);
   const [isOmniSearchModalOpen, setIsOmniSearchModalOpen] = useState(false);
+
+  const handleLogout = () => {
+    authService.logout();
+    setCurrentUser(null);
+  };
 
   const setActiveTab = (newTab, pushState = true) => {
     setActiveTabState(newTab);
@@ -139,6 +150,7 @@ export default function App() {
                         window.location.pathname.includes('/myactivity') ||
                         window.location.pathname.includes('/search') ||
                         window.location.pathname.includes('/voiceagent') ||
+                        window.location.pathname.includes('/roles') ||
                         window.location.pathname.includes('/settings');
     if (isPathRoute) {
       const basePath = window.location.pathname.startsWith('/public/dashboard')
@@ -172,6 +184,11 @@ export default function App() {
     setActiveTab('detail');
   };
 
+  // If user is not authenticated, display luxury login screen
+  if (!currentUser) {
+    return <Login onLoginSuccess={(user) => setCurrentUser(user)} />;
+  }
+
   return (
     <div 
       className="h-screen w-screen text-white p-2 sm:p-2.5 flex gap-2 sm:gap-2.5 box-border font-sans antialiased overflow-hidden selection:bg-blue-500/30 selection:text-white"
@@ -181,7 +198,12 @@ export default function App() {
       }}
     >
       {/* Sleek Left Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
@@ -253,7 +275,17 @@ export default function App() {
               )}</div>
             )}
 
-            {activeTab === 'settings' && <AccountSettings />}
+            {activeTab === 'roles' && (
+              <RolesManagement currentUser={currentUser} />
+            )}
+
+            {activeTab === 'settings' && (
+              <AccountSettings 
+                currentUser={currentUser} 
+                onLogout={handleLogout}
+                onUpdateUser={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+              />
+            )}
           </TabErrorBoundary>
         </main>
       </div>

@@ -11,6 +11,8 @@
   "dependencies": {
     "axios": "^1.7.7",
     "file-saver": "^2.0.5",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.9",
     "jszip": "^3.10.2",
     "lucide-react": "^0.446.0",
     "playwright": "^1.64.0",

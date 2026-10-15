@@ -1,7 +1,7 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, LogOut, User } from 'lucide-react';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout }) {
   const isListingActive = activeTab === 'listing' || activeTab === 'dashboard' || activeTab === 'new' || activeTab === 'detail';
   const isLeadsActive = activeTab === 'leads';
 
@@ -164,7 +164,19 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <ExternalLink className="w-3.5 h-3.5 text-white/50" />
         </a>
 
-        {/* 13. Account and settings */}
+        {/* 13. Roles */}
+        <button 
+          onClick={() => setActiveTab('roles')} 
+          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+            activeTab === 'roles' 
+              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <span>Roles</span>
+        </button>
+
+        {/* 14. Account and settings */}
         <button 
           onClick={() => setActiveTab('settings')} 
           className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -176,6 +188,35 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <span>Account and settings</span>
         </button>
       </nav>
+
+      {/* User Session & Logout Footer */}
+      {currentUser && (
+        <div className="pt-2.5 mt-auto border-t border-white/[0.08] shrink-0 flex items-center justify-between px-1.5 py-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 font-bold text-xs uppercase shrink-0">
+              {currentUser.name ? currentUser.name.charAt(0) : 'A'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold text-white truncate leading-tight">
+                {currentUser.name || 'Administrator'}
+              </div>
+              <div className="text-[10px] text-slate-400 truncate flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
+                <span className="capitalize">{currentUser.role || 'admin'}</span>
+              </div>
+            </div>
+          </div>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              title="Sign Out"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

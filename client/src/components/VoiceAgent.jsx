@@ -10,7 +10,7 @@ import { fetchVoiceOverview } from '../utils/voiceAgentService';
 
 export default function VoiceAgent() {
   const [timeFilter, setTimeFilter] = useState('Daily');
-  const [selectedDate, setSelectedDate] = useState('2026-10-13'); // Live today calls
+  const [selectedDate, setSelectedDate] = useState('2026-10-15'); // Live today calls
   const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedMonth, setSelectedMonth] = useState(10);
   const [selectedWeek, setSelectedWeek] = useState(1);
