@@ -76,11 +76,25 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
   const res = await axios.get(qUrl, {
     headers: {
       apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      Prefer: 'count=exact'
     }
   });
 
   let rawCalls = res.data || [];
+  const contentRange = res.headers['content-range'] || '';
+  const match = contentRange.match(/\/(\d+)/);
+  const totalCount = match ? parseInt(match[1], 10) : rawCalls.length;
+  if (totalCount > rawCalls.length && rawCalls.length >= 1000) {
+    try {
+      const page2Res = await axios.get(`${qUrl}&offset=${rawCalls.length}`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+      });
+      if (Array.isArray(page2Res.data)) rawCalls = rawCalls.concat(page2Res.data);
+    } catch (e) {
+      console.warn('Could not fetch page 2 for audit PDF:', e);
+    }
+  }
 
   // Filter if category requested
   if (category === 'leads') {

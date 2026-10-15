@@ -21,7 +21,7 @@ const AUDIT_CATEGORIES = [
 
 // Baseline metrics for recent days (October 2026)
 const RECENT_DAYS = [
-  { date: '2026-10-15', dayName: 'Thu', isToday: true, allCalls: 248, leads: 4, drops: 182 },
+  { date: '2026-10-15', dayName: 'Thu', isToday: true, allCalls: 1618, leads: 106, drops: 1283 },
   { date: '2026-10-14', dayName: 'Wed', isToday: false, allCalls: 306, leads: 2, drops: 214 },
   { date: '2026-10-13', dayName: 'Tue', isToday: false, allCalls: 679, leads: 115, drops: 372 },
   { date: '2026-10-12', dayName: 'Mon', isToday: false, allCalls: 582, leads: 98, drops: 315 },

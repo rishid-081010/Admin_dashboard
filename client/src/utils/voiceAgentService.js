@@ -219,10 +219,24 @@ export async function fetchVoiceOverview(filterParams) {
     throw new Error(`Failed to fetch call logs: ${response.statusText}`);
   }
 
-  const calls = await response.json();
+  let calls = await response.json();
   const contentRange = response.headers.get('Content-Range') || '';
   const match = contentRange.match(/\/(\d+)/);
   const totalCallsCount = match ? parseInt(match[1], 10) : calls.length;
+
+  // If there are more calls than the first page (PostgREST limit is 1000), fetch next page
+  if (totalCallsCount > calls.length && calls.length >= 1000) {
+    try {
+      const page2Url = `${url}&offset=${calls.length}`;
+      const res2 = await fetch(page2Url, { headers });
+      if (res2.ok) {
+        const batch2 = await res2.json();
+        if (Array.isArray(batch2)) calls = calls.concat(batch2);
+      }
+    } catch (e) {
+      console.warn('Could not fetch subsequent page of call logs:', e);
+    }
+  }
 
   // Aggregate metrics
   let dropsCount = 0;
