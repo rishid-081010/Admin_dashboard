@@ -84,16 +84,32 @@ export default function VoiceAuditDownload({
       try {
         const oldest = recentDays[recentDays.length - 1]?.date;
         if (!oldest) return;
-        const res = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${oldest}T00:00:00.000Z&select=created_at,status,voice_call_status&limit=5000`, {
-          headers: {
-            apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54',
-            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54'
+        
+        let allFetched = [];
+        let offset = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore && allFetched.length < 10000) {
+          const res = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${oldest}T00:00:00.000Z&select=created_at,status,voice_call_status&limit=${pageSize}&offset=${offset}`, {
+            headers: {
+              apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54',
+              Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54'
+            }
+          });
+          if (!res.ok) break;
+          const chunk = await res.json();
+          if (!Array.isArray(chunk) || chunk.length === 0) break;
+          allFetched = allFetched.concat(chunk);
+          if (chunk.length < pageSize) {
+            hasMore = false;
+          } else {
+            offset += pageSize;
           }
-        });
-        if (!res.ok) return;
-        const calls = await res.json();
+        }
+
         const map = {};
-        for (const c of calls) {
+        for (const c of allFetched) {
           const d = (c.created_at || '').split('T')[0];
           if (!map[d]) map[d] = { all: 0, leads: 0, drops: 0 };
           map[d].all++;

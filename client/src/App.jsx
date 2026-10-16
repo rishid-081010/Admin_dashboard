@@ -234,7 +234,7 @@ export default function App() {
 
             {activeTab === 'sources' && <SourcesDirectory />}
 
-            {activeTab === 'activity' && <MyActivity globalAgent="6" />}
+            {activeTab === 'activity' && <MyActivity currentUser={currentUser} />}
 
             {activeTab === 'voice' && <VoiceAgent />}
 
