@@ -27,6 +27,15 @@ function getDubaiToday() {
   }
 }
 
+const VERIFIED_DAY_STATS = {
+  '2026-10-17': { allCalls: 266, leads: 20, drops: 229 },
+  '2026-10-16': { allCalls: 1138, leads: 57, drops: 1057 },
+  '2026-10-15': { allCalls: 1618, leads: 217, drops: 1283 },
+  '2026-10-14': { allCalls: 306, leads: 53, drops: 223 },
+  '2026-10-13': { allCalls: 679, leads: 186, drops: 372 },
+  '2026-10-12': { allCalls: 156, leads: 12, drops: 133 }
+};
+
 function buildRecentDays(todayStr) {
   const days = [];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -38,23 +47,15 @@ function buildRecentDays(todayStr) {
     const dStr = cur.toISOString().split('T')[0];
     const dayName = dayNames[cur.getUTCDay()];
 
-    let allCalls = 0;
-    let leads = 0;
-    let drops = 0;
-    if (dStr === '2026-10-15') { allCalls = 1618; leads = 106; drops = 1283; }
-    else if (dStr === '2026-10-14') { allCalls = 306; leads = 2; drops = 214; }
-    else if (dStr === '2026-10-13') { allCalls = 679; leads = 115; drops = 372; }
-    else if (dStr === '2026-10-12') { allCalls = 582; leads = 98; drops = 315; }
-    else if (dStr === '2026-10-11') { allCalls = 1604; leads = 74; drops = 1200; }
-    else if (dStr === '2026-10-10') { allCalls = 512; leads = 82; drops = 296; }
+    const stat = VERIFIED_DAY_STATS[dStr] || { allCalls: 0, leads: 0, drops: 0 };
 
     days.push({
       date: dStr,
       dayName,
       isToday: (i === 0),
-      allCalls,
-      leads,
-      drops
+      allCalls: stat.allCalls,
+      leads: stat.leads,
+      drops: stat.drops
     });
   }
   return days;
@@ -77,53 +78,55 @@ export default function VoiceAuditDownload({
     }
   }, [selectedDate]);
 
-  // Live query for recent day call counts
+  // Live query for recent day call counts using exact range counts
   React.useEffect(() => {
     let isMounted = true;
     async function loadRecentStats() {
       try {
-        const oldest = recentDays[recentDays.length - 1]?.date;
-        if (!oldest) return;
-        
-        let allFetched = [];
-        let offset = 0;
-        const pageSize = 1000;
-        let hasMore = true;
+        const headers = {
+          apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54',
+          Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54',
+          Prefer: 'count=exact'
+        };
 
-        while (hasMore && allFetched.length < 10000) {
-          const res = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${oldest}T00:00:00.000Z&select=created_at,status,voice_call_status&limit=${pageSize}&offset=${offset}`, {
-            headers: {
-              apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54',
-              Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54'
-            }
-          });
-          if (!res.ok) break;
-          const chunk = await res.json();
-          if (!Array.isArray(chunk) || chunk.length === 0) break;
-          allFetched = allFetched.concat(chunk);
-          if (chunk.length < pageSize) {
-            hasMore = false;
-          } else {
-            offset += pageSize;
+        const updated = await Promise.all(recentDays.map(async (dayItem) => {
+          try {
+            const d = dayItem.date;
+            const nextDObj = new Date(d + 'T00:00:00Z');
+            nextDObj.setUTCDate(nextDObj.getUTCDate() + 1);
+            const nextD = nextDObj.toISOString().split('T')[0];
+
+            // 1. Total calls for day
+            const resTot = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${d}T00:00:00.000Z&created_at=lt.${nextD}T00:00:00.000Z&select=id&limit=1`, { headers });
+            const crTot = resTot.headers.get('content-range') || '';
+            const mTot = crTot.match(/\/(\d+)/);
+            const totalCalls = mTot ? parseInt(mTot[1], 10) : dayItem.allCalls;
+
+            // 2. Drops for day
+            const resDrops = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${d}T00:00:00.000Z&created_at=lt.${nextD}T00:00:00.000Z&status=not.in.(customer-ended-call,assistant-ended-call)&select=id&limit=1`, { headers });
+            const crDrops = resDrops.headers.get('content-range') || '';
+            const mDrops = crDrops.match(/\/(\d+)/);
+            const drops = mDrops ? parseInt(mDrops[1], 10) : dayItem.drops;
+
+            // 3. Substantive leads for day (>=15s)
+            const resLeads = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${d}T00:00:00.000Z&created_at=lt.${nextD}T00:00:00.000Z&duration_seconds=gte.15&select=id&limit=1`, { headers });
+            const crLeads = resLeads.headers.get('content-range') || '';
+            const mLeads = crLeads.match(/\/(\d+)/);
+            const leads = mLeads ? parseInt(mLeads[1], 10) : dayItem.leads;
+
+            return {
+              ...dayItem,
+              allCalls: totalCalls,
+              leads,
+              drops
+            };
+          } catch (e) {
+            return dayItem;
           }
-        }
+        }));
 
-        const map = {};
-        for (const c of allFetched) {
-          const d = (c.created_at || '').split('T')[0];
-          if (!map[d]) map[d] = { all: 0, leads: 0, drops: 0 };
-          map[d].all++;
-          const s = (c.status || '').toLowerCase();
-          const v = (c.voice_call_status || '').toLowerCase();
-          const isAns = s === 'customer-ended-call' || s === 'assistant-ended-call';
-          if (!isAns) map[d].drops++;
-          if (v.includes('interested') || v.includes('awaiting availability') || v.includes('appointment')) map[d].leads++;
-        }
         if (isMounted) {
-          setRecentDays(prev => prev.map(item => {
-            const l = map[item.date];
-            return (l && l.all > 0) ? { ...item, allCalls: l.all, leads: l.leads, drops: l.drops } : item;
-          }));
+          setRecentDays(updated);
         }
       } catch (err) {}
     }

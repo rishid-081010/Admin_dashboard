@@ -20,6 +20,7 @@ export default function MyActivity({ currentUser }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeStageFilter, setActiveStageFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('oldest'); // 'oldest' (FIFO Priority: earlier = higher priority) or 'newest'
 
   // Modal / Detail Drawer
   const [selectedItem, setSelectedItem] = useState(null);
@@ -54,14 +55,15 @@ export default function MyActivity({ currentUser }) {
     initAgents();
   }, [currentUser]);
 
-  // Fetch activity cards whenever selectedAgentId changes
+  // Fetch activity cards whenever selectedAgentId or sortBy changes
   const loadActivity = async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
     else setLoading(true);
 
     try {
       const data = await activityService.getActivity(selectedAgentId, {
-        limit: 100
+        limit: 100,
+        sortBy
       });
       setItems(data.items || []);
       setTotalItems(data.total || (data.items || []).length);
@@ -75,7 +77,7 @@ export default function MyActivity({ currentUser }) {
 
   useEffect(() => {
     loadActivity();
-  }, [selectedAgentId]);
+  }, [selectedAgentId, sortBy]);
 
   // Open item detail modal & load audio / transcript timeline
   const handleOpenDetail = async (item) => {
@@ -289,6 +291,20 @@ export default function MyActivity({ currentUser }) {
             )}
           </div>
 
+          {/* Priority Sort Button (Earlier/Older leads = Higher Priority) */}
+          <button
+            onClick={() => setSortBy(prev => prev === 'oldest' ? 'newest' : 'oldest')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all shadow-sm cursor-pointer ${
+              sortBy === 'oldest'
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                : 'bg-[#09182b] text-slate-300 border-[#233b59] hover:bg-[#0f243d] hover:text-white'
+            }`}
+            title="Every interested lead is important: earlier (older) leads have higher priority"
+          >
+            <Clock className={`w-3.5 h-3.5 ${sortBy === 'oldest' ? 'text-amber-400' : 'text-slate-400'}`} />
+            <span>{sortBy === 'oldest' ? 'FIFO Priority (Oldest First)' : 'Newest First'}</span>
+          </button>
+
           {/* Refresh Button */}
           <button
             onClick={() => loadActivity(true)}
@@ -324,7 +340,7 @@ export default function MyActivity({ currentUser }) {
       </div>
 
       {/* Metric Quick Stats Pills */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
         <div className="bg-[#081729]/80 border border-[#1d324d] rounded-xl p-3 flex items-center justify-between">
           <div>
             <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Total Assigned</div>
@@ -355,6 +371,23 @@ export default function MyActivity({ currentUser }) {
           </div>
           <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300">
             <Flame className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="bg-[#081729]/80 border border-rose-500/30 rounded-xl p-3 flex items-center justify-between shadow-lg shadow-rose-500/5">
+          <div>
+            <div className="text-[11px] text-rose-400 uppercase tracking-wider font-semibold flex items-center gap-1">
+              <span>Overdue (&gt;48h)</span>
+              {items.filter(it => it.priority_level === 'critical').length > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+              )}
+            </div>
+            <div className="text-xl font-bold text-rose-300 mt-0.5">
+              {items.filter(it => it.priority_level === 'critical').length}
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-300">
+            <AlertCircle className="w-4 h-4" />
           </div>
         </div>
 
@@ -495,6 +528,30 @@ export default function MyActivity({ currentUser }) {
                             <div className="absolute left-0 top-3 bottom-3 w-1.5 bg-emerald-400 rounded-r-full shadow-lg shadow-emerald-400/50" />
                           )}
 
+                          {/* Priority Ranking & SLA Waiting Badge (Earlier = Higher Priority) */}
+                          <div className="flex items-center justify-between mb-2 pl-1.5 pr-1">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-tight inline-flex items-center gap-1.5 ${
+                              item.priority_level === 'critical'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm shadow-rose-500/20'
+                                : item.priority_level === 'high'
+                                ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
+                                : item.priority_level === 'medium'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            }`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                              <span>Priority #{item.priority_rank || 1}</span>
+                              <span className="text-white/30">•</span>
+                              <span>{item.waiting_human || 'Recent'}</span>
+                            </span>
+
+                            {item.priority_level === 'critical' && (
+                              <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider font-mono">
+                                Overdue
+                              </span>
+                            )}
+                          </div>
+
                           {/* Card Header matching Image 1 */}
                           <div className="flex items-start justify-between mb-2.5 pl-1.5">
                             <div>
@@ -634,13 +691,14 @@ export default function MyActivity({ currentUser }) {
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-[#05101d] sticky top-0 z-10 text-slate-400 uppercase text-[10px] tracking-wider border-b border-[#1e3450]">
                   <tr>
+                    <th className="py-3 px-4 font-semibold">Priority</th>
                     <th className="py-3 px-4 font-semibold">Card ID</th>
                     <th className="py-3 px-4 font-semibold">Project &amp; Location</th>
                     <th className="py-3 px-4 font-semibold">Owner Name</th>
                     <th className="py-3 px-4 font-semibold">Unit</th>
                     <th className="py-3 px-4 font-semibold">Contact &amp; WhatsApp</th>
                     <th className="py-3 px-4 font-semibold">Stage</th>
-                    <th className="py-3 px-4 font-semibold">Updated</th>
+                    <th className="py-3 px-4 font-semibold">Aging / Date</th>
                     <th className="py-3 px-4 font-semibold text-right">Actions</th>
                   </tr>
                 </thead>
@@ -651,6 +709,22 @@ export default function MyActivity({ currentUser }) {
                       onClick={() => handleOpenDetail(item)}
                       className="hover:bg-white/[0.03] transition-colors cursor-pointer group"
                     >
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-tight inline-flex items-center gap-1.5 ${
+                          item.priority_level === 'critical'
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            : item.priority_level === 'high'
+                            ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
+                            : item.priority_level === 'medium'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                          <span>#{item.priority_rank}</span>
+                          <span className="text-white/30">•</span>
+                          <span>{item.waiting_human}</span>
+                        </span>
+                      </td>
                       <td className="py-3 px-4 font-mono font-bold text-blue-400">
                         #{item.id}
                       </td>

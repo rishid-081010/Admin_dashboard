@@ -113,6 +113,7 @@ if ($action === 'get_agents') {
 if ($action === 'get_activity') {
     $agentId = $_GET['agent_id'] ?? $_POST['agent_id'] ?? '144'; // default to Vikram
     $stageId = $_GET['stage_id'] ?? $_POST['stage_id'] ?? null;
+    $sortBy = $_GET['sort_by'] ?? $_POST['sort_by'] ?? 'oldest'; // 'oldest' (FIFO Priority) or 'newest'
     $search = trim($_GET['search'] ?? $_POST['search'] ?? '');
     $limit = min(max((int)($_GET['limit'] ?? $_POST['limit'] ?? 50), 1), 100);
     $start = (int)($_GET['start'] ?? $_POST['start'] ?? 0);
@@ -125,12 +126,17 @@ if ($action === 'get_activity') {
         $filter['stageId'] = $stageId;
     }
     
+    // In real estate telesales: earlier (older) the interested lead, the higher the priority!
+    $order = ($sortBy === 'newest') 
+        ? ['updatedTime' => 'desc', 'id' => 'desc']
+        : ['movedTime' => 'asc', 'updatedTime' => 'asc', 'id' => 'asc'];
+    
     // Bitrix payload
     $payload = [
         'entityTypeId' => $ENTITY_TYPE_ID,
         'filter' => $filter,
         'select' => [
-            'id', 'title', 'stageId', 'createdTime', 'updatedTime', 'lastActivityTime', 'assignedById',
+            'id', 'title', 'stageId', 'createdTime', 'updatedTime', 'movedTime', 'lastActivityTime', 'assignedById',
             'ufCrm19_1776147554', // Category
             'ufCrm19_1776147607', // Project Name
             'ufCrm19_1776147625', // Location
@@ -139,7 +145,7 @@ if ($action === 'get_activity') {
             'ufCrm19_1776186627', // Contact Number
             'ufCrm19_1785239877'  // Whatsapp Link
         ],
-        'order' => ['updatedTime' => 'desc', 'id' => 'desc'],
+        'order' => $order,
         'start' => $start
     ];
     
@@ -169,6 +175,9 @@ if ($action === 'get_activity') {
         'other' => 0
     ];
     
+    $now = time();
+    $rankCounter = 1;
+    
     foreach ($rawItems as $item) {
         $sId = $item['stageId'] ?? '';
         $stageMeta = $STAGE_MAP[$sId] ?? [
@@ -193,6 +202,41 @@ if ($action === 'get_activity') {
         $assignedId = (string)($item['assignedById'] ?? '6');
         $agentInfo = $userMap[$assignedId] ?? ['name' => 'Agent #' . $assignedId, 'photo' => null];
         
+        // Calculate date aging: earlier the lead entered stage, higher priority rank
+        $stageDateStr = !empty($item['movedTime']) ? $item['movedTime'] : (!empty($item['updatedTime']) ? $item['updatedTime'] : ($item['createdTime'] ?? ''));
+        $stageTimestamp = !empty($stageDateStr) ? strtotime($stageDateStr) : $now;
+        $ageSeconds = max(0, $now - $stageTimestamp);
+        $ageHours = floor($ageSeconds / 3600);
+        $ageDays = floor($ageHours / 24);
+        
+        if ($ageDays > 0) {
+            $waitingHuman = $ageDays . ($ageDays === 1 ? 'd waiting' : 'd waiting');
+        } elseif ($ageHours > 0) {
+            $waitingHuman = $ageHours . ($ageHours === 1 ? 'h waiting' : 'h waiting');
+        } else {
+            $mins = max(1, floor($ageSeconds / 60));
+            $waitingHuman = $mins . 'm waiting';
+        }
+        
+        // Priority classification based on aging in stage
+        if ($ageHours >= 48) {
+            $priorityLevel = 'critical'; // Overdue: waiting > 48 hours
+            $priorityLabel = 'Critical / Overdue';
+            $priorityColor = '#ef4444';
+        } elseif ($ageHours >= 24) {
+            $priorityLevel = 'high'; // Waiting 24-48 hours
+            $priorityLabel = 'High Priority';
+            $priorityColor = '#f97316';
+        } elseif ($ageHours >= 12) {
+            $priorityLevel = 'medium'; // Waiting 12-24 hours
+            $priorityLabel = 'Action Due';
+            $priorityColor = '#eab308';
+        } else {
+            $priorityLevel = 'fresh'; // < 12 hours
+            $priorityLabel = 'Fresh Lead';
+            $priorityColor = '#10b981';
+        }
+        
         $card = [
             'id' => (int)$item['id'],
             'title' => $item['title'] ?? ('Telesales - Owners data #' . $item['id']),
@@ -212,7 +256,15 @@ if ($action === 'get_activity') {
             'assigned_by_photo' => $agentInfo['photo'],
             'created_time' => $item['createdTime'] ?? '',
             'updated_time' => $item['updatedTime'] ?? '',
+            'moved_time' => $item['movedTime'] ?? '',
             'last_activity_time' => $item['lastActivityTime'] ?? '',
+            'priority_rank' => $rankCounter,
+            'age_days' => (int)$ageDays,
+            'age_hours' => (int)$ageHours,
+            'waiting_human' => $waitingHuman,
+            'priority_level' => $priorityLevel,
+            'priority_label' => $priorityLabel,
+            'priority_color' => $priorityColor,
             'crm_link' => 'https://crm.asquared.ae/crm/type/' . $ENTITY_TYPE_ID . '/details/' . $item['id'] . '/'
         ];
         
@@ -232,11 +284,13 @@ if ($action === 'get_activity') {
         }
         
         $normalized[] = $card;
+        $rankCounter++;
     }
     
     echo json_encode([
         'success' => true,
         'agent_id' => $agentId,
+        'sort_by' => $sortBy,
         'total' => $total,
         'count' => count($normalized),
         'stages_summary' => $stagesSummary,

@@ -68,9 +68,9 @@ export const activityService = {
 
   // Fetch activity cards for an agent
   async getActivity(agentId = '144', options = {}) {
-    const { stageId = '', search = '', limit = 100, start = 0 } = options;
+    const { stageId = '', search = '', limit = 100, start = 0, sortBy = 'oldest' } = options;
     try {
-      const url = `${getApiBaseUrl()}/api_activity.php?action=get_activity&agent_id=${encodeURIComponent(agentId)}&stage_id=${encodeURIComponent(stageId)}&search=${encodeURIComponent(search)}&limit=${limit}&start=${start}`;
+      const url = `${getApiBaseUrl()}/api_activity.php?action=get_activity&agent_id=${encodeURIComponent(agentId)}&stage_id=${encodeURIComponent(stageId)}&search=${encodeURIComponent(search)}&sort_by=${encodeURIComponent(sortBy)}&limit=${limit}&start=${start}`;
       const res = await axios.get(url, { timeout: 15000 });
       if (res.data?.success) {
         return res.data;
@@ -85,27 +85,59 @@ export const activityService = {
       if (agentId !== 'all') filter.assignedById = agentId;
       if (stageId) filter.stageId = stageId;
 
+      const order = (sortBy === 'newest') 
+        ? { updatedTime: 'desc', id: 'desc' }
+        : { movedTime: 'asc', updatedTime: 'asc', id: 'asc' };
+
       const direct = await axios.post(`${BITRIX_REST_BASE}crm.item.list.json`, {
         entityTypeId: ENTITY_TYPE_ID,
         filter,
         select: [
-          'id', 'title', 'stageId', 'createdTime', 'updatedTime', 'lastActivityTime', 'assignedById',
+          'id', 'title', 'stageId', 'createdTime', 'updatedTime', 'movedTime', 'lastActivityTime', 'assignedById',
           'ufCrm19_1776147554', 'ufCrm19_1776147607', 'ufCrm19_1776147625',
           'ufCrm19_1776147649', 'ufCrm19_1776186597', 'ufCrm19_1776186627', 'ufCrm19_1785239877'
         ],
-        order: { updatedTime: 'desc', id: 'desc' },
+        order,
         start
       });
 
       const rawItems = direct.data?.result?.items || [];
       const total = direct.data?.total || rawItems.length;
+      const now = Date.now();
 
-      const items = rawItems.map(item => {
+      const items = rawItems.map((item, idx) => {
         const sId = item.stageId || '';
         const meta = STAGE_CONFIG[sId] || { name: 'In Progress', key: 'other', color: '#385175' };
         const contact = String(item.ufCrm19_1776186627 || '').replace(/[^0-9]/g, '');
         let wa = item.ufCrm19_1785239877 || '';
         if (!wa && contact) wa = `https://wa.me/${contact}`;
+
+        const stageDateStr = item.movedTime || item.updatedTime || item.createdTime;
+        const stageTime = stageDateStr ? new Date(stageDateStr).getTime() : now;
+        const ageHours = Math.max(0, Math.floor((now - stageTime) / (1000 * 60 * 60)));
+        const ageDays = Math.floor(ageHours / 24);
+
+        let waitingHuman = `${Math.max(1, Math.floor((now - stageTime) / 60000))}m waiting`;
+        if (ageDays > 0) waitingHuman = `${ageDays}d waiting`;
+        else if (ageHours > 0) waitingHuman = `${ageHours}h waiting`;
+
+        let priorityLevel = 'fresh';
+        let priorityLabel = 'Fresh Lead';
+        let priorityColor = '#10b981';
+
+        if (ageHours >= 48) {
+          priorityLevel = 'critical';
+          priorityLabel = 'Critical / Overdue';
+          priorityColor = '#ef4444';
+        } else if (ageHours >= 24) {
+          priorityLevel = 'high';
+          priorityLabel = 'High Priority';
+          priorityColor = '#f97316';
+        } else if (ageHours >= 12) {
+          priorityLevel = 'medium';
+          priorityLabel = 'Action Due';
+          priorityColor = '#eab308';
+        }
 
         return {
           id: Number(item.id),
@@ -126,7 +158,15 @@ export const activityService = {
           assigned_by_photo: null,
           created_time: item.createdTime || '',
           updated_time: item.updatedTime || '',
+          moved_time: item.movedTime || '',
           last_activity_time: item.lastActivityTime || '',
+          priority_rank: idx + 1,
+          age_days: ageDays,
+          age_hours: ageHours,
+          waiting_human: waitingHuman,
+          priority_level: priorityLevel,
+          priority_label: priorityLabel,
+          priority_color: priorityColor,
           crm_link: `https://crm.asquared.ae/crm/type/${ENTITY_TYPE_ID}/details/${item.id}/`
         };
       });
@@ -134,6 +174,7 @@ export const activityService = {
       return {
         success: true,
         agent_id: agentId,
+        sort_by: sortBy,
         total,
         count: items.length,
         items
