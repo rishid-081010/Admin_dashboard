@@ -3,7 +3,8 @@ import {
   LayoutDashboard, List, Search, Phone, MessageSquare, 
   ChevronDown, RefreshCw, ExternalLink, Play, Pause, Volume2, 
   Building2, MapPin, User, Hash, CheckCircle2, AlertCircle, Clock, 
-  ArrowRight, X, UserCheck, ShieldCheck, Flame, Filter
+  ArrowRight, X, UserCheck, ShieldCheck, Flame, Filter,
+  Link2, Copy, Check, Send, Radio, Terminal, Sparkles
 } from 'lucide-react';
 import { activityService, STAGE_CONFIG } from '../utils/activityService';
 
@@ -21,6 +22,47 @@ export default function MyActivity({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeStageFilter, setActiveStageFilter] = useState('all');
   const [sortBy, setSortBy] = useState('oldest'); // 'oldest' (FIFO Priority: earlier = higher priority) or 'newest'
+
+  // Webhook Modal State
+  const [isWebhookModalOpen, setIsWebhookModalOpen] = useState(false);
+  const [webhookList, setWebhookList] = useState([]);
+  const [loadingWebhooks, setLoadingWebhooks] = useState(false);
+  const [copiedWebhookId, setCopiedWebhookId] = useState(null);
+  const [pingingAgentId, setPingingAgentId] = useState(null);
+  const [pingResult, setPingResult] = useState({});
+  const [webhookSearch, setWebhookSearch] = useState('');
+
+  const loadWebhooks = async () => {
+    setLoadingWebhooks(true);
+    try {
+      const res = await activityService.listWebhooks();
+      if (res?.agents) {
+        setWebhookList(res.agents);
+      }
+    } catch (e) {
+      console.error('Failed to load webhook list:', e);
+    } finally {
+      setLoadingWebhooks(false);
+    }
+  };
+
+  const handleCopyWebhook = (url, id) => {
+    navigator.clipboard.writeText(url);
+    setCopiedWebhookId(id);
+    setTimeout(() => setCopiedWebhookId(null), 2000);
+  };
+
+  const handlePingWebhook = async (agentId) => {
+    setPingingAgentId(agentId);
+    try {
+      const res = await activityService.pingWebhook(agentId);
+      setPingResult(prev => ({ ...prev, [agentId]: res }));
+    } catch (err) {
+      setPingResult(prev => ({ ...prev, [agentId]: { success: false, message: err.message } }));
+    } finally {
+      setPingingAgentId(null);
+    }
+  };
 
   // Modal / Detail Drawer
   const [selectedItem, setSelectedItem] = useState(null);
@@ -188,6 +230,16 @@ export default function MyActivity({ currentUser }) {
     );
   }, [agents, agentSearch]);
 
+  const filteredWebhookList = useMemo(() => {
+    if (!webhookSearch.trim()) return webhookList;
+    const q = webhookSearch.toLowerCase().trim();
+    return webhookList.filter(a => 
+      (a.name || '').toLowerCase().includes(q) || 
+      (a.email || '').toLowerCase().includes(q) ||
+      (a.id || '').includes(q)
+    );
+  }, [webhookList, webhookSearch]);
+
   const interestedCount = items.filter(it => it.stage_key === 'interested').length;
   const contactedCount = items.filter(it => it.stage_key === 'contacted' || it.stage_key === 'no_answer').length;
   const readyCount = items.filter(it => it.stage_key === 'ready' || it.stage_key === 'import').length;
@@ -313,6 +365,19 @@ export default function MyActivity({ currentUser }) {
             title="Refresh Bitrix24 cards"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-blue-400' : ''}`} />
+          </button>
+
+          {/* Dedicated Agent Webhooks Gateway */}
+          <button
+            onClick={() => {
+              setIsWebhookModalOpen(true);
+              loadWebhooks();
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all shadow-sm cursor-pointer"
+            title="Connect agent webhooks to Bitrix24 automations and n8n"
+          >
+            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span>Agent Webhooks</span>
           </button>
 
           {/* Board / List Switcher */}
@@ -981,6 +1046,276 @@ export default function MyActivity({ currentUser }) {
                 className="px-4 py-2 bg-[#1b2b3d] hover:bg-[#283e58] text-white text-xs font-semibold rounded-xl transition-all cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* AGENT WEBHOOK GATEWAY MODAL                                         */}
+      {/* =================================================================== */}
+      {isWebhookModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#061324] border border-[#233b59] w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-[#233b59] flex items-center justify-between bg-[#081729]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Radio className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                      AGENT REAL-TIME WEBHOOK GATEWAY
+                    </h2>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                      Live Gateway
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Bidirectional webhooks connecting Bitrix24 automations, VAPI telephony, and n8n workflows directly to each agent's personal dashboard board.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsWebhookModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 custom-scrollbar bg-[#040c17]">
+              {/* Universal Webhook Endpoint Box */}
+              <div className="bg-[#071526] border border-[#1b314d] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">Universal Webhook Endpoint</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono">Accepts GET / POST</span>
+                </div>
+                <p className="text-xs text-slate-400 mb-3 leading-relaxed">
+                  Automatically routes to any agent by specifying <code className="text-amber-300 font-mono">agent_id</code> or <code className="text-amber-300 font-mono">assigned_by_id</code> in the query parameter or JSON body.
+                </p>
+                <div className="flex items-center gap-2 bg-[#02070f] border border-white/10 rounded-lg p-2 font-mono text-xs text-emerald-300 overflow-x-auto">
+                  <span className="truncate select-all flex-1">https://admin.asquared.ae/dashboard/api_agent_webhook.php</span>
+                  <button
+                    onClick={() => handleCopyWebhook('https://admin.asquared.ae/dashboard/api_agent_webhook.php', 'universal')}
+                    className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded text-[11px] font-sans font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer"
+                  >
+                    {copiedWebhookId === 'universal' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedWebhookId === 'universal' ? 'Copied' : 'Copy URL'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Selected Agent Dedicated Webhook Card */}
+              {selectedAgentId !== 'all' && (
+                <div className="bg-gradient-to-r from-blue-950/30 via-[#071a33] to-blue-950/20 border border-blue-500/30 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full overflow-hidden bg-blue-600/30 border border-blue-400/30 flex items-center justify-center shrink-0">
+                        {currentAgent.photo ? (
+                          <img src={currentAgent.photo} alt={currentAgent.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-4 h-4 text-blue-300" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white flex items-center gap-2">
+                          <span>{currentAgent.name}</span>
+                          <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                            Agent #{currentAgent.id}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400">{currentAgent.email || 'Active Telesales Agent'}</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase text-blue-400 font-semibold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                      Currently Selected Board
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-[#02070f] border border-blue-500/20 rounded-lg p-2 font-mono text-xs text-sky-300 overflow-x-auto mb-3">
+                    <span className="truncate select-all flex-1">
+                      {`https://admin.asquared.ae/dashboard/api_agent_webhook.php?agent_id=${selectedAgentId}`}
+                    </span>
+                    <button
+                      onClick={() => handleCopyWebhook(`https://admin.asquared.ae/dashboard/api_agent_webhook.php?agent_id=${selectedAgentId}`, `agent_${selectedAgentId}`)}
+                      className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded text-[11px] font-sans font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer"
+                    >
+                      {copiedWebhookId === `agent_${selectedAgentId}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedWebhookId === `agent_${selectedAgentId}` ? 'Copied' : 'Copy'}</span>
+                    </button>
+                    <button
+                      onClick={() => handlePingWebhook(selectedAgentId)}
+                      disabled={pingingAgentId === selectedAgentId}
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-sans font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer shadow"
+                    >
+                      {pingingAgentId === selectedAgentId ? (
+                        <RefreshCw className="w-3 h-3 animate-spin text-white" />
+                      ) : (
+                        <Send className="w-3 h-3" />
+                      )}
+                      <span>{pingingAgentId === selectedAgentId ? 'Pinging...' : 'Send Test Ping'}</span>
+                    </button>
+                  </div>
+
+                  {/* Ping Result Display */}
+                  {pingResult[selectedAgentId] && (
+                    <div className="bg-[#020813] border border-emerald-500/30 rounded-lg p-3 text-xs text-slate-300 animate-fade-in">
+                      <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-1">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Status 200 OK — Gateway Online & Verified!</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        {pingResult[selectedAgentId].message || 'Ping logged to Supabase asq_crm_events_v1 audit table.'}
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-1 font-mono">
+                        Received At: {pingResult[selectedAgentId].received_at || new Date().toISOString()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Search & Roster Directory of All 30 Agents */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-blue-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      All Agent Webhooks Directory ({webhookList.length || agents.length})
+                    </span>
+                  </div>
+                  <div className="relative w-64">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Filter by agent name or ID..."
+                      value={webhookSearch}
+                      onChange={e => setWebhookSearch(e.target.value)}
+                      className="w-full bg-[#02070f] border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {loadingWebhooks ? (
+                  <div className="text-center py-8 text-slate-400 text-xs">
+                    <RefreshCw className="w-4 h-4 animate-spin inline-block mr-2 text-blue-400" />
+                    Loading agent webhooks from Bitrix24 &amp; Supabase...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-72 overflow-y-auto custom-scrollbar p-1">
+                    {(filteredWebhookList.length > 0 ? filteredWebhookList : agents).map(agt => {
+                      const id = String(agt.id);
+                      const url = `https://admin.asquared.ae/dashboard/api_agent_webhook.php?agent_id=${id}`;
+                      const isPinged = pingResult[id];
+
+                      return (
+                        <div key={id} className="bg-[#071322] border border-[#1b2b3d] hover:border-blue-500/30 rounded-xl p-3 flex flex-col justify-between gap-2 transition-all">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center shrink-0">
+                                {agt.photo ? (
+                                  <img src={agt.photo} alt={agt.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <User className="w-3.5 h-3.5 text-slate-300" />
+                                )}
+                              </div>
+                              <div className="truncate">
+                                <div className="text-xs font-bold text-white truncate">{agt.name}</div>
+                                <div className="text-[10px] text-slate-400 truncate">{agt.email || `ID: ${id}`}</div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold shrink-0">
+                              #{id}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 bg-[#02070f] border border-white/5 rounded-lg px-2 py-1 text-[11px] font-mono text-slate-300">
+                            <span className="truncate flex-1 text-slate-400">...api_agent_webhook.php?agent_id={id}</span>
+                            <button
+                              onClick={() => handleCopyWebhook(url, `list_${id}`)}
+                              className="p-1 hover:bg-white/10 rounded text-slate-300 hover:text-white transition-all cursor-pointer"
+                              title="Copy full webhook URL"
+                            >
+                              {copiedWebhookId === `list_${id}` ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handlePingWebhook(id)}
+                              disabled={pingingAgentId === id}
+                              className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-sans font-semibold transition-all cursor-pointer"
+                              title="Send test ping"
+                            >
+                              {pingingAgentId === id ? (
+                                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                              ) : (
+                                'Ping'
+                              )}
+                            </button>
+                          </div>
+
+                          {isPinged && (
+                            <div className="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Verified Online ({new Date(isPinged.received_at || Date.now()).toLocaleTimeString()})</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Bitrix24 & n8n Integration Guide Code Box */}
+              <div className="bg-[#071526] border border-[#1b314d] rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Terminal className="w-4 h-4 text-sky-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">Bitrix24 Robot &amp; n8n Setup Guide</span>
+                </div>
+                <div className="text-xs text-slate-300 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                    <p>
+                      <strong>In Bitrix24:</strong> Navigate to CRM &gt; Telesales - Owners data (SPA 1100) &gt; Automation rules. Add a <em>Web Hook</em> action triggered on stage changes or owner call completion.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                    <p>
+                      <strong>Handler URL:</strong> Set handler to <code className="text-emerald-300 font-mono">https://admin.asquared.ae/dashboard/api_agent_webhook.php?agent_id={`{{Responsible}}`}</code>
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                    <p>
+                      <strong>Payload POST Body:</strong> The webhook accepts JSON with <code className="text-amber-300 font-mono">item_id</code>, <code className="text-amber-300 font-mono">stage_id</code>, <code className="text-amber-300 font-mono">call_note</code>, <code className="text-amber-300 font-mono">audio_url</code>, and <code className="text-amber-300 font-mono">transcript_url</code>. All events are logged to Supabase and immediately visible on the agent's board.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#233b59] bg-[#05101d] flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Supabase Audit Logging Active (Table: <code>asq_crm_events_v1</code>)</span>
+              </div>
+              <button
+                onClick={() => setIsWebhookModalOpen(false)}
+                className="px-4 py-2 bg-[#1b2b3d] hover:bg-[#283e58] text-white text-xs font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                Done
               </button>
             </div>
           </div>

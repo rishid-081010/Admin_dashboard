@@ -294,5 +294,42 @@ export const activityService = {
       console.error('Failed to reassign agent:', err);
       return { success: false, error: err.message };
     }
+  },
+
+  // Fetch all dedicated agent webhooks
+  async listWebhooks() {
+    try {
+      const url = `${getApiBaseUrl()}/api_agent_webhook.php?action=list_webhooks`;
+      const res = await axios.get(url, { timeout: 12000 });
+      if (res.data?.success) {
+        return res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to fetch webhooks list:', e);
+    }
+    return { success: false, agents: [] };
+  },
+
+  // Send a test ping to an agent webhook
+  async pingWebhook(agentId) {
+    try {
+      const url = `${getApiBaseUrl()}/api_agent_webhook.php?agent_id=${encodeURIComponent(agentId)}&ping=true`;
+      const res = await axios.get(url, { timeout: 8000 });
+      return res.data;
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Send a custom webhook event (stage update, call note, audio recording)
+  async sendWebhookEvent(payload) {
+    try {
+      const url = `${getApiBaseUrl()}/api_agent_webhook.php`;
+      const res = await axios.post(url, payload, { timeout: 12000 });
+      return res.data;
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 };
+
