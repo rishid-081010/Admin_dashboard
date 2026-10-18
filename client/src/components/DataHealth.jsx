@@ -1,7 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Database, CheckCircle, ShieldCheck, FileSpreadsheet, Info } from 'lucide-react';
+import { fetchTotalLeadsCount } from '../utils/voiceAgentService';
 
 export default function DataHealth() {
+  const [totalLeads, setTotalLeads] = useState(3042722);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      try {
+        const count = await fetchTotalLeadsCount();
+        if (isMounted && count) {
+          setTotalLeads(count);
+        }
+      } catch (e) {
+        console.warn('Failed to load live count in DataHealth:', e);
+      }
+    }
+    load();
+    return () => { isMounted = false; };
+  }, []);
+
   return (
     <div className="w-full flex flex-col h-full animate-fade-in text-white/90 gap-4 overflow-hidden justify-between">
       {/* Top Banner Notice */}
@@ -30,7 +50,7 @@ export default function DataHealth() {
         <div className="bg-[#04152d]/80 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 sm:p-5 shadow-2xl relative flex flex-col justify-between group hover:border-white/20 transition-all">
           <div className="w-10 h-1 bg-purple-500 rounded-full mb-3"></div>
           <div className="text-xs text-white/60 font-semibold mb-2">Owner Profiles</div>
-          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">3,042,722</div>
+          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">{totalLeads.toLocaleString()}</div>
         </div>
 
         {/* Card 3 */}
@@ -60,7 +80,7 @@ export default function DataHealth() {
               <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-80" />
               <div className="text-white font-bold text-sm">All Records Clean &amp; Processed</div>
               <p className="text-white/50 text-xs mt-1 max-w-sm">
-                No corrupt rows or parsing errors found across 3,042,722 owner records.
+                No corrupt rows or parsing errors found across {totalLeads.toLocaleString()} owner records.
               </p>
             </div>
           </div>

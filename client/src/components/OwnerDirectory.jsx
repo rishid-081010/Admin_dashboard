@@ -398,7 +398,12 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       
       if (Array.isArray(response.data)) {
         const mapped = response.data.map(row => {
-          let cleanUnit = row.unit_number ? String(row.unit_number).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim() : null;
+          let rawUnit = row.unit_number ? String(row.unit_number).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim() : null;
+          let cleanUnit = rawUnit;
+          // Filter out dates (e.g. 1977-12-04) mistakenly stored in unit_number during vendor ingestion
+          if (cleanUnit && /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(cleanUnit)) {
+            cleanUnit = null;
+          }
           let cleanBuilding = row.building_name ? String(row.building_name).trim() : 'Dubai';
           if (cleanBuilding === '1' || cleanBuilding.toLowerCase() === 'null') {
             cleanBuilding = row.master_area || 'Dubai';
@@ -408,13 +413,13 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           return {
             id: row.owner_id ? String(row.owner_id) : 'UnknownID',
             owner_id: row.owner_id ? String(row.owner_id) : null,
-            lead_id: row.lead_id ? String(row.lead_id) : (row.owner_id ? String(row.owner_id) : 'LEAD-0000000'),
+            lead_id: row.lead_id ? String(row.lead_id) : (row.owner_id ? `OWN-${row.owner_id}` : 'UNSPECIFIED'),
             name: cleanName,
             building: cleanBuilding,
             area: row.master_area ? String(row.master_area).trim() : 'Dubai',
             phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
             email: row.email ? String(row.email).trim() : 'N/A',
-            units: row.verified_bedrooms ? parseInt(row.verified_bedrooms) : 1,
+            units: 1, // Individual property title deed; aggregated portfolio linked in Owner 360
             unit_number: cleanUnit,
             property_type: row.reported_property_type || null,
             property_category: row.property_category || (row.reported_property_type && /commercial|office|shop|warehouse|industrial|hotel|showroom|store|workshop|factory/i.test(row.reported_property_type) ? 'Commercial' : 'Residential'),

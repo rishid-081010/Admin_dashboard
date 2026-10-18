@@ -19,7 +19,7 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Spearheads high-priority residential villa & luxury apartment owner qualification.',
-    allTimeTotal: 26478,
+    allTimeTotal: 27967,
   },
   '91732d4e-3b60-4950-8aa6-4060c0803119': {
     id: '91732d4e-3b60-4950-8aa6-4060c0803119',
@@ -35,7 +35,7 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Executes high-velocity campaigns across prime developer towers & repeat investors.',
-    allTimeTotal: 40008,
+    allTimeTotal: 41476,
   },
   'f99e8e9a-48b1-411f-806e-6cb7d1dde58b': {
     id: 'f99e8e9a-48b1-411f-806e-6cb7d1dde58b',
@@ -51,7 +51,7 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Specializes in prime areas (Palm Jumeirah, Downtown, Jumeirah Islands) and owner valuation queries.',
-    allTimeTotal: 15110,
+    allTimeTotal: 16530,
   }
 };
 
@@ -774,34 +774,35 @@ export async function fetchImmediateActivities() {
   }
 }
 
-// Fetch total live non-duplicate leads / verified owners count from Supabase
+let _cachedTotalLeads = null;
+let _lastFetchedLeadsTime = 0;
+const LEADS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+// Fetch total live non-duplicate leads / verified owners count from Supabase using fast planned count
 export async function fetchTotalLeadsCount() {
+  const now = Date.now();
+  if (_cachedTotalLeads && (now - _lastFetchedLeadsTime < LEADS_CACHE_TTL)) {
+    return _cachedTotalLeads;
+  }
+
   const headers = {
     'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Prefer': 'count=exact'
+    'Prefer': 'count=planned'
   };
 
   try {
-    const res = await fetch(`${SUPABASE_BASE_URL}/owner_intelligence_leads?limit=1`, { headers });
+    const res = await fetch(`${SUPABASE_BASE_URL}/owners_data?limit=1`, { headers });
     const contentRange = res.headers.get('Content-Range') || '';
     const match = contentRange.match(/\/(\d+)/);
     if (match && match[1]) {
-      return parseInt(match[1], 10);
+      const count = parseInt(match[1], 10);
+      _cachedTotalLeads = count;
+      _lastFetchedLeadsTime = now;
+      return count;
     }
   } catch (err) {
-    console.warn('Failed to fetch from owner_intelligence_leads, falling back to owners_data:', err);
-  }
-
-  try {
-    const res2 = await fetch(`${SUPABASE_BASE_URL}/owners_data?limit=1`, { headers });
-    const contentRange2 = res2.headers.get('Content-Range') || '';
-    const match2 = contentRange2.match(/\/(\d+)/);
-    if (match2 && match2[1]) {
-      return parseInt(match2[1], 10);
-    }
-  } catch (err2) {
-    console.warn('Failed to fetch from owners_data:', err2);
+    console.warn('Failed to fetch planned count from owners_data:', err);
   }
 
   return 3042722;

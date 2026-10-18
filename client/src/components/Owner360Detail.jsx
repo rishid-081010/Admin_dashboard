@@ -17,17 +17,40 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
   const [showFollowupModal, setShowFollowupModal] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
 
-  // Fetch all related properties for this owner from Supabase
+// Helper to sanitize unit numbers and strip DOB dates
+function sanitizeUnitNumber(rawUnit) {
+  if (!rawUnit || rawUnit === 'N/A' || rawUnit === 'null' || rawUnit === '-') return null;
+  const str = String(rawUnit).trim();
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(str)) {
+    return null;
+  }
+  const cleaned = str.replace(/[-_,\s]+$/, '');
+  return cleaned || null;
+}
+
+  // Fetch all related properties for this owner across Dubai from Supabase
   useEffect(() => {
     const fetchRelated = async () => {
-      if (!owner || !owner.id || owner.id === 'UnknownID') return;
+      if (!owner) return;
       setLoadingProps(true);
       try {
         const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
-        const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?owner_id=eq.${encodeURIComponent(owner.id)}&select=*&limit=50`;
-        const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setRelatedProperties(res.data);
+        
+        let filter = null;
+        if (owner.phone && owner.phone !== 'N/A' && owner.phone !== 'null' && String(owner.phone).trim().length > 6) {
+          filter = `phone_normalized=eq.${encodeURIComponent(String(owner.phone).trim())}`;
+        } else if (owner.name && !owner.name.startsWith('Owner (') && !owner.name.startsWith('Verified Property Owner') && !owner.name.startsWith('Verified Owner')) {
+          filter = `full_name=eq.${encodeURIComponent(String(owner.name).trim())}`;
+        } else if (owner.id && owner.id !== 'UnknownID') {
+          filter = `owner_id=eq.${encodeURIComponent(owner.id)}`;
+        }
+
+        if (filter) {
+          const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${filter}&select=*&limit=50`;
+          const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            setRelatedProperties(res.data);
+          }
         }
       } catch (e) {
         console.error('Failed to load related properties:', e);
@@ -62,7 +85,8 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
     const bldg = (owner.building && owner.building !== 'N/A' && owner.building !== 'null') 
       ? owner.building 
       : (relatedProperties[0]?.building_name || relatedProperties[0]?.building || 'Primary Asset');
-    const unit = owner.unit_number || relatedProperties[0]?.unit_number;
+    const rawUnit = owner.unit_number || relatedProperties[0]?.unit_number;
+    const unit = sanitizeUnitNumber(rawUnit);
     return unit ? `${bldg} · Unit ${unit}` : bldg;
   })();
 
@@ -122,7 +146,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-[10px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-[#06111e] border border-[#1b2b3d] px-2 py-0.5 rounded-md">
-              {owner.lead_id || owner.id || 'LEAD-0000000'}
+              {owner.lead_id || (owner.id ? `OWN-${owner.id}` : 'VERIFIED-OWNER')}
             </span>
             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
               <ShieldCheck className="w-3 h-3" /> Verified Owner
@@ -366,9 +390,9 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
                                 <MapPin className="w-3 h-3 text-white/40" />
                                 {prop.master_area || prop.area || 'Dubai'}
                               </div>
-                              {prop.unit_number && (
+                              {sanitizeUnitNumber(prop.unit_number) && (
                                 <div className="text-[10px] font-mono text-blue-400/90 mt-1 bg-blue-500/10 px-1.5 py-0.5 rounded inline-block">
-                                  Unit: {prop.unit_number}
+                                  Unit: {sanitizeUnitNumber(prop.unit_number)}
                                 </div>
                               )}
                             </div>

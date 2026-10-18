@@ -71,7 +71,7 @@ function getBuildingCommunity(name, rawArea) {
   if (rawArea && !DUMMY_BUILDINGS.has(rawArea.toLowerCase()) && !/^\d+(\.\d+)?$/.test(rawArea.trim())) {
     return rawArea.toUpperCase();
   }
-  return 'BUSINESS BAY';
+  return 'DUBAI';
 }
 
 // Determine property classification
@@ -95,41 +95,35 @@ function getBuildingType(name, rawType) {
   return 'Residential';
 }
 
-// Calculate realistic dual SQM and SQFT specs
-function getUnitSizeMetrics(unitNum, propertyType) {
-  const u = String(unitNum || '101');
-  const hash = u.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  
-  let sqm;
-  if ((propertyType || '').includes('Office') || (propertyType || '').includes('Commercial')) {
-    sqm = 70 + (hash % 120);
-  } else if ((propertyType || '').includes('Villa')) {
-    sqm = 250 + (hash % 350);
-  } else {
-    sqm = 55 + (hash % 95);
+// Retrieve authentic verified size or mark as unspecified
+function getVerifiedSizeMetrics(record) {
+  const sqft = Number(record?.verified_size_sqft);
+  if (sqft && sqft > 0) {
+    const sqm = Math.round(sqft / 10.7639);
+    return { sqm, sqft, isVerified: true };
   }
-  
-  const sqft = Math.round(sqm * 10.7639);
-  return { sqm, sqft };
+  return { sqm: null, sqft: null, isVerified: false };
 }
 
-// Derive occupancy observation
-function getOccupancyObservation(unitNum, isPhoneAvailable) {
-  const u = String(unitNum || '');
-  const lastDigit = parseInt(u.slice(-1) || '0', 10);
-  if (lastDigit % 3 === 0) return 'Owner occupied';
-  if (lastDigit % 3 === 1) return 'Tenanted';
-  return isPhoneAvailable ? 'Tenanted' : 'Vacant';
+// Sanitize unit numbers (e.g. ingested vendor DOB dates like '1977-12-04' -> 'Unit Unspecified')
+function sanitizeUnitNumber(rawUnit) {
+  if (!rawUnit || rawUnit === 'N/A' || rawUnit === 'null' || rawUnit === '-') return '—';
+  const str = String(rawUnit).trim();
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(str)) {
+    return 'Unit Unspecified';
+  }
+  const cleaned = str.replace(/[-_,\s]+$/, '');
+  return cleaned || '—';
 }
 
 // Extract floor from unit number (e.g. Unit 1402 -> Floor 14)
 function getFloorFromUnit(unitNum) {
-  if (!unitNum || unitNum === 'N/A') return 'G';
+  if (!unitNum || unitNum === '—' || unitNum === 'N/A' || unitNum === 'Unit Unspecified') return 'G';
   const clean = String(unitNum).replace(/[^\d]/g, '');
-  if (clean.length >= 3) {
-    return clean.slice(0, -2);
-  }
-  return '1';
+  if (!clean) return 'G';
+  if (clean.length <= 2) return '1';
+  if (clean.length === 3) return clean.slice(0, 1);
+  return clean.slice(0, clean.length - 2);
 }
 
 export default function Buildings() {
@@ -407,9 +401,9 @@ export default function Buildings() {
       `"${o.lead_id}"`,
       `"${o.phone}"`,
       `"${o.type}"`,
-      o.sqm,
-      o.sqft,
-      `"${o.occupancy}"`,
+      o.isVerifiedSize ? o.sqm : '',
+      o.isVerifiedSize ? o.sqft : '',
+      `"${o.occupancy || 'Unconfirmed'}"`,
       `"${o.crmStatus}"`
     ]);
 
@@ -868,17 +862,11 @@ export default function Buildings() {
                           <span className="font-mono text-white/40">{owner.lead_id}</span>
                           <span>•</span>
                           <span className="text-blue-300 font-mono font-medium">
-                            {owner.sqm} sqm · {owner.sqft.toLocaleString()} sqft
+                            {owner.isVerifiedSize ? `${owner.sqm} sqm · ${owner.sqft.toLocaleString()} sqft` : 'Size Unspecified'}
                           </span>
                           <span>•</span>
-                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
-                            owner.occupancy === 'Owner occupied'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                              : owner.occupancy === 'Tenanted'
-                              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          }`}>
-                            {owner.occupancy}
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                            {owner.occupancy || 'Unconfirmed'}
                           </span>
                         </div>
                       </div>
@@ -998,21 +986,25 @@ export default function Buildings() {
                   <div className="bg-black/30 p-3 rounded-xl border border-white/5">
                     <div className="text-white/40">Reported Size (Dual Metric)</div>
                     <div className="text-sm font-bold text-white font-mono mt-1">
-                      {selectedProperty360.sqm} sqm <span className="text-white/40">/</span> {selectedProperty360.sqft?.toLocaleString()} sqft
+                      {selectedProperty360.isVerifiedSize ? (
+                        <>{selectedProperty360.sqm} sqm <span className="text-white/40">/</span> {selectedProperty360.sqft?.toLocaleString()} sqft</>
+                      ) : (
+                        <span className="text-white/40 italic">Unspecified in records</span>
+                      )}
                     </div>
                   </div>
 
                   <div className="bg-black/30 p-3 rounded-xl border border-white/5">
                     <div className="text-white/40">Occupancy Status</div>
                     <div className="text-sm font-bold text-emerald-400 mt-1">
-                      {selectedProperty360.occupancy}
+                      {selectedProperty360.occupancy || 'Unconfirmed'}
                     </div>
                   </div>
 
                   <div className="bg-black/30 p-3 rounded-xl border border-white/5">
                     <div className="text-white/40">Estimated Market Benchmark</div>
                     <div className="text-sm font-bold text-white font-serif mt-1">
-                      AED {((selectedProperty360.sqft || 1000) * 1350).toLocaleString()}
+                      {selectedProperty360.isVerifiedSize ? `AED ${(selectedProperty360.sqft * 1350).toLocaleString()}` : 'Awaiting Sqft'}
                     </div>
                     <div className="text-[10px] text-white/40 mt-0.5">AED 1,350 / sqft comp</div>
                   </div>

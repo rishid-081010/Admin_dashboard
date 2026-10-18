@@ -15,6 +15,36 @@ const getApiBaseUrl = () => {
   return 'https://admin.asquared.ae/dashboard';
 };
 
+export const KNOWN_AGENTS = {
+  '6': 'Melanie Simsiman',
+  '7': 'Akarsh Arora',
+  '11': 'Mridul Sethi',
+  '12': 'nouman tayyab',
+  '68': 'Angel',
+  '75': 'Mayannk Agarwal',
+  '82': 'Jayanta',
+  '89': 'Samuel',
+  '114': 'Jarrie',
+  '115': 'Vincent',
+  '128': 'Sanskrit',
+  '144': 'Vikram',
+  '155': 'Ai_Agent',
+  '157': 'Aravinda',
+  '174': 'fesal Adu',
+  '186': 'NIDAF KHAN',
+  '200': 'Abid Ali',
+  '201': 'Humesh Gurung',
+  '217': 'aryan singh',
+  '298': 'ASAD UR REHMAN',
+  '316': 'Yasmin Hussain',
+  '324': 'MARIAM NABISERE',
+  '325': 'Kruti Kubavat',
+  '327': 'Mohamed Nifras',
+  '328': 'Wasim Khan',
+  '329': 'Anish Kumar',
+  '330': 'Faical Lamara'
+};
+
 export const STAGE_CONFIG = {
   'DT1100_44:ASQ_READY_CALL': { name: 'Ready for Call', key: 'ready', color: '#39A8EF', badge: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
   'DT1100_44:UC_5B620Q': { name: 'Contacted', key: 'contacted', color: '#00c4fb', badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
@@ -154,7 +184,7 @@ export const activityService = {
           stage_key: meta.key,
           stage_color: meta.color,
           assigned_by_id: String(item.assignedById || '6'),
-          assigned_by_name: 'Agent #' + item.assignedById,
+          assigned_by_name: KNOWN_AGENTS[String(item.assignedById)] || (item.assignedById ? 'Agent #' + item.assignedById : 'Unassigned'),
           assigned_by_photo: null,
           created_time: item.createdTime || '',
           updated_time: item.updatedTime || '',

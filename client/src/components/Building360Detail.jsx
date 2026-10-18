@@ -11,23 +11,29 @@ import Owner360Detail from './Owner360Detail';
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
-function getUnitSizeMetrics(unitNum, propertyType) {
-  const u = String(unitNum || '101');
-  const hash = u.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  let sqm;
-  if ((propertyType || '').toLowerCase().includes('office') || (propertyType || '').toLowerCase().includes('commercial')) {
-    sqm = 70 + (hash % 120);
-  } else if ((propertyType || '').toLowerCase().includes('villa')) {
-    sqm = 250 + (hash % 350);
-  } else {
-    sqm = 55 + (hash % 95);
+// Retrieve authentic verified size or mark as unspecified
+function getVerifiedSizeMetrics(record) {
+  const sqft = Number(record?.verified_size_sqft);
+  if (sqft && sqft > 0) {
+    const sqm = Math.round(sqft / 10.7639);
+    return { sqm, sqft, isVerified: true };
   }
-  const sqft = Math.round(sqm * 10.7639);
-  return { sqm, sqft };
+  return { sqm: null, sqft: null, isVerified: false };
+}
+
+// Sanitize unit numbers (e.g. ingested vendor DOB dates like '1977-12-04' -> 'Unit Unspecified')
+function sanitizeUnitNumber(rawUnit) {
+  if (!rawUnit || rawUnit === 'N/A' || rawUnit === 'null' || rawUnit === '-') return '—';
+  const str = String(rawUnit).trim();
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(str)) {
+    return 'Unit Unspecified';
+  }
+  const cleaned = str.replace(/[-_,\s]+$/, '');
+  return cleaned || '—';
 }
 
 function getFloorFromUnit(unit) {
-  if (!unit || unit === 'N/A') return 'G';
+  if (!unit || unit === '—' || unit === 'N/A' || unit === 'Unit Unspecified') return 'G';
   const clean = unit.replace(/[^\d]/g, '');
   if (!clean) return 'G';
   if (clean.length <= 2) return '1';
@@ -107,25 +113,26 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           searchFilter = `building_name=eq.${encodeURIComponent(rawBn)}`;
         }
 
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?${searchFilter}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price&limit=500`;
+        const endpoint = `${SUPABASE_BASE_URL}/owners_data?${searchFilter}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price,verified_size_sqft&limit=500`;
         
         let res = await axios.get(endpoint, { headers });
         if (!res.data || res.data.length === 0) {
           // Fallback with ilike (no wildcards) in case of casing differences
-          const fallbackEndpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.${encodeURIComponent(rawBn)}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price&limit=500`;
+          const fallbackEndpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.${encodeURIComponent(rawBn)}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price,verified_size_sqft&limit=500`;
           res = await axios.get(fallbackEndpoint, { headers });
         }
 
         if (isMounted && res.data && res.data.length > 0) {
           const mapped = res.data.map((r, i) => {
+            const rawUnit = r.unit_number ? String(r.unit_number).trim() : 'N/A';
+            const unit = sanitizeUnitNumber(rawUnit);
             const rawName = (r.full_name || '').trim();
             const cleanName = (!rawName || rawName === '_' || rawName === 'null' || rawName === '-') 
-              ? `Verified Owner (${r.unit_number ? 'Unit ' + r.unit_number : building.name})` 
+              ? `Verified Owner (${unit !== '—' && unit !== 'Unit Unspecified' ? 'Unit ' + unit : building.name})` 
               : rawName;
             
-            const unit = r.unit_number ? String(r.unit_number).trim() : 'N/A';
             const propType = r.property_category || r.reported_property_type || building.propertyType || 'Residential';
-            const sizeMetrics = getUnitSizeMetrics(unit, propType);
+            const sizeMetrics = getVerifiedSizeMetrics(r);
             const hasPhone = Boolean(r.phone_normalized && String(r.phone_normalized).trim().length > 6);
             const floor = getFloorFromUnit(unit);
 
@@ -143,6 +150,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
               type: propType,
               sqm: sizeMetrics.sqm,
               sqft: sizeMetrics.sqft,
+              isVerifiedSize: sizeMetrics.isVerified,
               crmStatus: hasPhone ? 'Synced' : 'Draft',
               bitrix_id: r.bitrix_id,
               rawRecord: r
@@ -258,8 +266,8 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
       `"${o.lead_id}"`,
       `"${o.phone}"`,
       `"${o.type}"`,
-      o.sqm,
-      o.sqft,
+      o.isVerifiedSize ? o.sqm : '',
+      o.isVerifiedSize ? o.sqft : '',
       `"${o.area}"`,
       `"${o.crmStatus}"`
     ]);
@@ -561,7 +569,11 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                     <td className="py-3 px-4 text-white/70">
                       <div className="text-[12px] font-medium">{owner.type}</div>
                       <div className="text-[10.5px] text-white/40 font-mono mt-0.5">
-                        {owner.sqft} sqft ({owner.sqm} sqm)
+                        {owner.isVerifiedSize ? (
+                          `${owner.sqft.toLocaleString()} sqft (${owner.sqm} sqm)`
+                        ) : (
+                          <span className="text-white/30 italic">Unspecified</span>
+                        )}
                       </div>
                     </td>
 
@@ -613,7 +625,9 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                   </h4>
                   <div className="text-[11px] text-white/50 flex items-center justify-between mt-1">
                     <span>{owner.type}</span>
-                    <span className="font-mono text-white/40">{owner.sqft} sqft</span>
+                    <span className="font-mono text-white/40">
+                      {owner.isVerifiedSize ? `${owner.sqft.toLocaleString()} sqft` : 'Unspecified'}
+                    </span>
                   </div>
                 </div>
 
