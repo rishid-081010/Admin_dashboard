@@ -64,7 +64,7 @@ export default function OverviewDashboard({ onNavigate }) {
     };
 
     const totalCallsNum = res.rawTotalCalls ?? parseNum(res.totalCalls, 0);
-    const answeredCallsNum = res.rawAnsweredCalls ?? parseNum(res.answeredCalls, Math.round(totalCallsNum * 0.48));
+    const answeredCallsNum = res.rawAnsweredCalls ?? parseNum(res.answeredCalls, 0);
     const qualifiedLeadsNum = res.rawQualifiedLeads ?? parseNum(res.qualifiedLeads, 0);
 
     const sCalls = sAgent.rawCalls ?? parseNum(sAgent.calls, 0);

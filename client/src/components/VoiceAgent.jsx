@@ -87,7 +87,7 @@ export default function VoiceAgent() {
               <ShieldCheck className="w-3 h-3" /> Live Telephony Intelligence
             </span>
             <span className="text-[10px] text-white/40 font-mono">
-              Supabase Cluster (81,597 calls)
+              Supabase Cluster (85,973+ verified calls)
             </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-white">

@@ -222,6 +222,16 @@ export function cleanUnitNumber(rawUnit, buildingName = '') {
   // Strip trailing dashes, slashes, whitespace
   u = u.replace(/[\s\-_/]+$/g, '').trim();
 
+  // Strip DOB date strings (e.g. 1985-04-12, 12/04/1985) ingested mistakenly into unit field
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(u) || /^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(u)) {
+    return '';
+  }
+
+  // Strip dummy or nullish placeholder strings
+  if (DUMMY_STRINGS.has(u.toLowerCase()) || /^(?:null|none|n\/a|undefined|-|--|0)$/i.test(u)) {
+    return '';
+  }
+
   // Strip leading prefixes like "Unit ", "Flat ", "Villa ", "Apartment "
   u = u.replace(/^(?:Unit|Flat|Villa|Apartment|Apt|Suite|Door)\s+/i, '');
 

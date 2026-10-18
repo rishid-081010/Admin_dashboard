@@ -91,7 +91,7 @@ export default function WorkflowsDirectory() {
     const latencies = workflows.map(w => w.avgDurationSec).filter(v => typeof v === 'number' && v > 0);
     const avgRuntimeSec = latencies.length > 0 
       ? Number((latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(2))
-      : (data?.summary?.avgRuntimeSec || 1.73);
+      : (data?.summary?.avgRuntimeSec || 0);
 
     return {
       totalWorkflows,

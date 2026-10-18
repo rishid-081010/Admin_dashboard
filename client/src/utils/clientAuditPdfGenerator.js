@@ -226,7 +226,7 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
   ];
 
   const hoursConnected = (totalDur / 3600).toFixed(2);
-  const callbackPool = Math.max(0, 31668 - totalCalls).toLocaleString();
+  const callbackPool = (noAnswer || 0).toLocaleString();
 
   const kpisRow2 = [
     { label: 'TOTAL AIRTIME', val: `${airtimeMins} Mins`, sub: `${hoursConnected} Hours Connected`, color: [139, 92, 246] },
@@ -278,36 +278,51 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
 
   y = doc.lastAutoTable.finalY;
 
+  const sDials = agentStats['682cf6ae-23fd-44f3-a4a3-756998cd62c1']?.dials || 0;
+  const sConn = agentStats['682cf6ae-23fd-44f3-a4a3-756998cd62c1']?.connected || 0;
+  const sRate = sDials > 0 ? `${((sConn / sDials) * 100).toFixed(1)}%` : '0.0%';
+  const sLeads = agentStats['682cf6ae-23fd-44f3-a4a3-756998cd62c1']?.leads || 0;
+
+  const jDials = agentStats['91732d4e-3b60-4950-8aa6-4060c0803119']?.dials || 0;
+  const jConn = agentStats['91732d4e-3b60-4950-8aa6-4060c0803119']?.connected || 0;
+  const jRate = jDials > 0 ? `${((jConn / jDials) * 100).toFixed(1)}%` : '0.0%';
+  const jLeads = agentStats['91732d4e-3b60-4950-8aa6-4060c0803119']?.leads || 0;
+
+  const aDials = agentStats['f99e8e9a-48b1-411f-806e-6cb7d1dde58b']?.dials || 0;
+  const aConn = agentStats['f99e8e9a-48b1-411f-806e-6cb7d1dde58b']?.connected || 0;
+  const aRate = aDials > 0 ? `${((aConn / aDials) * 100).toFixed(1)}%` : '0.0%';
+  const aLeads = agentStats['f99e8e9a-48b1-411f-806e-6cb7d1dde58b']?.leads || 0;
+
   const fleetRows = [
     [
       'Sarah\n(akarsharora@gmail.com)',
       'Owner Cold Outreach\n(Batch 19k)',
-      (agentStats['682cf6ae-23fd-44f3-a4a3-756998cd62c1']?.dials || Math.round(totalCalls * 0.4)).toString(),
-      (agentStats['682cf6ae-23fd-44f3-a4a3-756998cd62c1']?.connected || Math.round(answered * 0.42)).toString(),
-      totalCalls > 0 ? `${((answered / totalCalls) * 100).toFixed(1)}%` : '21.6%',
-      (agentStats['682cf6ae-23fd-44f3-a4a3-756998cd62c1']?.leads || Math.round(substantive * 0.45)).toString(),
+      sDials.toString(),
+      sConn.toString(),
+      sRate,
+      sLeads.toString(),
       '09:00 AM – 06:15 PM',
-      'ACTIVE • HEALTHY'
+      sDials > 0 ? 'ACTIVE • HEALTHY' : 'STANDBY'
     ],
     [
       'James\n(leads.asquared@gmail.com)',
       'Owner Cold Outreach\n(Batch 53k)',
-      (agentStats['91732d4e-3b60-4950-8aa6-4060c0803119']?.dials || Math.round(totalCalls * 0.3)).toString(),
-      (agentStats['91732d4e-3b60-4950-8aa6-4060c0803119']?.connected || Math.round(answered * 0.29)).toString(),
-      totalCalls > 0 ? `${((answered / totalCalls) * 100).toFixed(1)}%` : '19.1%',
-      (agentStats['91732d4e-3b60-4950-8aa6-4060c0803119']?.leads || Math.round(substantive * 0.28)).toString(),
+      jDials.toString(),
+      jConn.toString(),
+      jRate,
+      jLeads.toString(),
       '09:00 AM – 04:30 PM',
-      'COMPLETED'
+      jDials > 0 ? 'ACTIVE • HEALTHY' : 'STANDBY'
     ],
     [
       'Aisha\n(asquaredrealestate2026)',
       'Owner Cold Outreach\n(Batch 53k)',
-      (agentStats['f99e8e9a-48b1-411f-806e-6cb7d1dde58b']?.dials || Math.round(totalCalls * 0.3)).toString(),
-      (agentStats['f99e8e9a-48b1-411f-806e-6cb7d1dde58b']?.connected || Math.round(answered * 0.29)).toString(),
-      totalCalls > 0 ? `${((answered / totalCalls) * 100).toFixed(1)}%` : '18.8%',
-      (agentStats['f99e8e9a-48b1-411f-806e-6cb7d1dde58b']?.leads || Math.round(substantive * 0.27)).toString(),
+      aDials.toString(),
+      aConn.toString(),
+      aRate,
+      aLeads.toString(),
       '09:02 AM – 05:40 PM',
-      'COMPLETED'
+      aDials > 0 ? 'ACTIVE • HEALTHY' : 'STANDBY'
     ],
     [
       'TOTAL / CAMPAIGN AVERAGE',
@@ -356,9 +371,12 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
 
   y = doc.lastAutoTable.finalY;
 
-  const noAnsPct = totalCalls > 0 ? ((noAnswer || Math.round(totalCalls * 0.52)) / totalCalls * 100).toFixed(1) : '52.2';
-  const busyPct = totalCalls > 0 ? ((busy || Math.round(totalCalls * 0.18)) / totalCalls * 100).toFixed(1) : '18.9';
-  const livePct = totalCalls > 0 ? ((answered || Math.round(totalCalls * 0.20)) / totalCalls * 100).toFixed(1) : '20.5';
+  const carrierDrops = Math.max(0, totalCalls - (answered + noAnswer + busy + voicemails));
+  const livePct = totalCalls > 0 ? ((answered / totalCalls) * 100).toFixed(1) : '0.0';
+  const noAnsPct = totalCalls > 0 ? ((noAnswer / totalCalls) * 100).toFixed(1) : '0.0';
+  const busyPct = totalCalls > 0 ? ((busy / totalCalls) * 100).toFixed(1) : '0.0';
+  const vmPct = totalCalls > 0 ? ((voicemails / totalCalls) * 100).toFixed(1) : '0.0';
+  const dropsPct = totalCalls > 0 ? ((carrierDrops / totalCalls) * 100).toFixed(1) : '0.0';
 
   const outcomeRows = [
     [
@@ -371,29 +389,29 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
     [
       'NO ANSWER / RING TIMEOUT',
       "Phone rang out ('customer-did-not-answer')",
-      (noAnswer || Math.round(totalCalls * 0.52)).toString(),
+      noAnswer.toString(),
       `${noAnsPct}%`,
       "Added to automated Attempt #2 retry pool ('voice_call_status = did_not_answer')."
     ],
     [
       'LINE ENGAGED / BUSY',
       'Customer busy / on another call',
-      (busy || Math.round(totalCalls * 0.18)).toString(),
+      busy.toString(),
       `${busyPct}%`,
       'Subscriber line busy; scheduled for Day 3 follow-up loop.'
     ],
     [
       'VOICEMAIL / IVR',
       'Carrier answering machine detected',
-      (voicemails || Math.round(totalCalls * 0.04)).toString(),
-      '4.0%',
+      voicemails.toString(),
+      `${vmPct}%`,
       'Filtered by AI machine-detection rule; preserved in retry queue.'
     ],
     [
       'NETWORK DROPS / SIP',
       'Carrier connection failed / silence timeout',
-      Math.round(totalCalls * 0.05).toString(),
-      '5.0%',
+      carrierDrops.toString(),
+      `${dropsPct}%`,
       'Telco trunk carrier handshake drops (Etisalat/du route resets).'
     ]
   ];
@@ -472,7 +490,8 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
-  doc.text('AED 11,800,000+ INVENTORY', pageWidth - margin, 14, { align: 'right' });
+  const totalInventoryAed = highValueLeads.reduce((acc, l) => acc + (Number(l.verified_purchase_price) || 0), 0);
+  doc.text(totalInventoryAed > 0 ? `AED ${(totalInventoryAed / 1000000).toFixed(1)}M PIPELINE` : 'HIGH-INTENT SELLER LEADS', pageWidth - margin, 14, { align: 'right' });
 
   doc.setFontSize(7.5);
   doc.setTextColor(16, 185, 129);
@@ -501,58 +520,15 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
   y = doc.lastAutoTable.finalY;
 
   // Map substantive leads from database into the executive lead portfolio table
-  const dossierRows = (highValueLeads.length > 0 ? highValueLeads.slice(0, 7) : [
-    {
-      customer_name: 'Khaled',
-      customer_phone: '+966 50 685 0013',
-      summary: 'Danube Oceans • 2-Bedroom (Under Construction). Unlisted Unit. Wants to sell. Explicitly requested a senior consultant callback to discuss listing terms.',
-      asking: 'AED 3,500,000'
-    },
-    {
-      customer_name: 'Kinan',
-      customer_phone: '+971 55 550 0848',
-      summary: '29 Boulevard Tower 2 • 1-Bedroom Prime Unit. Confirmed Seller Intent. Currently listed with another agency; agreed to an official AS Properties senior consultant call.',
-      asking: 'AED 3,000,000'
-    },
-    {
-      customer_name: 'Anshul',
-      customer_phone: '+971 56 713 6238',
-      summary: 'Green Lakes S2 • 2-Bedroom Luxury JLT Unit. Exclusive Opportunity. Unit is NOT listed anywhere else. Wants to sell. Scheduled senior consultant consultation.',
-      asking: 'AED 2,600,000'
-    },
-    {
-      customer_name: 'Nikhir',
-      customer_phone: '+971 56 367 4943',
-      summary: 'Green Lakes S2 JLT • 2-Bed + Maid Upgraded Layout. Selling to Upgrade. Looking to sell to purchase a larger family residence. Senior consultant callback scheduled.',
-      asking: 'AED 2,650,000'
-    },
-    {
-      customer_name: 'Uleg',
-      customer_phone: '+971 50 628 3504',
-      summary: 'Burj Khalifa District • 2-Bedroom High Floor. Immediate Rental Listing. Owner confirmed he wants to rent out the unit right now; expected rental income AED 180k/yr.',
-      asking: 'AED 180,000/yr'
-    },
-    {
-      customer_name: 'Gregory',
-      customer_phone: '+971 58 579 1019',
-      summary: 'Verde by Sobha JLT • High-End Apartment Handover Imminent. Rental Supply. Plans to give unit on rent as soon as handover is finalized; requires agency rental management proposal.',
-      asking: 'Market Rental'
-    },
-    {
-      customer_name: 'Svitlana',
-      customer_phone: '+971 55 620 0811',
-      summary: 'Act 1 Act 2 Tower 1 Downtown • 2-Bedroom Opera District View. Seller Lead. Open to selling; requested WhatsApp message from AS Properties to connect directly with listing broker.',
-      asking: 'Open to Offer'
-    }
-  ]).map((ld) => {
+  const dossierRows = (highValueLeads.length > 0 ? highValueLeads.slice(0, 7) : []).map((ld) => {
     const name = ld.customer_name || 'Verified Owner';
     const phone = ld.customer_phone || '+971 50 *** ****';
     const s = ld.summary || 'Owner expressed clear interest in property evaluation and agency representation.';
     
     // Extract community or unit specs if present in summary
-    let community = 'Downtown Dubai';
-    let specs = '2-Bedroom Luxury Unit';
-    let asking = ld.asking || 'AED 2,500,000+';
+    let community = ld.master_area || ld.building_name || 'Dubai';
+    let specs = ld.property_category || 'Residential Unit';
+    let asking = ld.verified_purchase_price ? `AED ${Number(ld.verified_purchase_price).toLocaleString()}` : (ld.asking || 'Market Valuation');
 
     if (s.toLowerCase().includes('danube')) { community = 'Danube Oceans\nDubai Off-Plan'; specs = '2-Bedroom\n(Under Const.)'; asking = 'AED 3,500,000'; }
     else if (s.toLowerCase().includes('29 boulevard')) { community = '29 Boulevard\nTower 2'; specs = '1-Bedroom\nPrime Unit'; asking = 'AED 3,000,000'; }
@@ -569,6 +545,16 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
       s
     ];
   });
+
+  if (dossierRows.length === 0) {
+    dossierRows.push([
+      'No Leads Logged',
+      'All Communities',
+      '—',
+      '—',
+      'No high-value qualified seller leads or appointments recorded for this operational day.'
+    ]);
+  }
 
   autoTable(doc, {
     startY: y,

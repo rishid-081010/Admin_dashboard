@@ -21,7 +21,7 @@ export default function LeadIngestionStudio() {
   const [liveSync, setLiveSync] = useState(false);
   const [tableSearch, setTableSearch] = useState('');
   const [isDragging, setIsDragging] = useState(false);
-  const [dbStats, setDbStats] = useState({ database_leads_count: 40717, status: 'online' });
+  const [dbStats, setDbStats] = useState({ database_leads_count: 3042722, status: 'online' });
 
   const fileInputRef = useRef(null);
   const tableContainerRef = useRef(null);

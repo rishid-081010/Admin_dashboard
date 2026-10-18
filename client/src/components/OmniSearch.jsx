@@ -8,6 +8,7 @@ import {
 import Owner360Detail from './Owner360Detail';
 import Building360Detail from './Building360Detail';
 import { parseIdQuery, isIdMatched } from '../utils/idParser';
+import { cleanUnitNumber } from '../utils/leadCleanerClient';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
@@ -485,9 +486,9 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       if (res.data && res.data.length > 0) {
         const mapped = res.data.map(r => ({
           id: r.owner_id || r.lead_id,
-          lead_id: r.lead_id || `LEAD-${r.owner_id}`,
+          lead_id: r.lead_id || (r.owner_id ? `LEAD-${r.owner_id}` : 'Unassigned'),
           name: r.full_name || 'Property Owner',
-          unit: r.unit_number || 'N/A',
+          unit: cleanUnitNumber(r.unit_number) || 'N/A',
           phone: r.phone_normalized || 'N/A',
           email: r.email || 'N/A',
           area: building.area,
@@ -529,8 +530,9 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       setAreaBuildingsList(area.sampleBuildings.map(bName => ({
         rawName: bName,
         name: bName,
-        unitsCount: Math.max(1, Math.round(area.totalUnits / area.sampleBuildings.length)),
-        ownersCount: Math.max(1, Math.round(area.totalOwners / area.sampleBuildings.length))
+        unitsCount: null,
+        ownersCount: null,
+        contactsCount: null
       })));
     } else {
       setAreaBuildingsList([]);
@@ -561,18 +563,20 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 name: disp,
                 unitsCount: 0,
                 ownersCount: 0,
+                contactsCount: 0,
                 sampleOwners: []
               };
             }
             bMap[k].ownersCount++;
             if (r.unit_number) bMap[k].unitsCount++;
+            if (r.phone_normalized && r.phone_normalized !== 'N/A') bMap[k].contactsCount++;
           }
           if (ownersList.length < 50) {
             ownersList.push({
               id: r.owner_id || r.lead_id,
-              lead_id: r.lead_id || `LEAD-${r.owner_id}`,
-              name: r.full_name || 'Owner',
-              unit: r.unit_number || 'N/A',
+              lead_id: r.lead_id || (r.owner_id ? `LEAD-${r.owner_id}` : 'Unassigned'),
+              name: r.full_name || 'Property Owner',
+              unit: cleanUnitNumber(r.unit_number) || 'N/A',
               building: r.building_name ? formatBuildingName(r.building_name) : 'N/A',
               phone: r.phone_normalized || 'N/A',
               property_category: r.property_category || 'Residential',
@@ -841,7 +845,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-white/50 flex-wrap">
-                        {item.unit_number && <span>Unit: <strong className="text-white/80">{item.unit_number}</strong></span>}
+                        {cleanUnitNumber(item.unit_number) && <span>Unit: <strong className="text-white/80">{cleanUnitNumber(item.unit_number)}</strong></span>}
                         {item.building_name && <span>Building: <strong className="text-white/80">{item.building_name}</strong></span>}
                         {item.master_area && <span>Area: <strong className="text-white/80">{item.master_area}</strong></span>}
                       </div>
@@ -863,7 +867,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         id: item.owner_id || item.lead_id,
                         lead_id: item.lead_id,
                         name: item.full_name,
-                        unit_number: item.unit_number,
+                        unit_number: cleanUnitNumber(item.unit_number),
                         building: item.building_name,
                         area: item.master_area,
                         phone: item.phone_normalized,
@@ -1086,7 +1090,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-white/50 flex-wrap">
-                        {item.unit_number && <span>Unit: <strong className="text-white/80">{item.unit_number}</strong></span>}
+                        {cleanUnitNumber(item.unit_number) && <span>Unit: <strong className="text-white/80">{cleanUnitNumber(item.unit_number)}</strong></span>}
                         {item.building_name && <span>Building: <strong className="text-white/80">{item.building_name}</strong></span>}
                         {item.master_area && <span>Area: <strong className="text-white/80">{item.master_area}</strong></span>}
                       </div>
@@ -1108,7 +1112,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         id: item.owner_id || item.lead_id,
                         lead_id: item.lead_id,
                         name: item.full_name,
-                        unit_number: item.unit_number,
+                        unit_number: cleanUnitNumber(item.unit_number),
                         building: item.building_name,
                         area: item.master_area,
                         phone: item.phone_normalized,
@@ -1207,7 +1211,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                     propertyType: 'Residential',
                     unitsCount: b.unitsCount || b.ownersCount,
                     ownersCount: b.ownersCount,
-                    contactsCount: Math.round(b.ownersCount * 0.5)
+                    contactsCount: b.contactsCount || 0
                   })}
                   className="bg-[#03152d]/80 hover:bg-[#062044] border border-white/5 hover:border-amber-500/40 rounded-xl p-3 flex items-center justify-between gap-3 transition-all cursor-pointer group"
                 >
