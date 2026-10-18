@@ -6,6 +6,9 @@ import {
 import axios from 'axios';
 import Toast from './Toast';
 
+const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
+
 export default function Dashboard({ onNewListingClick, onSelectListing }) {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,21 +21,53 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
   useEffect(() => {
     let isMounted = true;
 
+    const fetchFromSupabase = async () => {
+      const res = await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?select=*&order=created_at.desc.nullslast`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      if (!res.ok) throw new Error(`Supabase returned status ${res.status}`);
+      return await res.json();
+    };
+
     const fetchListings = async () => {
       setLoading(true);
       setError(null);
+      const isLocal = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
       try {
-        const response = await axios.get('/api/listings');
+        if (!isLocal) {
+          // On live hosted environment (Hostinger static hosting), query Supabase directly for instant load
+          const data = await fetchFromSupabase();
+          if (isMounted) setListings(data || []);
+          return;
+        }
+
+        // On local development, try local Express server first
+        const response = await axios.get('/api/listings', { timeout: 3000 });
         if (!isMounted) return;
-        if (response.data.success) {
+        if (response.data && response.data.success) {
           setListings(response.data.listings || []);
         } else {
-          setError('Failed to load listings');
+          const fallbackData = await fetchFromSupabase();
+          if (isMounted) setListings(fallbackData || []);
         }
       } catch (err) {
         if (!isMounted) return;
+        try {
+          const fallbackData = await fetchFromSupabase();
+          if (isMounted) {
+            setListings(fallbackData || []);
+            return;
+          }
+        } catch (sbErr) {
+          console.error('Supabase fallback error:', sbErr);
+        }
         console.error('Fetch listings error:', err);
-        setError('Could not connect to server.');
+        setError('Could not connect to database.');
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -54,9 +89,26 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       if (response.data.success) {
         setListings((prev) => prev.filter((item) => item.id !== id));
         setToast({ msg: 'Listing deleted successfully.', type: 'success' });
+        return;
       }
     } catch (err) {
-      console.error('Delete error:', err);
+      console.warn('Backend delete error, trying Supabase direct deletion:', err);
+      try {
+        const delRes = await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${id}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+        if (delRes.ok) {
+          setListings((prev) => prev.filter((item) => item.id !== id));
+          setToast({ msg: 'Listing deleted successfully.', type: 'success' });
+          return;
+        }
+      } catch (sbDelErr) {
+        console.error('Supabase delete error:', sbDelErr);
+      }
       setToast({ msg: 'Failed to delete listing.', type: 'error' });
     }
   };
@@ -258,7 +310,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 <div className="flex items-center gap-4 text-xs text-slate-400 mb-4">
                   <span className="flex items-center gap-1">
                     <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
-                    {listing.images?.length || 0} Photos
+                    {listing.total_images ?? (listing.images?.length || 0)} Photos
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />

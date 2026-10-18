@@ -12,6 +12,9 @@ import axios from 'axios';
 import BeforeAfterSlider from './BeforeAfterSlider';
 import Toast from './Toast';
 
+const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
+
 const ROOM_CATEGORIES = [
   'Living_Room',
   'Master_Bedroom',
@@ -127,19 +130,72 @@ export default function ListingDetail({ listingId, onBack }) {
 
   const fetchListingDetails = async (isInitial = false) => {
     if (isInitial) setLoading(true);
+    const isLocal = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    const fetchFromSupabase = async () => {
+      const [listingRes, imagesRes] = await Promise.all([
+        fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}&select=*&limit=1`, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        }),
+        fetch(`${SUPABASE_BASE_URL}/real_estate_images?listing_id=eq.${listingId}&select=*&order=created_at.asc`, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        })
+      ]);
+      if (!listingRes.ok) throw new Error('Supabase listing fetch failed');
+      const listings = await listingRes.json();
+      const rawImages = imagesRes.ok ? await imagesRes.json() : [];
+      return { listing: listings[0] || null, images: rawImages };
+    };
+
     try {
-      const response = await axios.get(`/api/listings/${listingId}`);
+      if (!isLocal) {
+        // On live hosted domain, load directly from Supabase
+        const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
+        if (!isMountedRef.current) return;
+        if (sbListing) {
+          setListing(sbListing);
+          setImages(sbImages || []);
+          if (sbListing.prompt && !customPrompt) {
+            setCustomPrompt(sbListing.prompt);
+          }
+        }
+        return;
+      }
+
+      // On local dev, try local API first
+      const response = await axios.get(`/api/listings/${listingId}`, { timeout: 3000 });
       if (!isMountedRef.current) return;
 
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         setListing(response.data.listing);
         setImages(response.data.images || []);
         if (response.data.listing?.prompt && !customPrompt) {
           setCustomPrompt(response.data.listing.prompt);
         }
+      } else {
+        const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
+        if (!isMountedRef.current) return;
+        if (sbListing) {
+          setListing(sbListing);
+          setImages(sbImages || []);
+        }
       }
     } catch (err) {
       if (!isMountedRef.current) return;
+      try {
+        const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
+        if (isMountedRef.current && sbListing) {
+          setListing(sbListing);
+          setImages(sbImages || []);
+          if (sbListing.prompt && !customPrompt) {
+            setCustomPrompt(sbListing.prompt);
+          }
+          return;
+        }
+      } catch (sbErr) {
+        console.error('Supabase listing details fallback error:', sbErr);
+      }
       console.error('Fetch listing details error:', err);
       setError('Failed to fetch listing details.');
     } finally {
@@ -156,7 +212,7 @@ export default function ListingDetail({ listingId, onBack }) {
     const interval = setInterval(() => {
       if (!isMountedRef.current) return;
       fetchListingDetails(false);
-    }, 2500);
+    }, 8000);
 
     return () => {
       isMountedRef.current = false;
