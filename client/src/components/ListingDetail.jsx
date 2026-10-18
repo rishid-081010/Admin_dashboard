@@ -88,10 +88,103 @@ export default function ListingDetail({ listingId, onBack }) {
     setToast({ msg, type });
   };
 
+  const DEFAULT_SEQUENCE = [
+    'Living_Room',
+    'Balcony_Skyline_View',
+    'Master_Bedroom',
+    'Modern_Kitchen',
+    'Luxury_Bathroom',
+    'Dining_Area',
+    'Bedroom',
+    'Infinity_Pool',
+    'Terrace_Lounge',
+    'Walk_in_Closet',
+    'Foyer_Entrance',
+    'Building_Exterior',
+    'Living_Room',
+    'Bedroom',
+    'Luxury_Bathroom',
+    'Balcony_Skyline_View',
+    'Property_Photo'
+  ];
+
+  const parsePromptMetadata = (promptStr) => {
+    let metadata = {};
+    let customPromptText = '';
+    if (promptStr) {
+      if (typeof promptStr === 'string' && promptStr.trim().startsWith('{')) {
+        try {
+          metadata = JSON.parse(promptStr);
+          customPromptText = metadata.customPrompt || '';
+        } catch (e) {
+          customPromptText = promptStr;
+        }
+      } else {
+        customPromptText = promptStr;
+      }
+    }
+    return { metadata, customPromptText };
+  };
+
+  const enrichImages = (rawImages, promptStr) => {
+    const { metadata } = parsePromptMetadata(promptStr);
+    let cachedMeta = {};
+    try {
+      const cached = localStorage.getItem(`listing_meta_${listingId}`);
+      if (cached) cachedMeta = JSON.parse(cached);
+    } catch (e) {}
+
+    const roomTypesMap = {
+      ...(cachedMeta.roomTypes || {}),
+      ...(metadata.roomTypes || {})
+    };
+
+    let cachedOrder = [];
+    try {
+      const ord = localStorage.getItem(`listing_order_${listingId}`);
+      if (ord) cachedOrder = JSON.parse(ord);
+    } catch (e) {}
+
+    const orderList = metadata.imagesOrder || cachedOrder || [];
+
+    const mapped = (rawImages || []).map((img, idx) => {
+      const tag = roomTypesMap[img.id] || img.room_type || DEFAULT_SEQUENCE[idx % DEFAULT_SEQUENCE.length] || 'Property_Photo';
+      return {
+        ...img,
+        room_type: tag,
+        status: img.status || 'completed'
+      };
+    });
+
+    if (orderList && orderList.length > 0) {
+      mapped.sort((a, b) => {
+        const idxA = orderList.indexOf(a.id);
+        const idxB = orderList.indexOf(b.id);
+        if (idxA === -1 && idxB === -1) return 0;
+        if (idxA === -1) return 1;
+        if (idxB === -1) return -1;
+        return idxA - idxB;
+      });
+    }
+
+    return mapped;
+  };
+
   const withTimestamp = (url) => {
     if (!url) return '';
+    let resolvedUrl = url;
+    if (resolvedUrl.startsWith('/uploads/')) {
+      if (typeof window !== 'undefined') {
+        const path = window.location.pathname;
+        if (path.includes('/dashboard')) {
+          resolvedUrl = '/dashboard' + resolvedUrl;
+        }
+      }
+    }
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const fullUrl = url.startsWith('/uploads') ? baseUrl + url : url;
+    const fullUrl = (baseUrl && resolvedUrl.startsWith('/') && !resolvedUrl.startsWith('//')) 
+      ? baseUrl + resolvedUrl 
+      : resolvedUrl;
     return `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}t=${cacheBuster}`;
   };
 
@@ -155,9 +248,11 @@ export default function ListingDetail({ listingId, onBack }) {
         if (!isMountedRef.current) return;
         if (sbListing) {
           setListing(sbListing);
-          setImages(sbImages || []);
-          if (sbListing.prompt && !customPrompt) {
-            setCustomPrompt(sbListing.prompt);
+          const enriched = enrichImages(sbImages || [], sbListing.prompt);
+          setImages(enriched);
+          const { customPromptText } = parsePromptMetadata(sbListing.prompt);
+          if (customPromptText && !customPrompt) {
+            setCustomPrompt(customPromptText);
           }
         }
         return;
@@ -169,16 +264,19 @@ export default function ListingDetail({ listingId, onBack }) {
 
       if (response.data && response.data.success) {
         setListing(response.data.listing);
-        setImages(response.data.images || []);
-        if (response.data.listing?.prompt && !customPrompt) {
-          setCustomPrompt(response.data.listing.prompt);
+        const enriched = enrichImages(response.data.images || [], response.data.listing?.prompt);
+        setImages(enriched);
+        const { customPromptText } = parsePromptMetadata(response.data.listing?.prompt);
+        if (customPromptText && !customPrompt) {
+          setCustomPrompt(customPromptText);
         }
       } else {
         const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
         if (!isMountedRef.current) return;
         if (sbListing) {
           setListing(sbListing);
-          setImages(sbImages || []);
+          const enriched = enrichImages(sbImages || [], sbListing.prompt);
+          setImages(enriched);
         }
       }
     } catch (err) {
@@ -187,9 +285,11 @@ export default function ListingDetail({ listingId, onBack }) {
         const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
         if (isMountedRef.current && sbListing) {
           setListing(sbListing);
-          setImages(sbImages || []);
-          if (sbListing.prompt && !customPrompt) {
-            setCustomPrompt(sbListing.prompt);
+          const enriched = enrichImages(sbImages || [], sbListing.prompt);
+          setImages(enriched);
+          const { customPromptText } = parsePromptMetadata(sbListing.prompt);
+          if (customPromptText && !customPrompt) {
+            setCustomPrompt(customPromptText);
           }
           return;
         }
@@ -583,15 +683,63 @@ export default function ListingDetail({ listingId, onBack }) {
   };
 
   const handleUpdateRoomType = async (imageId, newRoomType) => {
+    // 1. Immediate optimistic UI update
+    const updatedImages = images.map((img) =>
+      img.id === imageId ? { ...img, room_type: newRoomType } : img
+    );
+    setImages(updatedImages);
+    showToast(`Category updated to ${newRoomType.replace(/_/g, ' ')}.`, 'success');
+
+    // 2. Build roomTypes dictionary for all photos
+    const newRoomTypes = {};
+    updatedImages.forEach((img) => {
+      if (img.room_type) newRoomTypes[img.id] = img.room_type;
+    });
+
+    // 3. Update localStorage cache
     try {
-      await axios.put(`/api/images/${imageId}/room-type`, { room_type: newRoomType });
-      setImages((prev) =>
-        prev.map((img) => (img.id === imageId ? { ...img, room_type: newRoomType } : img))
-      );
-      showToast(`Category updated to ${newRoomType.replace(/_/g, ' ')}.`, 'success');
+      localStorage.setItem(`listing_meta_${listingId}`, JSON.stringify({ roomTypes: newRoomTypes }));
+    } catch (e) {}
+
+    // 4. Persist to Supabase real_estate_listings.prompt
+    try {
+      let existingPrompt = listing?.prompt || '';
+      let existingData = {};
+      if (typeof existingPrompt === 'string' && existingPrompt.trim().startsWith('{')) {
+        try { existingData = JSON.parse(existingPrompt); } catch(e) {}
+      }
+
+      const updatedPayload = {
+        ...existingData,
+        customPrompt: customPrompt || existingData.customPrompt || '',
+        roomTypes: newRoomTypes,
+        updatedAt: new Date().toISOString()
+      };
+      const promptString = JSON.stringify(updatedPayload);
+
+      await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ prompt: promptString })
+      });
+
+      setListing((prev) => prev ? { ...prev, prompt: promptString } : prev);
     } catch (err) {
-      console.error('Update room type error:', err);
-      showToast('Failed to update category.', 'error');
+      console.error('Failed to persist room type to Supabase:', err);
+    }
+
+    // 5. Backend API sync if local dev
+    const isLocal = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    if (isLocal) {
+      try {
+        await axios.put(`/api/images/${imageId}/room-type`, { room_type: newRoomType });
+      } catch (ignore) {}
     }
   };
 
@@ -605,15 +753,52 @@ export default function ListingDetail({ listingId, onBack }) {
     newImages[targetIndex] = temp;
 
     setImages(newImages);
+    showToast('Photo sequence reordered.', 'success');
+
+    const orderedIds = newImages.map((img) => img.id);
 
     try {
-      await axios.put(`/api/listings/${listingId}/reorder`, {
-        imageIds: newImages.map((img) => img.id),
+      localStorage.setItem(`listing_order_${listingId}`, JSON.stringify(orderedIds));
+    } catch (e) {}
+
+    try {
+      let existingPrompt = listing?.prompt || '';
+      let existingData = {};
+      if (typeof existingPrompt === 'string' && existingPrompt.trim().startsWith('{')) {
+        try { existingData = JSON.parse(existingPrompt); } catch(e) {}
+      }
+
+      const updatedPayload = {
+        ...existingData,
+        imagesOrder: orderedIds,
+        updatedAt: new Date().toISOString()
+      };
+      const promptString = JSON.stringify(updatedPayload);
+
+      await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ prompt: promptString })
       });
-      showToast('Photo sequence reordered.', 'success');
+
+      setListing((prev) => prev ? { ...prev, prompt: promptString } : prev);
     } catch (err) {
-      console.error('Reorder images error:', err);
-      showToast('Failed to save reorder.', 'error');
+      console.warn('Failed to persist order to Supabase:', err);
+    }
+
+    const isLocal = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    if (isLocal) {
+      try {
+        await axios.put(`/api/listings/${listingId}/reorder`, {
+          imageIds: orderedIds,
+        });
+      } catch (ignore) {}
     }
   };
 
@@ -652,8 +837,59 @@ export default function ListingDetail({ listingId, onBack }) {
     document.body.removeChild(link);
   };
 
+  const handleDownloadZip = async (title, packageType) => {
+    showToast(`Preparing ${title} archive...`, 'info');
+    try {
+      const zip = new JSZip();
+
+      if (packageType === 'marketing_photos' || packageType === 'master_bundle') {
+        const photoFolder = packageType === 'master_bundle' ? zip.folder('Marketing_Photos') : zip;
+        const validImages = images.filter((img) => img.generated_image_location || img.original_image_location);
+
+        let loaded = 0;
+        await Promise.all(
+          validImages.map(async (img, idx) => {
+            const rawUrl = img.generated_image_location || img.original_image_location;
+            const imgUrl = withTimestamp(rawUrl);
+            try {
+              const res = await fetch(imgUrl);
+              if (!res.ok) throw new Error('Fetch failed');
+              const blob = await res.blob();
+              const categoryName = (img.room_type || 'Photo').replace(/\s+/g, '_');
+              const paddedIdx = String(idx + 1).padStart(2, '0');
+              const filename = `${paddedIdx}_${categoryName}.jpg`;
+              photoFolder.file(filename, blob);
+              loaded++;
+            } catch (err) {
+              console.warn(`Could not add image ${idx} to zip:`, err);
+            }
+          })
+        );
+
+        if (loaded === 0 && packageType === 'marketing_photos') {
+          showToast('Could not bundle photos. Check internet connection.', 'error');
+          return;
+        }
+      }
+
+      if (packageType === 'gov_docs' || packageType === 'master_bundle') {
+        const docFolder = packageType === 'master_bundle' ? zip.folder('Government_NOC_Files') : zip;
+        const summaryText = `PROPERTY LISTING DOSSIER\n-------------------------\nListing Name: ${listing?.name || 'Luxury Property'}\nProperty Type: ${listing?.property_type || 'Apartment'}\nGenerated Date: ${new Date().toLocaleDateString()}\nStatus: Verified\nTotal Photos: ${images.length}\n`;
+        docFolder.file('Dossier_Summary.txt', summaryText);
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const safeListingName = (listing?.name || 'Listing').replace(/[^a-zA-Z0-9_-]/g, '_');
+      saveAs(content, `${safeListingName}_${packageType}.zip`);
+      showToast(`${title} downloaded successfully!`, 'success');
+    } catch (err) {
+      console.error('Download zip error:', err);
+      showToast('Failed to generate ZIP package.', 'error');
+    }
+  };
+
   const handleDownloadAllZip = () => {
-    window.location.href = `/api/listings/${listingId}/download-zip`;
+    handleDownloadZip('Marketing Photos', 'marketing_photos');
   };
 
   const completedCount = images.filter((img) => img.status === 'completed').length;
@@ -1379,7 +1615,20 @@ export default function ListingDetail({ listingId, onBack }) {
                   {/* Original Thumbnail */}
                   <div className="relative group">
                     <img
-onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...'; }}
+                      onError={(e) => {
+                        if (!e.target.dataset.retried) {
+                          e.target.dataset.retried = 'true';
+                          if (e.target.src.includes('/dashboard/uploads/')) {
+                            e.target.src = e.target.src.replace('/dashboard/uploads/', '/uploads/');
+                            return;
+                          } else if (e.target.src.includes('/uploads/')) {
+                            e.target.src = e.target.src.replace('/uploads/', '/dashboard/uploads/');
+                            return;
+                          }
+                        }
+                        e.target.onerror = null;
+                        e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...';
+                      }}
                       src={withTimestamp(img.original_image_location)}
                       alt="Original"
                       className="w-full h-36 object-cover rounded-xl border border-white/[0.08]"
@@ -1394,7 +1643,20 @@ onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/
                     {img.status === 'completed' && img.generated_image_location ? (
                       <>
                         <img
-onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...'; }}
+                          onError={(e) => {
+                            if (!e.target.dataset.retried) {
+                              e.target.dataset.retried = 'true';
+                              if (e.target.src.includes('/dashboard/uploads/')) {
+                                e.target.src = e.target.src.replace('/dashboard/uploads/', '/uploads/');
+                                return;
+                              } else if (e.target.src.includes('/uploads/')) {
+                                e.target.src = e.target.src.replace('/uploads/', '/dashboard/uploads/');
+                                return;
+                              }
+                            }
+                            e.target.onerror = null;
+                            e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...';
+                          }}
                           src={withTimestamp(img.generated_image_location)}
                           alt="Enhanced"
                           className="w-full h-36 object-cover rounded-xl border border-white/[0.04] shadow-md shadow-blue-950/40 cursor-pointer"
@@ -1505,7 +1767,7 @@ onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/
                     <button
                       onClick={() =>
                         handleDownloadSingle(
-                          img.generated_image_location,
+                          withTimestamp(img.generated_image_location),
                           `0${idx + 1}_${img.room_type || 'enhanced'}.jpg`
                         )
                       }
@@ -1643,7 +1905,7 @@ onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/
                     <button
                       onClick={() =>
                         handleDownloadSingle(
-                          refineModalImage.generated_image_location,
+                          withTimestamp(refineModalImage.generated_image_location),
                           `refined_${refineModalImage.room_type || 'photo'}.jpg`
                         )
                       }
@@ -2137,7 +2399,7 @@ onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/
                 <button
                   onClick={() =>
                     handleDownloadSingle(
-                      sliderModalImage.generated_image_location,
+                      withTimestamp(sliderModalImage.generated_image_location),
                       `0${sliderIndex + 1}_${sliderModalImage.room_type || 'enhanced'}.jpg`
                     )
                   }

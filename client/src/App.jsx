@@ -59,8 +59,8 @@ function getTabFromUrl() {
   if (target === 'roles' || target === 'role') return 'roles';
   if (target === 'settings') return 'settings';
   if (target === 'workflows' || target === 'workflow') return 'workflows';
-  if (target === 'new-listing') return 'new';
-  if (target === 'listing-detail') return 'detail';
+  if (target === 'new-listing' || target === 'new') return 'new';
+  if (target === 'listing-detail' || target === 'detail') return 'detail';
   return 'overview';
 }
 
@@ -105,7 +105,13 @@ class TabErrorBoundary extends React.Component {
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const [activeTab, setActiveTabState] = useState(() => getTabFromUrl());
-  const [selectedListingId, setSelectedListingId] = useState(null);
+  const [selectedListingId, setSelectedListingId] = useState(() => {
+    try {
+      return localStorage.getItem('asquared_selected_listing_id') || '62b2e8ce-7bcf-4c2a-875a-a8dd10ac1d96';
+    } catch (e) {
+      return '62b2e8ce-7bcf-4c2a-875a-a8dd10ac1d96';
+    }
+  });
   const [isOmniSearchModalOpen, setIsOmniSearchModalOpen] = useState(false);
 
   const handleLogout = () => {
@@ -175,11 +181,17 @@ export default function App() {
   }, [isOmniSearchModalOpen]);
 
   const handleListingCreated = (newListing) => {
+    try {
+      localStorage.setItem('asquared_selected_listing_id', newListing.id);
+    } catch (e) {}
     setSelectedListingId(newListing.id);
     setActiveTab('detail');
   };
 
   const handleSelectListing = (listing) => {
+    try {
+      localStorage.setItem('asquared_selected_listing_id', listing.id);
+    } catch (e) {}
     setSelectedListingId(listing.id);
     setActiveTab('detail');
   };
