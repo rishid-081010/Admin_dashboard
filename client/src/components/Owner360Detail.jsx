@@ -86,7 +86,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
     <div className="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar pr-1 -mr-1 text-slate-100">
       
       {/* ─── Breadcrumb & Top Bar ────────────────────────────────────────── */}
-      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08] mb-6">
+      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08] mb-6 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -110,17 +110,17 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       </div>
 
       {/* --- Profile Header Widget (Clean Display Only) --- */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 sm:p-5 mb-6 shadow-xl shadow-black/40 relative overflow-hidden flex items-center gap-4">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 mb-6 shadow-xl shadow-black/40 relative overflow-hidden flex items-center gap-5 shrink-0">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
         {/* Avatar with Initials */}
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-600/30 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center text-blue-300 text-lg sm:text-xl font-bold shadow-inner flex-shrink-0">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600/30 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center text-blue-300 text-xl font-bold shadow-inner shrink-0">
           {getInitials(owner.name)}
         </div>
 
         {/* Owner Details */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-[10px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-[#06111e] border border-[#1b2b3d] px-2 py-0.5 rounded-md">
               {owner.lead_id || owner.id || 'LEAD-0000000'}
             </span>
@@ -129,7 +129,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
             </span>
           </div>
 
-          <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-snug break-words">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug break-words">
             {owner.name}
           </h1>
 
@@ -144,7 +144,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       </div>
 
       {/* ─── 4 Metric Cards ─────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 shrink-0">
         
         {/* Card 1: Property Owned */}
         <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
@@ -234,7 +234,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       </div>
 
       {/* ─── Sub-Actions Toolbar ────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#0c1829] border border-[#233549] rounded-xl mb-6 shadow-xl shadow-black/40">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#0c1829] border border-[#233549] rounded-xl mb-6 shadow-xl shadow-black/40 shrink-0">
         <div className="flex flex-wrap items-center gap-2">
           {/* Watchlist Toggle */}
           <button 
@@ -300,7 +300,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       </div>
 
       {/* ─── Navigation Tabs ────────────────────────────── */}
-      <div className="flex border-b border-[#233549] mb-6 gap-8">
+      <div className="flex border-b border-[#233549] mb-6 gap-8 shrink-0">
         {[
           { id: 'portfolio', label: 'Portfolio' },
           { id: 'contacts', label: 'Contact Info' },
@@ -325,7 +325,7 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
       </div>
 
       {/* ─── Main 2-Column Section ──────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-12 shrink-0">
         
         {/* Left Column (2/3 Width) */}
         <div className="lg:col-span-2 space-y-6">
