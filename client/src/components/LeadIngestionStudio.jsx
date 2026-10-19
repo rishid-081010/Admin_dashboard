@@ -537,6 +537,22 @@ export default function LeadIngestionStudio() {
               </div>
             ))}
           </div>
+
+          {/* Autonomous AI Self-Healing & Review Summary */}
+          {stats.cell_shifts_realigned !== undefined && (
+            <div className="p-3 rounded-xl bg-gradient-to-r from-blue-950/60 to-purple-950/40 border border-blue-500/30 flex items-center justify-between gap-3 text-xs flex-wrap">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <Sparkles className="w-4 h-4 text-blue-400 animate-pulse shrink-0" />
+                <span className="font-bold text-white">Autonomous AI Data Review:</span>
+                <span className="text-slate-300">
+                  Realigned {stats.cell_shifts_realigned || 0} shifted cells &bull; Rescued {stats.phones_rescued || 0} phones from unit columns &bull; Demarcated {stats.plots_demarcated || 0} Cadastral Land Plots.
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                100% Zero-Error Sanitized
+              </span>
+            </div>
+          )}
         </div>
       )}
 

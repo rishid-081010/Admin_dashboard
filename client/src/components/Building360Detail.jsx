@@ -78,11 +78,11 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
         };
         const rawBn = (building.rawName || building.name || '').trim();
 
-        // If buildingStats not yet populated with aggregate numbers, fetch from building_directory_stats
+        // If buildingStats not yet populated with aggregate numbers, fetch from canonical_buildings
         if (!building?.ownersCount) {
           try {
             const statsRes = await axios.get(
-              `${SUPABASE_BASE_URL}/building_directory_stats?building_name=eq.${encodeURIComponent(rawBn)}&limit=1`,
+              `${SUPABASE_BASE_URL}/canonical_buildings?canonical_name=eq.${encodeURIComponent(building.canonical_name || rawBn)}&limit=1`,
               { headers }
             );
             if (isMounted && statsRes.data && statsRes.data[0]) {
@@ -105,25 +105,46 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           }
         }
 
-        // Query units with indexed exact search so it never times out
+        // Universal canonical filter: matches all source casing variants without one-off hacks
         let searchFilter;
-        if (rawBn.toLowerCase() === 'burlington' || (building.name || '').toLowerCase() === 'burlington') {
-          searchFilter = `or=(building_name.eq.Burlington,building_name.eq.BURLINGTON%20TOWER)`;
+        if (building.source_building_names && Array.isArray(building.source_building_names) && building.source_building_names.length > 0) {
+          const formattedNames = building.source_building_names.map(n => `"${n.trim()}"`).join(',');
+          searchFilter = `building_name=in.(${formattedNames})`;
         } else {
-          searchFilter = `building_name=eq.${encodeURIComponent(rawBn)}`;
+          searchFilter = `building_name=ilike.${encodeURIComponent(rawBn)}`;
         }
 
-        const endpoint = `${SUPABASE_BASE_URL}/owners_data?${searchFilter}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price,verified_size_sqft&limit=500`;
-        
-        let res = await axios.get(endpoint, { headers });
-        if (!res.data || res.data.length === 0) {
-          // Fallback with ilike (no wildcards) in case of casing differences
-          const fallbackEndpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.${encodeURIComponent(rawBn)}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price,verified_size_sqft&limit=500`;
-          res = await axios.get(fallbackEndpoint, { headers });
+        // Fetch complete unit roster in chunks of 1000 without 500-unit truncation
+        let allRecords = [];
+        let offset = 0;
+        const batchSize = 1000;
+        let hasMore = true;
+
+        while (hasMore && isMounted) {
+          const endpoint = `${SUPABASE_BASE_URL}/owners_data?${searchFilter}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price,verified_size_sqft,emirates_id&limit=${batchSize}&offset=${offset}`;
+          let res = await axios.get(endpoint, { headers });
+
+          if (!res.data || res.data.length === 0) {
+            if (offset === 0) {
+              // Fallback to exact eq search in case in.(...) was not matched
+              const fallbackEndpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=eq.${encodeURIComponent(rawBn)}&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,reported_property_type,bitrix_id,verified_purchase_price,verified_size_sqft,emirates_id&limit=${batchSize}`;
+              res = await axios.get(fallbackEndpoint, { headers });
+              if (res.data && res.data.length > 0) {
+                allRecords = res.data;
+              }
+            }
+            hasMore = false;
+          } else {
+            allRecords = allRecords.concat(res.data);
+            offset += res.data.length;
+            if (res.data.length < batchSize || allRecords.length >= 10000) {
+              hasMore = false;
+            }
+          }
         }
 
-        if (isMounted && res.data && res.data.length > 0) {
-          const mapped = res.data.map((r, i) => {
+        if (isMounted && allRecords.length > 0) {
+          const mapped = allRecords.map((r, i) => {
             const rawUnit = r.unit_number ? String(r.unit_number).trim() : 'N/A';
             const unit = sanitizeUnitNumber(rawUnit);
             const rawName = (r.full_name || '').trim();
@@ -138,11 +159,16 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
 
             return {
               id: r.owner_id || r.lead_id || `OWN-${i + 1}`,
+              sample_owner_id: r.owner_id,
+              emirates_id: r.emirates_id || null,
+              raw_full_name: r.full_name,
+              match_criteria: r.emirates_id ? 'EMIRATES_ID' : (r.phone_normalized ? 'MOBILE_AND_NAME' : null),
               lead_id: r.lead_id || `LEAD-${r.owner_id || (10400 + i)}`,
               name: cleanName,
               unit: unit,
               floor: floor,
               phone: hasPhone ? r.phone_normalized : 'N/A',
+              phone_normalized: hasPhone ? r.phone_normalized : null,
               hasPhone: hasPhone,
               email: r.email || 'N/A',
               area: r.master_area || building.area || 'Dubai',
@@ -169,13 +195,13 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
     return () => { isMounted = false; };
   }, [building]);
 
-  // Derived stats: STRICTLY prioritizes the true building database totals
+  // Derived stats: dynamically prioritizes whichever is higher between canonical snapshot and live fetched deeds
   const metrics = useMemo(() => {
-    const totalOwners = buildingStats.ownersCount || building?.ownersCount || owners.length || 0;
+    const totalOwners = Math.max(owners.length, buildingStats.ownersCount || building?.ownersCount || 0);
     const unitsSet = new Set(owners.map(o => o.unit).filter(u => u && u !== 'N/A'));
-    const verifiedUnits = buildingStats.unitsCount || building?.unitsCount || (unitsSet.size > 0 ? unitsSet.size : totalOwners);
+    const verifiedUnits = Math.max(unitsSet.size > 0 ? unitsSet.size : owners.length, buildingStats.unitsCount || building?.unitsCount || 0);
     const withPhone = buildingStats.contactsCount != null && buildingStats.contactsCount > 0 
-      ? buildingStats.contactsCount 
+      ? Math.max(buildingStats.contactsCount, owners.filter(o => o.hasPhone).length)
       : (building?.contactsCount != null && building?.contactsCount > 0 ? building.contactsCount : owners.filter(o => o.hasPhone).length);
     const phoneCoverage = buildingStats.contactCoverage != null && buildingStats.contactCoverage > 0
       ? buildingStats.contactCoverage
@@ -260,23 +286,24 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
     if (!owners.length) return;
     const headers = ['Unit Number', 'Floor', 'Owner Name', 'Lead ID', 'Phone Number', 'Property Type', 'Size SQM', 'Size SQFT', 'Area', 'CRM Status'];
     const rows = owners.map(o => [
-      `"${o.unit}"`,
-      `"${o.floor}"`,
-      `"${o.name}"`,
-      `"${o.lead_id}"`,
-      `"${o.phone}"`,
-      `"${o.type}"`,
+      `"${String(o.unit || '').replace(/"/g, '""')}"`,
+      `"${String(o.floor || '').replace(/"/g, '""')}"`,
+      `"${String(o.name || '').replace(/"/g, '""')}"`,
+      `"${String(o.lead_id || '').replace(/"/g, '""')}"`,
+      `"${String(o.phone || '').replace(/"/g, '""')}"`,
+      `"${String(o.type || '').replace(/"/g, '""')}"`,
       o.isVerifiedSize ? o.sqm : '',
       o.isVerifiedSize ? o.sqft : '',
-      `"${o.area}"`,
-      `"${o.crmStatus}"`
+      `"${String(o.area || '').replace(/"/g, '""')}"`,
+      `"${String(o.crmStatus || '').replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `${(building.name || 'Building').replace(/\s+/g, '_')}_Verified_Units.csv`);
+    const fileName = (building.canonical_name || building.name || 'Building').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_');
+    link.setAttribute('download', `${fileName}_Verified_Units.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

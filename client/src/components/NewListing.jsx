@@ -152,6 +152,16 @@ export default function NewListing({ onListingCreated, onBack }) {
   const [sizeSqft, setSizeSqft] = useState('');
   const [roughNotes, setRoughNotes] = useState('');
 
+  // Rental Contract & NOC Form Specifics
+  const [cheques, setCheques] = useState('4 Cheques');
+  const [occupancyStatus, setOccupancyStatus] = useState('Vacant');
+  const [furnishing, setFurnishing] = useState('Unfurnished');
+  const [ownerPhone, setOwnerPhone] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
+  const [agreementDuration, setAgreementDuration] = useState('3 Months');
+  const [agreementType, setAgreementType] = useState('Non-Exclusive');
+  const [securityDeposit, setSecurityDeposit] = useState('5%');
+
   const [selectedPresets, setSelectedPresets] = useState(['asquared_default']);
   const [compiledPrompt, setCompiledPrompt] = useState(ASQUARED_DEFAULT_PROMPT);
   
@@ -388,6 +398,18 @@ export default function NewListing({ onListingCreated, onBack }) {
     formData.append('size_sqft', sizeSqft);
     formData.append('rough_notes', roughNotes);
     formData.append('prompt', compiledPrompt);
+
+    // Rental specific parameters
+    if (purpose === 'For Rent') {
+      formData.append('cheques', cheques);
+      formData.append('occupancy_status', occupancyStatus);
+      formData.append('furnishing', furnishing);
+      formData.append('owner_phone', ownerPhone);
+      formData.append('owner_email', ownerEmail);
+      formData.append('agreement_duration', agreementDuration);
+      formData.append('agreement_type', agreementType);
+      formData.append('security_deposit', securityDeposit);
+    }
 
     selectedFiles.forEach((file) => {
       formData.append('images', file);
@@ -704,6 +726,148 @@ export default function NewListing({ onListingCreated, onBack }) {
                 />
               </div>
             </div>
+
+            {/* Dedicated Rental Terms & Landlord Representation Specs */}
+            {purpose === 'For Rent' && (
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-500/[0.08] via-navy-900/60 to-black/60 border border-blue-500/30 space-y-4 animate-fade-in shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileBadge2 className="w-5 h-5 text-blue-400 shrink-0" />
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                        Official A-SQUARED Rental Listing Form & NOC Setup
+                      </h3>
+                      <p className="text-[11px] text-white/60">
+                        Specify exact tenancy commercial terms to auto-populate the official 1:1 DLD / RERA Rental NOC document.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="self-start sm:self-auto text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/20 px-2.5 py-1 rounded-full border border-blue-500/30">
+                    Rental NOC
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                      Cheques
+                    </label>
+                    <select
+                      value={cheques}
+                      onChange={(e) => setCheques(e.target.value)}
+                      className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
+                    >
+                      <option value="1 Cheque">1 Cheque</option>
+                      <option value="2 Cheques">2 Cheques</option>
+                      <option value="3 Cheques">3 Cheques</option>
+                      <option value="4 Cheques">4 Cheques</option>
+                      <option value="6 Cheques">6 Cheques</option>
+                      <option value="12 Cheques">12 Cheques</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                      Occupancy Status
+                    </label>
+                    <select
+                      value={occupancyStatus}
+                      onChange={(e) => setOccupancyStatus(e.target.value)}
+                      className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
+                    >
+                      <option value="Vacant">Vacant</option>
+                      <option value="Tenanted">Tenanted</option>
+                      <option value="Owner Occupied">Owner Occupied</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                      Furnishing
+                    </label>
+                    <select
+                      value={furnishing}
+                      onChange={(e) => setFurnishing(e.target.value)}
+                      className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
+                    >
+                      <option value="Unfurnished">Unfurnished</option>
+                      <option value="Furnished">Furnished</option>
+                      <option value="Semi-Furnished">Semi-Furnished</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                      Security Deposit
+                    </label>
+                    <input
+                      type="text"
+                      value={securityDeposit}
+                      onChange={(e) => setSecurityDeposit(e.target.value)}
+                      placeholder="e.g. 5% or 10%"
+                      className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none placeholder-slate-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                      Landlord Contact Phone
+                    </label>
+                    <input
+                      type="text"
+                      value={ownerPhone}
+                      onChange={(e) => setOwnerPhone(e.target.value)}
+                      placeholder="e.g. +971 50 123 4567"
+                      className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none placeholder-slate-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                      Landlord Email
+                    </label>
+                    <input
+                      type="email"
+                      value={ownerEmail}
+                      onChange={(e) => setOwnerEmail(e.target.value)}
+                      placeholder="e.g. landlord@example.com"
+                      className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none placeholder-slate-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                      Mandate Representation
+                    </label>
+                    <select
+                      value={agreementType}
+                      onChange={(e) => setAgreementType(e.target.value)}
+                      className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
+                    >
+                      <option value="Non-Exclusive">Non-Exclusive</option>
+                      <option value="Exclusive">Exclusive</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                      Mandate Duration
+                    </label>
+                    <select
+                      value={agreementDuration}
+                      onChange={(e) => setAgreementDuration(e.target.value)}
+                      className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
+                    >
+                      <option value="3 Months">3 Months</option>
+                      <option value="6 Months">6 Months</option>
+                      <option value="1 Year">1 Year</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Row 4: Rough Notes */}
             <div>

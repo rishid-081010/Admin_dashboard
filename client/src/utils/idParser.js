@@ -20,16 +20,30 @@ export function parseIdQuery(term) {
   const uniqueDigits = Array.from(new Set([digits, String(intVal), padded7, padded6]));
 
   const wrapped = ' ' + raw + ' ';
-  const isPhoneExplicit = /(\b|[\s\-_:#])(phone|tel|mobile|whatsapp)(\b|[\s\-_:#])/i.test(wrapped) || raw.startsWith('+');
+  const isEidExplicit = /(\b|[\s\-_:#])(eid|emirates\s*id|national\s*id)(\b|[\s\-_:#])/i.test(wrapped) || digits.startsWith('784');
+  const isPhoneExplicit = !isEidExplicit && (/(\b|[\s\-_:#])(phone|tel|mobile|whatsapp)(\b|[\s\-_:#])/i.test(wrapped) || raw.startsWith('+'));
   const isMasterExplicit = /(\b|[\s\-_:#])(master\s*leads?\s*(id)?|master_id|master|owner_id|owner|owners|own|supabase)(\b|[\s\-_:#])/i.test(wrapped) || raw.toUpperCase().startsWith('OWN-');
   const isBitrixExplicit = /(\b|[\s\-_:#])(bitrix_id|bitrix|crm_id|crm)(\b|[\s\-_:#])/i.test(wrapped);
-  const isLeadExplicit = !isMasterExplicit && ( /(\b|[\s\-_:#])(lead_id|leadid|leads?|ld)(\b|[\s\-_:#])/i.test(wrapped) || raw.toUpperCase().startsWith('LEAD-') );
+  const isLeadExplicit = !isMasterExplicit && !isEidExplicit && ( /(\b|[\s\-_:#])(lead_id|leadid|leads?|ld)(\b|[\s\-_:#])/i.test(wrapped) || raw.toUpperCase().startsWith('LEAD-') );
 
   let intent = 'any';
-  if (isPhoneExplicit) intent = 'phone';
+  if (isEidExplicit) intent = 'eid';
+  else if (isPhoneExplicit) intent = 'phone';
   else if (isMasterExplicit) intent = 'owner';
   else if (isBitrixExplicit) intent = 'bitrix';
   else if (isLeadExplicit) intent = 'lead';
+
+  const eidVariants = [];
+  if (digits.startsWith('784')) {
+    eidVariants.push(digits);
+    eidVariants.push(digits + '.0');
+    if (digits.length === 15) {
+      eidVariants.push(`${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 14)}-${digits.slice(14)}`);
+    }
+  }
+  if (raw && !eidVariants.includes(raw)) {
+    eidVariants.push(raw);
+  }
 
   return {
     raw,
@@ -38,7 +52,8 @@ export function parseIdQuery(term) {
     intent,
     leadVariants: uniqueDigits.map(d => 'LEAD-' + d),
     ownerVariants: uniqueDigits.map(d => 'OWN-' + d),
-    bitrixVariants: Array.from(new Set([String(intVal), digits]))
+    bitrixVariants: Array.from(new Set([String(intVal), digits])),
+    eidVariants: Array.from(new Set(eidVariants))
   };
 }
 
@@ -52,6 +67,10 @@ export function isIdMatched(targetValue, queryTerm) {
 
   const cleanTarget = String(targetValue).trim().toUpperCase();
   const targetDigits = cleanTarget.replace(/[^0-9]/g, '');
+
+  if (parsed.eidVariants && parsed.eidVariants.some(v => v.toUpperCase() === cleanTarget)) {
+    return true;
+  }
 
   if (targetDigits === parsed.digits || parseInt(targetDigits, 10) === parsed.intVal) {
     return true;

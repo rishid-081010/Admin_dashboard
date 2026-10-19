@@ -80,9 +80,9 @@ export function fillListingFormRentalTemplate(page, {
   drawText(dateStr, 880, 1466, 16, true);
 
   // 2. Owner / Landlord Details
-  const ownerName = titleDeedData?.owner_name_english || emiratesIdData?.full_name_english || '';
+  const ownerName = commercialSpecs?.owner_name || titleDeedData?.owner_name_english || emiratesIdData?.full_name_english || '';
   const phone = commercialSpecs?.owner_phone || emiratesIdData?.phone || '';
-  const nationality = emiratesIdData?.nationality || titleDeedData?.nationality || '';
+  const nationality = commercialSpecs?.owner_nationality || emiratesIdData?.nationality || titleDeedData?.nationality || '';
   const email = commercialSpecs?.owner_email || '';
 
   drawText(ownerName, 145, 1147, 15, true);
@@ -91,7 +91,7 @@ export function fillListingFormRentalTemplate(page, {
   drawText(email, 520, 1116, 15, false);
 
   // 3. Property Type Checkboxes
-  const rawPropType = (titleDeedData?.property_type || listing?.property_type || '').toLowerCase();
+  const rawPropType = (commercialSpecs?.property_type || titleDeedData?.property_type || listing?.property_type || '').toLowerCase();
   const isApt = rawPropType.includes('apart') || rawPropType.includes('flat') || rawPropType.includes('شقة');
   const isVilla = rawPropType.includes('villa') || rawPropType.includes('فيلا');
   const isTownhouse = rawPropType.includes('town') || rawPropType.includes('تاون');
@@ -109,14 +109,15 @@ export function fillListingFormRentalTemplate(page, {
   else if (isWarehouse) drawCheck(676, 1018);
   else if (isShop) drawCheck(822, 1018);
   else if (isBuilding) drawCheck(81, 988);
-  else if (rawPropType) drawCheck(81, 1018); // Check apartment only if property type exists
+  else if (rawPropType) drawCheck(81, 1018); // Default to apartment if type provided
 
   // 4. Property Details Checkboxes
-  const isVacant = commercialSpecs?.occupancy_status ? commercialSpecs.occupancy_status.toLowerCase().includes('vacant') : true;
-  if (isVacant) drawCheck(81, 890); // Vacant
-  else drawCheck(481, 890); // Tenanted
+  const occ = (commercialSpecs?.occupancy_status || '').toLowerCase();
+  const isTenanted = occ.includes('tenant');
+  if (isTenanted) drawCheck(481, 890); // Tenanted
+  else drawCheck(81, 890); // Vacant (default or if selected)
 
-  const isCommercial = isOffice || isShop || isWarehouse;
+  const isCommercial = isOffice || isShop || isWarehouse || (commercialSpecs?.category || '').toLowerCase().includes('comm');
   if (!isCommercial) drawCheck(333, 890); // Residential
   else drawCheck(776, 890); // Commercial
 
@@ -125,16 +126,16 @@ export function fillListingFormRentalTemplate(page, {
   else if (furnishing.includes('furnished')) drawCheck(198, 890);
   else drawCheck(617, 890); // Default to unfurnished checkbox
 
-  // Property Details Text Fields (Strictly from verified data)
-  const buildingName = titleDeedData?.building_name || listing?.name || '';
-  const community = titleDeedData?.community || '';
-  const unitNumber = titleDeedData?.unit_number || '';
+  // Property Details Text Fields (Prioritizing broker specifications)
+  const buildingName = commercialSpecs?.building_name || titleDeedData?.building_name || listing?.name || '';
+  const community = commercialSpecs?.community || titleDeedData?.community || '';
+  const unitNumber = commercialSpecs?.unit_number || titleDeedData?.unit_number || '';
   const bedrooms = commercialSpecs?.bedrooms || '';
   const bathrooms = commercialSpecs?.bathrooms || '';
-  const parking = titleDeedData?.parking_bays?.[0] || commercialSpecs?.parking || '';
-  const buaSqft = titleDeedData?.total_area_sqft ? String(titleDeedData.total_area_sqft) : (titleDeedData?.suite_area_sqft ? String(titleDeedData.suite_area_sqft) : '');
-  const plotArea = titleDeedData?.plot_number ? String(titleDeedData.plot_number) : '';
-  const askingPrice = (commercialSpecs?.price || listing?.price) ? formatCurrency(commercialSpecs?.price || listing?.price) : '';
+  const parking = commercialSpecs?.parking_bays || commercialSpecs?.parking || titleDeedData?.parking_bays?.[0] || '';
+  const buaSqft = commercialSpecs?.bua_sqft ? String(commercialSpecs.bua_sqft) : (titleDeedData?.total_area_sqft ? String(titleDeedData.total_area_sqft) : (titleDeedData?.suite_area_sqft ? String(titleDeedData.suite_area_sqft) : ''));
+  const plotArea = commercialSpecs?.plot_area || (titleDeedData?.plot_number ? String(titleDeedData.plot_number) : '');
+  const askingPrice = (commercialSpecs?.price || commercialSpecs?.asking_price || listing?.price) ? formatCurrency(commercialSpecs?.price || commercialSpecs?.asking_price || listing?.price) : '';
   const cheques = commercialSpecs?.cheques || '1 - 4 Cheques';
 
   drawText(buildingName, 220, 820, 15, true);
@@ -151,12 +152,26 @@ export function fillListingFormRentalTemplate(page, {
   drawText(askingPrice, 205, 705, 15, true);
 
   // 5. Terms Checkboxes
-  drawCheck(210, 535); // Non-Exclusive
-  drawCheck(455, 495); // 3 Month (accurately mapped to 3 Month box)
+  const isExclusive = (commercialSpecs?.agreement_type || '').toLowerCase().includes('exclusive') && !(commercialSpecs?.agreement_type || '').toLowerCase().includes('non');
+  if (isExclusive) {
+    drawCheck(81, 535); // Exclusive
+  } else {
+    drawCheck(210, 535); // Non-Exclusive
+  }
+
+  const duration = (commercialSpecs?.agreement_duration || commercialSpecs?.validity_days || '').toString().toLowerCase();
+  if (duration.includes('6') || duration.includes('180')) {
+    drawCheck(600, 495); // 6 Month
+  } else if (duration.includes('1 year') || duration.includes('12') || duration.includes('365')) {
+    drawCheck(750, 495); // 1 Year
+  } else {
+    drawCheck(455, 495); // 3 Month (default)
+  }
 
   // 6. Signatures
   drawText(ownerName, 240, 214, 15, true);
-  drawText('A SQUARED REAL ESTATE', 680, 214, 15, true);
+  const brokerLabel = commercialSpecs?.broker_name || 'A SQUARED REAL ESTATE';
+  drawText(brokerLabel, 680, 214, 15, true);
 }
 
 /**

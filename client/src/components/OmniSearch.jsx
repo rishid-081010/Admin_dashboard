@@ -3,7 +3,8 @@ import axios from 'axios';
 import { 
   Search, Building2, User, Phone, MapPin, 
   ArrowRight, ShieldCheck, Copy, Check, Filter, 
-  ExternalLink, Sparkles, RefreshCw, X, ChevronRight, Hash, Database
+  ExternalLink, Sparkles, RefreshCw, X, ChevronRight, Hash, Database,
+  Clock, DollarSign, Award, Layers
 } from 'lucide-react';
 import Owner360Detail from './Owner360Detail';
 import Building360Detail from './Building360Detail';
@@ -13,12 +14,32 @@ import { cleanUnitNumber } from '../utils/leadCleanerClient';
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
-const KNOWN_COMMUNITIES = [
-  'Downtown Dubai', 'Dubai Marina', 'Business Bay', 'Palm Jumeirah',
-  'Jumeirah Lakes Towers (JLT)', 'Jumeirah Village Circle', 'Dubai Hills Estate',
-  'Emaar Beachfront', 'Creek Harbour', 'Al Barsha', 'Arabian Ranches',
-  'City Walk', 'Bluewaters Island', 'DIFC', 'Meydan', 'Motor City'
+const SEARCH_FILTER_PILLS = [
+  'All',
+  'Owners',
+  'Buildings',
+  'Area',
+  'Phone Numbers',
+  'Emirates ID',
+  'Lead ID',
+  'Bitrix ID',
+  'Master Leads ID'
 ];
+
+function formatAedValuation(val) {
+  const num = Number(val);
+  if (!num || isNaN(num) || num <= 0) return null;
+  if (num >= 1000000000) {
+    return `AED ${(num / 1000000000).toFixed(1)}B`;
+  }
+  if (num >= 1000000) {
+    return `AED ${(num / 1000000).toFixed(1)}M`;
+  }
+  if (num >= 1000) {
+    return `AED ${(num / 1000).toFixed(0)}K`;
+  }
+  return `AED ${num.toLocaleString()}`;
+}
 
 function formatBuildingName(name) {
   if (!name) return 'Dubai Residence';
@@ -41,151 +62,6 @@ function formatBuildingName(name) {
     .replace(/\bDamac\b/i, 'DAMAC');
 }
 
-function aggregateBuildings(rows) {
-  if (!Array.isArray(rows)) return [];
-  const bMap = {};
-  rows.forEach(row => {
-    const rawBn = (row.building_name || '').trim();
-    if (!rawBn || rawBn.length < 2 || rawBn.toLowerCase() === 'null' || rawBn.toLowerCase() === 'n/a') return;
-    const displayName = formatBuildingName(rawBn);
-    const key = displayName.toLowerCase();
-    if (!bMap[key]) {
-      bMap[key] = {
-        rawName: rawBn,
-        name: displayName,
-        area: getBuildingCommunity(rawBn, row.master_area),
-        propertyType: row.property_category || getBuildingType(rawBn, row.reported_property_type),
-        unitsSet: new Set(),
-        ownersCount: 0,
-        contactsCount: 0,
-        sampleOwners: []
-      };
-    }
-    bMap[key].ownersCount++;
-    if (row.unit_number && String(row.unit_number).trim()) {
-      bMap[key].unitsSet.add(String(row.unit_number).trim());
-    }
-    if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) {
-      bMap[key].contactsCount++;
-    }
-    if (bMap[key].sampleOwners.length < 40) {
-      bMap[key].sampleOwners.push({
-        id: row.owner_id || row.lead_id,
-        lead_id: row.lead_id || `LEAD-${row.owner_id}`,
-        name: row.full_name || 'Property Owner',
-        unit: row.unit_number || 'N/A',
-        phone: row.phone_normalized || 'N/A',
-        area: bMap[key].area,
-        building: displayName,
-        type: bMap[key].propertyType
-      });
-    }
-  });
-
-  return Object.values(bMap).map(b => ({
-    ...b,
-    unitsCount: b.unitsSet.size > 0 ? b.unitsSet.size : b.ownersCount,
-    contactCoverage: b.ownersCount > 0 ? Math.round((b.contactsCount / b.ownersCount) * 100) : 0
-  })).sort((a, b) => b.ownersCount - a.ownersCount);
-}
-
-function aggregateAreas(rows) {
-  if (!Array.isArray(rows)) return [];
-  const aMap = {};
-  rows.forEach(row => {
-    const rawArea = (row.master_area || '').trim();
-    if (!rawArea || rawArea.length < 2 || rawArea.toLowerCase() === 'null') return;
-    const key = rawArea.toLowerCase();
-    if (!aMap[key]) {
-      aMap[key] = {
-        rawName: rawArea,
-        name: rawArea,
-        buildingsSet: new Set(),
-        unitsSet: new Set(),
-        ownersCount: 0,
-        phonesCount: 0,
-        residentialCount: 0,
-        commercialCount: 0,
-        sampleBuildings: new Set()
-      };
-    }
-    aMap[key].ownersCount++;
-    if (row.building_name && String(row.building_name).trim()) {
-      aMap[key].buildingsSet.add(String(row.building_name).trim());
-      if (aMap[key].sampleBuildings.size < 6) {
-        aMap[key].sampleBuildings.add(formatBuildingName(String(row.building_name).trim()));
-      }
-    }
-    if (row.unit_number && String(row.unit_number).trim()) {
-      aMap[key].unitsSet.add(String(row.unit_number).trim());
-    }
-    if (row.phone_normalized && String(row.phone_normalized).trim().length > 6) {
-      aMap[key].phonesCount++;
-    }
-    if (row.property_category === 'Commercial') {
-      aMap[key].commercialCount++;
-    } else {
-      aMap[key].residentialCount++;
-    }
-  });
-
-  return Object.values(aMap).map(a => ({
-    rawName: a.rawName,
-    name: a.name,
-    totalBuildings: a.buildingsSet.size > 0 ? a.buildingsSet.size : 1,
-    totalUnits: a.unitsSet.size > 0 ? a.unitsSet.size : a.ownersCount,
-    totalOwners: a.ownersCount,
-    phoneCoverage: a.ownersCount > 0 ? Math.round((a.phonesCount / a.ownersCount) * 100) : 0,
-    sampleBuildings: Array.from(a.sampleBuildings),
-    residentialCount: a.residentialCount,
-    commercialCount: a.commercialCount
-  })).sort((a, b) => b.totalOwners - a.totalOwners);
-}
-
-function getBuildingCommunity(rawName, masterArea) {
-  if (masterArea && masterArea.trim() && masterArea.toLowerCase() !== 'dubai') {
-    return masterArea.trim().toUpperCase();
-  }
-  const n = (rawName || '').toLowerCase();
-  for (const c of KNOWN_COMMUNITIES) {
-    if (n.includes(c.toLowerCase())) return c.toUpperCase();
-  }
-  if (n.includes('khalifa') || n.includes('opera') || n.includes('boulevard') || n.includes('fountain')) return 'DOWNTOWN DUBAI';
-  if (n.includes('marina') || n.includes('gate') || n.includes('damac heights')) return 'DUBAI MARINA';
-  if (n.includes('palm') || n.includes('atlantis') || n.includes('nakheel')) return 'PALM JUMEIRAH';
-  if (n.includes('bay') || n.includes('executive') || n.includes('churchill')) return 'BUSINESS BAY';
-  if (n.includes('jlt') || n.includes('lake') || n.includes('cluster')) return 'JLT';
-  if (n.includes('jvc') || n.includes('circle')) return 'JVC';
-  if (n.includes('creek') || n.includes('harbour') || n.includes('cove')) return 'DUBAI CREEK';
-  if (n.includes('hills') || n.includes('park heights') || n.includes('collective')) return 'DUBAI HILLS';
-  return 'DUBAI';
-}
-
-function getBuildingType(rawName, rawType) {
-  const n = (rawName || '').toLowerCase();
-  if (n.includes('office') || n.includes('tower b') || n.includes('commercial') || n.includes('business')) {
-    return 'Commercial';
-  }
-  if (n.includes('villa') || n.includes('mansion') || n.includes('ranches')) {
-    return 'Luxury Villa';
-  }
-  if (rawType && !['owner', 'unknown', 'n/a', 'flat'].includes(rawType.toLowerCase())) {
-    return rawType.charAt(0).toUpperCase() + rawType.slice(1);
-  }
-  return 'Residential';
-}
-
-const SEARCH_FILTER_PILLS = [
-  'All',
-  'Owners',
-  'Buildings',
-  'Area',
-  'Phone Numbers',
-  'Lead ID',
-  'Bitrix ID',
-  'Master Leads ID'
-];
-
 export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose }) {
   const [query, setQuery] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -193,6 +69,15 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
   const [hasSearched, setHasSearched] = useState(false);
   const [searchedQuery, setSearchedQuery] = useState('');
   const [searchedFilter, setSearchedFilter] = useState('All');
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const stored = localStorage.getItem('asq_recent_searches');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const inputRef = useRef(null);
   const searchSeqRef = useRef(0);
   
@@ -202,27 +87,94 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
   const [areaResults, setAreaResults] = useState([]);
   const [idResults, setIdResults] = useState([]);
 
-  // Inside-Building Explorer State
+  // Full Page Detail Views
   const [selectedBuilding, setSelectedBuilding] = useState(null);
-  const [buildingOwners, setBuildingOwners] = useState([]);
-  const [loadingBuildingOwners, setLoadingBuildingOwners] = useState(false);
-  const [drawerSearch, setDrawerSearch] = useState('');
-  const [copiedPhone, setCopiedPhone] = useState(null);
+  const [selectedOwner, setSelectedOwner] = useState(null);
 
-  // Inside-Area Explorer State
+  // Community / Area Explorer State
   const [selectedArea, setSelectedArea] = useState(null);
   const [areaBuildingsList, setAreaBuildingsList] = useState([]);
-  const [areaTopOwners, setAreaTopOwners] = useState([]);
   const [loadingAreaDetails, setLoadingAreaDetails] = useState(false);
   const [areaDrawerSearch, setAreaDrawerSearch] = useState('');
 
-  // Owner 360 Full Page View
-  const [selectedOwner, setSelectedOwner] = useState(null);
+  const [copiedPhone, setCopiedPhone] = useState(null);
 
   // Autofocus input on load or when modal opens
   useEffect(() => {
     inputRef.current?.focus();
   }, [isModal]);
+
+  // Read URL Hash Parameters on Mount
+  useEffect(() => {
+    try {
+      const hash = window.location.hash || '';
+      if (hash.startsWith('#search')) {
+        const queryParams = new URLSearchParams(hash.split('?')[1] || '');
+        const qParam = queryParams.get('q');
+        const filterParam = queryParams.get('filter');
+        if (filterParam && SEARCH_FILTER_PILLS.includes(filterParam)) {
+          setFilterType(filterParam);
+        }
+        if (qParam && qParam.trim()) {
+          setQuery(qParam.trim());
+          handleSearch(filterParam || 'All', qParam.trim());
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse URL hash params:', e);
+    }
+  }, []);
+
+  const saveRecentSearch = (term) => {
+    if (!term || term.trim().length < 2) return;
+    const clean = term.trim();
+    setRecentSearches(prev => {
+      const updated = [clean, ...prev.filter(item => item.toLowerCase() !== clean.toLowerCase())].slice(0, 5);
+      try {
+        localStorage.setItem('asq_recent_searches', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleSelectBuilding = (building) => {
+    setSelectedBuilding({
+      name: building.canonical_name || building.name,
+      rawName: building.canonical_name || building.rawName || building.name,
+      area: building.master_area || building.area || 'Dubai',
+      propertyType: building.property_category || building.propertyType || 'Residential',
+      ownersCount: building.total_owners || building.ownersCount || 0,
+      unitsCount: building.total_units || building.unitsCount || 0,
+      contactsCount: building.total_contacts || building.contactsCount || 0,
+      contactCoverage: building.contact_coverage || building.contactCoverage || 0,
+      entityType: building.entity_type || building.entityType || 'building'
+    });
+  };
+
+  const handleSelectOwner = (item) => {
+    setSelectedOwner({
+      id: item.canonical_owner_id || item.owner_id || item.lead_id,
+      canonical_owner_id: item.canonical_owner_id,
+      name: item.full_name || item.name || 'Property Owner',
+      raw_full_name: item.full_name || item.name,
+      lead_id: item.lead_id || (item.sample_owner_id ? `LEAD-${item.sample_owner_id}` : undefined),
+      sample_owner_id: item.sample_owner_id || item.owner_id,
+      emirates_id: item.emirates_id,
+      phone: item.phone_normalized || item.phone,
+      phone_normalized: item.phone_normalized || item.phone,
+      email: item.email,
+      nationality: item.nationality,
+      building: item.primary_building || item.building_name,
+      area: item.primary_area || item.master_area,
+      total_units: item.total_units || 1,
+      units: item.total_units || 1,
+      total_portfolio_valuation: item.total_portfolio_valuation,
+      match_criteria: item.match_criteria || (item.emirates_id ? 'EMIRATES_ID' : 'MOBILE_AND_NAME'),
+      bitrix_id: item.bitrix_id,
+      bitrix_status: item.bitrix_status,
+      assigned_agent: item.assigned_agent
+    });
+  };
 
   const handleSearch = async (overrideFilter, overrideQuery) => {
     const q = (overrideQuery !== undefined ? overrideQuery : query).trim();
@@ -255,22 +207,95 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       }
     };
 
-    const fetchBuildings = () => 
-      safeGet(`${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(q)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,reported_property_type,property_category&limit=500`);
+    // ── CANONICAL HIGH-PERFORMANCE FETCHERS ──
+    const fetchBuildings = async () => {
+      const rows = await safeGet(`${SUPABASE_BASE_URL}/canonical_buildings?canonical_name=ilike.*${encodeURIComponent(q)}*&entity_type=neq.junk&order=total_owners.desc&limit=30`);
+      return rows.map(b => ({
+        canonical_name: b.canonical_name,
+        name: b.canonical_name,
+        rawName: b.canonical_name,
+        area: b.master_area || 'Dubai',
+        propertyType: b.property_category || 'Residential',
+        ownersCount: b.total_owners || 0,
+        unitsCount: b.total_units || 0,
+        contactsCount: b.total_contacts || 0,
+        contactCoverage: b.contact_coverage || 0,
+        entityType: b.entity_type
+      }));
+    };
 
-    const fetchAreas = () => 
-      safeGet(`${SUPABASE_BASE_URL}/owners_data?master_area=ilike.*${encodeURIComponent(q)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,reported_property_type,property_category&limit=500`);
+    const fetchAreas = async () => {
+      const rows = await safeGet(`${SUPABASE_BASE_URL}/canonical_buildings?canonical_name=ilike.*${encodeURIComponent(q)}*&entity_type=eq.community&order=total_owners.desc&limit=20`);
+      return rows.map(a => ({
+        rawName: a.canonical_name,
+        name: a.canonical_name,
+        totalBuildings: a.source_count || 1,
+        totalUnits: a.total_units || 0,
+        totalOwners: a.total_owners || 0,
+        phoneCoverage: a.contact_coverage || 0
+      }));
+    };
 
-    const fetchOwners = () => 
-      safeGet(`${SUPABASE_BASE_URL}/owners_data?full_name=ilike.*${encodeURIComponent(q)}*&select=*&limit=100`);
+    const fetchOwners = async () => {
+      const rows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?full_name=ilike.*${encodeURIComponent(q)}*&select=*&order=total_portfolio_valuation.desc.nullslast&limit=30`);
+      return rows;
+    };
 
-    const fetchPhone = () => {
+    const fetchPhone = async () => {
       const cleanDigits = q.replace(/[^0-9]/g, '');
-      const pExact = q.trim().startsWith('+') ? q.trim() : `+${cleanDigits}`;
-      const pUae = cleanDigits.startsWith('05') ? `+971${cleanDigits.slice(1)}` : (cleanDigits.startsWith('971') ? `+${cleanDigits}` : null);
-      const orClauses = [`phone_normalized.eq.${encodeURIComponent(pExact)}`];
-      if (pUae) orClauses.push(`phone_normalized.eq.${encodeURIComponent(pUae)}`);
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${Array.from(new Set(orClauses)).join(',')})&select=*&limit=100`);
+      const orClauses = [];
+
+      // 1. Exact string as entered
+      if (q.trim().startsWith('+')) {
+        orClauses.push(`phone_normalized.eq.${encodeURIComponent(q.trim())}`);
+      }
+
+      // 2. UAE mobile format (05x -> +9715x)
+      if (cleanDigits.startsWith('05') && cleanDigits.length === 10) {
+        orClauses.push(`phone_normalized.eq.${encodeURIComponent(`+971${cleanDigits.slice(1)}`)}`);
+      } else if (cleanDigits.startsWith('5') && cleanDigits.length === 9) {
+        orClauses.push(`phone_normalized.eq.${encodeURIComponent(`+971${cleanDigits}`)}`);
+      }
+
+      // 3. UAE landlines (04 -> Dubai, 02 -> Abu Dhabi, 06 -> Sharjah)
+      if (/^0[2-7]\d{7}$/.test(cleanDigits)) {
+        orClauses.push(`phone_normalized.eq.${encodeURIComponent(`+971${cleanDigits.slice(1)}`)}`);
+      }
+
+      // 4. International prefix (971...)
+      if (cleanDigits.startsWith('971')) {
+        orClauses.push(`phone_normalized.eq.${encodeURIComponent(`+${cleanDigits}`)}`);
+      }
+
+      // 5. Raw digits with +
+      if (cleanDigits.length >= 7) {
+        orClauses.push(`phone_normalized.eq.${encodeURIComponent(`+${cleanDigits}`)}`);
+      }
+
+      const uniqueClauses = Array.from(new Set(orClauses));
+      if (uniqueClauses.length === 0) return [];
+
+      // Primary: query canonical_owners (indexed)
+      const canonicalRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?or=(${uniqueClauses.join(',')})&select=*&limit=30`);
+      if (canonicalRows.length > 0) return canonicalRows;
+
+      // Secondary fallback: query owners_data
+      const rawRows = await safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${uniqueClauses.join(',')})&select=*&limit=30`);
+      return rawRows;
+    };
+
+    const fetchEid = async () => {
+      const parsed = parseIdQuery(q);
+      const variants = parsed?.eidVariants || [q.trim()];
+      const orClauses = variants.map(v => `emirates_id.eq.${encodeURIComponent(v)}`);
+
+      // 1. Query canonical_owners (indexed by idx_canonical_owners_eid)
+      const canonicalRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?or=(${orClauses.join(',')})&select=*&limit=30`);
+      if (canonicalRows.length > 0) return canonicalRows;
+
+      // 2. Secondary fallback: query owners_data
+      const rawRows = await safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=30`);
+      return rawRows;
     };
 
     const fetchLeadId = () => {
@@ -282,13 +307,17 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       return safeGet(`${SUPABASE_BASE_URL}/owners_data?lead_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`);
     };
 
-    const fetchBitrixId = () => {
+    const fetchBitrixId = async () => {
       const parsed = parseIdQuery(q);
-      if (parsed) {
-        const orClauses = parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`);
-        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
-      }
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`);
+      const bitrixVal = parsed?.intVal ? String(parsed.intVal) : q.trim().replace(/[^0-9]/g, '');
+      if (!bitrixVal) return [];
+
+      // Query canonical_owners first (indexed by idx_canonical_owners_bitrix_id)
+      const cRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?bitrix_id=eq.${encodeURIComponent(bitrixVal)}&select=*&limit=30`);
+      if (cRows.length > 0) return cRows;
+
+      // Fallback: owners_data
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(bitrixVal)}&select=*&limit=50`);
     };
 
     const fetchSupabaseId = () => {
@@ -300,29 +329,21 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       return safeGet(`${SUPABASE_BASE_URL}/owners_data?owner_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`);
     };
 
-    const fetchAllIds = () => {
+    const fetchAllIds = async () => {
       const parsed = parseIdQuery(q);
-      if (!parsed) return Promise.resolve([]);
+      if (!parsed) return [];
 
-      if (parsed.intent === 'lead') {
-        return fetchLeadId();
-      }
-      if (parsed.intent === 'owner') {
-        return fetchSupabaseId();
-      }
-      if (parsed.intent === 'bitrix') {
-        return fetchBitrixId();
-      }
+      if (parsed.intent === 'eid') return fetchEid();
+      if (parsed.intent === 'lead') return fetchLeadId();
+      if (parsed.intent === 'owner') return fetchSupabaseId();
+      if (parsed.intent === 'bitrix') return fetchBitrixId();
+
       // 'any': Search across Lead ID, Bitrix ID, and Master Leads ID (owner_id)
       const orClauses = [
         ...parsed.leadVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`),
         ...parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`),
         ...parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`)
       ];
-      if (parsed.digits.length >= 7) {
-        const pExact = q.trim().startsWith('+') ? q.trim() : `+${parsed.digits}`;
-        orClauses.push(`phone_normalized.eq.${encodeURIComponent(pExact)}`);
-      }
       return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${Array.from(new Set(orClauses)).join(',')})&select=*&limit=50`);
     };
 
@@ -332,13 +353,13 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setAreaResults([]);
         setIdResults([]);
         const rows = await fetchBuildings();
-        setBuildingResults(aggregateBuildings(rows));
+        setBuildingResults(rows);
       } else if (currentFilter === 'Area') {
         setOwnerResults([]);
         setBuildingResults([]);
         setIdResults([]);
         const rows = await fetchAreas();
-        setAreaResults(aggregateAreas(rows));
+        setAreaResults(rows);
       } else if (currentFilter === 'Owners') {
         setBuildingResults([]);
         setAreaResults([]);
@@ -351,6 +372,13 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         setIdResults([]);
         const rows = await fetchPhone();
         setOwnerResults(rows);
+      } else if (currentFilter === 'Emirates ID') {
+        setBuildingResults([]);
+        setAreaResults([]);
+        setIdResults([]);
+        setOwnerResults([]);
+        const rows = await fetchEid();
+        setIdResults(rows);
       } else if (currentFilter === 'Lead ID') {
         setBuildingResults([]);
         setAreaResults([]);
@@ -377,29 +405,30 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         const parsed = parseIdQuery(q);
         const cleanDigits = q.replace(/[^0-9]/g, '');
         
-        // Skip unindexed text table scans (3.5s timeouts) if the query is strictly an ID or numeric code
-        const isPureId = parsed && (parsed.intent !== 'any' || (cleanDigits.length >= 4 && !/[a-zA-Z]/.test(q.replace(/^(id|#|no\.?)\s*/i, ''))));
-        const shouldRunTextSearch = !isPureId;
-        const hasIdCheck = !!parsed;
-        const hasPhoneCheck = q.trim().startsWith('+') || (cleanDigits.length >= 9 && (cleanDigits.startsWith('05') || cleanDigits.startsWith('971') || cleanDigits.startsWith('04') || cleanDigits.startsWith('02')));
+        const isEid = parsed?.intent === 'eid' || cleanDigits.startsWith('784');
+        const isPureId = !isEid && parsed && (parsed.intent !== 'any' || (cleanDigits.length >= 4 && !/[a-zA-Z]/.test(q.replace(/^(id|#|no\.?)\s*/i, ''))));
+        const shouldRunTextSearch = !isPureId && !isEid;
+        const hasIdCheck = !!parsed && !isEid;
+        const hasPhoneCheck = !isEid && (q.trim().startsWith('+') || (cleanDigits.length >= 8 && (cleanDigits.startsWith('05') || cleanDigits.startsWith('971') || cleanDigits.startsWith('04') || cleanDigits.startsWith('02'))));
 
-        const [bldgRows, areaRows, ownerRows, idRows, phoneRows] = await Promise.all([
+        const [bldgRows, areaRows, ownerRows, idRows, phoneRows, eidRows] = await Promise.all([
           shouldRunTextSearch ? fetchBuildings() : Promise.resolve([]),
           shouldRunTextSearch ? fetchAreas() : Promise.resolve([]),
           shouldRunTextSearch ? fetchOwners() : Promise.resolve([]),
           hasIdCheck ? fetchAllIds() : Promise.resolve([]),
-          hasPhoneCheck ? fetchPhone() : Promise.resolve([])
+          hasPhoneCheck ? fetchPhone() : Promise.resolve([]),
+          isEid ? fetchEid() : Promise.resolve([])
         ]);
 
-        setBuildingResults(aggregateBuildings(bldgRows || []));
-        setAreaResults(aggregateAreas(areaRows || []));
+        setBuildingResults(bldgRows || []);
+        setAreaResults(areaRows || []);
 
         // Combine owners with any phone matches
         const combinedOwners = Array.isArray(ownerRows) ? [...ownerRows] : [];
         if (Array.isArray(phoneRows) && phoneRows.length > 0) {
-          const existingIds = new Set(combinedOwners.map(o => o.owner_id || o.lead_id));
+          const existingIds = new Set(combinedOwners.map(o => o.canonical_owner_id || o.owner_id || o.lead_id));
           phoneRows.forEach(p => {
-            const id = p.owner_id || p.lead_id;
+            const id = p.canonical_owner_id || p.owner_id || p.lead_id;
             if (!existingIds.has(id)) {
               existingIds.add(id);
               combinedOwners.push(p);
@@ -407,13 +436,24 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           });
         }
         setOwnerResults(combinedOwners);
-        setIdResults(Array.isArray(idRows) ? idRows : []);
+
+        const combinedIds = [...(Array.isArray(idRows) ? idRows : []), ...(Array.isArray(eidRows) ? eidRows : [])];
+        setIdResults(combinedIds);
       }
 
       if (seq !== searchSeqRef.current) return;
       setHasSearched(true);
       setSearchedQuery(q);
       setSearchedFilter(currentFilter);
+      saveRecentSearch(q);
+
+      // URL Hash Sync for deep linking
+      if (!isModal && q) {
+        const targetHash = `#search?q=${encodeURIComponent(q)}&filter=${encodeURIComponent(currentFilter)}`;
+        if (window.location.hash !== targetHash) {
+          window.history.replaceState(null, '', targetHash);
+        }
+      }
     } catch (err) {
       console.error('OmniSearch error:', err);
     } finally {
@@ -451,7 +491,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
     }
 
     // Faster debounce for ID patterns (150ms), smooth debounce for text (350ms)
-    const isIdLike = /^(lead|own|bitrix|#)?[-\s]?\d+/i.test(trimmed);
+    const isIdLike = /^(lead|own|bitrix|eid|#)?[-\s]?\d+/i.test(trimmed);
     const delay = isIdLike ? 150 : 350;
 
     const timer = setTimeout(() => {
@@ -468,75 +508,10 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
     }
   };
 
-  // Open Inside-Building Explorer Drawer
-  const openBuildingExplorer = async (building) => {
-    setSelectedBuilding(building);
-    setDrawerSearch('');
-    setLoadingBuildingOwners(true);
-
-    try {
-      const headers = { 
-        apikey: SUPABASE_API_KEY, 
-        Authorization: `Bearer ${SUPABASE_API_KEY}` 
-      };
-      const cleanTerm = (building.rawName || building.name).replace(/'/g, "''");
-      const endpoint = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${encodeURIComponent(cleanTerm)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,email,property_category,bitrix_id,bitrix_status&limit=500`;
-      const res = await axios.get(endpoint, { headers, timeout: 9000 });
-      
-      if (res.data && res.data.length > 0) {
-        const mapped = res.data.map(r => ({
-          id: r.owner_id || r.lead_id,
-          lead_id: r.lead_id || (r.owner_id ? `LEAD-${r.owner_id}` : 'Unassigned'),
-          name: r.full_name || 'Property Owner',
-          unit: cleanUnitNumber(r.unit_number) || 'N/A',
-          phone: r.phone_normalized || 'N/A',
-          email: r.email || 'N/A',
-          area: building.area,
-          building: building.name,
-          type: building.propertyType,
-          property_category: r.property_category || building.propertyType,
-          bitrix_id: r.bitrix_id,
-          bitrix_status: r.bitrix_status
-        }));
-        setBuildingOwners(mapped);
-
-        // Dynamically synchronize metrics to match exact live fetched records
-        const unitsSet = new Set(mapped.map(m => m.unit).filter(u => u && u !== 'N/A'));
-        const phonesCount = mapped.filter(m => m.phone && m.phone !== 'N/A').length;
-
-        setSelectedBuilding(prev => ({
-          ...prev,
-          unitsCount: unitsSet.size > 0 ? unitsSet.size : mapped.length,
-          ownersCount: mapped.length,
-          contactsCount: phonesCount
-        }));
-      } else {
-        setBuildingOwners([]);
-      }
-    } catch (e) {
-      console.error('Error fetching building owners:', e);
-      setBuildingOwners([]);
-    } finally {
-      setLoadingBuildingOwners(false);
-    }
-  };
-
   // Open Inside-Area Explorer Drawer
   const openAreaExplorer = async (area) => {
     setSelectedArea(area);
     setAreaDrawerSearch('');
-    // Instant pre-population from already aggregated search data
-    if (area.sampleBuildings && area.sampleBuildings.length > 0) {
-      setAreaBuildingsList(area.sampleBuildings.map(bName => ({
-        rawName: bName,
-        name: bName,
-        unitsCount: null,
-        ownersCount: null,
-        contactsCount: null
-      })));
-    } else {
-      setAreaBuildingsList([]);
-    }
     setLoadingAreaDetails(true);
 
     try {
@@ -545,50 +520,28 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         Authorization: `Bearer ${SUPABASE_API_KEY}` 
       };
       const cleanArea = (area.rawName || area.name).replace(/'/g, "''");
-      const endpoint = `${SUPABASE_BASE_URL}/owners_data?master_area=ilike.*${encodeURIComponent(cleanArea)}*&select=owner_id,lead_id,full_name,building_name,master_area,unit_number,phone_normalized,property_category,bitrix_id&limit=500`;
+      const endpoint = `${SUPABASE_BASE_URL}/canonical_buildings?master_area=ilike.*${encodeURIComponent(cleanArea)}*&entity_type=neq.junk&order=total_owners.desc&limit=50`;
       const res = await axios.get(endpoint, { headers, timeout: 9000 });
       
       if (res.data && res.data.length > 0) {
-        // Aggregate buildings in this area
-        const bMap = {};
-        const ownersList = [];
-        res.data.forEach(r => {
-          const rawBn = (r.building_name || '').trim();
-          if (rawBn && rawBn.length > 1) {
-            const disp = formatBuildingName(rawBn);
-            const k = disp.toLowerCase();
-            if (!bMap[k]) {
-              bMap[k] = {
-                rawName: rawBn,
-                name: disp,
-                unitsCount: 0,
-                ownersCount: 0,
-                contactsCount: 0,
-                sampleOwners: []
-              };
-            }
-            bMap[k].ownersCount++;
-            if (r.unit_number) bMap[k].unitsCount++;
-            if (r.phone_normalized && r.phone_normalized !== 'N/A') bMap[k].contactsCount++;
-          }
-          if (ownersList.length < 50) {
-            ownersList.push({
-              id: r.owner_id || r.lead_id,
-              lead_id: r.lead_id || (r.owner_id ? `LEAD-${r.owner_id}` : 'Unassigned'),
-              name: r.full_name || 'Property Owner',
-              unit: cleanUnitNumber(r.unit_number) || 'N/A',
-              building: r.building_name ? formatBuildingName(r.building_name) : 'N/A',
-              phone: r.phone_normalized || 'N/A',
-              property_category: r.property_category || 'Residential',
-              bitrix_id: r.bitrix_id
-            });
-          }
-        });
-        setAreaBuildingsList(Object.values(bMap).sort((a, b) => b.ownersCount - a.ownersCount));
-        setAreaTopOwners(ownersList);
+        const mapped = res.data.map(b => ({
+          canonical_name: b.canonical_name,
+          name: b.canonical_name,
+          rawName: b.canonical_name,
+          area: b.master_area || area.name,
+          propertyType: b.property_category || 'Residential',
+          ownersCount: b.total_owners || 0,
+          unitsCount: b.total_units || 0,
+          contactsCount: b.total_contacts || 0,
+          contactCoverage: b.contact_coverage || 0
+        }));
+        setAreaBuildingsList(mapped);
+      } else {
+        setAreaBuildingsList([]);
       }
     } catch (e) {
       console.error('Error fetching area details:', e);
+      setAreaBuildingsList([]);
     } finally {
       setLoadingAreaDetails(false);
     }
@@ -602,16 +555,6 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
     setTimeout(() => setCopiedPhone(null), 1800);
   };
 
-  const filteredDrawerOwners = useMemo(() => {
-    if (!drawerSearch.trim()) return buildingOwners;
-    const q = drawerSearch.toLowerCase();
-    return buildingOwners.filter(o => 
-      (o.name && o.name.toLowerCase().includes(q)) ||
-      (o.unit && String(o.unit).toLowerCase().includes(q)) ||
-      (o.phone && String(o.phone).includes(q))
-    );
-  }, [buildingOwners, drawerSearch]);
-
   const filteredAreaBuildings = useMemo(() => {
     if (!areaDrawerSearch.trim()) return areaBuildingsList;
     const q = areaDrawerSearch.toLowerCase();
@@ -624,18 +567,22 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       <Owner360Detail 
         owner={selectedOwner} 
         onBack={() => setSelectedOwner(null)}
+        onSelectBuilding={(bldgName) => {
+          setSelectedOwner(null);
+          handleSelectBuilding({ name: bldgName, rawName: bldgName });
+        }}
         globalAgentName="Melanie Simsiman"
       />
     );
   }
 
-  // If a Building 360 profile is open, render it full page (just like Owner 360!)
+  // If a Building 360 profile is open, render it full page
   if (selectedBuilding) {
     return (
       <Building360Detail 
         building={selectedBuilding} 
         onBack={() => setSelectedBuilding(null)}
-        onSelectOwner={(owner) => setSelectedOwner(owner)}
+        onSelectOwner={(owner) => handleSelectOwner(owner)}
       />
     );
   }
@@ -643,13 +590,15 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
   const getSearchPlaceholder = () => {
     switch (filterType) {
       case 'Buildings':
-        return 'Search building name or tower (e.g. Burj Khalifa, Marina Gate)...';
+        return 'Search building name or tower (e.g. Burj Crown, Marina Gate, Burj Khalifa)...';
       case 'Area':
         return 'Search community or area (e.g. Downtown Dubai, Dubai Marina, Business Bay)...';
       case 'Owners':
-        return 'Search owner or investor name (e.g. Alla Kuznetsova, Al Maktoum)...';
+        return 'Search investor or owner name (e.g. Alla Kuznetsova, Al Maktoum)...';
       case 'Phone Numbers':
-        return 'Search phone number digits (e.g. 971501234567)...';
+        return 'Search phone digits (e.g. 0501234567, 97150..., or landlines 04...)...';
+      case 'Emirates ID':
+        return 'Type Emirates ID (e.g. 784-1987-6869517-7 or 784198768695177)...';
       case 'Lead ID':
         return 'Type Lead ID in any format (e.g. LEAD-1433897, lead 1433897, or 1433897)...';
       case 'Bitrix ID':
@@ -658,7 +607,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       case 'Supabase ID':
         return 'Type Master Leads ID in any format (e.g. OWN-2723960, master 2723960, or 2723960)...';
       default:
-        return 'Search anything: owner, building, area, phone, Lead ID, Bitrix ID, or Master ID...';
+        return 'Search anything: investor, tower, community, phone, Emirates ID, or CRM ID...';
     }
   };
 
@@ -688,17 +637,23 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       )}
 
       {/* Main Header */}
-      <div className="flex flex-col items-center justify-center mt-2 mb-5 shrink-0">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-          SEARCH DATABASE
+      <div className="flex flex-col items-center justify-center mt-2 mb-4 shrink-0">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+          <span>SEARCH DATABASE</span>
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            Canonical 2.0
+          </span>
         </h1>
+        <p className="text-xs text-white/50 mt-1">
+          Fast indexed search across 2.22M+ verified owners and 69,000+ buildings
+        </p>
       </div>
 
       {/* Center Search Container */}
       <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col min-h-0">
         
         {/* Big Search Bar */}
-        <div className="relative mb-4 shrink-0">
+        <div className="relative mb-3 shrink-0">
           <Search className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 w-5 sm:w-6 h-5 sm:h-6 text-[#3b82f6]" />
           <input
             ref={inputRef}
@@ -740,8 +695,8 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           </div>
         </div>
 
-        {/* 8 Filter Pills */}
-        <div className="flex items-center gap-2 mb-5 flex-wrap shrink-0">
+        {/* Filter Pills */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap shrink-0">
           <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider mr-1">
             <Filter className="w-3.5 h-3.5 text-blue-400" />
             <span>Filters:</span>
@@ -751,7 +706,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               <button 
                 key={f}
                 onClick={() => handleFilterPillClick(f)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   filterType === f 
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 border border-blue-400' 
                     : 'bg-[#0c1829] text-slate-300 border border-[#233549] hover:bg-[#122238] hover:text-white'
@@ -762,13 +717,37 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             ))}
           </div>
         </div>
+
+        {/* Recent Searches Pills (when input is empty or just opened) */}
+        {!hasSearched && !query && recentSearches.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 px-1 shrink-0 flex-wrap">
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <Clock className="w-3 h-3 text-slate-400" />
+              <span>Recent:</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {recentSearches.map((term, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setQuery(term);
+                    handleSearch(filterType, term);
+                  }}
+                  className="px-2.5 py-0.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/5 transition-colors cursor-pointer"
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         
         {/* Results Container */}
         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pb-8 pr-1 min-h-0">
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 text-white/50">
               <RefreshCw className="w-7 h-7 animate-spin text-blue-400 mb-2" />
-              <p className="text-sm">Searching database records...</p>
+              <p className="text-sm">Searching verified canonical records...</p>
             </div>
           )}
 
@@ -783,7 +762,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           )}
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          {/* A. ID LOOKUP RESULTS (Lead ID, Bitrix ID, Supabase ID)             */}
+          {/* A. ID LOOKUP RESULTS (Emirates ID, Lead ID, Bitrix ID, Master ID)   */}
           {/* ═══════════════════════════════════════════════════════════════════ */}
           {!loading && idResults.length > 0 && (
             <div className="space-y-3">
@@ -795,7 +774,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               </div>
               {idResults.map((item, idx) => (
                 <div 
-                  key={item.owner_id || idx}
+                  key={item.canonical_owner_id || item.owner_id || idx}
                   className="bg-[#0c1829] border border-[#233549] hover:border-emerald-400/60 rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
@@ -807,6 +786,15 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         <span className="text-base font-bold text-white truncate group-hover:text-emerald-300 transition-colors">
                           {item.full_name || 'Verified Owner'}
                         </span>
+                        {item.emirates_id && (
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                            isIdMatched(item.emirates_id, query)
+                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm'
+                              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25 font-medium'
+                          }`}>
+                            EID: {item.emirates_id}
+                          </span>
+                        )}
                         {item.lead_id && (
                           <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
                             isIdMatched(item.lead_id, query)
@@ -819,7 +807,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         {item.owner_id && (
                           <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
                             isIdMatched(item.owner_id, query)
-                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm'
+                              ? 'bg-purple-500/25 text-purple-300 border-purple-500/40 font-bold shadow-sm'
                               : 'bg-purple-500/20 text-purple-300 border-purple-500/30 font-medium'
                           }`} title="Master Leads ID">
                             Master ID: {item.owner_id}
@@ -828,26 +816,27 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         {item.bitrix_id && (
                           <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
                             isIdMatched(item.bitrix_id, query)
-                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm'
+                              ? 'bg-amber-500/25 text-amber-300 border-amber-500/40 font-bold shadow-sm'
                               : 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-medium'
                           }`}>
                             Bitrix #{item.bitrix_id}
                           </span>
                         )}
-                        {item.property_category && (
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                            item.property_category === 'Commercial'
-                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                              : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                          }`}>
-                            {item.property_category}
+                        {item.total_units > 1 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            {item.total_units} Units Portfolio
+                          </span>
+                        )}
+                        {formatAedValuation(item.total_portfolio_valuation) && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            {formatAedValuation(item.total_portfolio_valuation)}
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-white/50 flex-wrap">
                         {cleanUnitNumber(item.unit_number) && <span>Unit: <strong className="text-white/80">{cleanUnitNumber(item.unit_number)}</strong></span>}
-                        {item.building_name && <span>Building: <strong className="text-white/80">{item.building_name}</strong></span>}
-                        {item.master_area && <span>Area: <strong className="text-white/80">{item.master_area}</strong></span>}
+                        {(item.primary_building || item.building_name) && <span>Building: <strong className="text-white/80">{item.primary_building || item.building_name}</strong></span>}
+                        {(item.primary_area || item.master_area) && <span>Area: <strong className="text-white/80">{item.primary_area || item.master_area}</strong></span>}
                       </div>
                     </div>
                   </div>
@@ -856,26 +845,15 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                     {item.phone_normalized && item.phone_normalized !== 'N/A' && (
                       <button
                         onClick={(e) => copyPhone(item.phone_normalized, e)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 transition-all"
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         {copiedPhone === item.phone_normalized ? <Check className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
                         <span>{copiedPhone === item.phone_normalized ? 'Copied' : item.phone_normalized}</span>
                       </button>
                     )}
                     <button
-                      onClick={() => setSelectedOwner({
-                        id: item.owner_id || item.lead_id,
-                        lead_id: item.lead_id,
-                        name: item.full_name,
-                        unit_number: cleanUnitNumber(item.unit_number),
-                        building: item.building_name,
-                        area: item.master_area,
-                        phone: item.phone_normalized,
-                        email: item.email,
-                        property_category: item.property_category,
-                        bitrix_id: item.bitrix_id
-                      })}
-                      className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 flex items-center gap-1 transition-all"
+                      onClick={() => handleSelectOwner(item)}
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 flex items-center gap-1 transition-all cursor-pointer"
                     >
                       <span>Owner 360</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -899,7 +877,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 {filterType === 'All' && (
                   <button 
                     onClick={() => handleFilterPillClick('Area')}
-                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1"
+                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all areas</span>
                     <ChevronRight className="w-3 h-3" />
@@ -943,12 +921,6 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                           <div className="text-[9.5px] text-white/40 uppercase">Phone Rate</div>
                         </div>
                       </div>
-
-                      {area.sampleBuildings && area.sampleBuildings.length > 0 && (
-                        <div className="text-[11px] text-white/50 truncate">
-                          Towers: <span className="text-white/70">{area.sampleBuildings.join(', ')}</span>
-                        </div>
-                      )}
                     </div>
 
                     <div className="mt-3 pt-2 flex items-center justify-end text-xs font-semibold text-amber-400 group-hover:text-amber-300">
@@ -973,7 +945,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 {filterType === 'All' && (
                   <button 
                     onClick={() => handleFilterPillClick('Buildings')}
-                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1"
+                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all buildings</span>
                     <ChevronRight className="w-3 h-3" />
@@ -984,7 +956,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               {buildingResults.map((b, idx) => (
                 <div 
                   key={b.rawName || idx}
-                  onClick={() => openBuildingExplorer(b)}
+                  onClick={() => handleSelectBuilding(b)}
                   className="bg-[#0c1829] hover:bg-[#102035] border border-[#233549] hover:border-[#385175] rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 cursor-pointer group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
@@ -1029,7 +1001,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      openBuildingExplorer(b);
+                      handleSelectBuilding(b);
                     }}
                     className="px-4 py-2 rounded-xl text-xs font-bold bg-[#183153] hover:bg-blue-600 text-white border border-white/10 group-hover:border-blue-400 shadow-md flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
                   >
@@ -1042,7 +1014,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           )}
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          {/* D. MATCHED OWNERS SECTION                                         */}
+          {/* D. MATCHED OWNERS SECTION (Canonical Multi-Unit Portfolio)         */}
           {/* ═══════════════════════════════════════════════════════════════════ */}
           {!loading && ownerResults.length > 0 && (
             <div className="space-y-3">
@@ -1054,7 +1026,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 {filterType === 'All' && (
                   <button 
                     onClick={() => handleFilterPillClick('Owners')}
-                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1"
+                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all owners</span>
                     <ChevronRight className="w-3 h-3" />
@@ -1064,7 +1036,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
               {ownerResults.map((item, idx) => (
                 <div 
-                  key={item.owner_id || idx}
+                  key={item.canonical_owner_id || item.owner_id || idx}
                   className="bg-[#0c1829] hover:bg-[#102035] border border-[#233549] hover:border-[#385175] rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
@@ -1076,23 +1048,43 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         <span className="text-base font-bold text-white truncate group-hover:text-blue-300 transition-colors">
                           {item.full_name || 'Property Owner'}
                         </span>
-                        <span className="text-[10px] bg-white/10 text-white/70 font-mono px-2 py-0.5 rounded border border-white/10">
-                          {item.lead_id || `ID: ${item.owner_id}`}
-                        </span>
-                        {item.property_category && (
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                            item.property_category === 'Commercial'
-                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                              : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                          }`}>
-                            {item.property_category}
+                        
+                        {item.nationality && (
+                          <span className="text-[10px] bg-white/10 text-white/70 px-2 py-0.5 rounded border border-white/10">
+                            {item.nationality}
+                          </span>
+                        )}
+
+                        {item.total_units > 1 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1">
+                            <Layers className="w-3 h-3" />
+                            {item.total_units} Units
+                          </span>
+                        )}
+
+                        {formatAedValuation(item.total_portfolio_valuation) && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                            <DollarSign className="w-3 h-3" />
+                            {formatAedValuation(item.total_portfolio_valuation)}
+                          </span>
+                        )}
+
+                        {item.emirates_id && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                            EID: {item.emirates_id}
+                          </span>
+                        )}
+
+                        {item.bitrix_id && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                            Bitrix #{item.bitrix_id}
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-white/50 flex-wrap">
                         {cleanUnitNumber(item.unit_number) && <span>Unit: <strong className="text-white/80">{cleanUnitNumber(item.unit_number)}</strong></span>}
-                        {item.building_name && <span>Building: <strong className="text-white/80">{item.building_name}</strong></span>}
-                        {item.master_area && <span>Area: <strong className="text-white/80">{item.master_area}</strong></span>}
+                        {(item.primary_building || item.building_name) && <span>Primary Asset: <strong className="text-white/80">{item.primary_building || item.building_name}</strong></span>}
+                        {(item.primary_area || item.master_area) && <span>Area: <strong className="text-white/80">{item.primary_area || item.master_area}</strong></span>}
                       </div>
                     </div>
                   </div>
@@ -1101,26 +1093,15 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                     {item.phone_normalized && item.phone_normalized !== 'N/A' && (
                       <button
                         onClick={(e) => copyPhone(item.phone_normalized, e)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 transition-all"
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         {copiedPhone === item.phone_normalized ? <Check className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
                         <span>{copiedPhone === item.phone_normalized ? 'Copied' : item.phone_normalized}</span>
                       </button>
                     )}
                     <button
-                      onClick={() => setSelectedOwner({
-                        id: item.owner_id || item.lead_id,
-                        lead_id: item.lead_id,
-                        name: item.full_name,
-                        unit_number: cleanUnitNumber(item.unit_number),
-                        building: item.building_name,
-                        area: item.master_area,
-                        phone: item.phone_normalized,
-                        email: item.email,
-                        property_category: item.property_category,
-                        bitrix_id: item.bitrix_id
-                      })}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 flex items-center gap-1 transition-all"
+                      onClick={() => handleSelectOwner(item)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 flex items-center gap-1 transition-all cursor-pointer"
                     >
                       <span>Owner 360</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -1133,8 +1114,6 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
         </div>
       </div>
-
-
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* INSIDE-AREA EXPLORER DRAWER                                         */}
@@ -1160,7 +1139,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             </div>
             <button
               onClick={() => setSelectedArea(null)}
-              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1198,21 +1177,16 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             {loadingAreaDetails && filteredAreaBuildings.length === 0 ? (
               <div className="py-16 text-center text-white/40 flex flex-col items-center">
                 <RefreshCw className="w-6 h-6 animate-spin text-amber-400 mb-2" />
-                <p className="text-xs">Loading towers &amp; owners in {selectedArea.name}...</p>
+                <p className="text-xs">Loading towers in {selectedArea.name}...</p>
               </div>
             ) : filteredAreaBuildings.length > 0 ? (
               filteredAreaBuildings.map((b, i) => (
                 <div 
                   key={b.rawName || i}
-                  onClick={() => openBuildingExplorer({
-                    rawName: b.rawName,
-                    name: b.name,
-                    area: selectedArea.name,
-                    propertyType: 'Residential',
-                    unitsCount: b.unitsCount || b.ownersCount,
-                    ownersCount: b.ownersCount,
-                    contactsCount: b.contactsCount || 0
-                  })}
+                  onClick={() => {
+                    setSelectedArea(null);
+                    handleSelectBuilding(b);
+                  }}
                   className="bg-[#03152d]/80 hover:bg-[#062044] border border-white/5 hover:border-amber-500/40 rounded-xl p-3 flex items-center justify-between gap-3 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -1227,11 +1201,13 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         <span>{b.ownersCount} Owners</span>
                         <span>•</span>
                         <span>{b.unitsCount || b.ownersCount} Units</span>
+                        <span>•</span>
+                        <span className="text-emerald-400">{b.contactCoverage}% Phone</span>
                       </div>
                     </div>
                   </div>
 
-                  <button className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#183153] hover:bg-amber-600 text-white flex items-center gap-1 transition-all">
+                  <button className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#183153] hover:bg-amber-600 text-white flex items-center gap-1 transition-all cursor-pointer">
                     <span>View Units</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -1248,7 +1224,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             <span>Showing {filteredAreaBuildings.length} towers in {selectedArea.name}</span>
             <button 
               onClick={() => setSelectedArea(null)}
-              className="text-white/60 hover:text-white px-3 py-1 rounded bg-white/5 hover:bg-white/10 font-semibold"
+              className="text-white/60 hover:text-white px-3 py-1 rounded bg-white/5 hover:bg-white/10 font-semibold cursor-pointer"
             >
               Close
             </button>

@@ -42,7 +42,7 @@ const ROUTE_MAP = {
 function getTabFromUrl() {
   if (typeof window === 'undefined') return 'overview';
   const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
-  const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '');
+  const hash = (window.location.hash || '').toLowerCase().replace(/^#\/?/, '').split('?')[0];
   
   const target = hash || path.split('/').pop() || '';
   

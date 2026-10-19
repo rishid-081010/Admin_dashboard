@@ -752,10 +752,10 @@ if (!empty($toolCalls)) {
         // --- 2. BUILDINGS & COMMUNITY DIRECTORY ---
         } elseif ($fnName === 'search_buildings') {
             $limit = min((int)($fnArgs['limit'] ?? 10), 30);
-            $url = $supabaseUrl . "/building_directory_stats?select=building_name,master_area,property_category,total_units,total_owners,total_contacts,contact_coverage&limit={$limit}&order=total_units.desc.nullslast";
+            $url = $supabaseUrl . "/canonical_buildings?select=canonical_name,building_name,primary_building_name,master_area,property_category,total_units,total_owners,total_contacts,contact_coverage&entity_type=eq.building&limit={$limit}&order=total_units.desc.nullslast";
             if (!empty($fnArgs['query'])) {
                 $q = rawurlencode(trim($fnArgs['query']));
-                $url .= "&building_name=ilike.*{$q}*";
+                $url .= "&or=(canonical_name.ilike.*{$q}*,building_name.ilike.*{$q}*)";
             }
             if (!empty($fnArgs['master_area'])) {
                 $a = rawurlencode(trim($fnArgs['master_area']));
@@ -779,16 +779,23 @@ if (!empty($toolCalls)) {
         } elseif ($fnName === 'get_building_360') {
             $bName = trim($fnArgs['building_name']);
             $cleanB = rawurlencode($bName);
-            $bUrl = $supabaseUrl . "/building_directory_stats?building_name=ilike.*{$cleanB}*&limit=1";
+            $bUrl = $supabaseUrl . "/canonical_buildings?or=(canonical_name.ilike.*{$cleanB}*,building_name.ilike.*{$cleanB}*)&limit=1";
             $bRes = makeCurlRequest($bUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
             $bData = $bRes['data'][0] ?? null;
 
-            $oUrl = $supabaseUrl . "/owners_data?building_name=ilike.*{$cleanB}*&select=unit_number,bedrooms,verified_purchase_price,full_name,phone_normalized&limit=15";
+            if (!empty($bData['source_building_names']) && is_array($bData['source_building_names'])) {
+                $inNames = array_map(function($n) { return '"' . trim($n) . '"'; }, $bData['source_building_names']);
+                $oFilter = "building_name=in.(" . implode(',', $inNames) . ")";
+            } else {
+                $oFilter = "building_name=ilike.*{$cleanB}*";
+            }
+
+            $oUrl = $supabaseUrl . "/owners_data?{$oFilter}&select=unit_number,bedrooms,verified_purchase_price,full_name,phone_normalized&limit=15";
             $oRes = makeCurlRequest($oUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
             $units = $oRes['data'] ?? [];
 
             $toolResult = [
-                'building' => $bData ?: ['building_name' => $bName, 'master_area' => 'Dubai', 'total_units' => count($units), 'contact_coverage' => 100],
+                'building' => $bData ?: ['building_name' => $bName, 'canonical_name' => $bName, 'master_area' => 'Dubai', 'total_units' => count($units), 'contact_coverage' => 100],
                 'sample_units_count' => count($units),
                 'sample_units' => $units
             ];
@@ -812,7 +819,7 @@ if (!empty($toolCalls)) {
             $searchArea = $aliasMap[$lowerArea] ?? $area;
             $cleanA = rawurlencode($searchArea);
 
-            $bUrl = $supabaseUrl . "/building_directory_stats?master_area=ilike.*{$cleanA}*&select=building_name,total_units,total_owners,total_contacts,contact_coverage&limit=100";
+            $bUrl = $supabaseUrl . "/canonical_buildings?entity_type=eq.building&master_area=ilike.*{$cleanA}*&select=canonical_name,building_name,total_units,total_owners,total_contacts,contact_coverage&limit=100";
             $bRes = makeCurlRequest($bUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
             $bList = $bRes['data'] ?? [];
 
@@ -877,7 +884,7 @@ if (!empty($toolCalls)) {
             $oRes = makeCurlRequest($oUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
 
             // Search buildings
-            $bUrl = $supabaseUrl . "/building_directory_stats?building_name=ilike.*{$cleanQ}*&select=building_name,master_area,total_units,contact_coverage&limit=5";
+            $bUrl = $supabaseUrl . "/canonical_buildings?or=(canonical_name.ilike.*{$cleanQ}*,building_name.ilike.*{$cleanQ}*)&select=canonical_name,building_name,master_area,total_units,contact_coverage&limit=5";
             $bRes = makeCurlRequest($bUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
 
             // Search listings

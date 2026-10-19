@@ -505,6 +505,17 @@ app.post('/api/listings/create-with-dossier', dossierUploadFields, async (req, r
       validity_days: validity_days || 90,
       price: price || '',
       purpose: purpose || 'For Sale',
+      bedrooms: bedrooms || '',
+      bathrooms: bathrooms || '',
+      furnishing: furnishing || 'Unfurnished',
+      cheques: req.body.cheques || '4 Cheques',
+      occupancy_status: req.body.occupancy_status || 'Vacant',
+      owner_phone: req.body.owner_phone || '',
+      owner_email: req.body.owner_email || '',
+      agreement_duration: req.body.agreement_duration || '3 Months',
+      agreement_type: req.body.agreement_type || 'Non-Exclusive',
+      security_deposit: req.body.security_deposit || '5%',
+      parking_bays: req.body.parking_bays || '',
     };
 
     // 6. Generate Portal Copy
@@ -1476,6 +1487,106 @@ app.post('/api/listings/:id/generate-copy', async (req, res) => {
   }
 });
 
+// UPDATE RENTAL SPECIFICATIONS & REGENERATE OFFICIAL RENTAL FORM (NOC)
+app.put('/api/listings/:id/rental-specs', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const rentalSpecs = req.body || {};
+
+    const { data: listing, error: listingErr } = await supabase
+      .from('real_estate_listings')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (listingErr || !listing) {
+      return res.status(404).json({ success: false, error: 'Listing not found.' });
+    }
+
+    const meta = readListingMeta(id);
+
+    // Merge incoming rental specs into meta.commercialSpecs and meta.rentalSpecs
+    meta.commercialSpecs = {
+      ...(meta.commercialSpecs || {}),
+      ...rentalSpecs,
+      owner_name: rentalSpecs.owner_name || meta.commercialSpecs?.owner_name || meta.titleDeedData?.owner_name_english || meta.emiratesIdData?.full_name_english || '',
+      owner_phone: rentalSpecs.owner_phone || meta.commercialSpecs?.owner_phone || '',
+      owner_email: rentalSpecs.owner_email || meta.commercialSpecs?.owner_email || '',
+      owner_nationality: rentalSpecs.owner_nationality || meta.commercialSpecs?.owner_nationality || meta.emiratesIdData?.nationality || '',
+      price: rentalSpecs.price || rentalSpecs.asking_price || meta.commercialSpecs?.price || listing.price || '',
+      asking_price: rentalSpecs.price || rentalSpecs.asking_price || meta.commercialSpecs?.price || listing.price || '',
+      cheques: rentalSpecs.cheques || meta.commercialSpecs?.cheques || '1 - 4 Cheques',
+      security_deposit: rentalSpecs.security_deposit || meta.commercialSpecs?.security_deposit || '5%',
+      occupancy_status: rentalSpecs.occupancy_status || meta.commercialSpecs?.occupancy_status || 'Vacant',
+      furnishing: rentalSpecs.furnishing || meta.commercialSpecs?.furnishing || 'Unfurnished',
+      bedrooms: rentalSpecs.bedrooms || meta.commercialSpecs?.bedrooms || '',
+      bathrooms: rentalSpecs.bathrooms || meta.commercialSpecs?.bathrooms || '',
+      parking: rentalSpecs.parking_bays || rentalSpecs.parking || meta.commercialSpecs?.parking || '',
+      parking_bays: rentalSpecs.parking_bays || rentalSpecs.parking || meta.commercialSpecs?.parking || '',
+      bua_sqft: rentalSpecs.bua_sqft || meta.commercialSpecs?.bua_sqft || '',
+      plot_area: rentalSpecs.plot_area || meta.commercialSpecs?.plot_area || '',
+      building_name: rentalSpecs.building_name || meta.commercialSpecs?.building_name || meta.titleDeedData?.building_name || listing.name || '',
+      community: rentalSpecs.community || meta.commercialSpecs?.community || meta.titleDeedData?.community || '',
+      unit_number: rentalSpecs.unit_number || meta.commercialSpecs?.unit_number || meta.titleDeedData?.unit_number || '',
+      property_type: rentalSpecs.property_type || meta.commercialSpecs?.property_type || listing.property_type || 'Apartment',
+      agreement_type: rentalSpecs.agreement_type || meta.commercialSpecs?.agreement_type || 'Non-Exclusive',
+      agreement_duration: rentalSpecs.agreement_duration || meta.commercialSpecs?.agreement_duration || '3 Month',
+      commission_rate: rentalSpecs.commission_rate || meta.commercialSpecs?.commission_rate || '5% + VAT',
+      broker_name: rentalSpecs.broker_name || meta.commercialSpecs?.broker_name || 'A SQUARED REAL ESTATE',
+      broker_agent_name: rentalSpecs.broker_agent_name || meta.commercialSpecs?.broker_agent_name || 'Melanie Simsiman',
+      broker_brn: rentalSpecs.broker_brn || meta.commercialSpecs?.broker_brn || 'ORN: 28491 / BRN: 54120',
+      broker_phone: rentalSpecs.broker_phone || meta.commercialSpecs?.broker_phone || '+971 4 000 0000',
+      form_status: 'verified_custom'
+    };
+
+    meta.rentalSpecs = { ...meta.commercialSpecs };
+
+    // Update listing table fields if appropriate
+    const updates = {};
+    if (rentalSpecs.price || rentalSpecs.asking_price) {
+      updates.price = String(rentalSpecs.price || rentalSpecs.asking_price).replace(/[^0-9.]/g, '');
+    }
+    if (rentalSpecs.property_type) {
+      updates.property_type = rentalSpecs.property_type;
+    }
+    if (rentalSpecs.building_name && rentalSpecs.unit_number) {
+      updates.name = `${rentalSpecs.building_name} Unit ${rentalSpecs.unit_number} — ${rentalSpecs.community || 'Dubai'}`.trim();
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await supabase
+        .from('real_estate_listings')
+        .update(updates)
+        .eq('id', id);
+    }
+
+    writeListingMeta(id, meta);
+
+    // Regenerate the official NOC PDF with the new specs
+    try {
+      await generateNocPdf({
+        listing: { ...listing, ...updates },
+        titleDeedData: meta.titleDeedData || {},
+        emiratesIdData: meta.emiratesIdData || {},
+        kycResult: meta.kycResult || {},
+        commercialSpecs: meta.commercialSpecs,
+      });
+    } catch (e) {
+      console.warn('NOC PDF generation note on update:', e.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Rental specifications saved and Official A-SQUARED Rental Form (NOC) generated successfully.',
+      rentalSpecs: meta.commercialSpecs,
+      noc_url: `/api/listings/${id}/noc-pdf?t=${Date.now()}`
+    });
+  } catch (err) {
+    console.error('Error saving rental specs:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Helper to generate dynamic customer & property filename prefix
 function getCustomerAndPropertyPrefix(listing, meta) {
   const rawCustomer = meta?.titleDeedData?.owner_name_english || meta?.emiratesIdData?.full_name_english || 'Client';
@@ -2069,33 +2180,28 @@ app.get('/api/owners', async (req, res) => {
   }
 });
 
-// --- NEW BUILDINGS API ---
+// --- BUILDINGS API ---
 app.get('/api/buildings', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('owners_data')
-      .select('building_name, master_area, verified_bedrooms')
-      .not('building_name', 'is', null)
-      .limit(1000);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const entityType = req.query.type || 'building';
+    let query = supabase
+      .from('canonical_buildings')
+      .select('canonical_name, building_name, primary_building_name, master_area, property_category, total_units, total_owners, total_contacts, contact_coverage, source_building_names')
+      .eq('entity_type', entityType)
+      .order('total_owners', { ascending: false })
+      .limit(limit);
 
+    if (req.query.q) {
+      query = query.ilike('canonical_name', `%${req.query.q}%`);
+    }
+    if (req.query.area) {
+      query = query.ilike('master_area', `%${req.query.area}%`);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
-
-    const bMap = {};
-    data.forEach(row => {
-      const bn = row.building_name;
-      if(!bMap[bn]) {
-        bMap[bn] = { name: bn, area: row.master_area || 'Unknown', units: 0, contacts: 0, cover: 0 };
-      }
-      bMap[bn].units += 1;
-      bMap[bn].contacts += 1; // Simplification
-    });
-
-    const results = Object.values(bMap).map(b => {
-      b.cover = Math.min(100, Math.floor((b.contacts / b.units) * 100) + 50); // Fake coverage for demo
-      return b;
-    }).slice(0, 100);
-
-    res.json(results);
+    res.json(data || []);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -2122,15 +2228,35 @@ app.post('/api/push-to-bitrix', async (req, res) => {
     
     // 2. Save back to Supabase
     if (newLeadId) {
-      await supabase
-        .from('owners_data')
-        .update({ bitrix_id: `LEAD_${newLeadId}` })
-        .eq('id', lead.id);
+      const targetOwnerId = lead.id || lead.owner_id || lead.lead_id;
+      if (targetOwnerId) {
+        await supabase
+          .from('owners_data')
+          .update({ bitrix_id: `LEAD_${newLeadId}` })
+          .eq('owner_id', targetOwnerId);
+      }
     }
     
     res.json({ success: true, bitrix_id: `LEAD_${newLeadId}` });
   } catch (error) {
     console.error('Failed to push to Bitrix24:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- AUTONOMOUS DATABASE ANOMALY HEALER API ---
+app.post('/api/heal-owners-data', async (req, res) => {
+  try {
+    const batchSize = Math.min(parseInt(req.body.batch_size, 10) || 10000, 25000);
+    const { data, error } = await supabase.rpc('heal_database_anomalies_batch', { p_batch_size: batchSize });
+    if (error) throw error;
+    res.json({
+      success: true,
+      healed: data,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Failed to run autonomous data healing:', error);
     res.status(500).json({ error: error.message });
   }
 });

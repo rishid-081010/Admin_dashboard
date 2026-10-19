@@ -397,7 +397,24 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           if (cleanBuilding === '1' || cleanBuilding.toLowerCase() === 'null') {
             cleanBuilding = row.primary_area || 'Dubai';
           }
+          if (/^[A-Z]{2,}\d+[A-Z0-9_-]+$/i.test(cleanBuilding)) {
+            cleanBuilding = `Plot Demarcation: ${cleanBuilding}`;
+          } else if (/^\d{1,4}$/.test(cleanBuilding)) {
+            cleanBuilding = `${row.primary_area ? `${row.primary_area} · ` : ''}Villa / Plot ${cleanBuilding}`;
+          } else if (['dubai', 'uae'].includes(cleanBuilding.toLowerCase()) && row.primary_area && row.primary_area.toLowerCase() !== 'dubai') {
+            cleanBuilding = row.primary_area;
+          }
+
           let cleanName = formatOwnerName(row.full_name, cleanBuilding, null);
+
+          let cleanPhoneDisplay = 'N/A';
+          if (row.phone_normalized) {
+            let p = String(row.phone_normalized).trim();
+            if (p.startsWith('+00')) p = '+' + p.slice(3);
+            cleanPhoneDisplay = p;
+          } else if (row.phone_raw) {
+            cleanPhoneDisplay = String(row.phone_raw).trim();
+          }
 
           return {
             id: row.canonical_owner_id,
@@ -409,8 +426,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             raw_full_name: row.full_name,
             building: cleanBuilding,
             area: row.primary_area ? String(row.primary_area).trim() : 'Dubai',
-            phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
-            phone_normalized: row.phone_normalized,
+            phone: cleanPhoneDisplay,
+            phone_normalized: cleanPhoneDisplay !== 'N/A' ? cleanPhoneDisplay : null,
             email: 'N/A',
             units: row.total_units || 1,
             total_units: row.total_units || 1,
@@ -430,7 +447,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             bitrix_status: row.bitrix_status || null,
             assigned_agent: row.assigned_agent || null,
             assigned_agent_id: row.assigned_agent_id || null,
-            portfolioValue: row.total_portfolio_valuation > 0 ? `AED ${(parseFloat(row.total_portfolio_valuation) / 1000000).toFixed(1)}M` : (row.total_units > 1 ? `${row.total_units} Units Portfolio` : 'Standard'),
+            portfolioValue: row.total_portfolio_valuation > 0 ? (row.total_portfolio_valuation >= 1000000 ? `AED ${(parseFloat(row.total_portfolio_valuation) / 1000000).toFixed(1)}M` : `AED ${Math.round(row.total_portfolio_valuation).toLocaleString()}`) : (row.total_units > 1 ? `${row.total_units} Units Portfolio` : 'Standard'),
             lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
           };
         });
@@ -1156,10 +1173,20 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       {/* 3. Property & Portfolio */}
                       <td className="px-5 py-3 align-middle">
                         <div className="flex flex-col justify-center space-y-1 text-xs">
-                          <div className="font-medium text-white/90 flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetB = owner.building && owner.building !== 'Dubai' ? owner.building : (owner.area || 'Dubai');
+                              window.location.hash = `#buildings?tower=${encodeURIComponent(targetB)}`;
+                            }}
+                            className="font-medium text-white/90 hover:text-blue-400 flex items-center gap-1.5 transition-colors group/bldg cursor-pointer text-left"
+                            title={`View ${owner.building} in Building 360`}
+                          >
                             <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                             <span className="truncate max-w-[190px] font-medium">{owner.building}</span>
-                          </div>
+                            <ExternalLink className="w-2.5 h-2.5 text-white/30 group-hover/bldg:text-blue-400 transition-colors shrink-0" />
+                          </button>
                           <div className="flex items-center gap-2 text-white/50 flex-wrap">
                             {owner.total_portfolio_valuation > 0 ? (
                               <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold shrink-0">

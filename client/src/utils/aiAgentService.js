@@ -589,8 +589,8 @@ async function executeClientTool(name, args) {
     // 2. Buildings & Community Directory
     if (name === 'search_buildings') {
       const limit = Math.min(args.limit || 10, 30);
-      let url = `${SUPABASE_BASE_URL}/building_directory_stats?select=building_name,master_area,property_category,total_units,total_owners,total_contacts,contact_coverage&limit=${limit}&order=total_units.desc.nullslast`;
-      if (args.query) url += `&building_name=ilike.*${encodeURIComponent(args.query)}*`;
+      let url = `${SUPABASE_BASE_URL}/canonical_buildings?select=canonical_name,building_name,primary_building_name,master_area,property_category,total_units,total_owners,total_contacts,contact_coverage&entity_type=eq.building&limit=${limit}&order=total_units.desc.nullslast`;
+      if (args.query) url += `&or=(canonical_name.ilike.*${encodeURIComponent(args.query)}*,building_name.ilike.*${encodeURIComponent(args.query)}*)`;
       if (args.master_area) url += `&master_area=ilike.*${encodeURIComponent(args.master_area)}*`;
       if (args.property_category) url += `&property_category=ilike.*${encodeURIComponent(args.property_category)}*`;
       if (args.min_units) url += `&total_units=gte.${args.min_units}`;
@@ -601,16 +601,23 @@ async function executeClientTool(name, args) {
     if (name === 'get_building_360') {
       const bName = String(args.building_name || '').trim();
       const cleanB = encodeURIComponent(bName);
-      const bUrl = `${SUPABASE_BASE_URL}/building_directory_stats?building_name=ilike.*${cleanB}*&limit=1`;
+      const bUrl = `${SUPABASE_BASE_URL}/canonical_buildings?or=(canonical_name.ilike.*${cleanB}*,building_name.ilike.*${cleanB}*)&limit=1`;
       const bRes = await axios.get(bUrl, { headers: sbHeaders });
       const bData = bRes.data?.[0];
 
-      const oUrl = `${SUPABASE_BASE_URL}/owners_data?building_name=ilike.*${cleanB}*&select=unit_number,bedrooms,verified_purchase_price,full_name,phone_normalized&limit=15`;
+      let oFilter;
+      if (bData?.source_building_names && Array.isArray(bData.source_building_names) && bData.source_building_names.length > 0) {
+        oFilter = `building_name=in.(${bData.source_building_names.map(n => `"${n.trim()}"`).join(',')})`;
+      } else {
+        oFilter = `building_name=ilike.*${cleanB}*`;
+      }
+
+      const oUrl = `${SUPABASE_BASE_URL}/owners_data?${oFilter}&select=unit_number,bedrooms,verified_purchase_price,full_name,phone_normalized&limit=15`;
       const oRes = await axios.get(oUrl, { headers: sbHeaders });
       const units = oRes.data || [];
 
       return {
-        building: bData || { building_name: bName, master_area: 'Dubai', total_units: units.length, contact_coverage: 100 },
+        building: bData || { building_name: bName, canonical_name: bName, master_area: 'Dubai', total_units: units.length, contact_coverage: 100 },
         sample_units_count: units.length,
         sample_units: units
       };
@@ -631,7 +638,7 @@ async function executeClientTool(name, args) {
         'jlt': 'Al Thanyah Fifth'
       };
       const searchArea = aliasMap[area.toLowerCase()] || area;
-      const bUrl = `${SUPABASE_BASE_URL}/building_directory_stats?master_area=ilike.*${encodeURIComponent(searchArea)}*&select=building_name,total_units,total_owners,total_contacts,contact_coverage&limit=100`;
+      const bUrl = `${SUPABASE_BASE_URL}/canonical_buildings?entity_type=eq.building&master_area=ilike.*${encodeURIComponent(searchArea)}*&select=canonical_name,building_name,total_units,total_owners,total_contacts,contact_coverage&limit=100`;
       const bRes = await axios.get(bUrl, { headers: sbHeaders });
       const bList = bRes.data || [];
 
@@ -685,7 +692,7 @@ async function executeClientTool(name, args) {
       oUrl += `&or=(${orParts.join(',')})`;
       const oRes = await axios.get(oUrl, { headers: sbHeaders });
 
-      const bUrl = `${SUPABASE_BASE_URL}/building_directory_stats?building_name=ilike.*${cleanQ}*&select=building_name,master_area,total_units,contact_coverage&limit=5`;
+      const bUrl = `${SUPABASE_BASE_URL}/canonical_buildings?or=(canonical_name.ilike.*${cleanQ}*,building_name.ilike.*${cleanQ}*)&select=canonical_name,building_name,master_area,total_units,contact_coverage&limit=5`;
       const bRes = await axios.get(bUrl, { headers: sbHeaders });
 
       const lUrl = `${SUPABASE_BASE_URL}/real_estate_listings?name=ilike.*${cleanQ}*&select=id,name,reference,property_type,status&limit=5`;
