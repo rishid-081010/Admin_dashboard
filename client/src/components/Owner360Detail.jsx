@@ -11,6 +11,9 @@ export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed
   const [activeTab, setActiveTab] = useState('portfolio');
   const [relatedProperties, setRelatedProperties] = useState([]);
   const [loadingProps, setLoadingProps] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState(null);
   const [showAskModal, setShowAskModal] = useState(false);
   const [showFollowupModal, setShowFollowupModal] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
@@ -49,10 +52,16 @@ function sanitizeUnitNumber(rawUnit) {
         }
 
         if (filter) {
-          const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${filter}&select=*&limit=50`;
+          setCurrentFilter(filter);
+          const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${filter}&select=*&limit=50&offset=0`;
           const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
           if (Array.isArray(res.data) && res.data.length > 0) {
             setRelatedProperties(res.data);
+            const totalUnits = Number(owner.total_units || owner.units) || res.data.length;
+            setHasMore(res.data.length === 50 && (totalUnits > 50 || res.data.length < totalUnits));
+          } else {
+            setRelatedProperties([]);
+            setHasMore(false);
           }
         }
       } catch (e) {
@@ -63,6 +72,29 @@ function sanitizeUnitNumber(rawUnit) {
     };
     fetchRelated();
   }, [owner]);
+
+  const handleLoadMore = async () => {
+    if (!currentFilter || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
+      const offset = relatedProperties.length;
+      const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${currentFilter}&select=*&limit=50&offset=${offset}`;
+      const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        const nextList = [...relatedProperties, ...res.data];
+        setRelatedProperties(nextList);
+        const totalUnits = Number(owner.total_units || owner.units) || 0;
+        setHasMore(res.data.length === 50 && (totalUnits === 0 || nextList.length < totalUnits));
+      } else {
+        setHasMore(false);
+      }
+    } catch (e) {
+      console.error('Failed to load more properties:', e);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const copyToClipboard = (text, field) => {
     if (!text || text === 'N/A') return;
@@ -80,7 +112,8 @@ function sanitizeUnitNumber(rawUnit) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  const propertiesCount = relatedProperties.length > 0 ? relatedProperties.length : (owner.units || 1);
+  const totalUnits = Number(owner.total_units || owner.units);
+  const propertiesCount = (totalUnits && totalUnits > 0) ? totalUnits : (relatedProperties.length > 0 ? relatedProperties.length : 1);
   const isAvailablePhone = owner.phone && owner.phone !== 'N/A' && owner.phone !== 'null';
   const assignedAgent = globalAgentName || 'Mayank';
 
@@ -294,8 +327,24 @@ function sanitizeUnitNumber(rawUnit) {
           {/* TAB 1: PORTFOLIO */}
           {activeTab === 'portfolio' && (
             <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-white tracking-tight">Registered Properties</h2>
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-lg font-bold text-white tracking-tight">Registered Properties</h2>
+                  {propertiesCount > 1 && (
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Showing {relatedProperties.length} of {propertiesCount} registered {propertiesCount > 1 ? 'units' : 'unit'}
+                    </p>
+                  )}
+                </div>
+                {hasMore && (
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="self-start sm:self-auto px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    {loadingMore ? 'Loading Next 50...' : 'Load Next 50 Units'}
+                  </button>
+                )}
               </div>
 
               <div className="overflow-x-auto">
@@ -371,6 +420,29 @@ function sanitizeUnitNumber(rawUnit) {
                   </tbody>
                 </table>
               </div>
+
+              {hasMore && (
+                <div className="mt-4 pt-4 border-t border-[#1b2b3d] flex items-center justify-between">
+                  <div className="text-xs text-slate-400">
+                    Loaded <strong className="text-white">{relatedProperties.length}</strong> of{' '}
+                    <strong className="text-white">{propertiesCount}</strong> units
+                  </div>
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="px-4 py-2 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-md"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Loading Next 50 Units...</span>
+                      </>
+                    ) : (
+                      <span>Load Next 50 Units</span>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -546,7 +618,7 @@ function sanitizeUnitNumber(rawUnit) {
             <div className="p-4 rounded-xl bg-[#06111e] border border-[#1b2b3d] text-xs text-slate-300 leading-relaxed mb-6 space-y-2">
               <p>
                 <strong className="text-white">{owner.name}</strong> is currently linked to{' '}
-                <strong className="text-white">{propertiesCount} property</strong> across{' '}
+                <strong className="text-white">{propertiesCount} {propertiesCount > 1 ? 'properties' : 'property'}</strong> across{' '}
                 <strong className="text-white">{owner.area || 'Dubai'}</strong>.
               </p>
               <p>
