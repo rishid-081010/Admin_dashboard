@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Building2, User, Users, UserCheck, FileText, Sparkles, 
-  Star, Printer, Phone, Mail, MapPin, CheckCircle2, AlertCircle, 
+  Phone, Mail, MapPin, CheckCircle2, AlertCircle, 
   Copy, ExternalLink, ShieldCheck, ChevronDown, Send, MessageSquare, 
   HelpCircle, Bot, Share2, Layers, Tag
 } from 'lucide-react';
@@ -9,8 +9,6 @@ import axios from 'axios';
 
 export default function Owner360Detail({ owner, onBack, onPushToBitrix, isPushed, globalAgentName }) {
   const [activeTab, setActiveTab] = useState('portfolio');
-  const [priority, setPriority] = useState('Normal');
-  const [isWatchlist, setIsWatchlist] = useState(false);
   const [relatedProperties, setRelatedProperties] = useState([]);
   const [loadingProps, setLoadingProps] = useState(false);
   const [showAskModal, setShowAskModal] = useState(false);
@@ -254,72 +252,6 @@ function sanitizeUnitNumber(rawUnit) {
               <span className="text-emerald-400/80 font-mono text-[10px]">Verified</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ─── Sub-Actions Toolbar ────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#0c1829] border border-[#233549] rounded-xl mb-6 shadow-xl shadow-black/40 shrink-0">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Watchlist Toggle */}
-          <button 
-            onClick={() => setIsWatchlist(!isWatchlist)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-              isWatchlist 
-                ? 'bg-amber-400/20 text-amber-300 border-amber-400/40' 
-                : 'bg-[#06111e] text-slate-300 border-[#1b2b3d] hover:border-[#385175] hover:text-white'
-            }`}
-          >
-            <Star className={`w-3.5 h-3.5 ${isWatchlist ? 'fill-amber-300 text-amber-300' : ''}`} />
-            {isWatchlist ? 'In watchlist' : 'Add to watchlist'}
-          </button>
-
-          {/* Priority Dropdown */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#06111e] border border-[#1b2b3d] rounded-lg text-xs">
-            <span className="text-slate-400">Priority</span>
-            <select 
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              className="bg-transparent text-white font-semibold outline-none cursor-pointer"
-            >
-              <option value="Normal" className="bg-[#0c1829]">Normal</option>
-              <option value="High" className="bg-[#0c1829]">High</option>
-              <option value="Urgent VIP" className="bg-[#0c1829]">Urgent VIP</option>
-            </select>
-          </div>
-
-          {/* Print Profile */}
-          <button 
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#06111e] hover:bg-[#102035] text-slate-300 hover:text-white border border-[#1b2b3d] hover:border-[#385175] transition-all"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Print profile
-          </button>
-
-          {/* Draft Message */}
-          <button 
-            onClick={() => setShowFollowupModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#06111e] hover:bg-[#102035] text-slate-300 hover:text-white border border-[#1b2b3d] hover:border-[#385175] transition-all"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            Draft Message
-          </button>
-        </div>
-
-        {/* CRM Push Action */}
-        <div>
-          <button
-            onClick={() => onPushToBitrix(owner)}
-            disabled={isPushed}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
-              isPushed 
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default' 
-                : 'bg-[#3b82f6] hover:bg-[#2563eb] text-white shadow-blue-500/20 hover:scale-[1.02]'
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            {isPushed ? `Synced to CRM (${owner.bitrix_id || 'Active'})` : 'Push to Bitrix24'}
-          </button>
         </div>
       </div>
 
