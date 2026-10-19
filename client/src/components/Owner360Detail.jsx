@@ -35,12 +35,17 @@ function sanitizeUnitNumber(rawUnit) {
         const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
         
         let filter = null;
-        if (owner.phone && owner.phone !== 'N/A' && owner.phone !== 'null' && String(owner.phone).trim().length > 6) {
-          filter = `phone_normalized=eq.${encodeURIComponent(String(owner.phone).trim())}`;
-        } else if (owner.name && !owner.name.startsWith('Owner (') && !owner.name.startsWith('Verified Property Owner') && !owner.name.startsWith('Verified Owner')) {
-          filter = `full_name=eq.${encodeURIComponent(String(owner.name).trim())}`;
-        } else if (owner.id && owner.id !== 'UnknownID') {
+        if (owner.match_criteria === 'EMIRATES_ID' && owner.emirates_id) {
+          filter = `emirates_id=eq.${encodeURIComponent(owner.emirates_id)}`;
+        } else if (owner.match_criteria === 'MOBILE_AND_NAME' && owner.phone_normalized && (owner.raw_full_name || owner.name)) {
+          const matchName = owner.raw_full_name || owner.name;
+          filter = `phone_normalized=eq.${encodeURIComponent(owner.phone_normalized)}&full_name=eq.${encodeURIComponent(matchName)}`;
+        } else if (owner.sample_owner_id) {
+          filter = `owner_id=eq.${encodeURIComponent(owner.sample_owner_id)}`;
+        } else if (owner.id && owner.id !== 'UnknownID' && !owner.id.startsWith('MOB-') && !owner.id.startsWith('EID-')) {
           filter = `owner_id=eq.${encodeURIComponent(owner.id)}`;
+        } else if (owner.phone && owner.phone !== 'N/A' && !owner.phone.startsWith('+9714') && !owner.phone.startsWith('04')) {
+          filter = `phone_normalized=eq.${encodeURIComponent(String(owner.phone).trim())}`;
         }
 
         if (filter) {
@@ -449,7 +454,19 @@ function sanitizeUnitNumber(rawUnit) {
                   </div>
                   <div className="bg-[#06111e] p-3 rounded-xl border border-[#1b2b3d]">
                     <div className="text-slate-400 mb-1">Golden Visa Status</div>
-                    <div className="font-semibold text-emerald-400">High Eligibility</div>
+                    <div className={`font-semibold ${
+                      (owner.total_portfolio_valuation || owner.verified_purchase_price || 0) >= 2000000
+                        ? 'text-emerald-400' 
+                        : (owner.total_portfolio_valuation || owner.verified_purchase_price || 0) > 0
+                        ? 'text-amber-400'
+                        : 'text-slate-400'
+                    }`}>
+                      {(owner.total_portfolio_valuation || owner.verified_purchase_price || 0) >= 2000000
+                        ? 'Eligible (AED 2M+ Equity)' 
+                        : (owner.total_portfolio_valuation || owner.verified_purchase_price || 0) > 0
+                        ? `AED ${((owner.total_portfolio_valuation || owner.verified_purchase_price) / 1000000).toFixed(1)}M / AED 2.0M Threshold`
+                        : 'Pending Valuation'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -475,22 +492,6 @@ function sanitizeUnitNumber(rawUnit) {
                       {owner.bitrix_id ? 'SYNCED' : 'UNSYNCED'}
                     </span>
                   </div>
-
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#06111e] border border-[#1b2b3d]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">CALL</div>
-                      <div>
-                        <div className="font-semibold text-white">Outbound Call</div>
-                        <div className="text-[11px] text-slate-400">Call script ready</div>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => alert(`Enqueued automated voice call for ${owner.name} (${owner.phone})`)}
-                      className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-colors"
-                    >
-                      Trigger Call
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -515,9 +516,13 @@ function sanitizeUnitNumber(rawUnit) {
                 </div>
 
                 <div className="p-3 bg-[#06111e] rounded-xl border border-[#1b2b3d]">
-                  <div className="text-slate-400 mb-1">Land Registry Match</div>
-                  <div className="text-emerald-400">
-                    {owner.match_confidence || (owner.dld_matched ? 'FINGERPRINT_VERIFIED' : 'UNMATCHED_LEAD')}
+                  <div className="text-slate-400 mb-1">Identity Resolution Match</div>
+                  <div className="text-emerald-400 font-bold">
+                    {owner.match_criteria === 'EMIRATES_ID' 
+                      ? 'GOV_EMIRATES_ID_MATCHED (100% Deterministic)' 
+                      : owner.match_criteria === 'MOBILE_AND_NAME' 
+                      ? 'KYC_MOBILE_AND_NAME_MATCHED (High Confidence)' 
+                      : 'SINGLE_PROPERTY_DEED (Individual Record)'}
                   </div>
                 </div>
               </div>
@@ -676,15 +681,30 @@ function sanitizeUnitNumber(rawUnit) {
               >
                 Cancel
               </button>
-              <a
-                href={`https://wa.me/${String(owner.phone).replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${owner.name}, this is ${assignedAgent} from A Squared Real Estate. I'm reaching out regarding your property in ${owner.building || owner.area || 'Dubai'}. We've noticed strong buyer interest in the building this quarter. Would you be open to a quick valuation update this week?`)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs transition-colors flex items-center gap-2 shadow-lg shadow-green-600/30"
-              >
-                <MessageSquare className="w-4 h-4" />
-                Open WhatsApp with Draft
-              </a>
+              {(() => {
+                const rawDigits = String(owner.phone || '').replace(/\D/g, '');
+                const isValidMobile = rawDigits.length >= 8 && !String(owner.phone || '').startsWith('+9714') && !String(owner.phone || '').startsWith('04');
+                return isValidMobile ? (
+                  <a
+                    href={`https://wa.me/${rawDigits}?text=${encodeURIComponent(`Hi ${owner.name}, this is ${assignedAgent} from A Squared Real Estate. I'm reaching out regarding your property in ${owner.building || owner.area || 'Dubai'}. We've noticed strong buyer interest in the building this quarter. Would you be open to a quick valuation update this week?`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs transition-colors flex items-center gap-2 shadow-lg shadow-green-600/30"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Open WhatsApp with Draft
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/40 font-bold text-xs flex items-center gap-2 cursor-not-allowed"
+                    title="A valid mobile phone number is required for WhatsApp"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    WhatsApp Unavailable (No Mobile)
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>

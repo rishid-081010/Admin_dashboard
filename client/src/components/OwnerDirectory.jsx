@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, SlidersHorizontal, ChevronDown, List, LayoutGrid,
   X, Building2, Phone, Mail, MapPin, ExternalLink, Share2, 
-  MoreHorizontal, UserCheck, RefreshCw, ChevronLeft, ChevronRight
+  MoreHorizontal, UserCheck, RefreshCw, ChevronLeft, ChevronRight,
+  MessageSquare
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
@@ -161,10 +162,11 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   const [agentFilter, setAgentFilter] = useState('Any');           // 'Any' | 'Unassigned' | agent name
   const [bitrixStatusFilter, setBitrixStatusFilter] = useState('Any');
   const [phoneFilter, setPhoneFilter] = useState('Any');           // 'Any' | 'Yes' | 'No'
-  const [emailFilter, setEmailFilter] = useState('Any');           // 'Any' | 'Yes' | 'No'
+  const [classificationFilter, setClassificationFilter] = useState('Any'); // 'Any' | 'OWNER' | 'BUYER' | 'TENANT' | 'UNKNOWN'
+  const [portfolioSizeFilter, setPortfolioSizeFilter] = useState('Any');   // 'Any' | 'Single Unit' | 'Multi-Unit (2+)' | 'Large Portfolio (5+)'
 
   // ─── Sort & View Mode ────────────────────────────────────────────────────
-  const [sortBy, setSortBy] = useState('Name A–Z');
+  const [sortBy, setSortBy] = useState('Most Properties');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
 
   // ─── Data & Pagination State ─────────────────────────────────────────────
@@ -174,8 +176,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   const itemsPerPage = 50;
   const [customPageInput, setCustomPageInput] = useState('');
   const customPageInputRef = useRef(null);
-  const totalCount = 3042722;
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const [totalCount, setTotalCount] = useState(2220643);
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
   const isSearching = searchTerm.trim().length > 1;
 
   const handleCustomPageSubmit = () => {
@@ -234,12 +236,13 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     if (agentFilter !== 'Any') count++;
     if (bitrixStatusFilter !== 'Any') count++;
     if (phoneFilter !== 'Any') count++;
-    if (emailFilter !== 'Any') count++;
+    if (classificationFilter !== 'Any') count++;
+    if (portfolioSizeFilter !== 'Any') count++;
     return count;
   }, [
     areaFilter, buildingFilter, propertyTypeFilter, bedroomsFilter, 
     sourceFileFilter, dateFrom, dateTo, crmPresentFilter, 
-    agentFilter, bitrixStatusFilter, phoneFilter, emailFilter
+    agentFilter, bitrixStatusFilter, phoneFilter, classificationFilter, portfolioSizeFilter
   ]);
 
   const clearFilters = () => {
@@ -254,7 +257,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     setAgentFilter('Any');
     setBitrixStatusFilter('Any');
     setPhoneFilter('Any');
-    setEmailFilter('Any');
+    setClassificationFilter('Any');
+    setPortfolioSizeFilter('Any');
     setCurrentPage(1);
   };
 
@@ -265,7 +269,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       const offset = (currentPage - 1) * itemsPerPage;
       const isSearching = searchTerm.trim().length > 1;
 
-      let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?select=lead_id,owner_id,full_name,building_name,master_area,unit_number,phone_normalized,phone_raw,email,nationality,emirates_id,passport_expiry,reported_property_type,verified_bedrooms,verified_purchase_price,verified_purchase_date,verified_size_sqft,vendor_source_file,bitrix_id,assigned_agent,assigned_agent_id,bitrix_status&limit=${itemsPerPage}&offset=${offset}`;
+      let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/canonical_owners?select=canonical_owner_id,full_name,primary_building,primary_area,phone_normalized,phone_raw,nationality,emirates_id,total_units,total_portfolio_valuation,ownership_type,match_criteria,match_confidence,bitrix_id,assigned_agent,assigned_agent_id,bitrix_status,sample_owner_id&limit=${itemsPerPage}&offset=${offset}`;
 
       // 1. Search Query
       if (isSearching) {
@@ -273,76 +277,61 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         const parsed = parseIdQuery(queryTerm);
 
         if (parsed) {
-          if (parsed.intent === 'lead') {
-            url += `&or=(${parsed.leadVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`).join(',')})`;
-          } else if (parsed.intent === 'owner') {
-            url += `&or=(${parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`).join(',')})`;
-          } else if (parsed.intent === 'bitrix') {
-            url += `&or=(${parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`).join(',')})`;
-          } else if (parsed.intent === 'phone') {
+          if (parsed.intent === 'phone') {
             const pExact = queryTerm.startsWith('+') ? queryTerm : `+${parsed.digits}`;
             url += `&phone_normalized=eq.${encodeURIComponent(pExact)}`;
+          } else if (parsed.intent === 'bitrix') {
+            url += `&bitrix_id=eq.${encodeURIComponent(queryTerm)}`;
           } else {
-            // 'any': Search across Lead ID, Bitrix ID, and Master Leads ID (owner_id)
             const orClauses = [
-              ...parsed.leadVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`),
-              ...parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`),
-              ...parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`)
+              `canonical_owner_id.ilike.*${encodeURIComponent(queryTerm)}*`,
+              `sample_owner_id.ilike.*${encodeURIComponent(queryTerm)}*`
             ];
-            if (parsed.digits.length >= 7) {
+            if (parsed.digits && parsed.digits.length >= 7) {
               const pExact = queryTerm.startsWith('+') ? queryTerm : `+${parsed.digits}`;
               orClauses.push(`phone_normalized.eq.${encodeURIComponent(pExact)}`);
             }
-            url += `&or=(${Array.from(new Set(orClauses)).join(',')})`;
+            url += `&or=(${orClauses.join(',')})`;
           }
         } else {
           const enc = encodeURIComponent(queryTerm);
-          url += `&or=(full_name.ilike.*${enc}*,building_name.ilike.*${enc}*,assigned_agent.ilike.*${enc}*)`;
+          url += `&or=(full_name.ilike.*${enc}*,primary_building.ilike.*${enc}*,assigned_agent.ilike.*${enc}*,canonical_owner_id.ilike.*${enc}*)`;
         }
       }
 
       // 2. Area
       if (areaFilter !== 'Any') {
         const areaParam = areaFilter.replace(/\s*\(JLT\)|\s*\(JVC\)/g, '');
-        url += `&master_area=ilike.*${encodeURIComponent(areaParam)}*`;
+        url += `&primary_area=ilike.*${encodeURIComponent(areaParam)}*`;
       }
 
       // 3. Building
       if (buildingFilter !== 'Any') {
-        url += `&building_name=ilike.*${encodeURIComponent(buildingFilter)}*`;
+        url += `&primary_building=ilike.*${encodeURIComponent(buildingFilter)}*`;
       }
 
-      // 4. Type
-      if (propertyTypeFilter !== 'Any') {
-        if (propertyTypeFilter === 'Residential' || propertyTypeFilter === 'Commercial') {
-          url += `&property_category=eq.${encodeURIComponent(propertyTypeFilter)}`;
-        } else {
-          url += `&reported_property_type=ilike.*${encodeURIComponent(propertyTypeFilter)}*`;
-        }
+      // 4. Ownership Classification
+      if (classificationFilter !== 'Any') {
+        url += `&ownership_type=eq.${encodeURIComponent(classificationFilter)}`;
       }
 
-      // 5. Bedrooms
-      if (bedroomsFilter !== 'Any') {
-        url += `&verified_bedrooms=eq.${encodeURIComponent(bedroomsFilter)}`;
+      // 5. Portfolio Size
+      if (portfolioSizeFilter === 'Single Unit') {
+        url += '&total_units=eq.1';
+      } else if (portfolioSizeFilter === 'Multi-Unit (2+)') {
+        url += '&total_units=gte.2';
+      } else if (portfolioSizeFilter === 'Large Portfolio (5+)') {
+        url += '&total_units=gte.5';
       }
 
-      // 6. Data Source
-      if (sourceFileFilter !== 'Any') {
-        url += `&vendor_source_file=eq.${encodeURIComponent(sourceFileFilter)}`;
-      }
-
-      // 7. Date from / Date to
-      if (dateFrom) url += `&verified_purchase_date=gte.${dateFrom}`;
-      if (dateTo) url += `&verified_purchase_date=lte.${dateTo}`;
-
-      // 8. Present in CRM
+      // 6. Present in CRM
       if (crmPresentFilter === 'Yes') {
         url += '&bitrix_id=not.is.null';
       } else if (crmPresentFilter === 'No') {
         url += '&bitrix_id=is.null';
       }
 
-      // 9. Agent
+      // 7. Agent
       if (agentFilter !== 'Any') {
         if (agentFilter === 'Unassigned') {
           url += '&assigned_agent=is.null';
@@ -351,91 +340,97 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         }
       }
 
-      // 10. Bitrix Status
+      // 8. Bitrix Status
       if (bitrixStatusFilter !== 'Any') {
-        url += `&or=(bitrix_status.eq.${encodeURIComponent(bitrixStatusFilter)},bitrix_status_id.eq.${encodeURIComponent(bitrixStatusFilter)})`;
+        url += `&bitrix_status=eq.${encodeURIComponent(bitrixStatusFilter)}`;
       }
 
-      // 11. Phone
+      // 9. Phone
       if (phoneFilter === 'Yes') {
         url += '&phone_normalized=not.is.null';
       } else if (phoneFilter === 'No') {
         url += '&phone_normalized=is.null';
       }
 
-      // 12. Email
-      if (emailFilter === 'Yes') {
-        url += '&email=not.is.null';
-      } else if (emailFilter === 'No') {
-        url += '&email=is.null';
-      }
-
-      // 13. Sort Order
-      if (!isSearching) {
-        if (sortBy === 'Name A–Z') {
-          url += `&order=full_name.asc`;
-        } else if (sortBy === 'Name Z–A') {
-          url += `&order=full_name.desc`;
-        } else if (sortBy === 'Price: High to Low') {
-          url += `&order=verified_purchase_price.desc.nullslast`;
-        } else if (sortBy === 'Price: Low to High') {
-          url += `&order=verified_purchase_price.asc.nullslast`;
-        } else if (sortBy === 'Lead ID (Newest)') {
-          url += `&order=lead_id.desc`;
-        } else if (sortBy === 'Lead ID (Oldest)') {
-          url += `&order=lead_id.asc`;
-        } else {
-          url += `&order=owner_id.asc`;
-        }
+      // 10. Sort Order (Always active)
+      if (sortBy === 'Name A–Z') {
+        url += `&order=full_name.asc`;
+      } else if (sortBy === 'Name Z–A') {
+        url += `&order=full_name.desc`;
+      } else if (sortBy === 'Price: High to Low') {
+        url += `&order=total_portfolio_valuation.desc.nullslast`;
+      } else if (sortBy === 'Price: Low to High') {
+        url += `&order=total_portfolio_valuation.asc.nullslast`;
+      } else if (sortBy === 'Most Properties') {
+        url += `&order=total_units.desc.nullslast`;
+      } else if (sortBy === 'Lead ID (Newest)') {
+        url += `&order=canonical_owner_id.desc`;
+      } else if (sortBy === 'Lead ID (Oldest)') {
+        url += `&order=canonical_owner_id.asc`;
+      } else {
+        url += `&order=total_units.desc.nullslast`;
       }
       
       const response = await axios.get(url, { 
         headers: { 
           apikey: SUPABASE_API_KEY, 
-          Authorization: `Bearer ${SUPABASE_API_KEY}` 
+          Authorization: `Bearer ${SUPABASE_API_KEY}`,
+          Prefer: 'count=exact'
         } 
       });
+
+      // Parse live exact count from Content-Range header (e.g. "0-49/2220643")
+      const contentRange = response.headers['content-range'] || response.headers['Content-Range'];
+      if (contentRange) {
+        const parts = String(contentRange).split('/');
+        if (parts.length > 1) {
+          const parsedCount = parseInt(parts[1], 10);
+          if (!isNaN(parsedCount)) {
+            setTotalCount(parsedCount);
+          }
+        }
+      }
       
       if (Array.isArray(response.data)) {
         const mapped = response.data.map(row => {
-          let rawUnit = row.unit_number ? String(row.unit_number).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim() : null;
-          let cleanUnit = rawUnit;
-          // Filter out dates (e.g. 1977-12-04) mistakenly stored in unit_number during vendor ingestion
-          if (cleanUnit && /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(cleanUnit)) {
-            cleanUnit = null;
-          }
-          let cleanBuilding = row.building_name ? String(row.building_name).trim() : 'Dubai';
+          let cleanBuilding = row.primary_building ? String(row.primary_building).trim() : 'Dubai';
           if (cleanBuilding === '1' || cleanBuilding.toLowerCase() === 'null') {
-            cleanBuilding = row.master_area || 'Dubai';
+            cleanBuilding = row.primary_area || 'Dubai';
           }
-          let cleanName = formatOwnerName(row.full_name, cleanBuilding, cleanUnit);
+          let cleanName = formatOwnerName(row.full_name, cleanBuilding, null);
 
           return {
-            id: row.owner_id ? String(row.owner_id) : 'UnknownID',
-            owner_id: row.owner_id ? String(row.owner_id) : null,
-            lead_id: row.lead_id ? String(row.lead_id) : (row.owner_id ? `OWN-${row.owner_id}` : 'UNSPECIFIED'),
+            id: row.canonical_owner_id,
+            canonical_owner_id: row.canonical_owner_id,
+            sample_owner_id: row.sample_owner_id,
+            owner_id: row.sample_owner_id || row.canonical_owner_id,
+            lead_id: row.canonical_owner_id,
             name: cleanName,
+            raw_full_name: row.full_name,
             building: cleanBuilding,
-            area: row.master_area ? String(row.master_area).trim() : 'Dubai',
+            area: row.primary_area ? String(row.primary_area).trim() : 'Dubai',
             phone: row.phone_normalized ? String(row.phone_normalized) : (row.phone_raw ? String(row.phone_raw) : 'N/A'),
-            email: row.email ? String(row.email).trim() : 'N/A',
-            units: 1, // Individual property title deed; aggregated portfolio linked in Owner 360
-            unit_number: cleanUnit,
-            property_type: row.reported_property_type || null,
-            property_category: row.property_category || (row.reported_property_type && /commercial|office|shop|warehouse|industrial|hotel|showroom|store|workshop|factory/i.test(row.reported_property_type) ? 'Commercial' : 'Residential'),
+            phone_normalized: row.phone_normalized,
+            email: 'N/A',
+            units: row.total_units || 1,
+            total_units: row.total_units || 1,
+            unit_number: null,
+            property_type: row.total_units > 1 ? `${row.total_units} Properties Portfolio` : 'Individual Asset',
+            property_category: 'Residential',
             nationality: row.nationality || null,
             emirates_id: row.emirates_id || null,
-            passport_expiry: row.passport_expiry || null,
-            verified_purchase_price: row.verified_purchase_price || null,
-            verified_purchase_date: row.verified_purchase_date || null,
-            verified_size_sqft: row.verified_size_sqft || null,
-            vendor_source_file: row.vendor_source_file || null,
+            passport_expiry: null,
+            verified_purchase_price: row.total_portfolio_valuation || null,
+            total_portfolio_valuation: row.total_portfolio_valuation || 0,
+            ownership_type: row.ownership_type || 'OWNER',
+            match_criteria: row.match_criteria || 'SINGLE_DEED',
+            match_confidence: row.match_confidence || 'STANDARD',
             source: 'Verified',
             bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
             bitrix_status: row.bitrix_status || null,
             assigned_agent: row.assigned_agent || null,
             assigned_agent_id: row.assigned_agent_id || null,
-            portfolioValue: row.verified_purchase_price ? `AED ${(parseFloat(row.verified_purchase_price) / 1000000).toFixed(1)}M` : 'Standard',
+            portfolioValue: row.total_portfolio_valuation > 0 ? `AED ${(parseFloat(row.total_portfolio_valuation) / 1000000).toFixed(1)}M` : (row.total_units > 1 ? `${row.total_units} Units Portfolio` : 'Standard'),
             lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
           };
         });
@@ -459,7 +454,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   }, [
     currentPage, searchTerm, areaFilter, buildingFilter, propertyTypeFilter,
     bedroomsFilter, sourceFileFilter, dateFrom, dateTo, crmPresentFilter,
-    agentFilter, bitrixStatusFilter, phoneFilter, emailFilter, sortBy
+    agentFilter, bitrixStatusFilter, phoneFilter, classificationFilter, portfolioSizeFilter, sortBy
   ]);
 
   // ─── Bitrix24 Integration Actions ────────────────────────────────────────
@@ -470,19 +465,38 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       const targetAgent = availableAgents.find(a => String(a.id) === String(targetAgentId));
       const targetAgentName = agentNameOverride || lead.assigned_agent || (targetAgent ? targetAgent.name : globalAgentName);
 
-      const w_url = 'https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/crm.lead.add.json';
-      const bRes = await axios.post(w_url, {
-        fields: { 
-          TITLE: `[${lead.lead_id}] ${lead.name} - ${lead.building}`, 
-          NAME: lead.name, 
-          PHONE: [{ VALUE: lead.phone, VALUE_TYPE: "WORK" }], 
-          EMAIL: lead.email && lead.email !== 'N/A' ? [{ VALUE: lead.email, VALUE_TYPE: "WORK" }] : [],
-          ASSIGNED_BY_ID: targetAgentId,
-          COMMENTS: `Lead ID: ${lead.lead_id}\nBuilding: ${lead.building}\nUnit: ${lead.unit_number || 'N/A'}\nMaster Area: ${lead.area}\nAssigned Agent: ${targetAgentName}\nPushed via A-Squared Data Portal` 
+      let newBitrixId = null;
+      try {
+        const bRes = await axios.post('/api/push-to-bitrix.php', {
+          owner: lead,
+          agentId: targetAgentId,
+          agentName: targetAgentName
+        });
+        newBitrixId = bRes.data?.bitrix_id;
+      } catch (e1) {
+        // Fallback to Express backend or Bitrix webhook
+        try {
+          const bRes = await axios.post('/api/push-to-bitrix', {
+            owner: lead,
+            lead: lead,
+            agentId: targetAgentId,
+            agentName: targetAgentName
+          });
+          newBitrixId = bRes.data?.bitrix_id;
+        } catch (e2) {
+          const w_url = 'https://crm.asquared.ae/rest/6/se51vx22azw2dq1s/crm.lead.add.json';
+          const bRes = await axios.post(w_url, {
+            fields: { 
+              TITLE: `[${lead.lead_id}] ${lead.name} - ${lead.building} (${lead.units || 1} Units)`, 
+              NAME: lead.name, 
+              PHONE: lead.phone && lead.phone !== 'N/A' ? [{ VALUE: lead.phone, VALUE_TYPE: "WORK" }] : [], 
+              ASSIGNED_BY_ID: targetAgentId,
+              COMMENTS: `Owner ID: ${lead.lead_id}\nBuilding: ${lead.building}\nTotal Units: ${lead.units || 1}\nPortfolio Value: ${lead.portfolioValue || 'Standard'}\nAssigned Agent: ${targetAgentName}\nPushed via A-Squared Data Portal` 
+            }
+          });
+          newBitrixId = bRes.data?.result;
         }
-      });
-
-      const newBitrixId = bRes.data?.result;
+      }
       if (newBitrixId) {
         await axios.patch(
           `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?owner_id=eq.${encodeURIComponent(lead.id)}`,
@@ -638,6 +652,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   onChange={(e) => setSortBy(e.target.value)}
                   className="bg-[#06111e] hover:bg-[#091728] border border-[#1a2c42] focus:border-blue-500/60 rounded-xl pl-3 pr-8 py-2.5 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
                 >
+                  <option value="Most Properties" className="bg-[#0c1829] text-white">Most Properties (Portfolio)</option>
                   <option value="Name A–Z" className="bg-[#0c1829] text-white">Name A–Z</option>
                   <option value="Name Z–A" className="bg-[#0c1829] text-white">Name Z–A</option>
                   <option value="Price: High to Low" className="bg-[#0c1829] text-white">Price: High to Low</option>
@@ -753,10 +768,17 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               </span>
             )}
 
-            {emailFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 font-medium">
-                Email: {emailFilter}
-                <button onClick={() => setEmailFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+            {classificationFilter !== 'Any' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-200 font-medium">
+                Type: {classificationFilter}
+                <button onClick={() => setClassificationFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+
+            {portfolioSizeFilter !== 'Any' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 font-medium">
+                Portfolio: {portfolioSizeFilter}
+                <button onClick={() => setPortfolioSizeFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
               </span>
             )}
 
@@ -975,20 +997,42 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   </div>
                 </div>
 
-                {/* Email */}
+                {/* Ownership Classification */}
                 <div>
                   <label className="text-xs font-semibold text-white/70 block mb-1.5">
-                    Email
+                    Ownership Classification
                   </label>
                   <div className="relative">
                     <select
-                      value={emailFilter}
-                      onChange={(e) => { setEmailFilter(e.target.value); setCurrentPage(1); }}
+                      value={classificationFilter}
+                      onChange={(e) => { setClassificationFilter(e.target.value); setCurrentPage(1); }}
                       className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm font-medium text-white outline-none cursor-pointer transition-all appearance-none"
                     >
                       <option value="Any" className="bg-slate-900 text-white">Any</option>
-                      <option value="Yes" className="bg-slate-900 text-white">Yes</option>
-                      <option value="No" className="bg-slate-900 text-white">No</option>
+                      <option value="OWNER" className="bg-slate-900 text-white">Confirmed Owner</option>
+                      <option value="BUYER" className="bg-slate-900 text-white">Buyer</option>
+                      <option value="TENANT" className="bg-slate-900 text-white">Tenant</option>
+                      <option value="UNKNOWN" className="bg-slate-900 text-white">Unknown Classification</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Portfolio Size */}
+                <div>
+                  <label className="text-xs font-semibold text-white/70 block mb-1.5">
+                    Portfolio Size
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={portfolioSizeFilter}
+                      onChange={(e) => { setPortfolioSizeFilter(e.target.value); setCurrentPage(1); }}
+                      className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+                    >
+                      <option value="Any" className="bg-slate-900 text-white">Any Size</option>
+                      <option value="Single Unit" className="bg-slate-900 text-white">Single Unit (1 Property)</option>
+                      <option value="Multi-Unit (2+)" className="bg-slate-900 text-white">Multi-Unit (2+ Properties)</option>
+                      <option value="Large Portfolio (5+)" className="bg-slate-900 text-white">VIP Portfolio (5+ Properties)</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
                   </div>
@@ -1029,10 +1073,10 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                 <tr>
                   <th className="w-[28%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Lead ID &amp; Owner</th>
                   <th className="w-[18%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Phone &amp; Email</th>
-                  <th className="w-[22%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Property &amp; Unit</th>
+                  <th className="w-[22%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Property &amp; Portfolio</th>
                   <th className="w-[13%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Assigned Agent</th>
                   <th className="w-[11%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Bitrix ID / Status</th>
-                  <th className="w-[8%] px-5 py-3.5 font-semibold text-right bg-[#071322] align-middle">Category</th>
+                  <th className="w-[8%] px-5 py-3.5 font-semibold text-right bg-[#071322] align-middle">Classification</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1b2b3d]">
@@ -1064,14 +1108,18 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold tracking-tight">
                                 {owner.lead_id}
                               </span>
-                              {owner.owner_id && (
-                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-medium tracking-tight" title="Master Leads ID">
-                                  {owner.owner_id}
+                              {owner.units > 1 ? (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 tracking-tight">
+                                  {owner.units} Units Portfolio
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider font-semibold">
+                                  1 Unit
                                 </span>
                               )}
-                              {owner.property_type && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider font-semibold truncate max-w-[140px]">
-                                  {owner.property_type}
+                              {owner.ownership_type && owner.ownership_type !== 'OWNER' && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 uppercase tracking-wider">
+                                  {owner.ownership_type}
                                 </span>
                               )}
                             </div>
@@ -1085,6 +1133,18 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                           <div className="flex items-center gap-1.5 text-white/85">
                             <Phone className="w-3.5 h-3.5 text-white/40 shrink-0" />
                             <span className="font-mono tracking-tight">{owner.phone}</span>
+                            {owner.phone && owner.phone !== 'N/A' && !owner.phone.startsWith('+9714') && !owner.phone.startsWith('04') && (
+                              <a
+                                href={`https://wa.me/${String(owner.phone).replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Chat on WhatsApp"
+                                className="text-emerald-400 hover:text-emerald-300 ml-1 p-0.5 rounded hover:bg-emerald-500/15 inline-flex items-center"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                              </a>
+                            )}
                           </div>
                           <div className="flex items-center gap-1.5 text-white/50">
                             <Mail className="w-3.5 h-3.5 text-white/40 shrink-0" />
@@ -1093,7 +1153,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                         </div>
                       </td>
 
-                      {/* 3. Property & Unit */}
+                      {/* 3. Property & Portfolio */}
                       <td className="px-5 py-3 align-middle">
                         <div className="flex flex-col justify-center space-y-1 text-xs">
                           <div className="font-medium text-white/90 flex items-center gap-1.5">
@@ -1101,9 +1161,13 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                             <span className="truncate max-w-[190px] font-medium">{owner.building}</span>
                           </div>
                           <div className="flex items-center gap-2 text-white/50 flex-wrap">
-                            {owner.unit_number && (
-                              <span className="px-1.5 py-0.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-300 font-mono text-[10px] font-bold shrink-0">
-                                Unit {owner.unit_number}
+                            {owner.total_portfolio_valuation > 0 ? (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold shrink-0">
+                                AED {(owner.total_portfolio_valuation / 1000000).toFixed(1)}M Valuation
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 text-[10px] shrink-0">
+                                Single Deed
                               </span>
                             )}
                             <span className="flex items-center gap-1 truncate text-slate-300">
@@ -1168,14 +1232,18 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                         )}
                       </td>
 
-                      {/* 6. Residential / Commercial */}
+                      {/* 6. Classification */}
                       <td className="px-5 py-3 text-right align-middle">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                          owner.property_category === 'Commercial'
+                          owner.ownership_type === 'OWNER'
+                            ? 'bg-blue-500/15 border border-blue-500/30 text-blue-300'
+                            : owner.ownership_type === 'BUYER'
+                            ? 'bg-purple-500/15 border border-purple-500/30 text-purple-300'
+                            : owner.ownership_type === 'TENANT'
                             ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
-                            : 'bg-blue-500/15 border border-blue-500/30 text-blue-300'
+                            : 'bg-slate-500/15 border border-slate-500/30 text-slate-300'
                         }`}>
-                          {owner.property_category || 'Residential'}
+                          {owner.ownership_type || 'OWNER'}
                         </span>
                       </td>
                     </tr>
@@ -1385,27 +1453,40 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                               <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                               {owner.building}
                             </span>
-                            {owner.unit_number && (
-                              <span className="px-1.5 py-0.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-300 font-mono text-[10px] font-bold">
-                                Unit {owner.unit_number}
+                            {owner.total_portfolio_valuation > 0 ? (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold">
+                                AED {(owner.total_portfolio_valuation / 1000000).toFixed(1)}M
                               </span>
-                            )}
+                            ) : null}
                           </div>
                           <div className="flex items-center justify-between text-white/40 text-[11px] mt-1.5">
                             <span>{owner.area}</span>
-                            {owner.property_type && (
-                              <span className="uppercase text-[9px] tracking-wider font-semibold text-white/50">
-                                {owner.property_type}
-                              </span>
-                            )}
+                            <span className="uppercase text-[9px] tracking-wider font-semibold text-white/50">
+                              {owner.property_type}
+                            </span>
                           </div>
                         </div>
 
                         {/* Contact info */}
                         <div className="space-y-1 mb-4 text-xs text-white/70">
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-3 h-3 text-white/40" />
-                            <span className="font-mono">{owner.phone}</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-3 h-3 text-white/40" />
+                              <span className="font-mono">{owner.phone}</span>
+                            </div>
+                            {owner.phone && owner.phone !== 'N/A' && !owner.phone.startsWith('+9714') && !owner.phone.startsWith('04') && (
+                              <a
+                                href={`https://wa.me/${String(owner.phone).replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Chat on WhatsApp"
+                                className="text-emerald-400 hover:text-emerald-300 p-0.5 rounded hover:bg-emerald-500/15 flex items-center gap-1 text-[11px]"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <Mail className="w-3 h-3 text-white/40" />
@@ -1457,7 +1538,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               {isSearching ? (
                 `Found ${owners.length} matching owner record${owners.length === 1 ? '' : 's'}`
               ) : (
-                `Showing ${((currentPage - 1) * itemsPerPage) + 1} to ${((currentPage - 1) * itemsPerPage) + owners.length} of {totalCount.toLocaleString()} owners (Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()})`
+                `Showing ${((currentPage - 1) * itemsPerPage) + 1} to ${((currentPage - 1) * itemsPerPage) + owners.length} of ${totalCount.toLocaleString()} owners (Page ${currentPage.toLocaleString()} of ${totalPages.toLocaleString()})`
               )}
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">

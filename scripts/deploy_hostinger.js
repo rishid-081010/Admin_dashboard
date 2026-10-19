@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const upload_base_url = 'https://srv529-files.hstgr.io/rest/b1b6c037dd52fdac/api/tus';
-const auth_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxLCJsb2NhbGUiOiJlbl9VUyIsInZpZXdNb2RlIjoibGlzdCIsInNpbmdsZUNsaWNrIjpmYWxzZSwicmVkaXJlY3RBZnRlckNvcHlNb3ZlIjpmYWxzZSwicGVybSI6eyJhZG1pbiI6ZmFsc2UsImV4ZWN1dGUiOmZhbHNlLCJjcmVhdGUiOnRydWUsInJlbmFtZSI6dHJ1ZSwibW9kaWZ5Ijp0cnVlLCJkZWxldGUiOnRydWUsInNoYXJlIjpmYWxzZSwiZG93bmxvYWQiOnRydWV9LCJjb21tYW5kcyI6W10sImxvY2tQYXNzd29yZCI6dHJ1ZSwiaGlkZURvdGZpbGVzIjpmYWxzZSwiZGF0ZUZvcm1hdCI6ZmFsc2UsInVzZXJuYW1lIjoidTI5Mjc2MDI5NCIsImFjZUVkaXRvclRoZW1lIjoiIn0sImlzcyI6IkZpbGUgQnJvd3NlciIsImV4cCI6MTc5MjQyMDMxNSwiaWF0IjoxNzkyMzk4NzE1fQ.-tj1RKnBfjifXD5_FJbW_-0FbRkYS3w_Xng4vfQYEGc';
-const rest_auth_key = 'ac165163c39c95c70da583ed2c9d5471f89d333173676825b326101aae3e8423-b1b6c037dd52fdac';
+const upload_base_url = 'https://srv529-files.hstgr.io/rest/f9ff99f8ea66cd48/api/tus';
+const auth_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxLCJsb2NhbGUiOiJlbl9VUyIsInZpZXdNb2RlIjoibGlzdCIsInNpbmdsZUNsaWNrIjpmYWxzZSwicmVkaXJlY3RBZnRlckNvcHlNb3ZlIjpmYWxzZSwicGVybSI6eyJhZG1pbiI6ZmFsc2UsImV4ZWN1dGUiOmZhbHNlLCJjcmVhdGUiOnRydWUsInJlbmFtZSI6dHJ1ZSwibW9kaWZ5Ijp0cnVlLCJkZWxldGUiOnRydWUsInNoYXJlIjpmYWxzZSwiZG93bmxvYWQiOnRydWV9LCJjb21tYW5kcyI6W10sImxvY2tQYXNzd29yZCI6dHJ1ZSwiaGlkZURvdGZpbGVzIjpmYWxzZSwiZGF0ZUZvcm1hdCI6ZmFsc2UsInVzZXJuYW1lIjoidTI5Mjc2MDI5NCIsImFjZUVkaXRvclRoZW1lIjoiIn0sImlzcyI6IkZpbGUgQnJvd3NlciIsImV4cCI6MTc5MjQyNjM1MSwiaWF0IjoxNzkyNDA0NzUxfQ.6NmIuwC1rcvJnUsplPbJ_c2GtTg_1ku16upi9lBfVpg';
+const rest_auth_key = 'e8e5d0aec58092ba62eb6dff8fa074e2b22aab26e52eefc975b29abb7784d410-f9ff99f8ea66cd48';
 
 const dist_dir = 'client/dist';
 
@@ -36,15 +36,14 @@ for (const localPath of allDistFiles) {
   }
 }
 
-// Add root entrypoint files if present
+// Add root entrypoint files and api proxies if present
 const root_dir = 'root_files';
 if (fs.existsSync(root_dir)) {
-  for (const f of fs.readdirSync(root_dir)) {
-    const lpath = path.join(root_dir, f);
-    if (fs.statSync(lpath).isFile()) {
-      uploadsList.push({ localPath: lpath, remotePath: f });
-      uploadsList.push({ localPath: lpath, remotePath: `public/${f}` });
-    }
+  const allRootFiles = collectFiles(root_dir);
+  for (const lpath of allRootFiles) {
+    const rel = path.relative(root_dir, lpath).replace(/\\/g, '/');
+    uploadsList.push({ localPath: lpath, remotePath: rel });
+    uploadsList.push({ localPath: lpath, remotePath: `public/${rel}` });
   }
 }
 
