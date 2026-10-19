@@ -375,7 +375,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         headers: { 
           apikey: SUPABASE_API_KEY, 
           Authorization: `Bearer ${SUPABASE_API_KEY}`,
-          Prefer: 'count=exact'
+          Prefer: 'count=planned'
         } 
       });
 
