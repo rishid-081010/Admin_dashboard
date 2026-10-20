@@ -12,6 +12,7 @@ import {
 import axios from 'axios';
 import BeforeAfterSlider from './BeforeAfterSlider';
 import Toast from './Toast';
+import { previewRentalPdfInNewTab, downloadRentalPdf } from '../utils/rentalFormPdfClient';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
@@ -88,6 +89,8 @@ export default function ListingDetail({ listingId, onBack }) {
     broker_phone: '+971 4 000 0000',
   });
   const [isSavingRentalSpecs, setIsSavingRentalSpecs] = useState(false);
+  const [isPreviewingPdf, setIsPreviewingPdf] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [rentalFormGenerated, setRentalFormGenerated] = useState(false);
   const [rentalActiveTab, setRentalActiveTab] = useState('financials'); // 'financials' | 'landlord' | 'specs' | 'mandate'
 
@@ -283,10 +286,24 @@ export default function ListingDetail({ listingId, onBack }) {
         const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
         if (!isMountedRef.current) return;
         if (sbListing) {
+          const { metadata, customPromptText } = parsePromptMetadata(sbListing.prompt);
+          if (metadata) {
+            if (metadata.commercialSpecs || metadata.commercial_specs) {
+              sbListing.commercial_specs = metadata.commercialSpecs || metadata.commercial_specs;
+            }
+            if (metadata.titleDeedData || metadata.title_deed_data) {
+              sbListing.title_deed_data = metadata.titleDeedData || metadata.title_deed_data;
+            }
+            if (metadata.emiratesIdData || metadata.emirates_id_data) {
+              sbListing.emirates_id_data = metadata.emiratesIdData || metadata.emirates_id_data;
+            }
+            if (metadata.propertySpecs || metadata.property_specs) {
+              sbListing.property_specs = metadata.propertySpecs || metadata.property_specs;
+            }
+          }
           setListing(sbListing);
           const enriched = enrichImages(sbImages || [], sbListing.prompt);
           setImages(enriched);
-          const { customPromptText } = parsePromptMetadata(sbListing.prompt);
           if (customPromptText && !customPrompt) {
             setCustomPrompt(customPromptText);
           }
@@ -320,10 +337,24 @@ export default function ListingDetail({ listingId, onBack }) {
       try {
         const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
         if (isMountedRef.current && sbListing) {
+          const { metadata, customPromptText } = parsePromptMetadata(sbListing.prompt);
+          if (metadata) {
+            if (metadata.commercialSpecs || metadata.commercial_specs) {
+              sbListing.commercial_specs = metadata.commercialSpecs || metadata.commercial_specs;
+            }
+            if (metadata.titleDeedData || metadata.title_deed_data) {
+              sbListing.title_deed_data = metadata.titleDeedData || metadata.title_deed_data;
+            }
+            if (metadata.emiratesIdData || metadata.emirates_id_data) {
+              sbListing.emirates_id_data = metadata.emiratesIdData || metadata.emirates_id_data;
+            }
+            if (metadata.propertySpecs || metadata.property_specs) {
+              sbListing.property_specs = metadata.propertySpecs || metadata.property_specs;
+            }
+          }
           setListing(sbListing);
           const enriched = enrichImages(sbImages || [], sbListing.prompt);
           setImages(enriched);
-          const { customPromptText } = parsePromptMetadata(sbListing.prompt);
           if (customPromptText && !customPrompt) {
             setCustomPrompt(customPromptText);
           }
@@ -441,22 +472,85 @@ export default function ListingDetail({ listingId, onBack }) {
         localStorage.setItem(`listing_rental_specs_${listingId}`, JSON.stringify(rentalSpecs));
       } catch {}
 
-      const res = await axios.put(`/api/listings/${listingId}/rental-specs`, rentalSpecs);
-      if (res.data?.success) {
-        setRentalFormGenerated(true);
-        if (res.data.rentalSpecs) {
-          setRentalSpecs(prev => ({ ...prev, ...res.data.rentalSpecs }));
-        }
-        showToast('✨ Official A-SQUARED Rental Form (NOC) generated and saved successfully!', 'success');
-      } else {
-        showToast(res.data?.error || 'Failed to save rental specs.', 'error');
+      // 1. Try local Express backend if active
+      try {
+        await axios.put(`/api/listings/${listingId}/rental-specs`, rentalSpecs, { timeout: 2000 });
+      } catch (err) {
+        // Expected when hosted without active Node.js server
       }
+
+      // 2. Persist to Supabase real_estate_listings.prompt
+      try {
+        let existingPrompt = listing?.prompt || '';
+        let promptPayload = {};
+        if (typeof existingPrompt === 'string' && existingPrompt.trim().startsWith('{')) {
+          try {
+            promptPayload = JSON.parse(existingPrompt);
+          } catch {}
+        }
+        promptPayload.commercialSpecs = rentalSpecs;
+        promptPayload.commercial_specs = rentalSpecs;
+        const promptString = JSON.stringify(promptPayload);
+
+        await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ prompt: promptString })
+        });
+
+        setListing(prev => prev ? { ...prev, prompt: promptString, commercial_specs: rentalSpecs } : prev);
+      } catch (sbErr) {
+        console.warn('Failed to persist rental specs to Supabase:', sbErr);
+      }
+
+      setRentalFormGenerated(true);
+      showToast('✨ Official A-SQUARED Rental Form saved! Click Preview PDF to review.', 'success');
     } catch (err) {
       console.warn('Backend save note, cached locally:', err.message);
       setRentalFormGenerated(true);
-      showToast('Rental specs saved. Form is ready for preview.', 'success');
+      showToast('Rental specs saved locally. Form is ready for preview.', 'success');
     } finally {
       setIsSavingRentalSpecs(false);
+    }
+  };
+
+  const handlePreviewPdf = async () => {
+    setIsPreviewingPdf(true);
+    try {
+      await previewRentalPdfInNewTab({
+        listing,
+        commercialSpecs: rentalSpecs,
+        titleDeedData: listing?.title_deed_data,
+        emiratesIdData: listing?.emirates_id_data,
+      });
+    } catch (err) {
+      console.error('PDF preview error:', err);
+      showToast('Failed to preview PDF: ' + (err.message || 'Error rendering PDF'), 'error');
+    } finally {
+      setIsPreviewingPdf(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      await downloadRentalPdf({
+        listing,
+        commercialSpecs: rentalSpecs,
+        titleDeedData: listing?.title_deed_data,
+        emiratesIdData: listing?.emirates_id_data,
+      });
+      showToast('Official Rental Form PDF downloaded successfully!', 'success');
+    } catch (err) {
+      console.error('PDF download error:', err);
+      showToast('Failed to download PDF: ' + (err.message || 'Error downloading PDF'), 'error');
+    } finally {
+      setIsDownloadingPdf(false);
     }
   };
 
@@ -1308,25 +1402,27 @@ export default function ListingDetail({ listingId, onBack }) {
               <span>{isSavingRentalSpecs ? 'Generating Form...' : 'Save & Generate Rental Form PDF'}</span>
             </button>
 
-            {/* Direct PDF View / Preview */}
+            {/* Direct PDF View / Preview (Generated Client-Side, Zero 404) */}
             <button
               type="button"
-              onClick={() => window.open(`/api/listings/${listingId}/noc-pdf?t=${Date.now()}`, '_blank')}
-              className="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              onClick={handlePreviewPdf}
+              disabled={isPreviewingPdf}
+              className="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-60"
               title="Preview official filled Rental Form PDF in a new tab"
             >
-              <Eye className="w-3.5 h-3.5" />
-              <span>Preview PDF</span>
+              <Eye className={`w-3.5 h-3.5 ${isPreviewingPdf ? 'animate-spin' : ''}`} />
+              <span>{isPreviewingPdf ? 'Preparing Preview...' : 'Preview PDF'}</span>
             </button>
 
-            <a
-              href={`/api/listings/${listingId}/noc-pdf?download=true`}
-              download={`A_SQUARED_Rental_Form_NOC_${listing?.name || 'Listing'}.pdf`}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all cursor-pointer disabled:opacity-60"
               title="Direct download Rental Form PDF"
             >
-              <Download className="w-4 h-4" />
-            </a>
+              <Download className={`w-4 h-4 ${isDownloadingPdf ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
 

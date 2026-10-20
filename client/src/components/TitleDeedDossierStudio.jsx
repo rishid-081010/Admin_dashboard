@@ -28,6 +28,7 @@ import {
   FolderArchive
 } from 'lucide-react';
 import Toast from './Toast';
+import { downloadRentalPdf } from '../utils/rentalFormPdfClient';
 
 export default function TitleDeedDossierStudio({ onSelectListing }) {
   // Uploaded Files State
@@ -833,14 +834,18 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                     <p className="text-xs text-white/60">Dubai Land Department & RERA Compliant Representation Contract</p>
                   </div>
                   {generatedListing && (
-                    <a
-                      href={`/api/listings/${generatedListing.id}/noc-pdf`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-4 py-2 rounded-xl bg-white/[0.06] text-white font-bold text-xs flex items-center gap-1.5"
+                    <button
+                      type="button"
+                      onClick={() => downloadRentalPdf({
+                        listing: generatedListing,
+                        titleDeedData,
+                        emiratesIdData,
+                        commercialSpecs: generatedListing?.commercial_specs || {}
+                      })}
+                      className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" /> Download NOC PDF
-                    </a>
+                    </button>
                   )}
                 </div>
 
