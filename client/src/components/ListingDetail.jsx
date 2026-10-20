@@ -1376,7 +1376,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
           </button>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-serif font-bold text-white tracking-tight">{listing.name}</h1>
+            <h1 className="text-3xl font-sans font-bold text-white tracking-tight">{listing.name}</h1>
           </div>
           <p className="text-white/60 text-sm mt-1 font-sans">
             Property Type: <span className="text-blue-400 font-semibold">{listing.property_type}</span>
@@ -1509,7 +1509,7 @@ export default function ListingDetail({ listingId, onBack }) {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-serif font-bold text-white">Photographic Processing Status</h2>
+            <h2 className="text-lg font-sans font-bold text-white">Photographic Processing Status</h2>
           </div>
           <span className="text-sm font-bold text-blue-400 font-sans">
             {completedCount} / {totalCount} images completed ({progressPercentage}%){images.some(i => i.status === 'processing') && ' • Auto-naming in progress...'}
@@ -1567,7 +1567,7 @@ export default function ListingDetail({ listingId, onBack }) {
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <FileBadge2 className="w-5 h-5 text-blue-400" />
-              <h2 className="text-lg font-serif font-bold text-white tracking-tight">
+              <h2 className="text-lg font-sans font-bold text-white tracking-tight">
                 Official A-SQUARED Rental Listing Form &amp; NOC Studio
               </h2>
               {rentalFormGenerated ? (
@@ -2249,7 +2249,7 @@ export default function ListingDetail({ listingId, onBack }) {
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-400" />
             <div>
-              <h2 className="text-lg font-serif font-bold text-white">Multi-Channel Marketing Copywriter Suite</h2>
+              <h2 className="text-lg font-sans font-bold text-white">Multi-Channel Marketing Copywriter Suite</h2>
               <p className="text-xs text-white/60 font-sans">1-Click generation for Portals, WhatsApp Broadcasts, Instagram, Investor Emails & Translations.</p>
             </div>
           </div>
@@ -2558,7 +2558,7 @@ export default function ListingDetail({ listingId, onBack }) {
           <div className="flex items-center gap-2">
             <Upload className="w-5 h-5 text-blue-400" />
             <div>
-              <h3 className="text-base font-serif font-bold text-white">Add More Photos to This Listing</h3>
+              <h3 className="text-base font-sans font-bold text-white">Add More Photos to This Listing</h3>
               <p className="text-xs text-white/60 font-sans">
                 Drag and drop, browse, or paste (<kbd className="px-1.5 py-0.5 bg-navy-950 border border-navy-700 rounded text-[10px] font-mono text-blue-400">Ctrl + V</kbd>) additional photos anytime.
               </p>
@@ -2664,7 +2664,7 @@ export default function ListingDetail({ listingId, onBack }) {
       {/* Image Results Gallery */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-serif font-bold text-white flex items-center gap-2">
+          <h2 className="text-xl font-sans font-bold text-white flex items-center gap-2">
             Image Results Gallery ({images.length} Photos)
           </h2>
           <span className="text-xs text-white/60 font-sans">
@@ -2937,7 +2937,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base font-serif font-bold text-white">
+                      <h3 className="text-base font-sans font-bold text-white">
                         AI Darkroom Refinement Studio
                       </h3>
                       <span className="text-[11px] font-mono bg-white/[0.06] text-blue-400 px-2 py-0.5 rounded border border-white/[0.1]">
@@ -3426,7 +3426,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <span className="text-xs font-bold bg-white/[0.06] text-white px-2.5 py-1 rounded-md font-sans">
                     #{sliderIndex + 1} of {completedImages.length}
                   </span>
-                  <span className="text-sm font-serif font-bold text-white">
+                  <span className="text-sm font-sans font-bold text-white">
                     {(sliderModalImage.room_type || 'Property Photo').replace(/_/g, ' ')}
                   </span>
                   <span className="text-xs text-white/60 font-mono hidden sm:inline">

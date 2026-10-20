@@ -49,6 +49,20 @@ export default function SourcesDirectory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [showCatalogBanner, setShowCatalogBanner] = useState(() => {
+    try {
+      return localStorage.getItem('asq_dismiss_parquet_banner') !== 'true';
+    } catch {
+      return true;
+    }
+  });
+
+  const dismissBanner = () => {
+    setShowCatalogBanner(false);
+    try {
+      localStorage.setItem('asq_dismiss_parquet_banner', 'true');
+    } catch {}
+  };
 
   const PARQUET_URL = "https://qgxgtavkovqklijfpnfl.supabase.co/storage/v1/object/public/dubai_real_estate/sources_catalog.parquet";
 
@@ -140,9 +154,33 @@ export default function SourcesDirectory() {
         <h1 
           className="text-2xl sm:text-3xl text-white font-bold tracking-tight" 
         >
-          Data library
+          Data Library
         </h1>
       </div>
+
+      {/* ─── Parquet Catalog Notice Banner (Dismissible with Persistence - UI-018) ─── */}
+      {showCatalogBanner && (
+        <div className="shrink-0 flex items-center justify-between bg-blue-500/10 border border-blue-500/25 px-4 py-2.5 rounded-2xl text-xs text-blue-200 shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-blue-400">High-Performance Parquet Catalog:</span>
+            <span className="text-slate-300">Fast indexed directory across all 2,127 developer &amp; DLD source files.</span>
+            <a 
+              href={PARQUET_URL}
+              download="sources_catalog.parquet"
+              className="text-blue-300 hover:text-white underline underline-offset-2 font-semibold ml-1 inline-flex items-center gap-1"
+            >
+              <span>Download sources_catalog.parquet</span>
+            </a>
+          </div>
+          <button
+            onClick={dismissBanner}
+            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-all cursor-pointer ml-2 shrink-0"
+            title="Dismiss notice"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* ─── Search & Filters Card ────────────────────────────────────────── */}
       <div className="shrink-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 p-4 select-none">

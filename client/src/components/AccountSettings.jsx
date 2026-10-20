@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { User, Shield, CheckCircle2, Database, Key, Bell, Globe, Phone, Server, Save, Users, LogOut } from 'lucide-react';
-import RolesManagement from './RolesManagement';
+import { User, Shield, CheckCircle2, Database, Key, Bell, Globe, Phone, Server, Save, Users, LogOut, ExternalLink } from 'lucide-react';
 import { authService } from '../utils/authService';
 
-export default function AccountSettings({ currentUser, onLogout, onUpdateUser, initialSubTab = 'account' }) {
-  const [subTab, setSubTab] = useState(initialSubTab);
+export default function AccountSettings({ currentUser, onLogout, onUpdateUser }) {
   const [saved, setSaved] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState('admin@asquared.ae');
   const [autoSync, setAutoSync] = useState(true);
@@ -75,51 +73,43 @@ export default function AccountSettings({ currentUser, onLogout, onUpdateUser, i
 
   return (
     <div className="w-full flex flex-col h-full animate-fade-in text-white/80 overflow-y-auto custom-scrollbar pr-1 -mr-1">
-      {/* Sub-tab Navigation Button Header */}
-      <div className="flex items-center gap-2 mb-6 border-b border-white/[0.08] pb-3 shrink-0">
-        <button
-          onClick={() => setSubTab('account')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            subTab === 'account'
-              ? 'bg-[#183153] text-white border border-white/20 shadow-md'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          Account &amp; Integrations
-        </button>
-        <button
-          onClick={() => setSubTab('roles')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            subTab === 'roles'
-              ? 'bg-[#183153] text-white border border-white/20 shadow-md'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          Roles
-        </button>
+      {/* Sub-tab Navigation Header with direct link to #roles */}
+      <div className="flex items-center justify-between mb-6 border-b border-white/[0.08] pb-3 shrink-0 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-[#183153] text-white border border-white/20 shadow-md">
+            Account &amp; Integrations
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.hash = '#roles';
+            }}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-semibold tracking-wide text-slate-400 hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5 border border-transparent hover:border-white/10 cursor-pointer"
+            title="Navigate to dedicated Roles & Permissions directory"
+          >
+            <span>Manage Roles &amp; Team</span>
+            <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+          </button>
+        </div>
       </div>
 
-      {subTab === 'roles' ? (
-        <RolesManagement currentUser={currentUser} />
-      ) : (
-        <>
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8 shrink-0">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
-                ACCOUNT &amp; SETTINGS
-              </h1>
-              <p className="text-white/60 text-[15px]">
-                Manage administrative credentials, CRM webhook integrations, and system configuration.
-              </p>
-            </div>
-            <button
-              onClick={handleSave}
-              className="px-5 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white shadow-lg shadow-blue-500/20"
-            >
-              {saved ? <><CheckCircle2 className="w-4 h-4 text-emerald-300" /> Saved Successfully</> : <><Save className="w-4 h-4" /> Save Settings</>}
-            </button>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 shrink-0">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2 font-sans">
+            ACCOUNT &amp; SETTINGS
+          </h1>
+          <p className="text-white/60 text-[15px]">
+            Manage administrative credentials, CRM webhook integrations, and system configuration.
+          </p>
+        </div>
+        <button
+          onClick={handleSave}
+          className="px-5 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white shadow-lg shadow-blue-500/20"
+        >
+          {saved ? <><CheckCircle2 className="w-4 h-4 text-emerald-300" /> Saved Successfully</> : <><Save className="w-4 h-4" /> Save Settings</>}
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
         {/* Left Column: Dynamic User Profile & Security Card */}
@@ -351,8 +341,6 @@ export default function AccountSettings({ currentUser, onLogout, onUpdateUser, i
           </div>
         </div>
       </div>
-      </>
-      )}
     </div>
   );
 }

@@ -420,8 +420,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
               </div>
 
               <h1 
-                className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight truncate" 
-                style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
+                className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight truncate font-sans" 
               >
                 {building.name}
               </h1>
@@ -436,14 +435,14 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:max-w-xl w-full">
             <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 text-center">
               <div className="text-[10px] uppercase font-mono text-slate-400 font-medium">Units</div>
-              <div className="text-xl sm:text-2xl font-bold font-serif text-white mt-0.5">
+              <div className="text-xl sm:text-2xl font-bold font-sans text-white mt-0.5">
                 {metrics.verifiedUnits.toLocaleString()}
               </div>
             </div>
 
             <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 text-center">
               <div className="text-[10px] uppercase font-mono text-slate-400 font-medium">Owners</div>
-              <div className="text-xl sm:text-2xl font-bold font-serif text-white mt-0.5">
+              <div className="text-xl sm:text-2xl font-bold font-sans text-white mt-0.5">
                 {metrics.totalOwners.toLocaleString()}
               </div>
             </div>
@@ -453,7 +452,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                 <span>With Phone</span>
                 <span className="text-emerald-400 font-bold">({metrics.phoneCoverage}%)</span>
               </div>
-              <div className="text-xl sm:text-2xl font-bold font-serif text-emerald-400 mt-0.5">
+              <div className="text-xl sm:text-2xl font-bold font-sans text-emerald-400 mt-0.5">
                 {metrics.withPhone.toLocaleString()} <span className="text-xs text-slate-400 font-normal">/ {metrics.totalOwners.toLocaleString()}</span>
               </div>
               {/* Progress bar */}
@@ -566,14 +565,14 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           /* ── Table View ── */
           <div className="overflow-x-auto flex-1 custom-scrollbar">
             <table className="w-full text-left border-collapse">
-              <thead>
+              <thead className="sticky top-0 z-20 bg-[#071322] backdrop-blur-md shadow-md shadow-black/30">
                 <tr className="border-b border-[#233549] bg-[#071322] text-[11.5px] uppercase font-mono text-slate-400 tracking-wider">
-                  <th className="py-3 px-4 w-[12%]">Unit &amp; Floor</th>
-                  <th className="py-3 px-4 w-[28%]">Owner Name</th>
-                  <th className="py-3 px-4 w-[15%]">Lead ID</th>
-                  <th className="py-3 px-4 w-[20%]">Direct Contact</th>
-                  <th className="py-3 px-4 w-[13%]">Classification</th>
-                  <th className="py-3 px-4 w-[12%] text-right">Actions</th>
+                  <th className="py-2.5 px-4 w-[12%] bg-[#071322]">Unit &amp; Floor</th>
+                  <th className="py-2.5 px-4 w-[28%] bg-[#071322]">Owner Name</th>
+                  <th className="py-2.5 px-4 w-[15%] bg-[#071322]">Lead ID</th>
+                  <th className="py-2.5 px-4 w-[20%] bg-[#071322]">Direct Contact</th>
+                  <th className="py-2.5 px-4 w-[13%] bg-[#071322]">Classification</th>
+                  <th className="py-2.5 px-4 w-[12%] text-right bg-[#071322]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1b2b3d] text-xs">
@@ -584,7 +583,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                     onClick={() => handleOpenOwner(owner)}
                   >
                     {/* Unit & Floor */}
-                    <td className="py-3 px-4">
+                    <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[11.5px]">
                           Unit {owner.unit}
@@ -596,19 +595,19 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                     </td>
 
                     {/* Owner Name */}
-                    <td className="py-3 px-4">
+                    <td className="py-2.5 px-4">
                       <div className="font-bold text-white group-hover:text-blue-300 transition-colors text-[13px] truncate max-w-[280px]">
                         {owner.name}
                       </div>
                     </td>
 
                     {/* Lead ID */}
-                    <td className="py-3 px-4 font-mono text-white/60">
+                    <td className="py-2.5 px-4 font-mono text-white/60">
                       {owner.lead_id}
                     </td>
 
                     {/* Direct Contact Phone */}
-                    <td className="py-3 px-4">
+                    <td className="py-2.5 px-4">
                       {owner.hasPhone ? (
                         <button
                           onClick={(e) => copyPhone(owner.phone, e)}
@@ -618,12 +617,14 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                           <span className="font-mono">{copiedPhone === owner.phone ? 'Copied!' : owner.phone}</span>
                         </button>
                       ) : (
-                        <span className="text-white/30 italic text-[11.5px]">Unlisted</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700/50">
+                          Unlisted
+                        </span>
                       )}
                     </td>
 
                     {/* Property Classification & Specs */}
-                    <td className="py-3 px-4 text-white/70">
+                    <td className="py-2.5 px-4 text-white/70">
                       <div className="text-[12px] font-medium">{owner.type}</div>
                       <div className="text-[10.5px] text-white/40 font-mono mt-0.5">
                         {owner.isVerifiedSize ? (
@@ -635,7 +636,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-2.5 px-4 text-right">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -698,7 +699,9 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                       <span className="font-mono">{copiedPhone === owner.phone ? 'Copied' : owner.phone}</span>
                     </button>
                   ) : (
-                    <span className="text-[11px] text-white/30 italic">Unlisted</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700/50">
+                      Unlisted
+                    </span>
                   )}
 
                   <button

@@ -456,7 +456,7 @@ export default function NewListing({ onListingCreated, onBack }) {
       {/* Page Title & Back Button */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
+          <h1 className="text-2xl lg:text-3xl font-sans font-bold text-white tracking-tight">
             Create Property Listing & AI Package
           </h1>
           <p className="text-white/60 mt-1 text-xs lg:text-sm font-sans">
@@ -489,7 +489,7 @@ export default function NewListing({ onListingCreated, onBack }) {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
                 <Sparkles className="w-3.5 h-3.5" /> Zero-Typing Smart Auto-Fill
               </div>
-              <h2 className="text-lg font-serif font-bold text-white flex items-center gap-2">
+              <h2 className="text-lg font-sans font-bold text-white flex items-center gap-2">
                 <FileBadge2 className="w-5 h-5 text-blue-400" /> Auto-Fill Listing from Title Deed & Emirates ID
               </h2>
               <p className="text-xs text-white/60">
@@ -581,7 +581,7 @@ export default function NewListing({ onListingCreated, onBack }) {
 
         {/* STEP 1 — Property Listing Information */}
         <div className="glass-card p-6">
-          <h2 className="text-base font-serif font-bold text-white mb-5 flex items-center gap-2 border-b border-white/[0.06] pb-3">
+          <h2 className="text-base font-sans font-bold text-white mb-5 flex items-center gap-2 border-b border-white/[0.06] pb-3">
             <Building className="w-5 h-5 text-blue-500" /> STEP 1 — Property Listing Information
           </h2>
 
@@ -903,7 +903,7 @@ export default function NewListing({ onListingCreated, onBack }) {
         {/* STEP 2 — Upload Listing Photos */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between border-b border-white/[0.06] pb-3 mb-5">
-            <h2 className="text-base font-serif font-bold text-white flex items-center gap-2">
+            <h2 className="text-base font-sans font-bold text-white flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-blue-500" /> STEP 2 — Upload Listing Photos
             </h2>
             <span className="text-xs text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full font-medium border border-blue-500/25">
@@ -1003,7 +1003,7 @@ export default function NewListing({ onListingCreated, onBack }) {
         <div className="glass-card p-6">
           <div className="border-b border-white/[0.06] pb-3 mb-5 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-serif font-bold text-white flex items-center gap-2">
+              <h2 className="text-base font-sans font-bold text-white flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-blue-500" /> STEP 3 — Real Estate Photo QA & Enhancement Preset
               </h2>
               <p className="text-xs text-white/60 mt-1 font-sans">

@@ -752,12 +752,59 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           )}
 
           {!loading && hasSearched && searchedQuery.trim().toLowerCase() === query.trim().toLowerCase() && totalResultsCount === 0 && (
-            <div className="text-center py-16 border border-white/5 rounded-2xl bg-white/[0.02]">
-              <Search className="w-10 h-10 text-white/20 mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-white mb-1">No matching results found</h3>
-              <p className="text-sm text-white/40 max-w-md mx-auto">
-                No records matched "{query}" under the <span className="text-blue-400 font-semibold">{filterType}</span> filter. Try switching to "All" or refining your search term.
+            <div className="text-center py-12 px-6 border border-white/10 rounded-2xl bg-gradient-to-b from-[#0c192c]/60 to-[#07111e]/80 shadow-xl max-w-lg mx-auto">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-3 text-blue-400">
+                <Search className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-1.5">No matching records found</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4">
+                No verified records matched &ldquo;<span className="text-slate-200 font-medium">{query}</span>&rdquo; under the <span className="text-blue-400 font-semibold uppercase">{filterType}</span> filter.
               </p>
+
+              {/* Actionable Query Tips */}
+              <div className="bg-[#050c18] border border-white/5 rounded-xl p-3.5 text-left mb-4 space-y-2 text-xs text-slate-300">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Search Suggestions:</div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span>
+                  <span><strong>Owner Name:</strong> First or last name (e.g. &ldquo;Mohammed&rdquo;, &ldquo;Al Hashimi&rdquo;)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                  <span><strong>Phone:</strong> Full or partial mobile (e.g. &ldquo;97150&rdquo; or &ldquo;050&rdquo;)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></span>
+                  <span><strong>Identifier:</strong> Emirates ID (e.g. &ldquo;784-1985-...&rdquo;) or Bitrix ID</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                  <span><strong>Building:</strong> Tower name (e.g. &ldquo;Marina Gate&rdquo;, &ldquo;Burj Crown&rdquo;)</span>
+                </div>
+              </div>
+
+              {/* Quick Reset / Filter Switch Actions */}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {filterType !== 'All' && (
+                  <button
+                    onClick={() => {
+                      setFilterType('All');
+                      handleSearch('All', query);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-sm cursor-pointer"
+                  >
+                    Search in All Categories
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setQuery('');
+                    setHasSearched(false);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
             </div>
           )}
 

@@ -3,7 +3,7 @@ import {
   Search, SlidersHorizontal, ChevronDown, List, LayoutGrid,
   X, Building2, Phone, Mail, MapPin, ExternalLink, Share2, 
   MoreHorizontal, UserCheck, RefreshCw, ChevronLeft, ChevronRight,
-  MessageSquare
+  MessageSquare, CheckCircle2
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
@@ -654,6 +654,60 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           {/* Controls Cluster: Filters Button + Sort + View Mode */}
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0 self-end lg:self-auto">
             
+            {/* Quick Filter Pills (UI-010) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setPhoneFilter(prev => prev === 'Yes' ? 'Any' : 'Yes');
+                  setCurrentPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+                  phoneFilter === 'Yes'
+                    ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/50 shadow-emerald-950/40 ring-1 ring-emerald-500/40'
+                    : 'bg-[#06111e] hover:bg-[#091728] text-slate-300 hover:text-white border-[#1a2c42]'
+                }`}
+                title="Filter owners with verified phone number"
+              >
+                <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Has Phone</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPortfolioSizeFilter(prev => prev === 'Multi-Unit (2+)' ? 'Any' : 'Multi-Unit (2+)');
+                  setCurrentPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+                  portfolioSizeFilter === 'Multi-Unit (2+)'
+                    ? 'bg-blue-500/25 text-blue-300 border-blue-500/50 shadow-blue-950/40 ring-1 ring-blue-500/40'
+                    : 'bg-[#06111e] hover:bg-[#091728] text-slate-300 hover:text-white border-[#1a2c42]'
+                }`}
+                title="Filter owners with 2 or more properties"
+              >
+                <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                <span>Multi-Property</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCrmPresentFilter(prev => prev === 'Yes' ? 'Any' : 'Yes');
+                  setCurrentPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+                  crmPresentFilter === 'Yes'
+                    ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 shadow-amber-950/40 ring-1 ring-amber-500/40'
+                    : 'bg-[#06111e] hover:bg-[#091728] text-slate-300 hover:text-white border-[#1a2c42]'
+                }`}
+                title="Filter owners present in Bitrix CRM"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>In Bitrix</span>
+              </button>
+            </div>
+
             {/* 2. Filters Button */}
             <button
               onClick={() => setShowFiltersBox(prev => !prev)}
@@ -1027,10 +1081,10 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   </div>
                 </div>
 
-                {/* Ownership Classification */}
+                {/* Deed Party Role */}
                 <div>
                   <label className="text-xs font-semibold text-white/70 block mb-1.5">
-                    Ownership Classification
+                    Deed Party Role
                   </label>
                   <div className="relative">
                     <select
@@ -1099,14 +1153,14 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden">
           <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
             <table className="w-full text-left border-collapse text-[13.5px]">
-              <thead className="bg-[#071322] border-b border-[#233549] text-xs uppercase tracking-wider text-slate-400 sticky top-0 z-20 shadow-md shadow-black/40">
+              <thead className="bg-[#071322] border-b border-[#233549] text-xs uppercase tracking-wider text-slate-400 sticky top-0 z-20 shadow-md shadow-black/40 backdrop-blur-md">
                 <tr>
-                  <th className="w-[28%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Lead ID &amp; Owner</th>
-                  <th className="w-[18%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Phone &amp; Email</th>
-                  <th className="w-[22%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Property &amp; Portfolio</th>
-                  <th className="w-[13%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Assigned Agent</th>
-                  <th className="w-[11%] px-5 py-3.5 font-semibold text-left bg-[#071322] align-middle">Bitrix ID / Status</th>
-                  <th className="w-[8%] px-5 py-3.5 font-semibold text-right bg-[#071322] align-middle">Classification</th>
+                  <th className="w-[28%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Lead ID &amp; Owner</th>
+                  <th className="w-[18%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Phone &amp; Email</th>
+                  <th className="w-[22%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Property &amp; Portfolio</th>
+                  <th className="w-[13%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Assigned Agent</th>
+                  <th className="w-[11%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Bitrix ID / Status</th>
+                  <th className="w-[8%] px-5 py-2.5 font-semibold text-right bg-[#071322] align-middle">Classification</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1b2b3d]">
@@ -1121,20 +1175,20 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   return (
                     <tr 
                       key={owner.id} 
-                      className="hover:bg-[#102035] transition-colors group cursor-pointer border-b border-[#1b2b3d]/60 last:border-b-0 h-[68px]" 
+                      className="hover:bg-[#102035] transition-colors group cursor-pointer border-b border-[#1b2b3d]/60 last:border-b-0 min-h-[52px]" 
                       onClick={() => setSelectedOwner(owner)}
                     >
                       {/* 1. Lead ID & Owner Name */}
-                      <td className="px-5 py-3 font-medium text-white align-middle">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs shrink-0 shadow-sm">
+                      <td className="px-5 py-2.5 font-medium text-white align-middle">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs shrink-0 shadow-sm">
                             {owner.name ? (String(owner.name).match(/[a-zA-Z0-9]/) || ['O'])[0].toUpperCase() : 'O'}
                           </div>
                           <div className="min-w-0">
                             <div className="font-semibold text-white/95 group-hover:text-blue-400 transition-colors truncate text-sm leading-snug">
                               {owner.name}
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold tracking-tight">
                                 {owner.lead_id}
                               </span>
@@ -1158,7 +1212,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 2. Phone & Email */}
-                      <td className="px-5 py-3 align-middle">
+                      <td className="px-5 py-2.5 align-middle">
                         <div className="flex flex-col justify-center space-y-1 text-xs">
                           <div className="flex items-center gap-1.5 text-white/85">
                             <Phone className="w-3.5 h-3.5 text-white/40 shrink-0" />
@@ -1184,7 +1238,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 3. Property & Portfolio */}
-                      <td className="px-5 py-3 align-middle">
+                      <td className="px-5 py-2.5 align-middle">
                         <div className="flex flex-col justify-center space-y-1 text-xs">
                           <button
                             type="button"
@@ -1219,7 +1273,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 4. Assigned Agent */}
-                      <td className="px-5 py-3 align-middle">
+                      <td className="px-5 py-2.5 align-middle">
                         {owner.assigned_agent ? (
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-[10px] shrink-0">
@@ -1237,7 +1291,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 5. Bitrix ID / Status */}
-                      <td className="px-5 py-3 align-middle">
+                      <td className="px-5 py-2.5 align-middle">
                         {owner.bitrix_status ? (
                           <div className="flex flex-col justify-center gap-0.5">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold w-fit">
@@ -1273,7 +1327,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 6. Classification */}
-                      <td className="px-5 py-3 text-right align-middle">
+                      <td className="px-5 py-2.5 text-right align-middle">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
                           owner.ownership_type === 'OWNER'
                             ? 'bg-blue-500/15 border border-blue-500/30 text-blue-300'

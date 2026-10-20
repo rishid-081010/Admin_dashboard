@@ -297,15 +297,11 @@ export default function OverviewDashboard({ onNavigate }) {
                     </span>
                   </div>
 
-                  {/* Row 2: Owner Details & Pending Status Badge */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+                  {/* Row 2: Owner Details */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="text-sm text-amber-200/90 font-semibold" title={act.subtitle}>
                       {act.subtitle}
                     </div>
-                    <span className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-md font-mono shrink-0 flex items-center gap-1.5 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                      No Action Yet
-                    </span>
                   </div>
 
                   {/* Row 3: Spacious Lead Summary Box */}
@@ -389,127 +385,89 @@ export default function OverviewDashboard({ onNavigate }) {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Consolidated Voice Agent Telemetry Strip (UI-001) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Agent 1: Sarah */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-7 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
+            className="p-4 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-blue-500/50 transition-all cursor-pointer shadow-lg shadow-black/40 flex items-center justify-between group"
           >
-            <div>
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-base font-bold shadow-inner">
-                    1
-                  </div>
-                  <div>
-                    <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-blue-300 transition-colors tracking-tight">
-                      Sarah
-                    </h4>
-                    <span className="text-xs text-slate-400 font-medium">Line 1 · Acquisition Specialist</span>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  {voiceData.agent1.health}
-                </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 font-bold text-sm shadow-inner shrink-0">
+                1
               </div>
-
-              {/* Metric Box */}
-              <div className="my-4 p-4 rounded-xl bg-[#06101c] border border-[#16273c]">
-                <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight">
-                  {voiceData.agent1.callsToday.toLocaleString()}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors truncate">
+                    Sarah
+                  </h4>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
                 </div>
-                <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mt-1">
-                  Calls Dialed Today
-                </div>
+                <div className="text-[11px] text-slate-400 truncate">Line 1 · Acquisition Specialist</div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#1a2c42] flex items-center justify-between text-xs sm:text-sm text-blue-300 font-semibold group-hover:text-blue-200 transition-colors">
-              <span>Inspect Call Activity</span>
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <div className="text-right shrink-0 pl-2">
+              <div className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight leading-none">
+                {voiceData.agent1.callsToday.toLocaleString()}
+              </div>
+              <div className="text-[10px] uppercase font-semibold text-slate-400 mt-1">Calls Today</div>
             </div>
           </div>
 
           {/* Agent 2: James */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-7 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
+            className="p-4 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-purple-500/50 transition-all cursor-pointer shadow-lg shadow-black/40 flex items-center justify-between group"
           >
-            <div>
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 text-base font-bold shadow-inner">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-purple-300 transition-colors tracking-tight">
-                      James
-                    </h4>
-                    <span className="text-xs text-slate-400 font-medium">Line 2 · Investor Outreach</span>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  {voiceData.agent2.health}
-                </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 font-bold text-sm shadow-inner shrink-0">
+                2
               </div>
-
-              {/* Metric Box */}
-              <div className="my-4 p-4 rounded-xl bg-[#06101c] border border-[#16273c]">
-                <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight">
-                  {voiceData.agent2.callsToday.toLocaleString()}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors truncate">
+                    James
+                  </h4>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
                 </div>
-                <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mt-1">
-                  Calls Dialed Today
-                </div>
+                <div className="text-[11px] text-slate-400 truncate">Line 2 · Investor Outreach</div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#1a2c42] flex items-center justify-between text-xs sm:text-sm text-purple-300 font-semibold group-hover:text-purple-200 transition-colors">
-              <span>Inspect Call Activity</span>
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <div className="text-right shrink-0 pl-2">
+              <div className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight leading-none">
+                {voiceData.agent2.callsToday.toLocaleString()}
+              </div>
+              <div className="text-[10px] uppercase font-semibold text-slate-400 mt-1">Calls Today</div>
             </div>
           </div>
 
           {/* Agent 3: Aisha */}
           <div 
             onClick={() => onNavigate && onNavigate('voice')}
-            className="p-7 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-[#385175] transition-all cursor-pointer shadow-xl shadow-black/40 flex flex-col justify-between group"
+            className="p-4 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-emerald-500/50 transition-all cursor-pointer shadow-lg shadow-black/40 flex items-center justify-between group"
           >
-            <div>
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 text-base font-bold shadow-inner">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-emerald-300 transition-colors tracking-tight">
-                      Aisha
-                    </h4>
-                    <span className="text-xs text-slate-400 font-medium">Line 3 · Prime Specialist</span>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  {voiceData.agent3.health}
-                </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 font-bold text-sm shadow-inner shrink-0">
+                3
               </div>
-
-              {/* Metric Box */}
-              <div className="my-4 p-4 rounded-xl bg-[#06101c] border border-[#16273c]">
-                <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight">
-                  {voiceData.agent3.callsToday.toLocaleString()}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors truncate">
+                    Aisha
+                  </h4>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
                 </div>
-                <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mt-1">
-                  Calls Dialed Today
-                </div>
+                <div className="text-[11px] text-slate-400 truncate">Line 3 · Prime Specialist</div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#1a2c42] flex items-center justify-between text-xs sm:text-sm text-emerald-300 font-semibold group-hover:text-emerald-200 transition-colors">
-              <span>Inspect Call Activity</span>
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <div className="text-right shrink-0 pl-2">
+              <div className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight leading-none">
+                {voiceData.agent3.callsToday.toLocaleString()}
+              </div>
+              <div className="text-[10px] uppercase font-semibold text-slate-400 mt-1">Calls Today</div>
             </div>
           </div>
         </div>
@@ -538,14 +496,14 @@ export default function OverviewDashboard({ onNavigate }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs px-3 py-1.5 rounded-full bg-[#ff6d5a]/10 text-orange-300 border border-[#ff6d5a]/25 font-bold flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs px-3 py-1.5 rounded-xl bg-[#ff6d5a]/10 text-orange-300 border border-[#ff6d5a]/25 font-bold flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#ff6d5a] animate-pulse"></span>
-              {loadingN8n ? 'Syncing...' : `${n8nData.summary.activeWorkflows} Active · ${n8nData.summary.totalExecutionsToday} Runs Today`}
+              {loadingN8n ? 'Syncing...' : `${n8nData.summary.activeWorkflows} Active · ${n8nData.summary.totalExecutionsToday} Runs`}
             </span>
             <button
               onClick={() => onNavigate && onNavigate('workflows')}
-              className="px-3.5 py-1.5 rounded-xl bg-[#141d28] hover:bg-[#1a2535] border border-[#26374a] hover:border-[#ff6d5a]/40 text-slate-200 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
               title="Open Workflows Sidetab"
             >
               <span>View All</span>
@@ -555,7 +513,7 @@ export default function OverviewDashboard({ onNavigate }) {
               href="https://n8n.asquared.ae/executions"
               target="_blank"
               rel="noreferrer"
-              className="px-3 py-1.5 rounded-xl bg-[#0c1829] hover:bg-[#132238] border border-[#233549] text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
               title="Open live executions history in n8n"
             >
               <span>Executions Log</span>

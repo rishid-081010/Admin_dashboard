@@ -223,7 +223,7 @@ export default function VoiceDateFilter({
               <button
                 key={id}
                 onClick={() => handleModeChange(id)}
-                className={`flex-1 py-1 px-2.5 rounded-lg text-xs font-semibold text-center transition-all ${
+                className={`flex-1 py-1 px-2 rounded-lg text-xs font-semibold whitespace-nowrap text-center transition-all ${
                   isActive
                     ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'

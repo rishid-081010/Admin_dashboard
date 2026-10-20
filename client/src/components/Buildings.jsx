@@ -309,7 +309,7 @@ export default function Buildings() {
       {/* ── Top Header Bar ─────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white" style={{ fontFamily: "Georgia, serif" }}>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
             BUILDINGS &amp; COMMUNITIES
           </h1>
           <p className="text-xs text-slate-400 mt-1">
@@ -329,7 +329,7 @@ export default function Buildings() {
               <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">
                 {activeTab === 'community' ? 'Communities' : activeTab === 'single_unit' ? 'Plots' : 'Buildings'}
               </div>
-              <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">
+              <div className="text-sm font-bold text-white leading-tight font-sans mt-0.5">
                 {filteredBuildings.length.toLocaleString()}
               </div>
             </div>
@@ -339,7 +339,7 @@ export default function Buildings() {
             <Layers className="w-4 h-4 text-emerald-400" />
             <div>
               <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Units</div>
-              <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">
+              <div className="text-sm font-bold text-white leading-tight font-sans mt-0.5">
                 {currentViewStats.totalUnits.toLocaleString()}
               </div>
             </div>
@@ -349,7 +349,7 @@ export default function Buildings() {
             <Users className="w-4 h-4 text-sky-400" />
             <div>
               <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Owners</div>
-              <div className="text-sm font-bold text-white leading-tight font-serif mt-0.5">
+              <div className="text-sm font-bold text-white leading-tight font-sans mt-0.5">
                 {currentViewStats.totalOwners.toLocaleString()}
               </div>
             </div>
@@ -518,7 +518,7 @@ export default function Buildings() {
 
                   {/* Building / Community Title */}
                   <h3 
-                    className="text-2xl font-bold font-serif text-white tracking-tight leading-snug mb-1 group-hover:text-blue-300 transition-colors"
+                    className="text-2xl font-bold font-sans text-white tracking-tight leading-snug mb-1 group-hover:text-blue-300 transition-colors"
                     title={b.name}
                   >
                     {b.name}
@@ -532,7 +532,7 @@ export default function Buildings() {
                   {/* 2-Column Key Metrics */}
                   <div className="grid grid-cols-2 gap-4 py-4">
                     <div>
-                      <div className="text-2xl sm:text-3xl font-bold font-serif text-white leading-none">
+                      <div className="text-2xl sm:text-3xl font-bold font-sans text-white leading-none">
                         {b.unitsCount.toLocaleString()}
                       </div>
                       <div className="text-xs text-slate-400 font-medium mt-1">
@@ -540,7 +540,7 @@ export default function Buildings() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-2xl sm:text-3xl font-bold font-serif text-white leading-none">
+                      <div className="text-2xl sm:text-3xl font-bold font-sans text-white leading-none">
                         {b.ownersCount.toLocaleString()}
                       </div>
                       <div className="text-xs text-slate-400 font-medium mt-1">

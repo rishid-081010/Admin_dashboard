@@ -175,7 +175,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
+          <h1 className="text-2xl lg:text-3xl font-sans font-bold text-white tracking-tight">
             Listings Dashboard
           </h1>
           <p className="text-white/60 mt-1 text-xs lg:text-sm font-sans">
@@ -266,7 +266,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       ) : filteredListings.length === 0 ? (
         <div className="bg-[#0c1829] border border-[#233549] p-12 text-center rounded-2xl shadow-xl shadow-black/40">
           <Building2 className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
-          <h3 className="text-lg font-serif font-bold text-white mb-1">No Listings Found</h3>
+          <h3 className="text-lg font-sans font-bold text-white mb-1">No Listings Found</h3>
           <p className="text-slate-400 text-xs max-w-sm mx-auto mb-5">
             {searchQuery || statusFilter !== 'All Status' || typeFilter !== 'All Types'
               ? 'No listings match your filter criteria.'
@@ -303,7 +303,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                   {getStatusBadge(listing.status)}
                 </div>
 
-                <h3 className="text-base font-serif font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-1 mb-2">
+                <h3 className="text-base font-sans font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-1 mb-2">
                   {listing.name || 'Untitled Luxury Listing'}
                 </h3>
 

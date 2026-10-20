@@ -19,174 +19,196 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         />
       </div>
 
-      {/* Navigation Links evenly distributed across the entire vertical widget height */}
-      <nav className="w-full flex-1 flex flex-col justify-between py-2 min-h-0 space-y-0.5">
-        {/* 1. Overview */}
-        <button 
-          onClick={() => setActiveTab('overview')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'overview' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Overview</span>
-        </button>
+      {/* Navigation Links grouped into 3 logical sections: PORTFOLIO, OPERATIONS, ADMIN (UI-005) */}
+      <nav className="w-full flex-1 flex flex-col py-1 min-h-0 overflow-y-auto custom-scrollbar space-y-2.5">
+        
+        {/* ── SECTION 1: PORTFOLIO ── */}
+        <div className="space-y-0.5">
+          <div className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+            Portfolio
+          </div>
 
-        {/* 2. Owners Data */}
-        <button 
-          onClick={() => setActiveTab('owners')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'owners' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Owners Data</span>
-        </button>
+          {/* 1. Overview */}
+          <button 
+            onClick={() => setActiveTab('overview')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'overview' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Overview</span>
+          </button>
 
-        {/* 3. Buildings & Communities */}
-        <button 
-          onClick={() => setActiveTab('buildings')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'buildings' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Buildings</span>
-        </button>
+          {/* 2. Owners Data */}
+          <button 
+            onClick={() => setActiveTab('owners')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'owners' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Owners Data</span>
+          </button>
 
-        {/* 4. Search Engine */}
-        <button 
-          onClick={() => setActiveTab('search')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'search' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Search Engine</span>
-        </button>
+          {/* 3. Buildings & Communities */}
+          <button 
+            onClick={() => setActiveTab('buildings')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'buildings' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Buildings</span>
+          </button>
 
-        {/* 6. Workflows */}
-        <button 
-          onClick={() => setActiveTab('workflows')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'workflows' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Workflows</span>
-        </button>
+          {/* 4. Search Engine */}
+          <button 
+            onClick={() => setActiveTab('search')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'search' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Search Engine</span>
+          </button>
 
-        {/* 7. Data Cleaning */}
-        <button 
-          onClick={() => setActiveTab('leads')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            isLeadsActive 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Data Cleaning</span>
-        </button>
+          {/* 5. Transactions (External link to DLD Transaction Dashboard) */}
+          <a 
+            href="https://transactionaldashboard.asquared.ae/" 
+            target="_blank" 
+            rel="noreferrer"
+            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left text-[#94a3b8] hover:text-white hover:bg-white/[0.04]"
+          >
+            <span>Transactions</span>
+            <ExternalLink className="w-3.5 h-3.5 text-white/50" />
+          </a>
+        </div>
 
-        {/* 8. Data library */}
-        <button 
-          onClick={() => setActiveTab('sources')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'sources' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Data library</span>
-        </button>
+        {/* ── SECTION 2: OPERATIONS ── */}
+        <div className="space-y-0.5 pt-1 border-t border-white/[0.06]">
+          <div className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+            Operations
+          </div>
 
-        {/* 9. Listing Studio */}
-        <button 
-          onClick={() => setActiveTab('listing')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            isListingActive 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Listing Studio</span>
-        </button>
+          {/* 6. Workflows */}
+          <button 
+            onClick={() => setActiveTab('workflows')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'workflows' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Workflows</span>
+          </button>
 
-        {/* 10. Voice Agent Centre */}
-        <button 
-          onClick={() => setActiveTab('voice')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'voice' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Voice Agent Centre</span>
-        </button>
+          {/* 7. Data Cleaning */}
+          <button 
+            onClick={() => setActiveTab('leads')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              isLeadsActive 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Data Cleaning</span>
+          </button>
 
-        {/* 11. AI Agent */}
-        <button 
-          onClick={() => setActiveTab('agent')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'agent' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>AI Agent</span>
-        </button>
+          {/* 8. Data Library */}
+          <button 
+            onClick={() => setActiveTab('sources')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'sources' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Data Library</span>
+          </button>
 
-        {/* 11. My Activity */}
-        <button 
-          onClick={() => setActiveTab('activity')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'activity' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>My Activity</span>
-        </button>
+          {/* 9. Listing Studio */}
+          <button 
+            onClick={() => setActiveTab('listing')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              isListingActive 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Listing Studio</span>
+          </button>
 
-        {/* 12. Transactions (External link to DLD Transaction Dashboard) */}
-        <a 
-          href="https://transactionaldashboard.asquared.ae/" 
-          target="_blank" 
-          rel="noreferrer"
-          className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left text-[#94a3b8] hover:text-white hover:bg-white/[0.04]"
-        >
-          <span>Transactions</span>
-          <ExternalLink className="w-3.5 h-3.5 text-white/50" />
-        </a>
+          {/* 10. Voice Agent Centre */}
+          <button 
+            onClick={() => setActiveTab('voice')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'voice' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Voice Agent Centre</span>
+          </button>
 
-        {/* 13. Roles */}
-        <button 
-          onClick={() => setActiveTab('roles')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'roles' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Roles</span>
-        </button>
+          {/* 11. AI Agent */}
+          <button 
+            onClick={() => setActiveTab('agent')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'agent' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>AI Agent</span>
+          </button>
 
-        {/* 14. Account and settings */}
-        <button 
-          onClick={() => setActiveTab('settings')} 
-          className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-            activeTab === 'settings' 
-              ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-              : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <span>Account and settings</span>
-        </button>
+          {/* 12. My Activity */}
+          <button 
+            onClick={() => setActiveTab('activity')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'activity' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>My Activity</span>
+          </button>
+        </div>
+
+        {/* ── SECTION 3: ADMIN ── */}
+        <div className="space-y-0.5 pt-1 border-t border-white/[0.06]">
+          <div className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+            Admin
+          </div>
+
+          {/* 13. Roles */}
+          <button 
+            onClick={() => setActiveTab('roles')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'roles' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Roles</span>
+          </button>
+
+          {/* 14. Account & Settings */}
+          <button 
+            onClick={() => setActiveTab('settings')} 
+            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+              activeTab === 'settings' 
+                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
+                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <span>Account &amp; Settings</span>
+          </button>
+        </div>
       </nav>
 
       {/* User Session & Logout Footer */}

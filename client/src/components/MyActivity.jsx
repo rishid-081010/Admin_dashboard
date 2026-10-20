@@ -288,32 +288,33 @@ export default function MyActivity({ currentUser }) {
             {/* Agent Select Menu */}
             {isAgentDropdownOpen && (
               <div className="absolute right-0 mt-2 w-72 bg-[#061324] border border-[#233b59] rounded-2xl shadow-2xl z-50 p-2 animate-fade-in backdrop-blur-xl">
-                <div className="p-2 border-b border-white/[0.08]">
+                <div className="p-1.5 border-b border-white/[0.08]">
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                     <input
                       type="text"
                       placeholder="Search active agent..."
                       value={agentSearch}
+                      autoFocus
                       onChange={e => setAgentSearch(e.target.value)}
                       className="w-full bg-[#030a13] border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
 
-                <div className="max-h-60 overflow-y-auto custom-scrollbar py-1 space-y-0.5">
+                <div className="max-h-56 overflow-y-auto custom-scrollbar py-1 space-y-0.5">
                   <button
                     onClick={() => { setSelectedAgentId('all'); setIsAgentDropdownOpen(false); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-left transition-all ${
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left transition-all ${
                       selectedAgentId === 'all' ? 'bg-blue-600 text-white font-bold' : 'text-slate-300 hover:bg-white/[0.05]'
                     }`}
                   >
-                    <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
-                      <Flame className="w-3.5 h-3.5 text-blue-400" />
+                    <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0">
+                      <Flame className="w-3 h-3 text-blue-400" />
                     </div>
-                    <div>
-                      <div className="font-semibold">All Leads / Fleet Pool</div>
-                      <div className="text-[10px] text-slate-400">View cards across all agents</div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-xs leading-tight">All Leads / Fleet Pool</div>
+                      <div className="text-[10px] text-slate-400 truncate">Cards across all agents</div>
                     </div>
                   </button>
 
@@ -321,19 +322,19 @@ export default function MyActivity({ currentUser }) {
                     <button
                       key={a.id}
                       onClick={() => { setSelectedAgentId(a.id); setIsAgentDropdownOpen(false); }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-left transition-all ${
+                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left transition-all ${
                         selectedAgentId === a.id ? 'bg-blue-600 text-white font-bold' : 'text-slate-300 hover:bg-white/[0.05]'
                       }`}
                     >
-                      <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center shrink-0">
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center shrink-0">
                         {a.photo ? (
                           <img src={a.photo} alt={a.name} className="w-full h-full object-cover" />
                         ) : (
-                          <User className="w-3.5 h-3.5 text-slate-300" />
+                          <User className="w-3 h-3 text-slate-300" />
                         )}
                       </div>
-                      <div className="truncate">
-                        <div className="font-semibold truncate">{a.name}</div>
+                      <div className="truncate min-w-0">
+                        <div className="font-semibold truncate leading-tight text-xs">{a.name}</div>
                         <div className="text-[10px] text-slate-400 truncate">{a.email || `ID: ${a.id}`}</div>
                       </div>
                     </button>

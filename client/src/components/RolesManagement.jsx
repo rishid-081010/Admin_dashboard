@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Shield, ShieldAlert, ShieldCheck, UserCheck, Eye, EyeOff, Plus, Trash2, Check, AlertCircle, Loader2, Lock, User, Edit2, X } from 'lucide-react';
 import { authService } from '../utils/authService';
 
@@ -36,8 +36,16 @@ export default function RolesManagement({ currentUser }) {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  // Password visibility map { [userId]: boolean }
+  // Password visibility map { [userId]: boolean } with 10s auto-hide timer (UI-020)
   const [showPasswords, setShowPasswords] = useState({});
+  const passwordTimersRef = useRef({});
+
+  // Clean up auto-hide timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(passwordTimersRef.current).forEach(clearTimeout);
+    };
+  }, []);
 
   // Password in-line editing map { [userId]: string }
   const [editingPasswordId, setEditingPasswordId] = useState(null);
@@ -161,7 +169,25 @@ export default function RolesManagement({ currentUser }) {
   };
 
   const togglePasswordVisibility = (id) => {
-    setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+    setShowPasswords(prev => {
+      const willBeVisible = !prev[id];
+
+      // Clear existing auto-hide timer if any
+      if (passwordTimersRef.current[id]) {
+        clearTimeout(passwordTimersRef.current[id]);
+        delete passwordTimersRef.current[id];
+      }
+
+      // If making visible, auto-hide after 10 seconds (UI-020)
+      if (willBeVisible) {
+        passwordTimersRef.current[id] = setTimeout(() => {
+          setShowPasswords(curr => ({ ...curr, [id]: false }));
+          delete passwordTimersRef.current[id];
+        }, 10000);
+      }
+
+      return { ...prev, [id]: willBeVisible };
+    });
   };
 
   return (
@@ -170,7 +196,7 @@ export default function RolesManagement({ currentUser }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white" style={{ fontFamily: "Georgia, serif" }}>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
               ROLES &amp; PERMISSIONS
             </h1>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">

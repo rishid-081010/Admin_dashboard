@@ -207,8 +207,7 @@ export default function WorkflowsDirectory() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 pt-1">
         <div>
           <h1 
-            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white" 
-            style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-sans" 
           >
             Workflows
           </h1>
@@ -310,7 +309,7 @@ export default function WorkflowsDirectory() {
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 shadow-xl shadow-black/40 shrink-0 flex flex-col gap-3">
         
         {/* Top Filter Row: Search & Status Tabs */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           
           {/* Search input */}
           <div className="flex-1 flex items-center bg-[#071322] border border-[#1e2f42] rounded-xl px-3.5 py-2 focus-within:border-blue-500/70 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
@@ -334,7 +333,7 @@ export default function WorkflowsDirectory() {
           </div>
 
           {/* Status Tabs matching n8n */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
             {[
               { id: 'all', label: `All (${summary.totalWorkflows})` },
               { id: 'published', label: `Published (${summary.publishedCount})` },
@@ -416,14 +415,14 @@ export default function WorkflowsDirectory() {
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 overflow-hidden flex-1 flex flex-col min-h-0">
         <div className="overflow-x-auto flex-1 custom-scrollbar">
           <table className="w-full text-left border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-20 bg-[#071322] backdrop-blur-md shadow-md shadow-black/30">
               <tr className="border-b border-[#233549] bg-[#071322] text-[11px] uppercase font-mono text-slate-400 tracking-wider">
-                <th className="py-3 px-4 w-[11%] align-middle">Status</th>
-                <th className="py-3 px-5 w-[37%] align-middle">Workflow Name</th>
-                <th className="py-3 px-4 w-[14%] align-middle">Runs Today</th>
-                <th className="py-3 px-4 w-[11%] align-middle">Latency</th>
-                <th className="py-3 px-4 w-[18%] align-middle">Last Run / Saved</th>
-                <th className="py-3 px-4 w-[9%] text-right align-middle">Action</th>
+                <th className="py-2.5 px-4 w-[11%] align-middle bg-[#071322]">Status</th>
+                <th className="py-2.5 px-5 w-[37%] align-middle bg-[#071322]">Workflow Name</th>
+                <th className="py-2.5 px-4 w-[14%] align-middle bg-[#071322]">Runs Today</th>
+                <th className="py-2.5 px-4 w-[11%] align-middle bg-[#071322]">Latency</th>
+                <th className="py-2.5 px-4 w-[18%] align-middle bg-[#071322]">Last Run / Saved</th>
+                <th className="py-2.5 px-4 w-[9%] text-right align-middle bg-[#071322]">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1b2b3d] text-xs">
@@ -440,7 +439,7 @@ export default function WorkflowsDirectory() {
                   onClick={() => window.open(wf.n8nUrl, '_blank')}
                 >
                   {/* Status: Published vs Unpublished */}
-                  <td className="py-3.5 px-4 align-middle">
+                  <td className="py-2.5 px-4 align-middle">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium font-mono border ${
                       wf.active 
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' 
@@ -452,7 +451,7 @@ export default function WorkflowsDirectory() {
                   </td>
 
                   {/* Workflow Name, Folder, and ID */}
-                  <td className="py-3.5 px-5 align-middle">
+                  <td className="py-2.5 px-5 align-middle">
                     <div>
                       <h4 className="font-semibold text-white text-[13.5px] group-hover:text-blue-300 transition-colors truncate max-w-[380px]" title={wf.name}>
                         {wf.name}
@@ -474,7 +473,7 @@ export default function WorkflowsDirectory() {
                   </td>
 
                   {/* Executions Today */}
-                  <td className="py-3.5 px-4 font-mono align-middle">
+                  <td className="py-2.5 px-4 font-mono align-middle">
                     <div className="text-[13px] font-bold text-white">
                       {(wf.executionsToday || 0).toLocaleString()} <span className="text-[11px] text-slate-400 font-normal">runs</span>
                     </div>
@@ -491,7 +490,7 @@ export default function WorkflowsDirectory() {
                   </td>
 
                   {/* Latency */}
-                  <td className="py-3.5 px-4 font-mono align-middle text-slate-300">
+                  <td className="py-2.5 px-4 font-mono align-middle text-slate-300">
                     {wf.avgDurationSec !== null && wf.avgDurationSec !== undefined ? (
                       <span className="text-xs">{wf.avgDurationSec}s</span>
                     ) : (
@@ -500,7 +499,7 @@ export default function WorkflowsDirectory() {
                   </td>
 
                   {/* Last Run / Saved */}
-                  <td className="py-3.5 px-4 font-mono text-[11.5px] align-middle">
+                  <td className="py-2.5 px-4 font-mono text-[11.5px] align-middle">
                     <div>
                       {wf.lastExecutedAt ? (
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -532,7 +531,7 @@ export default function WorkflowsDirectory() {
                   </td>
 
                   {/* Action Link to n8n */}
-                  <td className="py-3.5 px-4 text-right align-middle">
+                  <td className="py-2.5 px-4 text-right align-middle">
                     <a
                       href={wf.n8nUrl}
                       target="_blank"

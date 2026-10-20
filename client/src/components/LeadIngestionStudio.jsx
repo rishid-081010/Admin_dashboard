@@ -348,7 +348,7 @@ export default function LeadIngestionStudio() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
+          <h1 className="text-2xl lg:text-3xl font-sans font-bold text-white tracking-tight">
             Data Cleaning &amp; Lead Ingestion
           </h1>
           <p className="text-xs text-white/60 mt-1">
@@ -490,10 +490,10 @@ export default function LeadIngestionStudio() {
               </div>
               <div>
                 <p className="text-base font-bold text-white">
-                  Drag &amp; drop raw developer Excel (.xlsx, .xls) or CSV here
+                  Drop developer Excel (.xlsx, .xls) or CSV files here
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
-                  Supports Jumeirah Islands, Damac Hills, Emaar, DLD exports, and arbitrary multi-column spreadsheets.
+                  Supports developer sales sheets, DLD exports, and multi-column lead files.
                 </p>
               </div>
               <div className="flex items-center gap-3 mt-1">
