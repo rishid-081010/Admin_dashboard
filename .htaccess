@@ -1,0 +1,18 @@
+Options -MultiViews
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /dashboard/
+
+  # If direct file or directory exists, serve it
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # For any other route, rewrite to index.html
+  RewriteRule ^ /dashboard/index.html [L]
+</IfModule>
+
+# Fallback 404 handler for LiteSpeed
+ErrorDocument 404 /dashboard/index.html
