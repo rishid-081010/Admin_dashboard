@@ -16,6 +16,7 @@ import { learnFromUserFollowUp } from './aiLearningEngine.js';
 import { parseTitleDeed, parseEmiratesId, verifyKycMatching, assessDocumentIntegrityAndNoc } from './documentIntelligence.js';
 import { generateNocPdf, generateMasterDossierPdf, generateGovAndNocCombinedPdf } from './dossierGenerator.js';
 import { uploadToSupabaseStorage } from './storageHelper.js';
+import OpenAI from 'openai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,6 +109,59 @@ const dossierUploadFields = upload.fields([
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
+
+// AI Property Name Shortener using OpenAI
+app.post('/api/ai-shorten-property-name', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ success: false, error: 'Name is required' });
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      // Deterministic fallback if API key missing
+      return res.json({ success: true, building_name: cleanBuildingNameFallback(name), source: 'fallback' });
+    }
+
+    const openai = new OpenAI({ apiKey });
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You extract and shorten the official building or project name from a Dubai property title for a standardized rental listing form. Return ONLY the concise building name under 25 characters (e.g. "V3 Tower", "Burj Khalifa", "Marina Gate 1"). Strip unit numbers, bedroom counts, community names, and marketing words. Never return explanations or quotes.'
+        },
+        { role: 'user', content: name }
+      ],
+      temperature: 0.1,
+      max_tokens: 30,
+    });
+
+    const aiName = response.choices?.[0]?.message?.content?.trim()?.replace(/^["'`]|["'`]$/g, '');
+    res.json({
+      success: true,
+      building_name: aiName || cleanBuildingNameFallback(name),
+      source: aiName ? 'openai' : 'fallback'
+    });
+  } catch (err) {
+    console.error('Error shortening property name with AI:', err);
+    res.json({ success: true, building_name: cleanBuildingNameFallback(req.body?.name || ''), source: 'error_fallback' });
+  }
+});
+
+function cleanBuildingNameFallback(str) {
+  if (!str) return '';
+  let s = String(str).trim();
+  s = s.replace(/\b(?:Unit|Apt|Apartment|Flat|Villa|Office|Penthouse|Suite|Plot|#)\s*[\w\d-]+/gi, '');
+  const parts = s.split(/[-–—|]/);
+  s = (parts[0] || s).trim();
+  s = s.replace(/[,\s]+$/, '').replace(/^\s*,\s*/, '');
+  if (s === s.toUpperCase() && s.length > 3) {
+    s = s.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+  return s.slice(0, 25).trim();
+}
 
 // GET all listings
 app.get('/api/listings', async (req, res) => {

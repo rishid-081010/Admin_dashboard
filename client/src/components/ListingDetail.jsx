@@ -13,6 +13,7 @@ import axios from 'axios';
 import BeforeAfterSlider from './BeforeAfterSlider';
 import Toast from './Toast';
 import { previewRentalPdfInNewTab, downloadRentalPdf } from '../utils/rentalFormPdfClient';
+import { cleanBuildingNameOffline, shortenPropertyNameWithAI } from '../utils/aiPropertyShortener';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
@@ -116,11 +117,8 @@ const normalizeAgreementDuration = (val) => {
 
 const cleanDefaultBuildingName = (str) => {
   if (!str) return '';
-  const match = String(str).match(/^([^–\-\|\n\r]+?)(?:\s+(?:Unit|Apt|Apartment|Villa|Office|#|\d+)\b|[\-–\|])/i);
-  if (match && match[1] && match[1].trim().length >= 3) {
-    return match[1].trim();
-  }
-  return String(str).trim();
+  const cleaned = cleanBuildingNameOffline(str);
+  return cleaned || String(str).trim();
 };
 
 const getInitialRentalSpecs = (id) => {
@@ -187,6 +185,7 @@ export default function ListingDetail({ listingId, onBack }) {
   const [isSavingRentalSpecs, setIsSavingRentalSpecs] = useState(false);
   const [isPreviewingPdf, setIsPreviewingPdf] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isShorteningName, setIsShorteningName] = useState(false);
   const [rentalFormGenerated, setRentalFormGenerated] = useState(false);
   const [rentalActiveTab, setRentalActiveTab] = useState('financials'); // 'financials' | 'landlord' | 'specs' | 'mandate'
   const hasInitializedRentalSpecsRef = useRef(null);
@@ -537,7 +536,12 @@ export default function ListingDetail({ listingId, onBack }) {
       owner_nationality: c.owner_nationality || e.nationality || d.nationality || 'United Arab Emirates',
       property_type: normalizePropertyType(c.property_type || listing.property_type || d.property_type),
       category: c.category || (['Office', 'Shop', 'Warehouse'].includes(c.property_type || listing.property_type) ? 'Commercial' : 'Residential'),
-      building_name: c.building_name || d.building_name || cleanDefaultBuildingName(listing.name) || '',
+      building_name: (() => {
+        const rawBn = c.building_name || d.building_name || listing.name || '';
+        return (rawBn.includes('Unit') || rawBn.includes(' - ') || rawBn.length > 25)
+          ? cleanDefaultBuildingName(rawBn)
+          : rawBn;
+      })(),
       community: c.community || d.community || 'Dubai',
       unit_number: c.unit_number || d.unit_number || '',
       bedrooms: normalizeBedrooms(c.bedrooms || p.bedrooms || listing.bedrooms),
@@ -630,7 +634,7 @@ export default function ListingDetail({ listingId, onBack }) {
         owner_name: d.owner_name_english || e.full_name_english || prev.owner_name,
         owner_phone: e.phone || prev.owner_phone,
         owner_nationality: e.nationality || d.nationality || prev.owner_nationality,
-        building_name: d.building_name || prev.building_name,
+        building_name: d.building_name ? cleanDefaultBuildingName(d.building_name) : prev.building_name,
         unit_number: d.unit_number || prev.unit_number,
         community: d.community || prev.community,
         bua_sqft: d.total_area_sqft || d.suite_area_sqft || p.size_sqft || prev.bua_sqft,
@@ -647,6 +651,23 @@ export default function ListingDetail({ listingId, onBack }) {
       return updated;
     });
     showToast('✨ Pulled base specs from Title Deed & Emirates ID!', 'success');
+  };
+
+  const handleAiShortenBuildingName = async () => {
+    const raw = rentalSpecs.building_name || listing?.name || '';
+    if (!raw) return;
+    setIsShorteningName(true);
+    try {
+      const shortened = await shortenPropertyNameWithAI(raw);
+      if (shortened) {
+        handleRentalSpecChange('building_name', shortened);
+        showToast(`✨ Shortened building name to "${shortened}"`, 'success');
+      }
+    } catch (e) {
+      console.warn('AI shorten error:', e);
+    } finally {
+      setIsShorteningName(false);
+    }
   };
 
   const handleSaveAndGenerateRentalForm = async () => {
@@ -2012,9 +2033,21 @@ export default function ListingDetail({ listingId, onBack }) {
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
-                  BUILDING / TOWER NAME
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400">
+                    BUILDING / TOWER NAME
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAiShortenBuildingName}
+                    disabled={isShorteningName}
+                    className="text-[10px] font-bold text-cyan-300 hover:text-white bg-cyan-500/20 hover:bg-cyan-500/40 px-2 py-0.5 rounded flex items-center gap-1 transition-all border border-cyan-500/30"
+                    title="Shorten compound property name using OpenAI"
+                  >
+                    <Sparkles className={`w-3 h-3 text-cyan-400 ${isShorteningName ? 'animate-spin' : ''}`} />
+                    {isShorteningName ? 'Shortening...' : 'AI Shorten'}
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={rentalSpecs.building_name ?? ''}
