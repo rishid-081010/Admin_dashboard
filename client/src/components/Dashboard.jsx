@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { 
   PlusCircle, Building2, Image as ImageIcon, Calendar, Trash2, 
-  ArrowRight, RefreshCw, CheckCircle2, Clock, AlertTriangle, Search 
+  ArrowRight, RefreshCw, CheckCircle2, Clock, AlertTriangle, Search, Tag
 } from 'lucide-react';
 import axios from 'axios';
 import Toast from './Toast';
-
-const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
+import { sbFetch } from '../utils/supabaseClient';
 
 export default function Dashboard({ onNewListingClick, onSelectListing }) {
   const [listings, setListings] = useState([]);
@@ -21,51 +19,14 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
   useEffect(() => {
     let isMounted = true;
 
-    const fetchFromSupabase = async () => {
-      const res = await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?select=*&order=created_at.desc.nullslast`, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-      if (!res.ok) throw new Error(`Supabase returned status ${res.status}`);
-      return await res.json();
-    };
-
     const fetchListings = async () => {
       setLoading(true);
       setError(null);
-      const isLocal = typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
       try {
-        if (!isLocal) {
-          // On live hosted environment (Hostinger static hosting), query Supabase directly for instant load
-          const data = await fetchFromSupabase();
-          if (isMounted) setListings(data || []);
-          return;
-        }
-
-        // On local development, try local Express server first
-        const response = await axios.get('/api/listings', { timeout: 3000 });
-        if (!isMounted) return;
-        if (response.data && response.data.success) {
-          setListings(response.data.listings || []);
-        } else {
-          const fallbackData = await fetchFromSupabase();
-          if (isMounted) setListings(fallbackData || []);
-        }
+        const data = await sbFetch('/real_estate_listings?select=*&order=created_at.desc.nullslast');
+        if (isMounted) setListings(data || []);
       } catch (err) {
         if (!isMounted) return;
-        try {
-          const fallbackData = await fetchFromSupabase();
-          if (isMounted) {
-            setListings(fallbackData || []);
-            return;
-          }
-        } catch (sbErr) {
-          console.error('Supabase fallback error:', sbErr);
-        }
         console.error('Fetch listings error:', err);
         setError('Could not connect to database.');
       } finally {
@@ -85,31 +46,26 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
     if (!window.confirm('Are you sure you want to delete this listing and all associated images?')) return;
 
     try {
-      const response = await axios.delete(`/api/listings/${id}`);
-      if (response.data.success) {
-        setListings((prev) => prev.filter((item) => item.id !== id));
-        setToast({ msg: 'Listing deleted successfully.', type: 'success' });
-        return;
-      }
-    } catch (err) {
-      console.warn('Backend delete error, trying Supabase direct deletion:', err);
+      // 1. Delete associated images in Supabase
       try {
-        const delRes = await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${id}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
-        });
-        if (delRes.ok) {
-          setListings((prev) => prev.filter((item) => item.id !== id));
-          setToast({ msg: 'Listing deleted successfully.', type: 'success' });
-          return;
-        }
-      } catch (sbDelErr) {
-        console.error('Supabase delete error:', sbDelErr);
+        await sbFetch(`/real_estate_images?listing_id=eq.${id}`, { method: 'DELETE' });
+      } catch (imgErr) {
+        console.warn('Image deletion note:', imgErr.message);
       }
-      setToast({ msg: 'Failed to delete listing.', type: 'error' });
+
+      // 2. Delete listing in Supabase
+      await sbFetch(`/real_estate_listings?id=eq.${id}`, { method: 'DELETE' });
+
+      // 3. Optional local express backend cleanup if active
+      try {
+        await axios.delete(`/api/listings/${id}`, { timeout: 1500 });
+      } catch (ignore) {}
+
+      setListings((prev) => prev.filter((item) => item.id !== id));
+      setToast({ msg: 'Listing deleted successfully.', type: 'success' });
+    } catch (err) {
+      console.error('Delete listing error:', err);
+      setToast({ msg: 'Failed to delete listing from database.', type: 'error' });
     }
   };
 
@@ -143,12 +99,16 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
   };
 
   const filteredListings = listings.filter((item) => {
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
     const matchQuery =
       !query ||
       (item.name && item.name.toLowerCase().includes(query)) ||
       (item.reference && item.reference.toLowerCase().includes(query)) ||
-      (item.property_type && item.property_type.toLowerCase().includes(query));
+      (item.building_name && item.building_name.toLowerCase().includes(query)) ||
+      (item.unit_number && String(item.unit_number).toLowerCase().includes(query)) ||
+      (item.community && item.community.toLowerCase().includes(query)) ||
+      (item.property_type && item.property_type.toLowerCase().includes(query)) ||
+      (item.purpose && item.purpose.toLowerCase().includes(query));
 
     let matchStatus = true;
     if (statusFilter === 'Completed') matchStatus = item.status === 'completed';
@@ -294,6 +254,13 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                     <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-[#06111e] text-slate-300 border border-[#1b2b3d]">
                       {listing.property_type || 'Apartment'}
                     </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${
+                      listing.purpose === 'For Rent' 
+                        ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' 
+                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    }`}>
+                      {listing.purpose || 'For Sale'}
+                    </span>
                     {listing.reference && (
                       <span className="text-[10px] font-mono text-slate-400">
                         {listing.reference}
@@ -303,9 +270,20 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                   {getStatusBadge(listing.status)}
                 </div>
 
-                <h3 className="text-base font-sans font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-1 mb-2">
+                <h3 className="text-base font-sans font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-1 mb-1">
                   {listing.name || 'Untitled Luxury Listing'}
                 </h3>
+
+                <div className="flex items-center justify-between text-xs mb-3">
+                  <span className="font-semibold text-emerald-400">
+                    {listing.price ? `AED ${Number(listing.price).toLocaleString()}` : 'Price on Application'}
+                  </span>
+                  {listing.community && (
+                    <span className="text-slate-400 truncate max-w-[140px]">
+                      {listing.community}
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-4 text-xs text-slate-400 mb-4">
                   <span className="flex items-center gap-1">

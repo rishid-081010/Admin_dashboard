@@ -2,6 +2,25 @@ DirectoryIndex index.php index.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+
+  # API Route Rewrites
+  RewriteRule ^api/listings/parse-documents/?$ api/parse-documents.php [L,QSA]
+  RewriteRule ^api/parse-documents/?$ api/parse-documents.php [L,QSA]
+  RewriteRule ^dashboard/api/listings/parse-documents/?$ api/parse-documents.php [L,QSA]
+  RewriteRule ^dashboard/api/parse-documents/?$ api/parse-documents.php [L,QSA]
+
+  RewriteRule ^api/listings/[^/]+/generate-copy/?$ api/generate-copy.php [L,QSA]
+  RewriteRule ^api/generate-copy/?$ api/generate-copy.php [L,QSA]
+  RewriteRule ^dashboard/api/listings/[^/]+/generate-copy/?$ api/generate-copy.php [L,QSA]
+  RewriteRule ^dashboard/api/generate-copy/?$ api/generate-copy.php [L,QSA]
+
+  RewriteRule ^api/push-listing-bitrix/?$ api/push-listing-bitrix.php [L,QSA]
+  RewriteRule ^dashboard/api/push-listing-bitrix/?$ api/push-listing-bitrix.php [L,QSA]
+
+  RewriteRule ^api/push-to-bitrix/?$ api/push-to-bitrix.php [L,QSA]
+  RewriteRule ^dashboard/api/push-to-bitrix/?$ api/push-to-bitrix.php [L,QSA]
+
+  # Redirect root to dashboard
   RewriteRule ^$ /dashboard/ [R=301,L]
   RewriteRule ^dashboard$ /dashboard/ [R=301,L]
 </IfModule>

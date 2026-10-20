@@ -14,9 +14,7 @@ import BeforeAfterSlider from './BeforeAfterSlider';
 import Toast from './Toast';
 import { previewRentalPdfInNewTab, downloadRentalPdf } from '../utils/rentalFormPdfClient';
 import { cleanBuildingNameOffline, shortenPropertyNameWithAI } from '../utils/aiPropertyShortener';
-
-const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
+import { sbFetch, uploadListingImage, SUPABASE_BASE_URL, SUPABASE_KEY, SUPABASE_STORAGE_URL } from '../utils/supabaseClient';
 
 const ROOM_CATEGORIES = [
   'Living_Room',
@@ -360,119 +358,65 @@ export default function ListingDetail({ listingId, onBack }) {
 
   const fetchListingDetails = async (isInitial = false) => {
     if (isInitial) setLoading(true);
-    const isLocal = typeof window !== 'undefined' && 
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-    const fetchFromSupabase = async () => {
-      const [listingRes, imagesRes] = await Promise.all([
-        fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}&select=*&limit=1`, {
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-        }),
-        fetch(`${SUPABASE_BASE_URL}/real_estate_images?listing_id=eq.${listingId}&select=*&order=created_at.asc`, {
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-        })
-      ]);
-      if (!listingRes.ok) throw new Error('Supabase listing fetch failed');
-      const listings = await listingRes.json();
-      const rawImages = imagesRes.ok ? await imagesRes.json() : [];
-      return { listing: listings[0] || null, images: rawImages };
-    };
 
     try {
-      if (!isLocal) {
-        // On live hosted domain, load directly from Supabase
-        const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
-        if (!isMountedRef.current) return;
-        if (sbListing) {
-          const { metadata, customPromptText } = parsePromptMetadata(sbListing.prompt);
-          if (metadata) {
-            if (metadata.commercialSpecs || metadata.commercial_specs) {
-              sbListing.commercial_specs = metadata.commercialSpecs || metadata.commercial_specs;
-            }
-            if (metadata.titleDeedData || metadata.title_deed_data) {
-              sbListing.title_deed_data = metadata.titleDeedData || metadata.title_deed_data;
-            }
-            if (metadata.emiratesIdData || metadata.emirates_id_data) {
-              sbListing.emirates_id_data = metadata.emiratesIdData || metadata.emirates_id_data;
-            }
-            if (metadata.propertySpecs || metadata.property_specs) {
-              sbListing.property_specs = metadata.propertySpecs || metadata.property_specs;
-            }
-          }
-          setListing(sbListing);
-          const enriched = enrichImages(sbImages || [], sbListing.prompt);
-          setImages(enriched);
-          if (customPromptText && !customPrompt) {
-            setCustomPrompt(customPromptText);
-          }
-        }
-        return;
-      }
+      const [listings, rawImages] = await Promise.all([
+        sbFetch(`/real_estate_listings?id=eq.${listingId}&select=*&limit=1`),
+        sbFetch(`/real_estate_images?listing_id=eq.${listingId}&select=*&order=display_order.asc.nullslast,created_at.asc`)
+      ]);
 
-      // On local dev, try local API first
-      const response = await axios.get(`/api/listings/${listingId}`, { timeout: 3000 });
       if (!isMountedRef.current) return;
+      const sbListing = listings?.[0] || null;
 
-      if (response.data && response.data.success) {
-        setListing(response.data.listing);
-        const enriched = enrichImages(response.data.images || [], response.data.listing?.prompt);
-        setImages(enriched);
-        const { customPromptText } = parsePromptMetadata(response.data.listing?.prompt);
-        if (customPromptText && !customPrompt) {
-          setCustomPrompt(customPromptText);
+      if (sbListing) {
+        let commSpecs = sbListing.commercial_specs || {};
+        let rentSpecs = sbListing.rental_specs || {};
+        let deedData = sbListing.dossier_data || {};
+        let eidData = sbListing.kyc_data?.emiratesIdData || {};
+        let copyPayload = sbListing.copy_data || null;
+
+        if (sbListing.prompt && typeof sbListing.prompt === 'string' && sbListing.prompt.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(sbListing.prompt);
+            if (Object.keys(commSpecs).length === 0) commSpecs = parsed.commercialSpecs || parsed.commercial_specs || {};
+            if (Object.keys(rentSpecs).length === 0) rentSpecs = parsed.rentalSpecs || parsed.rental_specs || commSpecs;
+            if (Object.keys(deedData).length === 0) deedData = parsed.titleDeedData || parsed.title_deed_data || {};
+            if (Object.keys(eidData).length === 0) eidData = parsed.emiratesIdData || parsed.emirates_id_data || {};
+            if (!copyPayload) copyPayload = parsed.copyData || parsed.copy_data || null;
+          } catch (e) {}
         }
-      } else {
-        const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
-        if (!isMountedRef.current) return;
-        if (sbListing) {
-          setListing(sbListing);
-          const enriched = enrichImages(sbImages || [], sbListing.prompt);
-          setImages(enriched);
+
+        sbListing.commercial_specs = commSpecs;
+        sbListing.rental_specs = rentSpecs;
+        sbListing.title_deed_data = deedData;
+        sbListing.emirates_id_data = eidData;
+        if (copyPayload) sbListing.copy_data = copyPayload;
+
+        setListing(sbListing);
+
+        const enriched = (rawImages || []).map((img, idx) => ({
+          ...img,
+          room_type: img.room_type || DEFAULT_SEQUENCE[idx % DEFAULT_SEQUENCE.length] || 'Property_Photo',
+          status: img.status || 'completed'
+        }));
+        setImages(enriched);
+
+        if (sbListing.prompt && !customPrompt && !sbListing.prompt.startsWith('{')) {
+          setCustomPrompt(sbListing.prompt);
         }
       }
     } catch (err) {
       if (!isMountedRef.current) return;
+      console.error('Fetch listing details error:', err);
       try {
-        const { listing: sbListing, images: sbImages } = await fetchFromSupabase();
-        if (isMountedRef.current && sbListing) {
-          const { metadata, customPromptText } = parsePromptMetadata(sbListing.prompt);
-          if (metadata) {
-            if (metadata.commercialSpecs || metadata.commercial_specs) {
-              sbListing.commercial_specs = metadata.commercialSpecs || metadata.commercial_specs;
-            }
-            if (metadata.titleDeedData || metadata.title_deed_data) {
-              sbListing.title_deed_data = metadata.titleDeedData || metadata.title_deed_data;
-            }
-            if (metadata.emiratesIdData || metadata.emirates_id_data) {
-              sbListing.emirates_id_data = metadata.emiratesIdData || metadata.emirates_id_data;
-            }
-            if (metadata.propertySpecs || metadata.property_specs) {
-              sbListing.property_specs = metadata.propertySpecs || metadata.property_specs;
-            }
-          }
-          if (isInitial) {
-            setListing(sbListing);
-          } else {
-            // Background poll: update listing without mutating reference if metadata is unchanged
-            setListing((prev) => {
-              if (!prev) return sbListing;
-              if (prev.status !== sbListing.status || prev.prompt !== sbListing.prompt) {
-                return { ...prev, status: sbListing.status, prompt: sbListing.prompt };
-              }
-              return prev;
-            });
-          }
-          const enriched = enrichImages(sbImages || [], sbListing.prompt);
+        const response = await axios.get(`/api/listings/${listingId}`, { timeout: 2000 });
+        if (response.data && response.data.success) {
+          setListing(response.data.listing);
+          const enriched = enrichImages(response.data.images || [], response.data.listing?.prompt);
           setImages(enriched);
-          if (customPromptText && !customPrompt) {
-            setCustomPrompt(customPromptText);
-          }
           return;
         }
-      } catch (sbErr) {
-        console.error('Supabase listing details fallback error:', sbErr);
-      }
-      console.error('Fetch listing details error:', err);
+      } catch (localErr) {}
       setError('Failed to fetch listing details.');
     } finally {
       if (isMountedRef.current && isInitial) {
@@ -677,48 +621,28 @@ export default function ListingDetail({ listingId, onBack }) {
         localStorage.setItem(`listing_rental_specs_${listingId}`, JSON.stringify(rentalSpecs));
       } catch {}
 
-      // 1. Try local Express backend if active
+      // Direct persist to Supabase relational columns
+      await sbFetch(`/real_estate_listings?id=eq.${listingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          rental_specs: rentalSpecs,
+          commercial_specs: rentalSpecs,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      // Optional local Express save if active
       try {
-        await axios.put(`/api/listings/${listingId}/rental-specs`, rentalSpecs, { timeout: 2000 });
-      } catch (err) {
-        // Expected when hosted without active Node.js server
-      }
+        await axios.put(`/api/listings/${listingId}/rental-specs`, rentalSpecs, { timeout: 1500 });
+      } catch (ignore) {}
 
-      // 2. Persist to Supabase real_estate_listings.prompt
-      try {
-        let existingPrompt = listing?.prompt || '';
-        let promptPayload = {};
-        if (typeof existingPrompt === 'string' && existingPrompt.trim().startsWith('{')) {
-          try {
-            promptPayload = JSON.parse(existingPrompt);
-          } catch {}
-        }
-        promptPayload.commercialSpecs = rentalSpecs;
-        promptPayload.commercial_specs = rentalSpecs;
-        const promptString = JSON.stringify(promptPayload);
-
-        await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({ prompt: promptString })
-        });
-
-        setListing(prev => prev ? { ...prev, prompt: promptString, commercial_specs: rentalSpecs } : prev);
-      } catch (sbErr) {
-        console.warn('Failed to persist rental specs to Supabase:', sbErr);
-      }
-
+      setListing(prev => prev ? { ...prev, rental_specs: rentalSpecs, commercial_specs: rentalSpecs } : prev);
       setRentalFormGenerated(true);
       showToast('✨ Official A-SQUARED Rental Form saved! Click Preview PDF to review.', 'success');
     } catch (err) {
       console.warn('Backend save note, cached locally:', err.message);
       setRentalFormGenerated(true);
-      showToast('Rental specs saved locally. Form is ready for preview.', 'success');
+      showToast('Rental specs saved. Form is ready for preview.', 'success');
     } finally {
       setIsSavingRentalSpecs(false);
     }
@@ -842,28 +766,59 @@ export default function ListingDetail({ listingId, onBack }) {
     if (additionalFiles.length === 0) return;
     setIsUploadingMore(true);
 
-    const formData = new FormData();
-    additionalFiles.forEach((file) => {
-      formData.append('images', file);
-    });
-
     try {
-      const response = await axios.post(`/api/listings/${listingId}/images`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const uploadedImages = [];
+      const currentCount = images.length;
+
+      for (let i = 0; i < additionalFiles.length; i++) {
+        const file = additionalFiles[i];
+        showToast(`Uploading photo ${i + 1} of ${additionalFiles.length}...`, 'info');
+        try {
+          const { publicUrl } = await uploadListingImage(file, listingId);
+          uploadedImages.push({ filename: file.name, url: publicUrl });
+        } catch (uErr) {
+          console.warn(`Storage upload warning for ${file.name}:`, uErr.message);
+          uploadedImages.push({ filename: file.name, url: additionalPreviews[i]?.url || URL.createObjectURL(file) });
+        }
+      }
+
+      const newRows = uploadedImages.map((img, idx) => ({
+        listing_id: listingId,
+        original_filename: img.filename,
+        original_image_location: img.url,
+        generated_image_location: img.url,
+        baseline_image_location: img.url,
+        room_type: DEFAULT_SEQUENCE[(currentCount + idx) % DEFAULT_SEQUENCE.length] || 'Property_Photo',
+        display_order: currentCount + idx,
+        is_cover: false,
+        status: 'completed',
+        created_at: new Date().toISOString()
+      }));
+
+      await sbFetch('/real_estate_images', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify(newRows)
       });
 
-      if (response.data.success) {
-        showToast(`${additionalFiles.length} new photo(s) added! Enhancement in progress.`, 'success');
-        additionalPreviews.forEach((p) => URL.revokeObjectURL(p.url));
-        setAdditionalFiles([]);
-        setAdditionalPreviews([]);
-        fetchListingDetails();
-      } else {
-        showToast(response.data.error || 'Failed to upload photos.', 'error');
-      }
+      // Update total_images in real_estate_listings
+      await sbFetch(`/real_estate_listings?id=eq.${listingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          total_images: currentCount + newRows.length,
+          completed_images: currentCount + newRows.length,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      showToast(`✨ ${additionalFiles.length} new photo(s) added successfully!`, 'success');
+      additionalPreviews.forEach((p) => URL.revokeObjectURL(p.url));
+      setAdditionalFiles([]);
+      setAdditionalPreviews([]);
+      fetchListingDetails(false);
     } catch (err) {
       console.error('Upload more images error:', err);
-      showToast('Failed to upload additional photos.', 'error');
+      showToast('Failed to upload additional photos: ' + err.message, 'error');
     } finally {
       setIsUploadingMore(false);
     }
@@ -874,17 +829,30 @@ export default function ListingDetail({ listingId, onBack }) {
 
     setIsDeletingImage((prev) => ({ ...prev, [imageId]: true }));
     try {
-      const response = await axios.delete(`/api/images/${imageId}`);
-      if (response.data.success) {
-        setImages((prev) => prev.filter((img) => img.id !== imageId));
-        showToast('Photo removed from listing.', 'success');
-        fetchListingDetails();
-      } else {
-        showToast(response.data.error || 'Failed to delete photo.', 'error');
-      }
+      // 1. Delete image in Supabase
+      await sbFetch(`/real_estate_images?id=eq.${imageId}`, { method: 'DELETE' });
+
+      // 2. Decrement total_images
+      const remainingCount = Math.max(0, images.length - 1);
+      await sbFetch(`/real_estate_listings?id=eq.${listingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          total_images: remainingCount,
+          completed_images: remainingCount,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      // 3. Optional local Express backend delete if active
+      try {
+        await axios.delete(`/api/images/${imageId}`, { timeout: 1500 });
+      } catch (ignore) {}
+
+      setImages((prev) => prev.filter((img) => img.id !== imageId));
+      showToast('Photo removed from listing.', 'success');
     } catch (err) {
       console.error('Delete image error:', err);
-      showToast('Failed to delete photo.', 'error');
+      showToast('Failed to delete photo: ' + err.message, 'error');
     } finally {
       setIsDeletingImage((prev) => ({ ...prev, [imageId]: false }));
     }
@@ -1123,62 +1091,49 @@ export default function ListingDetail({ listingId, onBack }) {
 
   const handleUpdateRoomType = async (imageId, newRoomType) => {
     // 1. Immediate optimistic UI update
-    const updatedImages = images.map((img) =>
-      img.id === imageId ? { ...img, room_type: newRoomType } : img
+    setImages((prev) =>
+      prev.map((img) => (img.id === imageId ? { ...img, room_type: newRoomType } : img))
     );
-    setImages(updatedImages);
     showToast(`Category updated to ${newRoomType.replace(/_/g, ' ')}.`, 'success');
 
-    // 2. Build roomTypes dictionary for all photos
-    const newRoomTypes = {};
-    updatedImages.forEach((img) => {
-      if (img.room_type) newRoomTypes[img.id] = img.room_type;
-    });
-
-    // 3. Update localStorage cache
+    // 2. Persist directly to Supabase real_estate_images
     try {
-      localStorage.setItem(`listing_meta_${listingId}`, JSON.stringify({ roomTypes: newRoomTypes }));
-    } catch (e) {}
-
-    // 4. Persist to Supabase real_estate_listings.prompt
-    try {
-      let existingPrompt = listing?.prompt || '';
-      let existingData = {};
-      if (typeof existingPrompt === 'string' && existingPrompt.trim().startsWith('{')) {
-        try { existingData = JSON.parse(existingPrompt); } catch(e) {}
-      }
-
-      const updatedPayload = {
-        ...existingData,
-        customPrompt: customPrompt || existingData.customPrompt || '',
-        roomTypes: newRoomTypes,
-        updatedAt: new Date().toISOString()
-      };
-      const promptString = JSON.stringify(updatedPayload);
-
-      await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}`, {
+      await sbFetch(`/real_estate_images?id=eq.${imageId}`, {
         method: 'PATCH',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ prompt: promptString })
+        body: JSON.stringify({ room_type: newRoomType })
       });
-
-      setListing((prev) => prev ? { ...prev, prompt: promptString } : prev);
     } catch (err) {
-      console.error('Failed to persist room type to Supabase:', err);
+      console.warn('Room type Supabase update warning:', err.message);
     }
 
-    // 5. Backend API sync if local dev
+    // 3. Optional local express backend sync
     const isLocal = typeof window !== 'undefined' && 
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     if (isLocal) {
       try {
         await axios.put(`/api/images/${imageId}/room-type`, { room_type: newRoomType });
       } catch (ignore) {}
+    }
+  };
+
+  const handleSetCoverImage = async (imageId) => {
+    setImages((prev) =>
+      prev.map((img) => ({ ...img, is_cover: img.id === imageId }))
+    );
+    try {
+      await Promise.all([
+        sbFetch(`/real_estate_images?listing_id=eq.${listingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_cover: false })
+        }),
+        sbFetch(`/real_estate_images?id=eq.${imageId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_cover: true })
+        })
+      ]);
+      showToast('🌟 Cover photo updated!', 'success');
+    } catch (err) {
+      console.warn('Cover photo update warning:', err);
     }
   };
 
@@ -1194,38 +1149,16 @@ export default function ListingDetail({ listingId, onBack }) {
     setImages(newImages);
     showToast('Photo sequence reordered.', 'success');
 
-    const orderedIds = newImages.map((img) => img.id);
-
+    // Persist display_order directly to Supabase
     try {
-      localStorage.setItem(`listing_order_${listingId}`, JSON.stringify(orderedIds));
-    } catch (e) {}
-
-    try {
-      let existingPrompt = listing?.prompt || '';
-      let existingData = {};
-      if (typeof existingPrompt === 'string' && existingPrompt.trim().startsWith('{')) {
-        try { existingData = JSON.parse(existingPrompt); } catch(e) {}
-      }
-
-      const updatedPayload = {
-        ...existingData,
-        imagesOrder: orderedIds,
-        updatedAt: new Date().toISOString()
-      };
-      const promptString = JSON.stringify(updatedPayload);
-
-      await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ prompt: promptString })
-      });
-
-      setListing((prev) => prev ? { ...prev, prompt: promptString } : prev);
+      await Promise.all(
+        newImages.map((img, idx) =>
+          sbFetch(`/real_estate_images?id=eq.${img.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ display_order: idx })
+          })
+        )
+      );
     } catch (err) {
       console.warn('Failed to persist order to Supabase:', err);
     }
@@ -1235,29 +1168,120 @@ export default function ListingDetail({ listingId, onBack }) {
     if (isLocal) {
       try {
         await axios.put(`/api/listings/${listingId}/reorder`, {
-          imageIds: orderedIds,
+          imageIds: newImages.map((img) => img.id),
         });
       } catch (ignore) {}
     }
   };
 
-  const handleGenerateCopy = async (tone = 'luxury') => {
-    setIsGeneratingCopy(true);
+  const [isPushingBitrix, setIsPushingBitrix] = useState(false);
+  const handlePushToBitrix = async () => {
+    setIsPushingBitrix(true);
     try {
-      const response = await axios.post(`/api/listings/${listingId}/generate-copy`, { tone });
-      if (response.data.success) {
+      const payload = {
+        listing,
+        commercial_specs: rentalSpecs,
+        rental_specs: rentalSpecs,
+        title_deed_data: listing?.title_deed_data
+      };
+
+      const endpoints = [
+        '/dashboard/api/push-listing-bitrix.php',
+        '/api/push-listing-bitrix.php',
+        '/api/push-listing-bitrix'
+      ];
+
+      let resData = null;
+      for (const ep of endpoints) {
+        try {
+          const res = await axios.post(ep, payload, { timeout: 20000 });
+          if (res.data && res.data.success) {
+            resData = res.data;
+            break;
+          }
+        } catch (e) {}
+      }
+
+      if (resData && resData.dealId) {
+        const dealIdStr = String(resData.dealId);
+        await sbFetch(`/real_estate_listings?id=eq.${listingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            bitrix_deal_id: dealIdStr,
+            bitrix_sync_status: 'synced',
+            updated_at: new Date().toISOString()
+          })
+        });
+
         setListing((prev) => ({
           ...prev,
-          copy_data: response.data.copy,
+          bitrix_deal_id: dealIdStr,
+          bitrix_sync_status: 'synced'
         }));
-        showToast('Marketing copy generated successfully!', 'success');
+
+        showToast(`🎉 Deal #${dealIdStr} synced to Bitrix24 CRM!`, 'success');
+      } else {
+        showToast('Could not sync deal to Bitrix24. Verify CRM webhook.', 'error');
       }
     } catch (err) {
-      console.error('Generate copy error:', err);
-      showToast('Failed to generate listing copy.', 'error');
+      console.error('Bitrix push error:', err);
+      showToast('Bitrix24 push error: ' + err.message, 'error');
     } finally {
-      setIsGeneratingCopy(false);
+      setIsPushingBitrix(false);
     }
+  };
+
+  const handleGenerateCopy = async (tone = 'luxury') => {
+    setIsGeneratingCopy(true);
+    const copyPayload = {
+      name: listing?.name || 'Luxury Property',
+      reference: listing?.reference || 'ASQ-PROP',
+      property_type: listing?.property_type || 'Apartment',
+      purpose: listing?.purpose || 'For Sale',
+      price: listing?.price || rentalSpecs?.price || '',
+      bedrooms: listing?.bedrooms || rentalSpecs?.bedrooms || '',
+      bathrooms: listing?.bathrooms || rentalSpecs?.bathrooms || '',
+      size_sqft: listing?.size_sqft || rentalSpecs?.bua_sqft || '',
+      furnishing: listing?.furnishing || rentalSpecs?.furnishing || 'Unfurnished',
+      rough_notes: listing?.prompt && !listing.prompt.startsWith('{') ? listing.prompt : (listing?.rough_notes || ''),
+      tone
+    };
+
+    const endpoints = [
+      '/dashboard/api/generate-copy.php',
+      '/api/generate-copy.php',
+      `/api/listings/${listingId}/generate-copy`,
+      '/api/generate-copy'
+    ];
+
+    let generatedData = null;
+    for (const ep of endpoints) {
+      try {
+        const response = await axios.post(ep, copyPayload, { timeout: 45000 });
+        if (response.data && (response.data.copyData || response.data.copy)) {
+          generatedData = response.data.copyData || response.data.copy;
+          break;
+        }
+      } catch (e) {
+        // Continue to next endpoint
+      }
+    }
+
+    if (generatedData) {
+      setListing((prev) => ({ ...prev, copy_data: generatedData }));
+      try {
+        await sbFetch(`/real_estate_listings?id=eq.${listingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ copy_data: generatedData, updated_at: new Date().toISOString() })
+        });
+      } catch (sbErr) {
+        console.warn('Supabase copy data save warning:', sbErr.message);
+      }
+      showToast('✨ Luxury multi-channel marketing copy generated & saved!', 'success');
+    } else {
+      showToast('Could not reach copy generator API. Please verify OpenAI connection.', 'error');
+    }
+    setIsGeneratingCopy(false);
   };
 
   const handleCopyText = (text, fieldName) => {
@@ -1383,16 +1407,41 @@ export default function ListingDetail({ listingId, onBack }) {
           </p>
         </div>
 
-        {/* Single Luxury Download Dropdown Button */}
-        <div className="relative" ref={downloadDropdownRef}>
-          <button
-            onClick={() => setDownloadDropdownOpen((prev) => !prev)}
-            className="px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white shadow-xl shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-white" />
-            <span>Download Packages</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-white transition-transform duration-200 ${downloadDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
+        <div className="flex items-center gap-3">
+          {/* Bitrix24 CRM Sync Button / Deal Badge */}
+          {listing.bitrix_deal_id ? (
+            <a
+              href={`https://crm.asquared.ae/crm/deal/details/${listing.bitrix_deal_id}/`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-3 rounded-2xl font-bold text-xs flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 transition-all shadow-lg cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Bitrix24 Deal #{listing.bitrix_deal_id}</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handlePushToBitrix}
+              disabled={isPushingBitrix}
+              className="px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 transition-all shadow-lg disabled:opacity-50 cursor-pointer"
+            >
+              <Share2 className={`w-4 h-4 text-blue-400 ${isPushingBitrix ? 'animate-spin' : ''}`} />
+              <span>{isPushingBitrix ? 'Syncing to Bitrix...' : 'Push to Bitrix24'}</span>
+            </button>
+          )}
+
+          {/* Single Luxury Download Dropdown Button */}
+          <div className="relative" ref={downloadDropdownRef}>
+            <button
+              onClick={() => setDownloadDropdownOpen((prev) => !prev)}
+              className="px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white shadow-xl shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-white" />
+              <span>Download Packages</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-white transition-transform duration-200 ${downloadDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
 
           {/* Dropdown Menu */}
           {downloadDropdownOpen && (
@@ -1476,6 +1525,7 @@ export default function ListingDetail({ listingId, onBack }) {
           )}
         </div>
       </div>
+    </div>
 
       {/* Editable AI Prompt & Instructions Bar */}
       <div className="glass-card p-5 mb-6">
@@ -2681,11 +2731,18 @@ export default function ListingDetail({ listingId, onBack }) {
               {/* Card Header: Order, Room Tag & Delete */}
               <div className="p-3 bg-black/40 border-b border-white/[0.06] flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                    idx === 0 ? 'bg-white/[0.06] text-white shadow-sm' : 'glass-pill text-white/80'
-                  }`}>
-                    {idx === 0 ? '★ #01 COVER' : `#0${idx + 1}`}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleSetCoverImage(img.id)}
+                    className={`text-[11px] font-bold px-2 py-0.5 rounded-md cursor-pointer transition-all ${
+                      img.is_cover || idx === 0 
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm' 
+                        : 'glass-pill text-white/60 hover:text-amber-300'
+                    }`}
+                    title="Click to set as primary cover photo"
+                  >
+                    {img.is_cover || idx === 0 ? '★ #01 COVER' : `#0${idx + 1}`}
+                  </button>
 
                   {/* Move Up/Down Order Buttons */}
                   <button
