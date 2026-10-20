@@ -114,6 +114,15 @@ const normalizeAgreementDuration = (val) => {
   return '3 Month';
 };
 
+const cleanDefaultBuildingName = (str) => {
+  if (!str) return '';
+  const match = String(str).match(/^([^–\-\|\n\r]+?)(?:\s+(?:Unit|Apt|Apartment|Villa|Office|#|\d+)\b|[\-–\|])/i);
+  if (match && match[1] && match[1].trim().length >= 3) {
+    return match[1].trim();
+  }
+  return String(str).trim();
+};
+
 const getInitialRentalSpecs = (id) => {
   let cached = {};
   if (typeof window !== 'undefined' && id) {
@@ -528,7 +537,7 @@ export default function ListingDetail({ listingId, onBack }) {
       owner_nationality: c.owner_nationality || e.nationality || d.nationality || 'United Arab Emirates',
       property_type: normalizePropertyType(c.property_type || listing.property_type || d.property_type),
       category: c.category || (['Office', 'Shop', 'Warehouse'].includes(c.property_type || listing.property_type) ? 'Commercial' : 'Residential'),
-      building_name: c.building_name || d.building_name || listing.name || '',
+      building_name: c.building_name || d.building_name || cleanDefaultBuildingName(listing.name) || '',
       community: c.community || d.community || 'Dubai',
       unit_number: c.unit_number || d.unit_number || '',
       bedrooms: normalizeBedrooms(c.bedrooms || p.bedrooms || listing.bedrooms),

@@ -1,14 +1,50 @@
 const fs = require('fs');
 const path = require('path');
 
-const upload_base_url = 'https://srv529-files.hstgr.io/rest/2d6afb10cc57aca0/api/tus/public_html';
-const auth_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxLCJsb2NhbGUiOiJlbl9VUyIsInZpZXdNb2RlIjoibGlzdCIsInNpbmdsZUNsaWNrIjpmYWxzZSwicmVkaXJlY3RBZnRlckNvcHlNb3ZlIjpmYWxzZSwicGVybSI6eyJhZG1pbiI6ZmFsc2UsImV4ZWN1dGUiOmZhbHNlLCJjcmVhdGUiOnRydWUsInJlbmFtZSI6dHJ1ZSwibW9kaWZ5Ijp0cnVlLCJkZWxldGUiOnRydWUsInNoYXJlIjpmYWxzZSwiZG93bmxvYWQiOnRydWV9LCJjb21tYW5kcyI6W10sImxvY2tQYXNzd29yZCI6dHJ1ZSwiaGlkZURvdGZpbGVzIjpmYWxzZSwiZGF0ZUZvcm1hdCI6ZmFsc2UsInVzZXJuYW1lIjoidTI5Mjc2MDI5NCIsImFjZUVkaXRvclRoZW1lIjoiIn0sImlzcyI6IkZpbGUgQnJvd3NlciIsImV4cCI6MTc5MjQzNzYyMSwiaWF0IjoxNzkyNDE2MDIxfQ.GC8c7S-IsSnrxKBKf8y5KRCPKNIoLNAEoxUClgRgUjg';
-const rest_auth_key = 'de874486de81961b6c36f6225608720138bfdb0361dda446f97f682474363067-2d6afb10cc57aca0';
+const token = process.env.HOSTINGER_API_TOKEN;
+if (!token) {
+  console.error('Error: HOSTINGER_API_TOKEN is missing from environment.');
+  process.exit(1);
+}
 
-const dist_dir = 'client/dist';
+async function getCredentials() {
+  for (let attempt = 1; attempt <= 15; attempt++) {
+    console.log(`Requesting upload credentials for admin.asquared.ae (Attempt ${attempt}/15)...`);
+    try {
+      const res = await fetch('https://developers.hostinger.com/api/hosting/v1/files/upload-urls', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'hostinger-mcp-server/1.63.3'
+        },
+        body: JSON.stringify({ domain: 'admin.asquared.ae', username: 'u292760294' })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('✓ Successfully acquired Hostinger upload credentials for admin.asquared.ae');
+        return {
+          upload_base_url: data.url,
+          auth_key: data.auth_key,
+          rest_auth_key: data.rest_auth_key
+        };
+      }
+      console.warn(`Attempt ${attempt} Hostinger API returned ${res.status}. Retrying in 3s...`);
+    } catch (err) {
+      console.warn(`Attempt ${attempt} error: ${err.message}. Retrying in 3s...`);
+    }
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  throw new Error('Hostinger API failed to return credentials after 15 attempts.');
+}
+
+const dist_dir = path.resolve(__dirname, '../client/dist');
 
 function collectFiles(dir) {
   let results = [];
+  if (!fs.existsSync(dir)) return results;
   const list = fs.readdirSync(dir);
   for (const file of list) {
     const fullPath = path.join(dir, file);
@@ -22,55 +58,21 @@ function collectFiles(dir) {
   return results;
 }
 
-const allDistFiles = collectFiles(dist_dir);
-const uploadsList = [];
-
-for (const localPath of allDistFiles) {
-  const relPath = path.relative(dist_dir, localPath).replace(/\\/g, '/');
-  uploadsList.push({ localPath, remotePath: `public/dashboard/${relPath}` });
-  uploadsList.push({ localPath, remotePath: `dashboard/${relPath}` });
-
-  if (relPath.startsWith('uploads/')) {
-    uploadsList.push({ localPath, remotePath: `public/${relPath}` });
-    uploadsList.push({ localPath, remotePath: relPath });
-  }
-}
-
-// Add root entrypoint files and api proxies if present
-const root_dir = 'root_files';
-if (fs.existsSync(root_dir)) {
-  const allRootFiles = collectFiles(root_dir);
-  for (const lpath of allRootFiles) {
-    const rel = path.relative(root_dir, lpath).replace(/\\/g, '/');
-    uploadsList.push({ localPath: lpath, remotePath: rel });
-    uploadsList.push({ localPath: lpath, remotePath: `public/${rel}` });
-  }
-}
-
-// Priority sort: index.html & assets first
-uploadsList.sort((a, b) => {
-  const pA = a.remotePath.includes('index.html') ? 0 : a.remotePath.includes('assets/') ? 1 : 2;
-  const pB = b.remotePath.includes('index.html') ? 0 : b.remotePath.includes('assets/') ? 1 : 2;
-  return pA - pB;
-});
-
-console.log(`Total files to upload: ${uploadsList.length}`);
-
-async function uploadOne(item) {
+async function uploadOne(item, creds) {
   const { localPath, remotePath } = item;
   const fileBytes = fs.readFileSync(localPath);
   const size = fileBytes.length;
 
-  const targetUrl = `${upload_base_url}/${remotePath}?override=true`;
+  const targetUrl = `${creds.upload_base_url}/${remotePath}?override=true`;
   const postHeaders = {
-    'X-Auth': auth_key,
-    'X-Auth-Rest': rest_auth_key,
+    'X-Auth': creds.auth_key,
+    'X-Auth-Rest': creds.rest_auth_key,
     'Tus-Resumable': '1.0.0',
     'Upload-Length': String(size),
     'Upload-Offset': '0'
   };
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 4; attempt++) {
     try {
       const resPost = await fetch(targetUrl, {
         method: 'POST',
@@ -78,30 +80,24 @@ async function uploadOne(item) {
       });
 
       if (resPost.status !== 200 && resPost.status !== 201) {
-        console.warn(`Attempt ${attempt} POST failed for ${remotePath}: status ${resPost.status}`);
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 500));
         continue;
       }
 
       let loc = resPost.headers.get('Location');
       if (!loc) {
-        console.warn(`Missing Location header for ${remotePath}`);
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 500));
         continue;
       }
 
       let patchUrl = loc;
       if (!loc.startsWith('http')) {
-        if (loc.startsWith('/')) {
-          patchUrl = `https://srv529-files.hstgr.io/rest${loc}`;
-        } else {
-          patchUrl = `https://srv529-files.hstgr.io/rest/${loc}`;
-        }
+        patchUrl = `https://srv529-files.hstgr.io/rest${loc.startsWith('/') ? '' : '/'}${loc}`;
       }
 
       const patchHeaders = {
-        'X-Auth': auth_key,
-        'X-Auth-Rest': rest_auth_key,
+        'X-Auth': creds.auth_key,
+        'X-Auth-Rest': creds.rest_auth_key,
         'Tus-Resumable': '1.0.0',
         'Content-Type': 'application/offset+octet-stream',
         'Upload-Offset': '0'
@@ -116,27 +112,25 @@ async function uploadOne(item) {
       if (resPatch.status === 200 || resPatch.status === 204) {
         console.log(`✓ Uploaded ${remotePath} (${size} B)`);
         return true;
-      } else {
-        console.warn(`Attempt ${attempt} PATCH returned ${resPatch.status} for ${remotePath}`);
       }
     } catch (err) {
-      console.warn(`Attempt ${attempt} error for ${remotePath}:`, err.message);
+      // Retry
     }
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 500));
   }
   console.error(`✗ FAILED completely for ${remotePath}`);
   return false;
 }
 
-async function runPool(items, limit = 5) {
+async function runPool(items, creds, limit = 5) {
   let index = 0;
-  let failed = 0;
   let done = 0;
+  let failed = 0;
 
   async function worker() {
     while (index < items.length) {
       const current = items[index++];
-      const ok = await uploadOne(current);
+      const ok = await uploadOne(current, creds);
       if (ok) done++;
       else failed++;
     }
@@ -144,7 +138,34 @@ async function runPool(items, limit = 5) {
 
   const workers = Array.from({ length: limit }, () => worker());
   await Promise.all(workers);
-  console.log(`Finished: ${done} succeeded, ${failed} failed.`);
+  console.log(`Deployment summary: ${done} succeeded, ${failed} failed.`);
 }
 
-runPool(uploadsList, 6);
+async function main() {
+  const creds = await getCredentials();
+  const allDistFiles = collectFiles(dist_dir);
+  console.log(`Found ${allDistFiles.length} dist files to deploy to admin.asquared.ae.`);
+
+  const uploadsList = [];
+  for (const localPath of allDistFiles) {
+    const relPath = path.relative(dist_dir, localPath).replace(/\\/g, '/');
+    // Deploy to both dashboard/${relPath} and public_html/dashboard/${relPath}
+    uploadsList.push({ localPath, remotePath: `dashboard/${relPath}` });
+    uploadsList.push({ localPath, remotePath: `public_html/dashboard/${relPath}` });
+  }
+
+  // Priority sort: index.html & core assets first
+  uploadsList.sort((a, b) => {
+    const pA = a.remotePath.includes('index.html') ? 0 : a.remotePath.includes('assets/index') ? 1 : 2;
+    const pB = b.remotePath.includes('index.html') ? 0 : b.remotePath.includes('assets/index') ? 1 : 2;
+    return pA - pB;
+  });
+
+  console.log(`Total target paths to deploy: ${uploadsList.length}`);
+  await runPool(uploadsList, creds, 5);
+}
+
+main().catch((err) => {
+  console.error('Fatal deployment error:', err);
+  process.exit(1);
+});

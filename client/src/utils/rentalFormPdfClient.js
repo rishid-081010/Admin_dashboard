@@ -5,7 +5,7 @@ import templatePdfAssetUrl from '../assets/templates/A_SQUARED_Listing_Form_Rent
  * Format helper for currency
  */
 export function formatCurrency(amount) {
-  if (!amount) return 'Price on Application';
+  if (!amount && amount !== 0) return 'Price on Application';
   const num = Number(String(amount).replace(/[^0-9.]/g, ''));
   if (isNaN(num) || num === 0) return sanitizeWinAnsi(String(amount), 'Price on Application');
   return 'AED ' + num.toLocaleString('en-US');
@@ -15,7 +15,7 @@ export function formatCurrency(amount) {
  * Sanitize text to ensure only characters encodable by Standard Helvetica (WinAnsi) are passed
  */
 export function sanitizeWinAnsi(str, fallback = '') {
-  if (!str) return fallback;
+  if (!str && str !== 0) return fallback;
   const cleaned = String(str)
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u201C\u201D]/g, '"')
@@ -71,34 +71,85 @@ export function fillListingFormRentalTemplate(page, {
   fontRegular,
   fontBold,
 }) {
-  const textColor = rgb(0.06, 0.10, 0.20);
+  const textColor = rgb(0.00, 0.09, 0.22); // Deep rich A-Squared Navy (#001738)
+  const white = rgb(1, 1, 1);
+  const underlineColor = rgb(0.72, 0.76, 0.83); // Crisp subtle slate rule
 
-  const drawText = (text, x, y, size = 15, isBold = false) => {
-    if (!text) return;
+  /**
+   * Smart Form Field Renderer:
+   * 1. Cleans out messy bitmap dashes from the template across the active fill area.
+   * 2. Draws a crisp solid baseline rule (0.75pt).
+   * 3. Dynamically downscales font if text exceeds available slot width to guarantee ZERO column collisions.
+   * 4. Renders crisp text resting 2.5pt above the baseline rule with zero strikethrough.
+   */
+  const drawField = ({
+    text,
+    startX,
+    endX,
+    dashY,
+    fontSize = 13.5,
+    isBold = true,
+    drawRule = true,
+  }) => {
+    if (!text && text !== 0) return;
+    const cleanText = sanitizeWinAnsi(String(text));
+    if (!cleanText) return;
+
+    const font = isBold ? fontBold : fontRegular;
+    const maxTextWidth = endX - startX - 4;
+
+    // Dynamically downscale font if text exceeds slot boundary
+    let currentFontSize = fontSize;
+    let textWidth = font.widthOfTextAtSize(cleanText, currentFontSize);
+    while (textWidth > maxTextWidth && currentFontSize > 7.5) {
+      currentFontSize -= 0.5;
+      textWidth = font.widthOfTextAtSize(cleanText, currentFontSize);
+    }
+
     try {
-      page.drawText(sanitizeWinAnsi(String(text)), {
-        x,
-        y,
-        size,
-        font: isBold ? fontBold : fontRegular,
+      // 1. Knock out the messy template bitmap dashed line
+      page.drawRectangle({
+        x: startX - 1,
+        y: dashY - 3,
+        width: endX - startX + 2,
+        height: 7.5,
+        color: white,
+      });
+
+      // 2. Draw clean, crisp solid baseline rule across the slot
+      if (drawRule) {
+        page.drawLine({
+          start: { x: startX, y: dashY },
+          end: { x: endX, y: dashY },
+          thickness: 0.75,
+          color: underlineColor,
+        });
+      }
+
+      // 3. Draw text cleanly resting 2.5pt above the baseline rule
+      page.drawText(cleanText, {
+        x: startX + 2,
+        y: dashY + 2.5,
+        size: currentFontSize,
+        font,
         color: textColor,
       });
     } catch (e) {
-      console.warn('Error drawing text:', text, e);
+      console.warn('Error drawing field:', cleanText, e);
     }
   };
 
   const drawCheck = (boxX, boxY) => {
     try {
-      // Exact center inside the 16x16 checkbox box
+      // Exact center inside 14x14 checkbox
       page.drawLine({
-        start: { x: boxX + 2, y: boxY + 6 },
-        end: { x: boxX + 6, y: boxY + 1 },
+        start: { x: boxX + 2.5, y: boxY + 6.5 },
+        end: { x: boxX + 6, y: boxY + 2 },
         thickness: 2.2,
         color: textColor,
       });
       page.drawLine({
-        start: { x: boxX + 6, y: boxY + 1 },
+        start: { x: boxX + 6, y: boxY + 2 },
         end: { x: boxX + 13, y: boxY + 12 },
         thickness: 2.2,
         color: textColor,
@@ -110,7 +161,14 @@ export function fillListingFormRentalTemplate(page, {
 
   // 1. Date (top right)
   const dateStr = commercialSpecs?.form_date || commercialSpecs?.agreement_date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  drawText(dateStr, 880, 1466, 16, true);
+  drawField({
+    text: dateStr,
+    startX: 880,
+    endX: 1025,
+    dashY: 1457,
+    fontSize: 15,
+    isBold: true,
+  });
 
   // 2. Owner / Landlord Details
   const ownerName = commercialSpecs?.owner_name || titleDeedData?.owner_name_english || emiratesIdData?.full_name_english || '';
@@ -118,10 +176,10 @@ export function fillListingFormRentalTemplate(page, {
   const nationality = commercialSpecs?.owner_nationality || emiratesIdData?.nationality || titleDeedData?.nationality || '';
   const email = commercialSpecs?.owner_email || '';
 
-  drawText(ownerName, 145, 1147, 15, true);
-  drawText(phone, 520, 1147, 15, true);
-  drawText(nationality, 190, 1116, 15, false);
-  drawText(email, 520, 1116, 15, false);
+  drawField({ text: ownerName, startX: 145, endX: 430, dashY: 1146, fontSize: 14, isBold: true });
+  drawField({ text: phone, startX: 530, endX: 740, dashY: 1146, fontSize: 14, isBold: true });
+  drawField({ text: nationality, startX: 190, endX: 430, dashY: 1115, fontSize: 13, isBold: false });
+  drawField({ text: email, startX: 520, endX: 765, dashY: 1115, fontSize: 13, isBold: false });
 
   // 3. Property Type Checkboxes
   const rawPropType = (commercialSpecs?.property_type || titleDeedData?.property_type || listing?.property_type || '').toLowerCase();
@@ -168,30 +226,37 @@ export function fillListingFormRentalTemplate(page, {
   }
 
   // Property Details Text Fields
-  const buildingName = commercialSpecs?.building_name || titleDeedData?.building_name || listing?.name || '';
+  const rawBuildingName = commercialSpecs?.building_name || titleDeedData?.building_name || listing?.name || '';
   const community = commercialSpecs?.community || titleDeedData?.community || '';
   const unitNumber = commercialSpecs?.unit_number || titleDeedData?.unit_number || '';
   const bedrooms = commercialSpecs?.bedrooms || listing?.propertySpecs?.bedrooms || listing?.bedrooms || '';
   const bathrooms = commercialSpecs?.bathrooms || listing?.propertySpecs?.bathrooms || listing?.bathrooms || '';
   const parking = commercialSpecs?.parking_bays || commercialSpecs?.parking || titleDeedData?.parking_bays?.[0] || '1 Space';
   const buaSqft = commercialSpecs?.bua_sqft ? String(commercialSpecs.bua_sqft) : (titleDeedData?.total_area_sqft ? String(titleDeedData.total_area_sqft) : (titleDeedData?.suite_area_sqft ? String(titleDeedData.suite_area_sqft) : ''));
-  const plotArea = commercialSpecs?.plot_area || (titleDeedData?.plot_number ? String(titleDeedData.plot_number) : '00');
+  const plotArea = commercialSpecs?.plot_area || (titleDeedData?.plot_number ? String(titleDeedData.plot_number) : '');
   const rawPrice = commercialSpecs?.price || commercialSpecs?.asking_price || listing?.price || '';
   const askingPrice = rawPrice ? (String(rawPrice).toLowerCase().includes('aed') ? String(rawPrice) : formatCurrency(rawPrice)) : '';
   const cheques = commercialSpecs?.cheques || '1 - 4 Cheques';
 
-  drawText(buildingName, 220, 820, 15, true);
-  drawText(community, 645, 820, 15, true);
-  drawText(unitNumber, 135, 782, 15, true);
-  drawText(bedrooms, 365, 782, 15, false);
-  drawText(bathrooms, 615, 782, 15, false);
-  drawText(parking, 860, 782, 15, true);
+  // Building Name & Community: dashY=820
+  // Building Name starts at 215 (after "Building Name:"), bounded at 565 before "Community:"
+  drawField({ text: rawBuildingName, startX: 215, endX: 565, dashY: 820, fontSize: 13.5, isBold: true });
+  // Community starts at 665 (after "Community:")
+  drawField({ text: community, startX: 665, endX: 1030, dashY: 820, fontSize: 14, isBold: true });
 
-  drawText(buaSqft, 135, 741, 15, true);
-  drawText(plotArea, 425, 741, 15, false);
-  drawText(cheques, 820, 741, 15, false);
+  // Row 2: Unit, Bedroom, Bathroom, Parking: dashY=782
+  drawField({ text: unitNumber, startX: 130, endX: 225, dashY: 782, fontSize: 14, isBold: true });
+  drawField({ text: bedrooms, startX: 350, endX: 485, dashY: 782, fontSize: 13, isBold: false });
+  drawField({ text: bathrooms, startX: 605, endX: 720, dashY: 782, fontSize: 13, isBold: false });
+  drawField({ text: parking, startX: 820, endX: 930, dashY: 782, fontSize: 13.5, isBold: true });
 
-  drawText(askingPrice, 205, 705, 15, true);
+  // Row 3: BUA, Plot Area, No. Of Cheques: dashY=741
+  drawField({ text: buaSqft, startX: 130, endX: 225, dashY: 741, fontSize: 13, isBold: true, drawRule: !!buaSqft });
+  drawField({ text: plotArea, startX: 420, endX: 515, dashY: 741, fontSize: 13, isBold: false, drawRule: !!plotArea });
+  drawField({ text: cheques, startX: 770, endX: 920, dashY: 741, fontSize: 13, isBold: false });
+
+  // Row 4: Asking Price: dashY=705
+  drawField({ text: askingPrice, startX: 195, endX: 740, dashY: 705, fontSize: 14.5, isBold: true });
 
   // 5. Terms Checkboxes
   const isExclusive = (commercialSpecs?.agreement_type || '').toLowerCase().includes('exclusive') && !(commercialSpecs?.agreement_type || '').toLowerCase().includes('non');
@@ -201,7 +266,7 @@ export function fillListingFormRentalTemplate(page, {
     drawCheck(210, 535); // Non-Exclusive
   }
 
-  // Exact 4 duration options matching official template
+  // Duration
   const duration = (commercialSpecs?.agreement_duration || '').toString().toLowerCase();
   const untilDate = commercialSpecs?.agreement_until_date || commercialSpecs?.until_date || '';
 
@@ -212,17 +277,16 @@ export function fillListingFormRentalTemplate(page, {
   } else if (duration.includes('until') || untilDate) {
     drawCheck(585, 495); // Or Until checkbox
     if (untilDate) {
-      drawText(untilDate, 670, 495, 14, true); // Stamped directly on the line
+      drawField({ text: untilDate, startX: 660, endX: 800, dashY: 495, fontSize: 13, isBold: true });
     }
   } else {
     drawCheck(455, 495); // 3 Month (default)
   }
 
-  // 6. Signatures
-  drawText(ownerName, 255, 214, 15, true);
+  // 6. Signatures: dashY=214
+  drawField({ text: ownerName, startX: 235, endX: 540, dashY: 214, fontSize: 14, isBold: true });
   const brokerLabel = commercialSpecs?.broker_name || 'A SQUARED REAL ESTATE';
-  // Starts after "Agent: " at X=725 to avoid colliding with printed word "Agent"
-  drawText(brokerLabel, 725, 214, 15, true);
+  drawField({ text: brokerLabel, startX: 715, endX: 960, dashY: 214, fontSize: 14, isBold: true });
 }
 
 /**
