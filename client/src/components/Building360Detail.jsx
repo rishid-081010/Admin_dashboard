@@ -21,24 +21,50 @@ function getVerifiedSizeMetrics(record) {
   return { sqm: null, sqft: null, isVerified: false };
 }
 
-// Sanitize unit numbers (e.g. ingested vendor DOB dates like '1977-12-04' -> 'Unit Unspecified')
+// Sanitize unit numbers (e.g. ingested vendor DOB dates like '1977-12-04' -> 'Unit Unspecified', strip trailing -0 export artifacts)
 function sanitizeUnitNumber(rawUnit) {
   if (!rawUnit || rawUnit === 'N/A' || rawUnit === 'null' || rawUnit === '-') return '—';
-  const str = String(rawUnit).trim();
+  let str = String(rawUnit).trim();
   if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(str)) {
     return 'Unit Unspecified';
   }
+  // Strip trailing -0 or -00 export artifacts (e.g. 102-0 -> 102, 1406-0 -> 1406)
+  str = str.replace(/^(\d+)-0+$/, '$1');
+  str = str.replace(/^(?:APT|UNIT|FLAT|VILLA|SUITE)?\s*([A-Za-z0-9_-]+)-0+$/i, '$1');
   const cleaned = str.replace(/[-_,\s]+$/, '');
   return cleaned || '—';
 }
 
 function getFloorFromUnit(unit) {
   if (!unit || unit === '—' || unit === 'N/A' || unit === 'Unit Unspecified') return 'G';
-  const clean = unit.replace(/[^\d]/g, '');
+  // Strip any trailing -0 first just in case
+  const cleanStr = String(unit).replace(/^(\d+)-0+$/, '$1');
+  const clean = cleanStr.replace(/[^\d]/g, '');
   if (!clean) return 'G';
   if (clean.length <= 2) return '1';
   if (clean.length === 3) return clean.slice(0, 1);
   return clean.slice(0, clean.length - 2);
+}
+
+function resolveBuildingUnitType(r, building = {}) {
+  if (r.verified_property_type && !/^(?:null|nan|unknown|owner|buyer|tenant)$/i.test(r.verified_property_type)) {
+    return r.verified_property_type;
+  }
+  const rep = (r.reported_property_type || '').trim();
+  if (rep && !/^(?:owner|buyer|tenant|unit owner|unknown|nan|null|n\/a|-)$/i.test(rep)) {
+    return rep;
+  }
+  const bldgName = (r.building_name || building.name || '').toLowerCase();
+  if (bldgName.includes('villa') || bldgName.includes('townhouse') || bldgName.includes('mira') || bldgName.includes('damac hills') || bldgName.includes('arabian ranches')) {
+    return 'Villa / Townhouse';
+  }
+  if (bldgName.includes('plot') || bldgName.includes('land')) {
+    return 'Land Plot';
+  }
+  if (bldgName.includes('office') || (bldgName.includes('tower') && bldgName.includes('commercial'))) {
+    return 'Commercial Office';
+  }
+  return r.property_category || building.propertyType || 'Apartment / Residential';
 }
 
 export default function Building360Detail({ building, onBack, onSelectOwner, initialOwners = [] }) {
@@ -152,7 +178,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
               ? `Verified Owner (${unit !== '—' && unit !== 'Unit Unspecified' ? 'Unit ' + unit : building.name})` 
               : rawName;
             
-            const propType = r.property_category || r.reported_property_type || building.propertyType || 'Residential';
+            const propType = resolveBuildingUnitType(r, building);
             const sizeMetrics = getVerifiedSizeMetrics(r);
             const hasPhone = Boolean(r.phone_normalized && String(r.phone_normalized).trim().length > 6);
             const floor = getFloorFromUnit(unit);
@@ -233,13 +259,17 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
       );
     }).sort((a, b) => {
       if (sortBy === 'unit_asc') {
-        const numA = parseInt(a.unit.replace(/[^\d]/g, ''), 10) || 0;
-        const numB = parseInt(b.unit.replace(/[^\d]/g, ''), 10) || 0;
+        const cleanA = String(a.unit || '').replace(/^(\d+)-0+$/, '$1');
+        const cleanB = String(b.unit || '').replace(/^(\d+)-0+$/, '$1');
+        const numA = parseInt(cleanA.replace(/[^\d]/g, ''), 10) || 0;
+        const numB = parseInt(cleanB.replace(/[^\d]/g, ''), 10) || 0;
         return numA - numB;
       }
       if (sortBy === 'unit_desc') {
-        const numA = parseInt(a.unit.replace(/[^\d]/g, ''), 10) || 0;
-        const numB = parseInt(b.unit.replace(/[^\d]/g, ''), 10) || 0;
+        const cleanA = String(a.unit || '').replace(/^(\d+)-0+$/, '$1');
+        const cleanB = String(b.unit || '').replace(/^(\d+)-0+$/, '$1');
+        const numA = parseInt(cleanA.replace(/[^\d]/g, ''), 10) || 0;
+        const numB = parseInt(cleanB.replace(/[^\d]/g, ''), 10) || 0;
         return numB - numA;
       }
       if (sortBy === 'name_asc') return a.name.localeCompare(b.name);

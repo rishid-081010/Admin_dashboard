@@ -53,6 +53,19 @@ const PROPERTY_SUBTYPES = [
   'Duplex'
 ];
 
+// Clean valuation formatter with support for Billions (B) and Millions (M)
+function formatValuationShort(val) {
+  if (!val || val <= 0) return null;
+  const num = parseFloat(val);
+  if (num >= 1000000000) {
+    return `AED ${(num / 1000000000).toFixed(1)}B`;
+  }
+  if (num >= 1000000) {
+    return `AED ${(num / 1000000).toFixed(1)}M`;
+  }
+  return `AED ${Math.round(num).toLocaleString()}`;
+}
+
 // Robust name formatting helper to normalize spacing, strip stray symbols, and format title case cleanly
 function formatOwnerName(rawName, buildingName, unitNumber) {
   if (!rawName) {
@@ -447,7 +460,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             bitrix_status: row.bitrix_status || null,
             assigned_agent: row.assigned_agent || null,
             assigned_agent_id: row.assigned_agent_id || null,
-            portfolioValue: row.total_portfolio_valuation > 0 ? (row.total_portfolio_valuation >= 1000000 ? `AED ${(parseFloat(row.total_portfolio_valuation) / 1000000).toFixed(1)}M` : `AED ${Math.round(row.total_portfolio_valuation).toLocaleString()}`) : (row.total_units > 1 ? `${row.total_units} Units Portfolio` : 'Standard'),
+            portfolioValue: formatValuationShort(row.total_portfolio_valuation) || (row.total_units > 1 ? `${row.total_units} Units Portfolio` : 'Standard'),
             lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
           };
         });
@@ -1190,7 +1203,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                           <div className="flex items-center gap-2 text-white/50 flex-wrap">
                             {owner.total_portfolio_valuation > 0 ? (
                               <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold shrink-0">
-                                AED {(owner.total_portfolio_valuation / 1000000).toFixed(1)}M Valuation
+                                {formatValuationShort(owner.total_portfolio_valuation)} Valuation
                               </span>
                             ) : (
                               <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 text-[10px] shrink-0">
@@ -1482,7 +1495,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                             </span>
                             {owner.total_portfolio_valuation > 0 ? (
                               <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold">
-                                AED {(owner.total_portfolio_valuation / 1000000).toFixed(1)}M
+                                {formatValuationShort(owner.total_portfolio_valuation)}
                               </span>
                             ) : null}
                           </div>

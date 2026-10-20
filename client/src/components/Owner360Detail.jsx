@@ -91,7 +91,7 @@ function sanitizeUnit(rawUnit) {
   if (!rawUnit || rawUnit === 'N/A' || rawUnit === 'null' || rawUnit === '-') {
     return { unit: null, rescuedPhone: null, rescuedDate: null };
   }
-  const str = String(rawUnit).trim();
+  let str = String(rawUnit).trim();
 
   // Fast check 1: Phone number dumped into unit column (cell shift)
   const digitsOnly = str.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()).replace(/\D/g, '');
@@ -109,8 +109,40 @@ function sanitizeUnit(rawUnit) {
     return { unit: null, rescuedPhone: null, rescuedDate: null };
   }
 
+  // Strip trailing -0 or -00 export artifacts (e.g. 102-0 -> 102, 1406-0 -> 1406)
+  str = str.replace(/^(\d+)-0+$/, '$1');
+  str = str.replace(/^(?:APT|UNIT|FLAT|VILLA|SUITE)?\s*([A-Za-z0-9_-]+)-0+$/i, '$1');
+
   const cleaned = str.replace(/^(?:Unit|Flat|Villa|Apartment|Apt|Suite|Door)\s*[:#-]?\s*/i, '').replace(/[-_,\s/]+$/, '');
   return { unit: cleaned || null, rescuedPhone: null, rescuedDate: null };
+}
+
+// ─── HELPER: SEMANTIC PROPERTY TYPE RESOLVER ──────────────────────────────
+function resolveCleanPropertyType(prop = {}) {
+  if (prop.verified_property_type && !/^(?:null|nan|unknown|owner|buyer|tenant)$/i.test(prop.verified_property_type)) {
+    return prop.verified_property_type;
+  }
+  const rep = (prop.reported_property_type || prop.property_type || '').trim();
+  if (rep && !/^(?:owner|buyer|tenant|unit owner|unknown|nan|null|n\/a|-)$/i.test(rep)) {
+    return rep;
+  }
+  if (prop.isCadastralPlot) {
+    return 'Land / Cadastral Plot';
+  }
+  const bldg = (prop.building_name || prop.building || prop.cleanBuilding || '').toLowerCase();
+  if (bldg.includes('villa') || bldg.includes('townhouse') || bldg.includes('mira') || bldg.includes('damac hills') || bldg.includes('arabian ranches')) {
+    return 'Villa / Townhouse';
+  }
+  if (bldg.includes('plot') || bldg.includes('land') || bldg.includes('industrial') || bldg.includes('zone')) {
+    return 'Land Plot / Commercial';
+  }
+  if (bldg.includes('office') || (bldg.includes('tower') && bldg.includes('commercial'))) {
+    return 'Commercial Office';
+  }
+  if (prop.property_category && !/^(?:null|nan|unknown)$/i.test(prop.property_category)) {
+    return prop.property_category === 'Residential' ? 'Apartment / Residential' : prop.property_category;
+  }
+  return 'Apartment / Flat';
 }
 
 // ─── AUTONOMOUS AI DATA REVIEW & DEEP DEDUPLICATION ENGINE ─────────────────
@@ -406,9 +438,11 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
     : (owner.total_portfolio_valuation || owner.verified_purchase_price || 0);
 
   const formattedPortfolio = trueValuation > 0 
-    ? (trueValuation >= 1000000 
-        ? `AED ${(trueValuation / 1000000).toFixed(1)}M`
-        : `AED ${trueValuation.toLocaleString()}`)
+    ? (trueValuation >= 1000000000
+        ? `AED ${(trueValuation / 1000000000).toFixed(1)}B`
+        : trueValuation >= 1000000 
+          ? `AED ${(trueValuation / 1000000).toFixed(1)}M`
+          : `AED ${trueValuation.toLocaleString()}`)
     : (owner.portfolioValue || 'Standard');
 
   return (
@@ -744,7 +778,7 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
 
                         {/* Details */}
                         <td className="py-4 pr-3 text-white/70">
-                          <div>{prop.reported_property_type || prop.property_type || (prop.isCadastralPlot ? 'Land / Cadastral Plot' : 'Apartment / Flat')}</div>
+                          <div>{resolveCleanPropertyType(prop)}</div>
                           {prop.verified_size_sqft && (
                             <div className="text-[11px] text-white/40">{Math.round(prop.verified_size_sqft)} sq.ft</div>
                           )}
@@ -839,14 +873,28 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                   >
                     Direct Call
                   </a>
-                  <a 
-                    href={`https://wa.me/${String(phoneNumber).replace(/\D/g, '')}`} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex-1 py-2 text-center rounded-lg bg-green-600/20 text-green-300 font-semibold text-xs hover:bg-green-600/30 transition-colors border border-green-500/30"
-                  >
-                    WhatsApp Chat
-                  </a>
+                  {(() => {
+                    const cleanDigits = String(phoneNumber || '').replace(/\D/g, '');
+                    const canWa = cleanDigits.length >= 8 && !String(phoneNumber || '').startsWith('+9714') && !String(phoneNumber || '').startsWith('04');
+                    return canWa ? (
+                      <a 
+                        href={`https://wa.me/${cleanDigits}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="flex-1 py-2 text-center rounded-lg bg-green-600/20 text-green-300 font-semibold text-xs hover:bg-green-600/30 transition-colors border border-green-500/30"
+                      >
+                        WhatsApp Chat
+                      </a>
+                    ) : (
+                      <button 
+                        disabled
+                        className="flex-1 py-2 text-center rounded-lg bg-white/5 text-white/30 font-semibold text-xs border border-white/10 cursor-not-allowed"
+                        title="WhatsApp unavailable for landline or unlisted numbers"
+                      >
+                        WhatsApp Unavailable
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
 

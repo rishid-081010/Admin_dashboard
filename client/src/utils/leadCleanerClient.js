@@ -267,6 +267,10 @@ export function cleanUnitNumber(rawUnit, buildingName = '') {
     }
   }
 
+  // Strip trailing -0 vendor export sub-index (e.g. 102-0 -> 102, 1406-0 -> 1406)
+  u = u.replace(/^(\d+)-0+$/, '$1');
+  u = u.replace(/^(?:APT|UNIT|FLAT|VILLA|SUITE)?\s*([A-Za-z0-9_-]+)-0+$/i, '$1');
+
   return u;
 }
 
@@ -646,14 +650,20 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
     item.unit_number = cleanUnit || '';
     item.project_name = rawProject || '';
     item.location = rawLocation || '';
-    item.property_type = rawPropType || defaultPropType;
+    let finalPropType = rawPropType;
+    if (finalPropType && /^(?:owner|buyer|tenant|unit owner|unknown|nan|null|n\/a|-)$/i.test(finalPropType)) {
+      item.party_role = finalPropType.toUpperCase();
+      finalPropType = defaultPropType;
+    }
+
+    item.property_type = finalPropType || defaultPropType;
 
     item['Owner Name'] = cleanName;
     item['Contact Number'] = phoneRes.primary || rawPhone;
     item['Unit Number'] = cleanUnit || '';
     item['Project'] = rawProject || '';
     item['Location'] = rawLocation || '';
-    item['Property Type'] = rawPropType || defaultPropType;
+    item['Property Type'] = finalPropType || defaultPropType;
     item['Cleaned Unit Number'] = cleanUnit || '';
     item['Cleaned Phone (E.164)'] = phoneRes.vapi_e164 || (phoneRes.primary ? `+${phoneRes.primary}` : '');
 
