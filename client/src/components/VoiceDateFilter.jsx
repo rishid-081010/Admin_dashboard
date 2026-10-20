@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Database, Check } from 'lucide-react';
+import { 
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Database, Check,
+  PhoneOutgoing, Sparkles, Clock, Globe
+} from 'lucide-react';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -21,6 +24,19 @@ function getDubaiToday() {
   }
 }
 
+function getDubaiYesterday() {
+  try {
+    const todayStr = getDubaiToday();
+    const d = new Date(todayStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().split('T')[0];
+  } catch (e) {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }
+}
+
 export default function VoiceDateFilter({
   timeFilter,
   setTimeFilter,
@@ -33,7 +49,8 @@ export default function VoiceDateFilter({
   selectedWeek,
   setSelectedWeek,
   activeLabel,
-  loading
+  loading,
+  overviewData
 }) {
   // Today reference in DB context (Dubai GST)
   const TODAY_STR = getDubaiToday();
@@ -143,23 +160,62 @@ export default function VoiceDateFilter({
     setSelectedYear(viewYear);
   };
 
-  // Quick jump to today
-  const handleJumpToToday = () => {
-    setViewYear(2026);
-    setViewMonth(9); // October
-    setSelectedMonth(10);
-    setSelectedYear(2026);
-    if (timeFilter === 'Daily') {
-      setSelectedDate(TODAY_STR);
-    } else if (timeFilter === 'Weekly') {
-      setSelectedWeek(2); // Oct 13 falls in week 2 (8-14)
-    } else if (timeFilter === 'Monthly') {
-      setSelectedMonth(10);
-    } else {
-      setTimeFilter('Daily');
-      setSelectedDate(TODAY_STR);
-    }
+  // Quick jump presets
+  const handleSelectToday = () => {
+    const parts = TODAY_STR.split('-');
+    const y = parseInt(parts[0], 10) || 2026;
+    const m = parseInt(parts[1], 10) || 10;
+    setViewYear(y);
+    setViewMonth(m - 1);
+    setSelectedYear(y);
+    setSelectedMonth(m);
+    setSelectedDate(TODAY_STR);
+    setTimeFilter('Daily');
   };
+
+  const handleSelectYesterday = () => {
+    const yest = getDubaiYesterday();
+    const parts = yest.split('-');
+    const y = parseInt(parts[0], 10) || 2026;
+    const m = parseInt(parts[1], 10) || 10;
+    setViewYear(y);
+    setViewMonth(m - 1);
+    setSelectedYear(y);
+    setSelectedMonth(m);
+    setSelectedDate(yest);
+    setTimeFilter('Daily');
+  };
+
+  const handleSelectCurrentWeek = () => {
+    const parts = TODAY_STR.split('-');
+    const y = parseInt(parts[0], 10) || 2026;
+    const m = parseInt(parts[1], 10) || 10;
+    const d = parseInt(parts[2], 10) || 1;
+    setViewYear(y);
+    setViewMonth(m - 1);
+    setSelectedYear(y);
+    setSelectedMonth(m);
+    const currentWeek = Math.min(5, Math.max(1, Math.ceil(d / 7)));
+    setSelectedWeek(currentWeek);
+    setTimeFilter('Weekly');
+  };
+
+  const handleSelectCurrentMonth = () => {
+    const parts = TODAY_STR.split('-');
+    const y = parseInt(parts[0], 10) || 2026;
+    const m = parseInt(parts[1], 10) || 10;
+    setViewYear(y);
+    setViewMonth(m - 1);
+    setSelectedYear(y);
+    setSelectedMonth(m);
+    setTimeFilter('Monthly');
+  };
+
+  const yesterdayStr = getDubaiYesterday();
+  const isTodayActive = timeFilter === 'Daily' && selectedDate === TODAY_STR;
+  const isYesterdayActive = timeFilter === 'Daily' && selectedDate === yesterdayStr;
+  const isThisWeekActive = timeFilter === 'Weekly';
+  const isThisMonthActive = timeFilter === 'Monthly';
 
   // Days in month calculation
   const totalDaysInMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0)).getUTCDate();
@@ -272,10 +328,10 @@ export default function VoiceDateFilter({
           </div>
 
           {/* Calendar Days Grid */}
-          <div className="grid grid-cols-7 gap-y-2 text-center">
+          <div className="grid grid-cols-7 gap-y-1.5 text-center">
             {/* Leading empty slots */}
             {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-              <div key={`empty-${i}`} className="w-9 h-9 mx-auto" />
+              <div key={`empty-${i}`} className="w-8 h-8 sm:w-8.5 sm:h-8.5 mx-auto" />
             ))}
 
             {/* Days of Month */}
@@ -300,7 +356,7 @@ export default function VoiceDateFilter({
                 <button
                   key={day}
                   onClick={() => handleSelectDay(day)}
-                  className={`w-9 h-9 mx-auto rounded-full text-sm flex items-center justify-center transition-all ${buttonStyle}`}
+                  className={`w-8 h-8 sm:w-8.5 sm:h-8.5 mx-auto rounded-full text-xs sm:text-sm flex items-center justify-center transition-all ${buttonStyle}`}
                 >
                   {day}
                 </button>
@@ -462,26 +518,127 @@ export default function VoiceDateFilter({
       )}
       </div>
 
-      {/* ─── Footer: Active Scope Label & Quick Jump ────────────────── */}
-      <div className="mt-5 pt-3.5 border-t border-[#1b2b3d] flex items-center justify-between text-xs text-slate-400">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-white font-medium">
+      {/* ─── Middle Section: Quick Presets + Telemetry Snapshot ──── */}
+      <div className="mt-4 pt-3.5 border-t border-[#1b2b3d] flex flex-col gap-3">
+        {/* Quick Presets Bar */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden sm:inline">
+            Quick Scope
+          </span>
+          <div className="flex items-center gap-1.5 flex-1 justify-end">
+            {[
+              { label: 'Today', active: isTodayActive, onClick: handleSelectToday },
+              { label: 'Yesterday', active: isYesterdayActive, onClick: handleSelectYesterday },
+              { label: 'This Week', active: isThisWeekActive, onClick: handleSelectCurrentWeek },
+              { label: 'This Month', active: isThisMonthActive, onClick: handleSelectCurrentMonth },
+            ].map((preset) => (
+              <button
+                key={preset.label}
+                onClick={preset.onClick}
+                type="button"
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                  preset.active
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold shadow-sm shadow-emerald-500/10'
+                    : 'bg-[#06111e] text-slate-400 hover:text-white hover:bg-[#1b2b3d] border border-[#1b2b3d]'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Live Scope Telemetry (Calls, Leads, Avg Talk) */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-2.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+              <span>Calls</span>
+              <PhoneOutgoing className="w-3 h-3 text-blue-400" />
+            </div>
+            <div className="text-base font-bold text-white font-mono mt-1">
+              {loading ? '...' : (overviewData?.totalCalls || '0')}
+            </div>
+            <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+              in scope
+            </div>
+          </div>
+
+          <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-2.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+              <span>Qualified</span>
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+            </div>
+            <div className="text-base font-bold text-emerald-400 font-mono mt-1">
+              {loading ? '...' : (overviewData?.qualifiedLeads || '0')}
+            </div>
+            <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+              hot leads
+            </div>
+          </div>
+
+          <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-2.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+              <span>Avg Talk</span>
+              <Clock className="w-3 h-3 text-amber-400" />
+            </div>
+            <div className="text-base font-bold text-amber-300 font-mono mt-1">
+              {loading ? '...' : (overviewData?.avgDuration || '0s')}
+            </div>
+            <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+              duration
+            </div>
+          </div>
+        </div>
+
+        {/* Multi-Agent Mini-Allocation Bar (Sarah, James, Aisha) */}
+        <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-2 flex items-center justify-between gap-1.5 text-[11px]">
+          {/* Sarah */}
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-500/5 border border-blue-500/10 flex-1 min-w-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+            <span className="text-blue-300 font-medium truncate">Sarah</span>
+            <span className="text-white font-mono font-semibold ml-auto text-[11px]">
+              {loading ? '...' : (overviewData?.agents?.[0]?.calls || '0')}
+            </span>
+          </div>
+
+          {/* James */}
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-purple-500/5 border border-purple-500/10 flex-1 min-w-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+            <span className="text-purple-300 font-medium truncate">James</span>
+            <span className="text-white font-mono font-semibold ml-auto text-[11px]">
+              {loading ? '...' : (overviewData?.agents?.[1]?.calls || '0')}
+            </span>
+          </div>
+
+          {/* Aisha */}
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex-1 min-w-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+            <span className="text-emerald-300 font-medium truncate">Aisha</span>
+            <span className="text-white font-mono font-semibold ml-auto text-[11px]">
+              {loading ? '...' : (overviewData?.agents?.[2]?.calls || '0')}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Footer: Active Scope Label & Timezone ──────────────────── */}
+      <div className="mt-3.5 pt-2.5 border-t border-[#1b2b3d] flex items-center justify-between text-xs text-slate-400">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
+          <span className="text-white font-medium truncate">
             {formatScopeLabel()}
           </span>
           {loading && (
-            <span className="text-[11px] text-blue-400 font-mono animate-pulse ml-1">
-              • Loading...
+            <span className="text-[11px] text-blue-400 font-mono animate-pulse ml-1 flex-shrink-0">
+              • Syncing...
             </span>
           )}
         </div>
 
-        <button
-          onClick={handleJumpToToday}
-          className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-medium transition-colors"
-        >
-          Today
-        </button>
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono flex-shrink-0 ml-2">
+          <Globe className="w-3 h-3 text-emerald-400/80" />
+          <span>GST (UTC+4)</span>
+        </div>
       </div>
     </div>
   );

@@ -120,6 +120,7 @@ export default function VoiceAgent() {
           setSelectedWeek={setSelectedWeek}
           activeLabel={overviewData?.label}
           loading={loading}
+          overviewData={overviewData}
         />
 
         <VoiceAuditDownload
