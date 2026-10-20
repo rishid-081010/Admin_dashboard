@@ -251,11 +251,8 @@ export default function MyActivity({ currentUser }) {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5 pb-4 border-b border-white/[0.08]">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-              <span>MY ACTIVITY &amp; PIPELINE</span>
-              <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
-                Bitrix24 Live Sync
-              </span>
+            <h1 className="text-2xl font-bold tracking-tight text-white">
+              MY ACTIVITY &amp; PIPELINE
             </h1>
           </div>
           <p className="text-slate-400 text-xs mt-1">
@@ -1135,9 +1132,6 @@ export default function MyActivity({ currentUser }) {
                         <div className="text-[10px] text-slate-400">{currentAgent.email || 'Active Telesales Agent'}</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono uppercase text-blue-400 font-semibold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
-                      Currently Selected Board
-                    </span>
                   </div>
 
                   <div className="flex items-center gap-2 bg-[#02070f] border border-blue-500/20 rounded-lg p-2 font-mono text-xs text-sky-300 overflow-x-auto mb-3">

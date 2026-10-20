@@ -528,9 +528,6 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
             <span className="text-[10px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-[#06111e] border border-[#1b2b3d] px-2 py-0.5 rounded-md">
               {owner.lead_id || (owner.id ? `OWN-${owner.id}` : 'VERIFIED-OWNER')}
             </span>
-            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> Verified Owner
-            </span>
             <span className="text-[10px] font-mono text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md">
               {propertiesCount} Unique {propertiesCount > 1 ? 'Assets' : 'Asset'}
             </span>
@@ -1030,10 +1027,6 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
             
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-white tracking-tight">Overview</h2>
-              <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2.5 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
-                <Sparkles className="w-3 h-3" />
-                Profile Summary
-              </span>
             </div>
 
             {/* Smart Summary Box */}

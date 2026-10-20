@@ -486,9 +486,6 @@ export default function NewListing({ onListingCreated, onBack }) {
         <div className="glass-card p-6 border border-blue-500/30 bg-gradient-to-br from-navy-900/60 via-navy-950/60 to-black/60 relative overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.08] mb-5">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                <Sparkles className="w-3.5 h-3.5" /> Zero-Typing Smart Auto-Fill
-              </div>
               <h2 className="text-lg font-sans font-bold text-white flex items-center gap-2">
                 <FileBadge2 className="w-5 h-5 text-blue-400" /> Auto-Fill Listing from Title Deed & Emirates ID
               </h2>
@@ -747,9 +744,6 @@ export default function NewListing({ onListingCreated, onBack }) {
                       </p>
                     </div>
                   </div>
-                  <span className="self-start sm:self-auto text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/20 px-2.5 py-1 rounded-full border border-blue-500/30">
-                    Rental NOC
-                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">

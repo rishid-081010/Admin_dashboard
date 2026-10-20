@@ -413,12 +413,6 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-mono uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">
-                  {building.area || 'DUBAI'}
-                </span>
-              </div>
-
               <h1 
                 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight truncate font-sans" 
               >
@@ -426,7 +420,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
               </h1>
 
               <div className="text-slate-400 text-xs mt-1">
-                {building.propertyType || 'Residential'}
+                {building.area ? `${building.area} · ` : ''}{building.propertyType || 'Residential'}
               </div>
             </div>
           </div>

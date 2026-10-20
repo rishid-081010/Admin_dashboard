@@ -147,12 +147,6 @@ export default function VoiceAgent360({
               <span className={`text-[10px] font-mono tracking-widest uppercase font-bold px-2 py-0.5 rounded-md border ${agent.badgeClass}`}>
                 {agent.line}
               </span>
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" /> Voice Synthesized
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono bg-[#06111e] border border-[#1b2b3d] px-2 py-0.5 rounded">
-                Engine: {agent.engine}
-              </span>
             </div>
 
             <h1 className="text-2xl font-bold text-white tracking-tight leading-snug">
@@ -473,13 +467,8 @@ export default function VoiceAgent360({
             {/* Modal Header */}
             <div className="flex items-start justify-between pb-4 border-b border-[#233549] mb-4">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold">
-                    Call Inspection
-                  </span>
-                  <span className="text-xs text-slate-400 font-mono">
-                    {activeCallModal.id}
-                  </span>
+                <div className="text-xs text-slate-400 font-mono mb-1">
+                  ID: {activeCallModal.id}
                 </div>
                 <h2 className="text-xl font-bold text-white">
                   Call with {activeCallModal.customer_name || 'Property Owner'}

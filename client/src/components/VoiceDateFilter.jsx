@@ -510,7 +510,7 @@ export default function VoiceDateFilter({
           <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed mb-3">
             Displaying all 81,597 calls placed across Sarah, James, and Aisha in the Supabase telephony cluster.
           </p>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+          <div className="inline-flex items-center gap-1.5 text-xs text-emerald-400/90 font-medium">
             <Check className="w-3.5 h-3.5 text-emerald-400" />
             <span>All Historical Records Active</span>
           </div>

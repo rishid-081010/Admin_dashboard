@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Mic, Activity, PhoneOff, PhoneOutgoing, Clock, 
-  Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Play, User, RefreshCw
+  Sparkles, CheckCircle2, ArrowRight, Play, User, RefreshCw
 } from 'lucide-react';
 import VoiceDateFilter from './VoiceDateFilter';
 import VoiceAuditDownload from './VoiceAuditDownload';
@@ -82,14 +82,6 @@ export default function VoiceAgent() {
       {/* ─── Header Bar ────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> Live Telephony Intelligence
-            </span>
-            <span className="text-[10px] text-white/40 font-mono">
-              Supabase Cluster (85,973+ verified calls)
-            </span>
-          </div>
           <h1 className="text-3xl font-bold tracking-tight text-white">
             Voice Agent Centre
           </h1>

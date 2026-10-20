@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const upload_base_url = 'https://srv529-files.hstgr.io/rest/c89e20cdf14e1312/api/tus';
-const auth_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxLCJsb2NhbGUiOiJlbl9VUyIsInZpZXdNb2RlIjoibGlzdCIsInNpbmdsZUNsaWNrIjpmYWxzZSwicmVkaXJlY3RBZnRlckNvcHlNb3ZlIjpmYWxzZSwicGVybSI6eyJhZG1pbiI6ZmFsc2UsImV4ZWN1dGUiOmZhbHNlLCJjcmVhdGUiOnRydWUsInJlbmFtZSI6dHJ1ZSwibW9kaWZ5Ijp0cnVlLCJkZWxldGUiOnRydWUsInNoYXJlIjpmYWxzZSwiZG93bmxvYWQiOnRydWV9LCJjb21tYW5kcyI6W10sImxvY2tQYXNzd29yZCI6dHJ1ZSwiaGlkZURvdGZpbGVzIjpmYWxzZSwiZGF0ZUZvcm1hdCI6ZmFsc2UsInVzZXJuYW1lIjoidTI5Mjc2MDI5NCIsImFjZUVkaXRvclRoZW1lIjoiIn0sImlzcyI6IkZpbGUgQnJvd3NlciIsImV4cCI6MTc5MjQzNzY4MCwiaWF0IjoxNzkyNDE2MDgwfQ.PYmTp8N8lG0BB7uQSqb9vh_fMVU9mjqdxz6CYJNMx6g';
-const rest_auth_key = '20f6247c7c5f5dea9f75ba684ab8bdb1049e45d9f578d286335f9b2573cf2df2-c89e20cdf14e1312';
+const upload_base_url = 'https://srv529-files.hstgr.io/rest/93762c2246e14503/api/tus';
+const auth_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxLCJsb2NhbGUiOiJlbl9VUyIsInZpZXdNb2RlIjoibGlzdCIsInNpbmdsZUNsaWNrIjpmYWxzZSwicmVkaXJlY3RBZnRlckNvcHlNb3ZlIjpmYWxzZSwicGVybSI6eyJhZG1pbiI6ZmFsc2UsImV4ZWN1dGUiOmZhbHNlLCJjcmVhdGUiOnRydWUsInJlbmFtZSI6dHJ1ZSwibW9kaWZ5Ijp0cnVlLCJkZWxldGUiOnRydWUsInNoYXJlIjpmYWxzZSwiZG93bmxvYWQiOnRydWV9LCJjb21tYW5kcyI6W10sImxvY2tQYXNzd29yZCI6dHJ1ZSwiaGlkZURvdGZpbGVzIjpmYWxzZSwiZGF0ZUZvcm1hdCI6ZmFsc2UsInVzZXJuYW1lIjoidTI5Mjc2MDI5NCIsImFjZUVkaXRvclRoZW1lIjoiIn0sImlzcyI6IkZpbGUgQnJvd3NlciIsImV4cCI6MTc5MjU1MjU1OSwiaWF0IjoxNzkyNTMwOTU5fQ.l6qDRvhBNlDFw45OUDbeNNfOnCDcWFUmL-0JfGywr74';
+const rest_auth_key = 'ebff856d1f2ce258e037a2d2f29ac5e436d1f4c565cbb9f99c217265e0a5e956-93762c2246e14503';
 
 const dist_dir = 'client/dist';
 
@@ -38,7 +38,7 @@ if (fs.existsSync(root_dir)) {
   for (const lpath of allRootFiles) {
     const rel = path.relative(root_dir, lpath).replace(/\\/g, '/');
     uploadsList.push({ localPath: lpath, remotePath: rel });
-    if (rel !== 'index.php') {
+    if (rel !== 'index.php' && rel !== 'index.html') {
       uploadsList.push({ localPath: lpath, remotePath: `dashboard/${rel}` });
     }
   }

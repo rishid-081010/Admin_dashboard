@@ -482,14 +482,9 @@ export default function OverviewDashboard({ onNavigate }) {
               <N8nLogo className="w-5 h-5" color="#FF6D5A" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-white tracking-tight">
-                  Automated Workflows
-                </h3>
-                <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-md bg-[#ff6d5a]/15 text-[#ff6d5a] border border-[#ff6d5a]/30 tracking-wider">
-                  n8n engine
-                </span>
-              </div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Automated Workflows
+              </h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 Live background n8n pipelines syncing CRM deals, updating logs, and routing alerts
               </p>
