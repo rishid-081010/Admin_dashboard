@@ -93,6 +93,8 @@ export default function ListingDetail({ listingId, onBack }) {
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [rentalFormGenerated, setRentalFormGenerated] = useState(false);
   const [rentalActiveTab, setRentalActiveTab] = useState('financials'); // 'financials' | 'landlord' | 'specs' | 'mandate'
+  const hasInitializedRentalSpecsRef = useRef(null);
+  const hasUserEditedRentalSpecsRef = useRef(false);
 
   // Staged additional photos state
   const [additionalFiles, setAdditionalFiles] = useState([]);
@@ -387,16 +389,27 @@ export default function ListingDetail({ listingId, onBack }) {
     };
   }, [listingId]);
 
-  // Synchronize rental specs when listing loads
+  // Synchronize rental specs ONLY once when listing first loads for this listingId
   useEffect(() => {
     if (!listing) return;
+
+    // If user has already started editing for this listing, NEVER clobber their edits from background polls!
+    if (hasUserEditedRentalSpecsRef.current && hasInitializedRentalSpecsRef.current === listingId) {
+      return;
+    }
+
+    // If we've already initialized for this listingId, do NOT re-run on background poll intervals
+    if (hasInitializedRentalSpecsRef.current === listingId) {
+      return;
+    }
+
     let cached = {};
     try {
       const stored = localStorage.getItem(`listing_rental_specs_${listingId}`);
       if (stored) cached = JSON.parse(stored);
     } catch {}
 
-    const c = listing.commercial_specs || cached || {};
+    const c = (cached && Object.keys(cached).length > 0) ? cached : (listing.commercial_specs || {});
     const d = listing.title_deed_data || {};
     const e = listing.emirates_id_data || {};
     const p = listing.property_specs || {};
@@ -432,6 +445,7 @@ export default function ListingDetail({ listingId, onBack }) {
       broker_phone: c.broker_phone || '+971 4 000 0000',
     };
 
+    hasInitializedRentalSpecsRef.current = listingId;
     setRentalSpecs(initial);
     if (c.form_status === 'verified_custom' || c.owner_phone || c.cheques) {
       setRentalFormGenerated(true);
@@ -439,29 +453,43 @@ export default function ListingDetail({ listingId, onBack }) {
   }, [listing, listingId]);
 
   const handleRentalSpecChange = (field, value) => {
-    setRentalSpecs(prev => ({ ...prev, [field]: value }));
+    hasUserEditedRentalSpecsRef.current = true;
+    setRentalSpecs(prev => {
+      const updated = { ...prev, [field]: value };
+      try {
+        localStorage.setItem(`listing_rental_specs_${listingId}`, JSON.stringify(updated));
+      } catch (err) {}
+      return updated;
+    });
   };
 
   const handlePullFromDocuments = () => {
+    hasUserEditedRentalSpecsRef.current = true;
     const d = listing?.title_deed_data || {};
     const e = listing?.emirates_id_data || {};
     const p = listing?.property_specs || {};
-    setRentalSpecs(prev => ({
-      ...prev,
-      owner_name: d.owner_name_english || e.full_name_english || prev.owner_name,
-      owner_phone: e.phone || prev.owner_phone,
-      owner_nationality: e.nationality || d.nationality || prev.owner_nationality,
-      building_name: d.building_name || prev.building_name,
-      unit_number: d.unit_number || prev.unit_number,
-      community: d.community || prev.community,
-      bua_sqft: d.total_area_sqft || d.suite_area_sqft || p.size_sqft || prev.bua_sqft,
-      plot_area: d.plot_number || prev.plot_area || '00',
-      parking_bays: d.parking_bays?.[0] || prev.parking_bays,
-      property_type: d.property_type || prev.property_type,
-      price: prev.price || listing?.price || '',
-      bedrooms: prev.bedrooms || p.bedrooms || listing?.bedrooms || '2 Bedrooms',
-      bathrooms: prev.bathrooms || p.bathrooms || listing?.bathrooms || '2 Baths',
-    }));
+    setRentalSpecs(prev => {
+      const updated = {
+        ...prev,
+        owner_name: d.owner_name_english || e.full_name_english || prev.owner_name,
+        owner_phone: e.phone || prev.owner_phone,
+        owner_nationality: e.nationality || d.nationality || prev.owner_nationality,
+        building_name: d.building_name || prev.building_name,
+        unit_number: d.unit_number || prev.unit_number,
+        community: d.community || prev.community,
+        bua_sqft: d.total_area_sqft || d.suite_area_sqft || p.size_sqft || prev.bua_sqft,
+        plot_area: d.plot_number || prev.plot_area || '00',
+        parking_bays: d.parking_bays?.[0] || prev.parking_bays,
+        property_type: d.property_type || prev.property_type,
+        price: prev.price || listing?.price || '',
+        bedrooms: prev.bedrooms || p.bedrooms || listing?.bedrooms || '2 Bedrooms',
+        bathrooms: prev.bathrooms || p.bathrooms || listing?.bathrooms || '2 Baths',
+      };
+      try {
+        localStorage.setItem(`listing_rental_specs_${listingId}`, JSON.stringify(updated));
+      } catch (err) {}
+      return updated;
+    });
     showToast('✨ Pulled base specs from Title Deed & Emirates ID!', 'success');
   };
 
@@ -1527,8 +1555,7 @@ export default function ListingDetail({ listingId, onBack }) {
         </div>
 
         {/* Tab 1: Rental Commercials & Terms */}
-        {rentalActiveTab === 'financials' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10 animate-fade-in">
+        <div className={rentalActiveTab === 'financials' ? "grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10 animate-fade-in" : "hidden"}>
             {/* Agreement Form Date */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
@@ -1686,11 +1713,9 @@ export default function ListingDetail({ listingId, onBack }) {
               <span className="text-[10px] text-white/40 mt-1 block">Checks official "Furnished" or "Unfurnished" box</span>
             </div>
           </div>
-        )}
 
         {/* Tab 2: Landlord & Contact Details */}
-        {rentalActiveTab === 'landlord' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10 animate-fade-in">
+        <div className={rentalActiveTab === 'landlord' ? "grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10 animate-fade-in" : "hidden"}>
             {/* Landlord Legal Name */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
@@ -1761,11 +1786,9 @@ export default function ListingDetail({ listingId, onBack }) {
               <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Nationality: ____________"</span>
             </div>
           </div>
-        )}
 
         {/* Tab 3: Property Physical Specifications */}
-        {rentalActiveTab === 'specs' && (
-          <div className="space-y-4 relative z-10 animate-fade-in">
+        <div className={rentalActiveTab === 'specs' ? "space-y-4 relative z-10 animate-fade-in" : "hidden"}>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
@@ -1902,11 +1925,9 @@ export default function ListingDetail({ listingId, onBack }) {
               </div>
             </div>
           </div>
-        )}
 
         {/* Tab 4: Broker Representation & Mandate */}
-        {rentalActiveTab === 'mandate' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10 animate-fade-in">
+        <div className={rentalActiveTab === 'mandate' ? "grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10 animate-fade-in" : "hidden"}>
             {/* Agreement Type */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
@@ -2031,7 +2052,6 @@ export default function ListingDetail({ listingId, onBack }) {
               />
             </div>
           </div>
-        )}
       </div>
 
       {/* Multi-Channel Dubai Marketing Copywriter Suite */}
