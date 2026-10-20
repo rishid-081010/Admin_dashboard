@@ -17,9 +17,21 @@ gen_headers = {
 gen_url = 'https://developers.hostinger.com/api/hosting/v1/files/upload-urls'
 payload = {'username': 'u292760294', 'domain': 'admin.asquared.ae'}
 print("Requesting upload URL for admin.asquared.ae...")
-r = requests.post(gen_url, headers=gen_headers, json=payload, timeout=30)
-if r.status_code != 200:
-    print("Error connecting to Hostinger API:", r.text)
+
+import time
+r = None
+for attempt in range(1, 6):
+    try:
+        r = requests.post(gen_url, headers=gen_headers, json=payload, timeout=30)
+        if r.status_code == 200:
+            break
+        print(f"Attempt {attempt}: Hostinger API returned {r.status_code}: {r.text}. Retrying in {attempt * 3}s...")
+    except Exception as e:
+        print(f"Attempt {attempt}: Exception connecting to Hostinger API: {e}. Retrying in {attempt * 3}s...")
+    time.sleep(attempt * 3)
+
+if not r or r.status_code != 200:
+    print("Error connecting to Hostinger API after 5 attempts:", r.text if r else "No response")
     sys.exit(1)
 
 data = r.json()
