@@ -158,7 +158,8 @@ export default function NewListing({ onListingCreated, onBack }) {
   const [furnishing, setFurnishing] = useState('Unfurnished');
   const [ownerPhone, setOwnerPhone] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
-  const [agreementDuration, setAgreementDuration] = useState('3 Months');
+  const [agreementDuration, setAgreementDuration] = useState('3 Month');
+  const [agreementUntilDate, setAgreementUntilDate] = useState('');
   const [agreementType, setAgreementType] = useState('Non-Exclusive');
   const [securityDeposit, setSecurityDeposit] = useState('5%');
 
@@ -407,6 +408,7 @@ export default function NewListing({ onListingCreated, onBack }) {
       formData.append('owner_phone', ownerPhone);
       formData.append('owner_email', ownerEmail);
       formData.append('agreement_duration', agreementDuration);
+      formData.append('agreement_until_date', agreementUntilDate);
       formData.append('agreement_type', agreementType);
       formData.append('security_deposit', securityDeposit);
     }
@@ -670,9 +672,12 @@ export default function NewListing({ onListingCreated, onBack }) {
                 >
                   <option value="Apartment">Apartment</option>
                   <option value="Villa">Villa</option>
-                  <option value="Penthouse">Penthouse</option>
                   <option value="Townhouse">Townhouse</option>
-                  <option value="Commercial">Commercial</option>
+                  <option value="Land">Land (Plot)</option>
+                  <option value="Office">Office</option>
+                  <option value="Warehouse">Warehouse</option>
+                  <option value="Shop">Shop / Retail</option>
+                  <option value="Building">Full Building</option>
                 </select>
               </div>
             </div>
@@ -860,10 +865,20 @@ export default function NewListing({ onListingCreated, onBack }) {
                       onChange={(e) => setAgreementDuration(e.target.value)}
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
                     >
-                      <option value="3 Months">3 Months</option>
-                      <option value="6 Months">6 Months</option>
-                      <option value="1 Year">1 Year</option>
+                      <option value="1 Month">1 Month</option>
+                      <option value="2 Month">2 Month</option>
+                      <option value="3 Month">3 Month</option>
+                      <option value="Or Until">Or Until (Specific Date)</option>
                     </select>
+                    {agreementDuration === 'Or Until' && (
+                      <input
+                        type="text"
+                        value={agreementUntilDate}
+                        onChange={(e) => setAgreementUntilDate(e.target.value)}
+                        placeholder="e.g. 31/12/2026"
+                        className="w-full glass-input rounded-xl px-3 py-1.5 text-bone-100 text-[11px] focus:outline-none mt-1.5"
+                      />
+                    )}
                   </div>
                 </div>
               </div>

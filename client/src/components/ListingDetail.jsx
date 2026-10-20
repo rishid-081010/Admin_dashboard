@@ -6,7 +6,8 @@ import {
   Clock, Sparkles, Building2, FolderArchive, RotateCcw, X, 
   Copy, Check, FileText, Share2, Tag, ChevronUp, ChevronDown, Sliders, ChevronLeft, ChevronRight, Wand2,
   Instagram, Mail, Globe, Upload, Plus, Trash2, Image as ImageIcon, MessageSquare, Send, History,
-  FileBadge2, Layers, ShieldCheck, Phone, Eye, ExternalLink, FileCheck, DollarSign, Home, BedDouble, Bath
+  FileBadge2, Layers, ShieldCheck, Phone, Eye, ExternalLink, FileCheck, DollarSign, Home, BedDouble, Bath,
+  Calendar, AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
 import BeforeAfterSlider from './BeforeAfterSlider';
@@ -57,11 +58,13 @@ export default function ListingDetail({ listingId, onBack }) {
 
   // Official A-SQUARED Rental Listing Form & NOC Studio State
   const [rentalSpecs, setRentalSpecs] = useState({
+    form_date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
     owner_name: '',
     owner_phone: '',
     owner_email: '',
     owner_nationality: 'United Arab Emirates',
     property_type: 'Apartment',
+    category: 'Residential',
     building_name: '',
     community: 'Dubai',
     unit_number: '',
@@ -69,7 +72,7 @@ export default function ListingDetail({ listingId, onBack }) {
     bathrooms: '2 Baths',
     parking_bays: '1 Space',
     bua_sqft: '',
-    plot_area: '',
+    plot_area: '00',
     price: '',
     cheques: '4 Cheques',
     security_deposit: '5%',
@@ -77,6 +80,7 @@ export default function ListingDetail({ listingId, onBack }) {
     furnishing: 'Unfurnished',
     agreement_type: 'Non-Exclusive',
     agreement_duration: '3 Month',
+    agreement_until_date: '',
     commission_rate: '5% + VAT',
     broker_name: 'A SQUARED REAL ESTATE',
     broker_agent_name: 'Melanie Simsiman',
@@ -367,19 +371,21 @@ export default function ListingDetail({ listingId, onBack }) {
     const p = listing.property_specs || {};
 
     const initial = {
+      form_date: c.form_date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
       owner_name: c.owner_name || d.owner_name_english || e.full_name_english || '',
       owner_phone: c.owner_phone || e.phone || '',
       owner_email: c.owner_email || '',
       owner_nationality: c.owner_nationality || e.nationality || d.nationality || 'United Arab Emirates',
       property_type: c.property_type || listing.property_type || d.property_type || 'Apartment',
+      category: c.category || (['Office', 'Shop', 'Warehouse'].includes(c.property_type || listing.property_type) ? 'Commercial' : 'Residential'),
       building_name: c.building_name || d.building_name || listing.name || '',
       community: c.community || d.community || 'Dubai',
       unit_number: c.unit_number || d.unit_number || '',
-      bedrooms: c.bedrooms || p.bedrooms || '2 Bedrooms',
-      bathrooms: c.bathrooms || p.bathrooms || '2 Baths',
+      bedrooms: c.bedrooms || p.bedrooms || listing.bedrooms || '2 Bedrooms',
+      bathrooms: c.bathrooms || p.bathrooms || listing.bathrooms || '2 Baths',
       parking_bays: c.parking_bays || c.parking || d.parking_bays?.[0] || '1 Space',
       bua_sqft: c.bua_sqft || d.total_area_sqft || d.suite_area_sqft || p.size_sqft || '',
-      plot_area: c.plot_area || d.plot_number || '',
+      plot_area: c.plot_area || d.plot_number || '00',
       price: c.price || c.asking_price || listing.price || '',
       cheques: c.cheques || '4 Cheques',
       security_deposit: c.security_deposit || '5%',
@@ -387,6 +393,7 @@ export default function ListingDetail({ listingId, onBack }) {
       furnishing: c.furnishing || p.furnishing || 'Unfurnished',
       agreement_type: c.agreement_type || 'Non-Exclusive',
       agreement_duration: c.agreement_duration || '3 Month',
+      agreement_until_date: c.agreement_until_date || c.until_date || '',
       commission_rate: c.commission_rate || '5% + VAT',
       broker_name: c.broker_name || 'A SQUARED REAL ESTATE',
       broker_agent_name: c.broker_agent_name || 'Melanie Simsiman',
@@ -407,17 +414,22 @@ export default function ListingDetail({ listingId, onBack }) {
   const handlePullFromDocuments = () => {
     const d = listing?.title_deed_data || {};
     const e = listing?.emirates_id_data || {};
+    const p = listing?.property_specs || {};
     setRentalSpecs(prev => ({
       ...prev,
       owner_name: d.owner_name_english || e.full_name_english || prev.owner_name,
+      owner_phone: e.phone || prev.owner_phone,
       owner_nationality: e.nationality || d.nationality || prev.owner_nationality,
       building_name: d.building_name || prev.building_name,
       unit_number: d.unit_number || prev.unit_number,
       community: d.community || prev.community,
-      bua_sqft: d.total_area_sqft || d.suite_area_sqft || prev.bua_sqft,
-      plot_area: d.plot_number || prev.plot_area,
+      bua_sqft: d.total_area_sqft || d.suite_area_sqft || p.size_sqft || prev.bua_sqft,
+      plot_area: d.plot_number || prev.plot_area || '00',
       parking_bays: d.parking_bays?.[0] || prev.parking_bays,
       property_type: d.property_type || prev.property_type,
+      price: prev.price || listing?.price || '',
+      bedrooms: prev.bedrooms || p.bedrooms || listing?.bedrooms || '2 Bedrooms',
+      bathrooms: prev.bathrooms || p.bathrooms || listing?.bathrooms || '2 Baths',
     }));
     showToast('✨ Pulled base specs from Title Deed & Emirates ID!', 'success');
   };
@@ -1318,6 +1330,51 @@ export default function ListingDetail({ listingId, onBack }) {
           </div>
         </div>
 
+        {/* Form Readiness Checklist */}
+        {(() => {
+          const isMissingPhone = !rentalSpecs.owner_phone || !rentalSpecs.owner_phone.trim();
+          const isMissingEmail = !rentalSpecs.owner_email || !rentalSpecs.owner_email.trim();
+          const isMissingPrice = !rentalSpecs.price || !rentalSpecs.price.trim();
+          const isMissingBeds = !rentalSpecs.bedrooms || !rentalSpecs.bedrooms.trim();
+          const isMissingBaths = !rentalSpecs.bathrooms || !rentalSpecs.bathrooms.trim();
+          const missingCount = [isMissingPhone, isMissingEmail, isMissingPrice, isMissingBeds, isMissingBaths].filter(Boolean).length;
+
+          return (
+            <div className="mb-5 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-wrap items-center justify-between gap-3 relative z-10">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-white/70">Form Stamping Readiness:</span>
+                {missingCount === 0 ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> All Critical Fields Completed
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> {missingCount} Field{missingCount > 1 ? 's' : ''} Blank (Will Print as Dashes)
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className={`px-2 py-0.5 rounded-md font-medium border ${!isMissingPhone ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-red-500/15 text-red-300 border-red-500/30 animate-pulse'}`}>
+                  Phone: {!isMissingPhone ? '✓ Ready' : '⚠️ Missing'}
+                </span>
+                <span className={`px-2 py-0.5 rounded-md font-medium border ${!isMissingEmail ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
+                  Email: {!isMissingEmail ? '✓ Ready' : '⚠️ Empty'}
+                </span>
+                <span className={`px-2 py-0.5 rounded-md font-medium border ${!isMissingPrice ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-red-500/15 text-red-300 border-red-500/30 animate-pulse'}`}>
+                  Rent Price: {!isMissingPrice ? '✓ Ready' : '⚠️ Missing'}
+                </span>
+                <span className={`px-2 py-0.5 rounded-md font-medium border ${!isMissingBeds ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
+                  Beds: {rentalSpecs.bedrooms || '⚠️ Empty'}
+                </span>
+                <span className={`px-2 py-0.5 rounded-md font-medium border ${!isMissingBaths ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
+                  Baths: {rentalSpecs.bathrooms || '⚠️ Empty'}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Tab Selection Bar */}
         <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-white/[0.06] pb-3 relative z-10">
           <button
@@ -1376,6 +1433,21 @@ export default function ListingDetail({ listingId, onBack }) {
         {/* Tab 1: Rental Commercials & Terms */}
         {rentalActiveTab === 'financials' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10 animate-fade-in">
+            {/* Agreement Form Date */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-blue-400" /> AGREEMENT FORM DATE
+              </label>
+              <input
+                type="text"
+                value={rentalSpecs.form_date || ''}
+                onChange={(e) => handleRentalSpecChange('form_date', e.target.value)}
+                placeholder="DD/MM/YYYY e.g. 20/10/2026"
+                className="w-full glass-input rounded-xl px-4 py-2.5 text-white font-semibold placeholder-slate-500 focus:outline-none transition-all text-sm"
+              />
+              <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "DATE: ________" at top right</span>
+            </div>
+
             {/* Asking Rent */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
@@ -1388,7 +1460,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 placeholder="e.g. 185,000"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white font-semibold placeholder-slate-500 focus:outline-none transition-all text-sm"
               />
-              <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Asking Price" in agreement</span>
+              <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Price (AED): ____________"</span>
             </div>
 
             {/* Cheques Payment Structure */}
@@ -1408,24 +1480,39 @@ export default function ListingDetail({ listingId, onBack }) {
                 <option value="12 Cheques">12 Cheques (Monthly)</option>
                 <option value="1 - 4 Cheques">1 - 4 Cheques (Negotiable)</option>
               </select>
-              <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Cheques" in agreement</span>
+              <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "No. Of Cheques"</span>
             </div>
 
-            {/* Security Deposit */}
+            {/* Classification: Residential vs Commercial */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
-                SECURITY DEPOSIT
+                CLASSIFICATION <span className="text-blue-500">*</span>
               </label>
-              <select
-                value={rentalSpecs.security_deposit}
-                onChange={(e) => handleRentalSpecChange('security_deposit', e.target.value)}
-                className="w-full glass-input rounded-xl px-4 py-2.5 text-white font-medium focus:outline-none transition-all text-sm cursor-pointer"
-              >
-                <option value="5%">5% (Standard Unfurnished)</option>
-                <option value="10%">10% (Standard Furnished)</option>
-                <option value="1 Month Rent">1 Month Rent Equivalent</option>
-                <option value="Custom">Custom / Non-Standard</option>
-              </select>
+              <div className="grid grid-cols-2 gap-2 glass-pill p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => handleRentalSpecChange('category', 'Residential')}
+                  className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    rentalSpecs.category !== 'Commercial'
+                      ? 'bg-blue-600 text-white shadow-sm border border-blue-400'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  ✓ Residential
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRentalSpecChange('category', 'Commercial')}
+                  className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    rentalSpecs.category === 'Commercial'
+                      ? 'bg-blue-600 text-white shadow-sm border border-blue-400'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  ✓ Commercial
+                </button>
+              </div>
+              <span className="text-[10px] text-white/40 mt-1 block">Checks official "Residential" or "Commercial" box</span>
             </div>
 
             {/* Occupancy Status */}
@@ -1443,7 +1530,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       : 'text-white/60 hover:text-white'
                   }`}
                 >
-                  ✓ Vacant Now
+                  ✓ Vacant
                 </button>
                 <button
                   type="button"
@@ -1461,7 +1548,7 @@ export default function ListingDetail({ listingId, onBack }) {
             </div>
 
             {/* Furnishing Status */}
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
                 FURNISHING STATUS <span className="text-blue-500">*</span>
               </label>
@@ -1486,7 +1573,7 @@ export default function ListingDetail({ listingId, onBack }) {
                       : 'text-white/60 hover:text-white'
                   }`}
                 >
-                  Semi-Furnished
+                  Semi
                 </button>
                 <button
                   type="button"
@@ -1497,10 +1584,10 @@ export default function ListingDetail({ listingId, onBack }) {
                       : 'text-white/60 hover:text-white'
                   }`}
                 >
-                  Fully Furnished
+                  Furnished
                 </button>
               </div>
-              <span className="text-[10px] text-white/40 mt-1 block">Checks official "Furnished" or "Unfurnished" checkbox</span>
+              <span className="text-[10px] text-white/40 mt-1 block">Checks official "Furnished" or "Unfurnished" box</span>
             </div>
           </div>
         )}
@@ -1520,28 +1607,38 @@ export default function ListingDetail({ listingId, onBack }) {
                 placeholder="Full Legal Name as shown on Title Deed"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white font-semibold placeholder-slate-500 focus:outline-none transition-all text-sm"
               />
-              <span className="text-[10px] text-white/40 mt-1 block">Appears under "Landlord's Name" and Signature</span>
+              <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Name: ________" and signature</span>
             </div>
 
             {/* Landlord Contact Mobile */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
-                <Phone className="w-3.5 h-3.5 text-emerald-400" /> CONTACT MOBILE / WHATSAPP <span className="text-blue-500">*</span>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Phone className="w-3.5 h-3.5 text-emerald-400" /> CONTACT MOBILE / WHATSAPP <span className="text-blue-500">*</span>
+                </span>
+                {!rentalSpecs.owner_phone && (
+                  <span className="text-[10px] text-red-400 font-bold uppercase animate-pulse">Required</span>
+                )}
               </label>
               <input
                 type="text"
                 value={rentalSpecs.owner_phone}
                 onChange={(e) => handleRentalSpecChange('owner_phone', e.target.value)}
                 placeholder="e.g. +971 50 123 4567"
-                className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
+                className={`w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm ${!rentalSpecs.owner_phone ? 'border-red-500/40' : ''}`}
               />
-              <span className="text-[10px] text-emerald-400/80 mt-1 block">Crucial: Missing on Title Deeds! Stamped in contact row.</span>
+              <span className="text-[10px] text-emerald-400/80 mt-1 block">Stamped on line "Phone: ____________"</span>
             </div>
 
             {/* Landlord Email */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5 text-blue-400" /> LANDLORD EMAIL ADDRESS
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5 text-blue-400" /> LANDLORD EMAIL ADDRESS <span className="text-blue-500">*</span>
+                </span>
+                {!rentalSpecs.owner_email && (
+                  <span className="text-[10px] text-amber-400 font-bold uppercase">Recommended</span>
+                )}
               </label>
               <input
                 type="email"
@@ -1550,7 +1647,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 placeholder="e.g. landlord@example.com"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
               />
-              <span className="text-[10px] text-white/40 mt-1 block">Stamped on official agreement line "Email"</span>
+              <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Email: ____________"</span>
             </div>
 
             {/* Landlord Nationality */}
@@ -1565,7 +1662,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 placeholder="e.g. United Arab Emirates"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
               />
-              <span className="text-[10px] text-white/40 mt-1 block">Stamped on official agreement line "Nationality"</span>
+              <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Nationality: ____________"</span>
             </div>
           </div>
         )}
@@ -1576,7 +1673,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
-                  <Home className="w-3.5 h-3.5 text-white/60" /> PROPERTY TYPE
+                  <Home className="w-3.5 h-3.5 text-white/60" /> PROPERTY TYPE (8 OFFICIAL OPTIONS)
                 </label>
                 <select
                   value={rentalSpecs.property_type}
@@ -1586,47 +1683,41 @@ export default function ListingDetail({ listingId, onBack }) {
                   <option value="Apartment">Apartment</option>
                   <option value="Villa">Villa</option>
                   <option value="Townhouse">Townhouse</option>
-                  <option value="Penthouse">Penthouse</option>
-                  <option value="Office">Office (Commercial)</option>
-                  <option value="Shop">Shop / Retail</option>
+                  <option value="Land">Land (Plot)</option>
+                  <option value="Office">Office</option>
                   <option value="Warehouse">Warehouse</option>
+                  <option value="Shop">Shop / Retail</option>
                   <option value="Building">Full Building</option>
                 </select>
+                <span className="text-[10px] text-white/40 mt-1 block">Marks 1 of 8 official checkboxes</span>
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
                   <BedDouble className="w-3.5 h-3.5 text-white/60" /> BEDROOMS
                 </label>
-                <select
+                <input
+                  type="text"
                   value={rentalSpecs.bedrooms}
                   onChange={(e) => handleRentalSpecChange('bedrooms', e.target.value)}
-                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm cursor-pointer"
-                >
-                  <option value="Studio">Studio</option>
-                  <option value="1 Bedroom">1 Bedroom</option>
-                  <option value="2 Bedrooms">2 Bedrooms</option>
-                  <option value="3 Bedrooms">3 Bedrooms</option>
-                  <option value="4 Bedrooms">4 Bedrooms</option>
-                  <option value="5+ Bedrooms">5+ Bedrooms</option>
-                </select>
+                  placeholder="e.g. 2 Bedrooms or Studio"
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
+                />
+                <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Bedroom: ________"</span>
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
                   <Bath className="w-3.5 h-3.5 text-white/60" /> BATHROOMS
                 </label>
-                <select
+                <input
+                  type="text"
                   value={rentalSpecs.bathrooms}
                   onChange={(e) => handleRentalSpecChange('bathrooms', e.target.value)}
-                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm cursor-pointer"
-                >
-                  <option value="1 Bath">1 Bath</option>
-                  <option value="2 Baths">2 Baths</option>
-                  <option value="3 Baths">3 Baths</option>
-                  <option value="4 Baths">4 Baths</option>
-                  <option value="5+ Baths">5+ Baths</option>
-                </select>
+                  placeholder="e.g. 2 Baths or 3 Baths"
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
+                />
+                <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Bathroom: ________"</span>
               </div>
 
               <div>
@@ -1637,9 +1728,10 @@ export default function ListingDetail({ listingId, onBack }) {
                   type="text"
                   value={rentalSpecs.parking_bays}
                   onChange={(e) => handleRentalSpecChange('parking_bays', e.target.value)}
-                  placeholder="e.g. 1 Space (P1-12)"
+                  placeholder="e.g. P2-128 or 1 Space"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
                 />
+                <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Parking: ________"</span>
               </div>
             </div>
 
@@ -1652,7 +1744,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   type="text"
                   value={rentalSpecs.building_name}
                   onChange={(e) => handleRentalSpecChange('building_name', e.target.value)}
-                  placeholder="e.g. Burj Crown"
+                  placeholder="e.g. Sobha Creek Vistas Reserve"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
                 />
               </div>
@@ -1665,7 +1757,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   type="text"
                   value={rentalSpecs.unit_number}
                   onChange={(e) => handleRentalSpecChange('unit_number', e.target.value)}
-                  placeholder="e.g. 1402"
+                  placeholder="e.g. B1610"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
                 />
               </div>
@@ -1678,7 +1770,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   type="text"
                   value={rentalSpecs.community}
                   onChange={(e) => handleRentalSpecChange('community', e.target.value)}
-                  placeholder="e.g. Downtown Dubai"
+                  placeholder="e.g. Sobha Hartland / MBR City"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
                 />
               </div>
@@ -1691,9 +1783,26 @@ export default function ListingDetail({ listingId, onBack }) {
                   type="text"
                   value={rentalSpecs.bua_sqft}
                   onChange={(e) => handleRentalSpecChange('bua_sqft', e.target.value)}
-                  placeholder="e.g. 1,065"
+                  placeholder="e.g. 528.83"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
                 />
+              </div>
+            </div>
+
+            {/* Plot Area */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  PLOT AREA (SQ.FT)
+                </label>
+                <input
+                  type="text"
+                  value={rentalSpecs.plot_area}
+                  onChange={(e) => handleRentalSpecChange('plot_area', e.target.value)}
+                  placeholder="e.g. 00 or 1,200"
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
+                />
+                <span className="text-[10px] text-white/40 mt-1 block">Stamped on line "Plot Area: ____ SqFt"</span>
               </div>
             </div>
           </div>
@@ -1734,13 +1843,13 @@ export default function ListingDetail({ listingId, onBack }) {
               <span className="text-[10px] text-white/40 mt-1 block">Checks official "Non-Exclusive" or "Exclusive" box</span>
             </div>
 
-            {/* Validity Duration */}
-            <div>
+            {/* Validity Duration (1 Month, 2 Month, 3 Month, Or Until) */}
+            <div className="md:col-span-2">
               <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
-                CONTRACT DURATION
+                CONTRACT PERIOD (OFFICIAL TEMPLATE OPTIONS)
               </label>
-              <div className="grid grid-cols-3 gap-2 glass-pill p-1 rounded-xl">
-                {['3 Month', '6 Month', '1 Year'].map((dur) => (
+              <div className="grid grid-cols-4 gap-2 glass-pill p-1 rounded-xl mb-2">
+                {['1 Month', '2 Month', '3 Month', 'Or Until'].map((dur) => (
                   <button
                     key={dur}
                     type="button"
@@ -1755,7 +1864,48 @@ export default function ListingDetail({ listingId, onBack }) {
                   </button>
                 ))}
               </div>
-              <span className="text-[10px] text-white/40 mt-1 block">Checks duration checkbox on agreement</span>
+              {rentalSpecs.agreement_duration === 'Or Until' && (
+                <div className="mt-2 animate-fade-in p-3 rounded-xl bg-blue-500/10 border border-blue-500/25">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1">
+                    SPECIFIC EXPIRY DATE (STAMPED ON "OR UNTIL: ________")
+                  </label>
+                  <input
+                    type="text"
+                    value={rentalSpecs.agreement_until_date || ''}
+                    onChange={(e) => handleRentalSpecChange('agreement_until_date', e.target.value)}
+                    placeholder="e.g. 31/12/2026 or 15 Nov 2026"
+                    className="w-full glass-input rounded-xl px-4 py-2 text-white text-xs placeholder-slate-500 focus:outline-none"
+                  />
+                </div>
+              )}
+              <span className="text-[10px] text-white/40 mt-1 block">Checks 1M, 2M, 3M, or marks "Or Until" and stamps the custom date</span>
+            </div>
+
+            {/* Brokerage Firm */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                BROKERAGE FIRM (STAMPED AFTER "AGENT:")
+              </label>
+              <input
+                type="text"
+                value={rentalSpecs.broker_name}
+                onChange={(e) => handleRentalSpecChange('broker_name', e.target.value)}
+                className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
+              />
+              <span className="text-[10px] text-white/40 mt-1 block">Aligned cleanly after "Agent: " to prevent text overlap</span>
+            </div>
+
+            {/* Assigned Agent Name & BRN */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                ASSIGNED AGENT NAME
+              </label>
+              <input
+                type="text"
+                value={rentalSpecs.broker_agent_name}
+                onChange={(e) => handleRentalSpecChange('broker_agent_name', e.target.value)}
+                className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
+              />
             </div>
 
             {/* Commission Rate */}
@@ -1772,33 +1922,7 @@ export default function ListingDetail({ listingId, onBack }) {
               />
             </div>
 
-            {/* Brokerage Firm */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
-                BROKERAGE FIRM
-              </label>
-              <input
-                type="text"
-                value={rentalSpecs.broker_name}
-                onChange={(e) => handleRentalSpecChange('broker_name', e.target.value)}
-                className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
-              />
-            </div>
-
-            {/* Assigned Agent Name & BRN */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
-                ASSIGNED AGENT NAME
-              </label>
-              <input
-                type="text"
-                value={rentalSpecs.broker_agent_name}
-                onChange={(e) => handleRentalSpecChange('broker_agent_name', e.target.value)}
-                className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
-              />
-            </div>
-
-            {/* Broker Phone / Office */}
+            {/* Broker Phone / Office & BRN */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
                 AGENCY REGISTRATION / BRN
