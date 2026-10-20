@@ -807,7 +807,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                     </label>
                     <input
                       type="text"
-                      value={securityDeposit}
+                      value={securityDeposit ?? ''}
                       onChange={(e) => setSecurityDeposit(e.target.value)}
                       placeholder="e.g. 5% or 10%"
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none placeholder-slate-500"
@@ -822,7 +822,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                     </label>
                     <input
                       type="text"
-                      value={ownerPhone}
+                      value={ownerPhone ?? ''}
                       onChange={(e) => setOwnerPhone(e.target.value)}
                       placeholder="e.g. +971 50 123 4567"
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none placeholder-slate-500"
@@ -835,7 +835,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                     </label>
                     <input
                       type="email"
-                      value={ownerEmail}
+                      value={ownerEmail ?? ''}
                       onChange={(e) => setOwnerEmail(e.target.value)}
                       placeholder="e.g. landlord@example.com"
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none placeholder-slate-500"

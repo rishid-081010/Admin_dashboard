@@ -42,6 +42,122 @@ const QUICK_DIRECTIVES = [
   { label: '🌊 Rich Balcony Pool/Sky', text: 'Enrich natural sky blue and pool water clarity without altering architecture' },
 ];
 
+// Dropdown and spec normalization helpers to prevent dropdown snap-backs
+const normalizeBedrooms = (val) => {
+  if (!val) return '2 Bedrooms';
+  const str = String(val).toLowerCase().trim();
+  if (str.includes('studio') || str === '0') return 'Studio';
+  if (str.startsWith('1')) return '1 Bedroom';
+  if (str.startsWith('2')) return '2 Bedrooms';
+  if (str.startsWith('3')) return '3 Bedrooms';
+  if (str.startsWith('4')) return '4 Bedrooms';
+  if (str.startsWith('5')) return '5 Bedrooms';
+  if (str.startsWith('6') || str.startsWith('7') || str.startsWith('8')) return '6+ Bedrooms';
+  return '2 Bedrooms';
+};
+
+const normalizeBathrooms = (val) => {
+  if (!val) return '2 Baths';
+  const str = String(val).toLowerCase().trim();
+  if (str.startsWith('1')) return '1 Bath';
+  if (str.startsWith('2')) return '2 Baths';
+  if (str.startsWith('3')) return '3 Baths';
+  if (str.startsWith('4')) return '4 Baths';
+  if (str.startsWith('5') || str.startsWith('6')) return '5+ Baths';
+  return '2 Baths';
+};
+
+const normalizeParking = (val) => {
+  if (!val) return '1 Space';
+  const str = String(val).toLowerCase().trim();
+  if (str.startsWith('0') || str.includes('none') || str.includes('no')) return '0 Spaces';
+  if (str.startsWith('1')) return '1 Space';
+  if (str.startsWith('2')) return '2 Spaces';
+  if (str.startsWith('3')) return '3 Spaces';
+  if (str.startsWith('4') || str.startsWith('5')) return '4+ Spaces';
+  return '1 Space';
+};
+
+const normalizePropertyType = (val) => {
+  if (!val) return 'Apartment';
+  const str = String(val).toLowerCase().trim();
+  if (str.includes('apart') || str.includes('flat') || str.includes('unit')) return 'Apartment';
+  if (str.includes('villa')) return 'Villa';
+  if (str.includes('townhouse') || str.includes('town house')) return 'Townhouse';
+  if (str.includes('land') || str.includes('plot')) return 'Land';
+  if (str.includes('office')) return 'Office';
+  if (str.includes('ware') || str.includes('storage')) return 'Warehouse';
+  if (str.includes('shop') || str.includes('retail')) return 'Shop';
+  if (str.includes('building') || str.includes('tower')) return 'Building';
+  return 'Apartment';
+};
+
+const normalizeCheques = (val) => {
+  if (!val) return '4 Cheques';
+  const str = String(val).toLowerCase().trim();
+  if (str.startsWith('1 -') || str.includes('negotiable')) return '1 - 4 Cheques';
+  if (str.startsWith('12')) return '12 Cheques';
+  if (str.startsWith('1')) return '1 Cheque';
+  if (str.startsWith('2')) return '2 Cheques';
+  if (str.startsWith('6')) return '6 Cheques';
+  if (str.startsWith('4')) return '4 Cheques';
+  return '4 Cheques';
+};
+
+const normalizeAgreementDuration = (val) => {
+  if (!val) return '3 Month';
+  const str = String(val).toLowerCase().trim();
+  if (str.includes('until') || str.includes('date')) return 'Or Until';
+  if (str.startsWith('1')) return '1 Month';
+  if (str.startsWith('2')) return '2 Month';
+  if (str.startsWith('3')) return '3 Month';
+  return '3 Month';
+};
+
+const getInitialRentalSpecs = (id) => {
+  let cached = {};
+  if (typeof window !== 'undefined' && id) {
+    try {
+      const stored = localStorage.getItem(`listing_rental_specs_${id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') cached = parsed;
+      }
+    } catch (e) {}
+  }
+
+  return {
+    form_date: cached.form_date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    owner_name: cached.owner_name ?? '',
+    owner_phone: cached.owner_phone ?? '',
+    owner_email: cached.owner_email ?? '',
+    owner_nationality: cached.owner_nationality ?? 'United Arab Emirates',
+    property_type: normalizePropertyType(cached.property_type),
+    category: cached.category || (['Office', 'Shop', 'Warehouse'].includes(cached.property_type) ? 'Commercial' : 'Residential'),
+    building_name: cached.building_name ?? '',
+    community: cached.community ?? 'Dubai',
+    unit_number: cached.unit_number ?? '',
+    bedrooms: normalizeBedrooms(cached.bedrooms),
+    bathrooms: normalizeBathrooms(cached.bathrooms),
+    parking_bays: normalizeParking(cached.parking_bays),
+    bua_sqft: cached.bua_sqft ?? '',
+    plot_area: cached.plot_area ?? '00',
+    price: cached.price ?? '',
+    cheques: normalizeCheques(cached.cheques),
+    security_deposit: cached.security_deposit ?? '5%',
+    occupancy_status: cached.occupancy_status ?? 'Vacant',
+    furnishing: cached.furnishing ?? 'Unfurnished',
+    agreement_type: cached.agreement_type ?? 'Non-Exclusive',
+    agreement_duration: normalizeAgreementDuration(cached.agreement_duration),
+    agreement_until_date: cached.agreement_until_date ?? '',
+    commission_rate: cached.commission_rate ?? '5% + VAT',
+    broker_name: cached.broker_name ?? 'A SQUARED REAL ESTATE',
+    broker_agent_name: cached.broker_agent_name ?? 'Melanie Simsiman',
+    broker_brn: cached.broker_brn ?? 'ORN: 28491 / BRN: 54120',
+    broker_phone: cached.broker_phone ?? '+971 4 000 0000',
+  };
+};
+
 export default function ListingDetail({ listingId, onBack }) {
   const [listing, setListing] = useState(null);
   const [images, setImages] = useState([]);
@@ -58,36 +174,7 @@ export default function ListingDetail({ listingId, onBack }) {
   const [copiedField, setCopiedField] = useState(null);
 
   // Official A-SQUARED Rental Listing Form & NOC Studio State
-  const [rentalSpecs, setRentalSpecs] = useState({
-    form_date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-    owner_name: '',
-    owner_phone: '',
-    owner_email: '',
-    owner_nationality: 'United Arab Emirates',
-    property_type: 'Apartment',
-    category: 'Residential',
-    building_name: '',
-    community: 'Dubai',
-    unit_number: '',
-    bedrooms: '2 Bedrooms',
-    bathrooms: '2 Baths',
-    parking_bays: '1 Space',
-    bua_sqft: '',
-    plot_area: '00',
-    price: '',
-    cheques: '4 Cheques',
-    security_deposit: '5%',
-    occupancy_status: 'Vacant',
-    furnishing: 'Unfurnished',
-    agreement_type: 'Non-Exclusive',
-    agreement_duration: '3 Month',
-    agreement_until_date: '',
-    commission_rate: '5% + VAT',
-    broker_name: 'A SQUARED REAL ESTATE',
-    broker_agent_name: 'Melanie Simsiman',
-    broker_brn: 'ORN: 28491 / BRN: 54120',
-    broker_phone: '+971 4 000 0000',
-  });
+  const [rentalSpecs, setRentalSpecs] = useState(() => getInitialRentalSpecs(listingId));
   const [isSavingRentalSpecs, setIsSavingRentalSpecs] = useState(false);
   const [isPreviewingPdf, setIsPreviewingPdf] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
@@ -95,6 +182,7 @@ export default function ListingDetail({ listingId, onBack }) {
   const [rentalActiveTab, setRentalActiveTab] = useState('financials'); // 'financials' | 'landlord' | 'specs' | 'mandate'
   const hasInitializedRentalSpecsRef = useRef(null);
   const hasUserEditedRentalSpecsRef = useRef(false);
+  const autoSaveDebounceRef = useRef(null);
 
   // Staged additional photos state
   const [additionalFiles, setAdditionalFiles] = useState([]);
@@ -354,7 +442,18 @@ export default function ListingDetail({ listingId, onBack }) {
               sbListing.property_specs = metadata.propertySpecs || metadata.property_specs;
             }
           }
-          setListing(sbListing);
+          if (isInitial) {
+            setListing(sbListing);
+          } else {
+            // Background poll: update listing without mutating reference if metadata is unchanged
+            setListing((prev) => {
+              if (!prev) return sbListing;
+              if (prev.status !== sbListing.status || prev.prompt !== sbListing.prompt) {
+                return { ...prev, status: sbListing.status, prompt: sbListing.prompt };
+              }
+              return prev;
+            });
+          }
           const enriched = enrichImages(sbImages || [], sbListing.prompt);
           setImages(enriched);
           if (customPromptText && !customPrompt) {
@@ -392,22 +491,29 @@ export default function ListingDetail({ listingId, onBack }) {
   // Synchronize rental specs ONLY once when listing first loads for this listingId
   useEffect(() => {
     if (!listing) return;
+    if (hasInitializedRentalSpecsRef.current === listingId) return;
 
-    // If user has already started editing for this listing, NEVER clobber their edits from background polls!
-    if (hasUserEditedRentalSpecsRef.current && hasInitializedRentalSpecsRef.current === listingId) {
-      return;
-    }
-
-    // If we've already initialized for this listingId, do NOT re-run on background poll intervals
-    if (hasInitializedRentalSpecsRef.current === listingId) {
-      return;
-    }
-
+    // Check if user has already edited or has a localStorage draft
+    let hasDraft = false;
     let cached = {};
     try {
       const stored = localStorage.getItem(`listing_rental_specs_${listingId}`);
-      if (stored) cached = JSON.parse(stored);
-    } catch {}
+      if (stored) {
+        cached = JSON.parse(stored) || {};
+        if (Object.keys(cached).length > 0) hasDraft = true;
+      }
+    } catch (e) {}
+
+    hasInitializedRentalSpecsRef.current = listingId;
+
+    if (hasUserEditedRentalSpecsRef.current || hasDraft) {
+      // User is editing or already has draft in localStorage -> preserve user draft!
+      if (cached && Object.keys(cached).length > 0) {
+        setRentalSpecs((prev) => ({ ...prev, ...cached }));
+      }
+      setRentalFormGenerated(true);
+      return;
+    }
 
     const c = (cached && Object.keys(cached).length > 0) ? cached : (listing.commercial_specs || {});
     const d = listing.title_deed_data || {};
@@ -420,23 +526,23 @@ export default function ListingDetail({ listingId, onBack }) {
       owner_phone: c.owner_phone || e.phone || '',
       owner_email: c.owner_email || '',
       owner_nationality: c.owner_nationality || e.nationality || d.nationality || 'United Arab Emirates',
-      property_type: c.property_type || listing.property_type || d.property_type || 'Apartment',
+      property_type: normalizePropertyType(c.property_type || listing.property_type || d.property_type),
       category: c.category || (['Office', 'Shop', 'Warehouse'].includes(c.property_type || listing.property_type) ? 'Commercial' : 'Residential'),
       building_name: c.building_name || d.building_name || listing.name || '',
       community: c.community || d.community || 'Dubai',
       unit_number: c.unit_number || d.unit_number || '',
-      bedrooms: c.bedrooms || p.bedrooms || listing.bedrooms || '2 Bedrooms',
-      bathrooms: c.bathrooms || p.bathrooms || listing.bathrooms || '2 Baths',
-      parking_bays: c.parking_bays || c.parking || d.parking_bays?.[0] || '1 Space',
+      bedrooms: normalizeBedrooms(c.bedrooms || p.bedrooms || listing.bedrooms),
+      bathrooms: normalizeBathrooms(c.bathrooms || p.bathrooms || listing.bathrooms),
+      parking_bays: normalizeParking(c.parking_bays || c.parking || d.parking_bays?.[0]),
       bua_sqft: c.bua_sqft || d.total_area_sqft || d.suite_area_sqft || p.size_sqft || '',
       plot_area: c.plot_area || d.plot_number || '00',
       price: c.price || c.asking_price || listing.price || '',
-      cheques: c.cheques || '4 Cheques',
+      cheques: normalizeCheques(c.cheques),
       security_deposit: c.security_deposit || '5%',
       occupancy_status: c.occupancy_status || 'Vacant',
       furnishing: c.furnishing || p.furnishing || 'Unfurnished',
       agreement_type: c.agreement_type || 'Non-Exclusive',
-      agreement_duration: c.agreement_duration || '3 Month',
+      agreement_duration: normalizeAgreementDuration(c.agreement_duration),
       agreement_until_date: c.agreement_until_date || c.until_date || '',
       commission_rate: c.commission_rate || '5% + VAT',
       broker_name: c.broker_name || 'A SQUARED REAL ESTATE',
@@ -445,7 +551,6 @@ export default function ListingDetail({ listingId, onBack }) {
       broker_phone: c.broker_phone || '+971 4 000 0000',
     };
 
-    hasInitializedRentalSpecsRef.current = listingId;
     setRentalSpecs(initial);
     if (c.form_status === 'verified_custom' || c.owner_phone || c.cheques) {
       setRentalFormGenerated(true);
@@ -456,11 +561,53 @@ export default function ListingDetail({ listingId, onBack }) {
     hasUserEditedRentalSpecsRef.current = true;
     setRentalSpecs(prev => {
       const updated = { ...prev, [field]: value };
-      try {
-        localStorage.setItem(`listing_rental_specs_${listingId}`, JSON.stringify(updated));
-      } catch (err) {}
+      if (typeof window !== 'undefined' && listingId) {
+        try {
+          localStorage.setItem(`listing_rental_specs_${listingId}`, JSON.stringify(updated));
+        } catch (err) {}
+      }
       return updated;
     });
+
+    // 1.5s Debounced background sync to Supabase so edits persist to the database without requiring manual save
+    if (autoSaveDebounceRef.current) {
+      clearTimeout(autoSaveDebounceRef.current);
+    }
+    autoSaveDebounceRef.current = setTimeout(async () => {
+      try {
+        if (!listingId) return;
+        const stored = localStorage.getItem(`listing_rental_specs_${listingId}`);
+        if (!stored) return;
+        const specsToSave = JSON.parse(stored);
+
+        const getRes = await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}&select=prompt&limit=1`, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        if (getRes.ok) {
+          const rows = await getRes.json();
+          let promptPayload = {};
+          if (rows[0]?.prompt && rows[0].prompt.trim().startsWith('{')) {
+            try { promptPayload = JSON.parse(rows[0].prompt); } catch {}
+          }
+          promptPayload.commercialSpecs = specsToSave;
+          promptPayload.commercial_specs = specsToSave;
+          promptPayload.lastEditedAt = new Date().toISOString();
+
+          await fetch(`${SUPABASE_BASE_URL}/real_estate_listings?id=eq.${listingId}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ prompt: JSON.stringify(promptPayload) })
+          });
+        }
+      } catch (e) {
+        // Silent fail for debounced background save
+      }
+    }, 1500);
   };
 
   const handlePullFromDocuments = () => {
@@ -1578,7 +1725,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="text"
-                value={rentalSpecs.price}
+                value={rentalSpecs.price ?? ''}
                 onChange={(e) => handleRentalSpecChange('price', e.target.value)}
                 placeholder="e.g. 185,000"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white font-semibold placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1723,7 +1870,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="text"
-                value={rentalSpecs.owner_name}
+                value={rentalSpecs.owner_name ?? ''}
                 onChange={(e) => handleRentalSpecChange('owner_name', e.target.value)}
                 placeholder="Full Legal Name as shown on Title Deed"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white font-semibold placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1743,7 +1890,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="text"
-                value={rentalSpecs.owner_phone}
+                value={rentalSpecs.owner_phone ?? ''}
                 onChange={(e) => handleRentalSpecChange('owner_phone', e.target.value)}
                 placeholder="e.g. +971 50 123 4567"
                 className={`w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm ${!rentalSpecs.owner_phone ? 'border-red-500/40' : ''}`}
@@ -1763,7 +1910,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="email"
-                value={rentalSpecs.owner_email}
+                value={rentalSpecs.owner_email ?? ''}
                 onChange={(e) => handleRentalSpecChange('owner_email', e.target.value)}
                 placeholder="e.g. landlord@example.com"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1778,7 +1925,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="text"
-                value={rentalSpecs.owner_nationality}
+                value={rentalSpecs.owner_nationality ?? ''}
                 onChange={(e) => handleRentalSpecChange('owner_nationality', e.target.value)}
                 placeholder="e.g. United Arab Emirates"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1795,7 +1942,7 @@ export default function ListingDetail({ listingId, onBack }) {
                   <Home className="w-3.5 h-3.5 text-white/60" /> PROPERTY TYPE (8 OFFICIAL OPTIONS)
                 </label>
                 <select
-                  value={rentalSpecs.property_type}
+                  value={rentalSpecs.property_type ?? 'Apartment'}
                   onChange={(e) => handleRentalSpecChange('property_type', e.target.value)}
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm cursor-pointer"
                 >
@@ -1817,7 +1964,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 </label>
                 <input
                   type="text"
-                  value={rentalSpecs.bedrooms}
+                  value={rentalSpecs.bedrooms ?? ''}
                   onChange={(e) => handleRentalSpecChange('bedrooms', e.target.value)}
                   placeholder="e.g. 2 Bedrooms or Studio"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
@@ -1831,7 +1978,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 </label>
                 <input
                   type="text"
-                  value={rentalSpecs.bathrooms}
+                  value={rentalSpecs.bathrooms ?? ''}
                   onChange={(e) => handleRentalSpecChange('bathrooms', e.target.value)}
                   placeholder="e.g. 2 Baths or 3 Baths"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
@@ -1845,7 +1992,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 </label>
                 <input
                   type="text"
-                  value={rentalSpecs.parking_bays}
+                  value={rentalSpecs.parking_bays ?? ''}
                   onChange={(e) => handleRentalSpecChange('parking_bays', e.target.value)}
                   placeholder="e.g. P2-128 or 1 Space"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1861,7 +2008,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 </label>
                 <input
                   type="text"
-                  value={rentalSpecs.building_name}
+                  value={rentalSpecs.building_name ?? ''}
                   onChange={(e) => handleRentalSpecChange('building_name', e.target.value)}
                   placeholder="e.g. Sobha Creek Vistas Reserve"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1874,7 +2021,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 </label>
                 <input
                   type="text"
-                  value={rentalSpecs.unit_number}
+                  value={rentalSpecs.unit_number ?? ''}
                   onChange={(e) => handleRentalSpecChange('unit_number', e.target.value)}
                   placeholder="e.g. B1610"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1887,7 +2034,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 </label>
                 <input
                   type="text"
-                  value={rentalSpecs.community}
+                  value={rentalSpecs.community ?? ''}
                   onChange={(e) => handleRentalSpecChange('community', e.target.value)}
                   placeholder="e.g. Sobha Hartland / MBR City"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1900,7 +2047,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 </label>
                 <input
                   type="text"
-                  value={rentalSpecs.bua_sqft}
+                  value={rentalSpecs.bua_sqft ?? ''}
                   onChange={(e) => handleRentalSpecChange('bua_sqft', e.target.value)}
                   placeholder="e.g. 528.83"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -1916,7 +2063,7 @@ export default function ListingDetail({ listingId, onBack }) {
                 </label>
                 <input
                   type="text"
-                  value={rentalSpecs.plot_area}
+                  value={rentalSpecs.plot_area ?? ''}
                   onChange={(e) => handleRentalSpecChange('plot_area', e.target.value)}
                   placeholder="e.g. 00 or 1,200"
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -2005,7 +2152,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="text"
-                value={rentalSpecs.broker_name}
+                value={rentalSpecs.broker_name ?? ''}
                 onChange={(e) => handleRentalSpecChange('broker_name', e.target.value)}
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
               />
@@ -2019,7 +2166,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="text"
-                value={rentalSpecs.broker_agent_name}
+                value={rentalSpecs.broker_agent_name ?? ''}
                 onChange={(e) => handleRentalSpecChange('broker_agent_name', e.target.value)}
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
               />
@@ -2032,7 +2179,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="text"
-                value={rentalSpecs.commission_rate}
+                value={rentalSpecs.commission_rate ?? ''}
                 onChange={(e) => handleRentalSpecChange('commission_rate', e.target.value)}
                 placeholder="e.g. 5% + VAT"
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none transition-all text-sm"
@@ -2046,7 +2193,7 @@ export default function ListingDetail({ listingId, onBack }) {
               </label>
               <input
                 type="text"
-                value={rentalSpecs.broker_brn}
+                value={rentalSpecs.broker_brn ?? ''}
                 onChange={(e) => handleRentalSpecChange('broker_brn', e.target.value)}
                 className="w-full glass-input rounded-xl px-4 py-2.5 text-white focus:outline-none transition-all text-sm"
               />
