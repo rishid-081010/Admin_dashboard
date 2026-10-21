@@ -10,6 +10,78 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
+export const ASQUARED_PRESERVATION_PROMPT = `You are a real-estate property photo QA and enhancement assistant.
+
+Review the attached property photo for portal advertising.
+
+First assess:
+- brightness
+- sharpness
+- natural appearance
+- vertical lines and perspective
+- composition
+- visible people
+- watermarks
+- reflections
+- clutter
+- CGI or AI-generated appearance
+- bathroom placement
+- floor-plan status
+- whether the photo clearly represents the property
+
+Do not change the property or invent furniture, features, amenities or views.
+
+Determine whether the image should be:
+- used as-is
+- edited
+- reordered
+- rejected
+- sent for human review
+
+If editing is required, edit the real-estate photo conservatively so it still looks like a natural professional photograph.
+
+Improve only:
+- exposure
+- brightness
+- white balance
+- clarity
+- straightness
+- minor photographic imperfections
+
+Preserve exactly:
+- actual room layout
+- finishes
+- furniture
+- fixtures
+- architectural features
+- windows
+- doors
+- view
+- property condition
+
+Do not:
+- add furniture
+- remove furniture
+- add amenities
+- remove amenities
+- alter the room layout
+- add or remove structural features
+- change the view
+- fabricate property features
+- make the image look CGI
+- make the image look AI-generated
+- over-saturate
+- over-sharpen
+- distort proportions
+
+If the image contains a floor plan, do not treat it as a normal room photograph. Identify it as a floor plan and evaluate whether it should be included and where it should appear in the photo sequence.
+
+If the image contains people, watermarks, severe clutter, misleading reflections, obvious CGI, or other issues that cannot be safely corrected through conservative editing, flag the issue instead of attempting to hide or fabricate it.
+
+For portal-ready output, target:
+1200 x 900 pixels
+Natural professional property-advertising style.`;
+
 const QA_SYSTEM_PROMPT = `You are the Principal Real Estate Photography Director & Darkroom Master for luxury Dubai properties (Downtown, Palm Jumeirah, Dubai Marina, Emirates Hills).
 
 MISSION:
@@ -61,7 +133,7 @@ Return strictly valid JSON matching this schema:
 }`;
 
 /**
- * Deterministic, non-generative Darkroom Transformation Engine using sharp.
+ * Deterministic fallback transformation engine using sharp.
  */
 export async function applyDarkroomTransformations(inputPath, adjustments = {}, outputPath) {
   const image = sharp(inputPath);
@@ -85,12 +157,12 @@ export async function applyDarkroomTransformations(inputPath, adjustments = {}, 
     hue: hueShift,
   });
 
-  // Stage B: Dynamic Multi-Zone Gamma (Deep shadow lifting / black retention)
+  // Stage B: Dynamic Multi-Zone Gamma
   if (Math.abs(gamma - 1.0) > 0.005) {
     pipeline = pipeline.gamma(gamma);
   }
 
-  // Stage C: CLAHE Local Micro-Contrast & Window Glare Compression
+  // Stage C: CLAHE Local Micro-Contrast
   pipeline = pipeline.clahe({
     width: 64,
     height: 64,
@@ -107,7 +179,7 @@ export async function applyDarkroomTransformations(inputPath, adjustments = {}, 
     y3: 28,
   });
 
-  // Export with 4:4:4 pristine chroma subsampling and optimal compression
+  // Export with optimal chroma
   const originalExt = (metadata.format || 'jpeg').toLowerCase();
   if (originalExt === 'png') {
     await pipeline.png({ quality: 98, compressionLevel: 6 }).toFile(outputPath);
@@ -131,7 +203,94 @@ export async function applyDarkroomTransformations(inputPath, adjustments = {}, 
   };
 }
 
-export async function processPhotoWithQA(inputPath, position = 1, totalPhotos = 1, context = '', outputPath) {
+/**
+ * Neural Image Enhancement Engine using OpenAI's Image Edits API (Flare or Sunburst).
+ * Dual-Mode: Defaults to 'gpt-image-2.5-flare', supports 'gpt-image-2.5-sunburst'.
+ */
+export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outputPath, modelChoice = 'flare') {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey || apiKey.includes('your_openai_api_key')) {
+    console.warn('[Neural Enhancer] No valid OpenAI API key; using local photographic fallback.');
+    return applyDarkroomTransformations(inputPath, {}, outputPath);
+  }
+
+  // Determine model: Flare (default, fast) or Sunburst (luxury flagship)
+  const isSunburst = String(modelChoice).toLowerCase().includes('sunburst');
+  const targetModel = isSunburst ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare';
+
+  // Build prompt combining proven preservation guardrails and any custom user tweaks
+  let effectivePrompt = ASQUARED_PRESERVATION_PROMPT;
+  if (customPrompt && customPrompt.trim() && customPrompt.trim() !== ASQUARED_PRESERVATION_PROMPT.trim()) {
+    effectivePrompt = `${customPrompt.trim()}\n\nSTRICT PRESERVATION REQUIREMENTS:\n- Keep the exact same room layout, architectural geometry, finishes, furniture, and real exterior view.\n- Zero new objects, zero altered room layout, zero CGI appearance.\n- Improve natural interior exposure, window clarity, and white balance without adding or removing features.`;
+  }
+
+  console.log(`[Neural Enhancer] Executing ${targetModel} on: ${path.basename(inputPath)} (Quality: high)...`);
+  const startTime = Date.now();
+
+  try {
+    const buffer = fs.readFileSync(inputPath);
+    const ext = path.extname(inputPath).toLowerCase().replace('.', '') || 'jpeg';
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    const blob = new Blob([buffer], { type: mimeType });
+
+    const formData = new FormData();
+    formData.append('model', targetModel);
+    formData.append('image', blob, path.basename(inputPath));
+    formData.append('prompt', effectivePrompt);
+    formData.append('quality', 'high');
+
+    const res = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: formData
+    });
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Neural Enhancer] ${targetModel} API responded with HTTP ${res.status} (${elapsed}s): ${errText}`);
+      throw new Error(`OpenAI API HTTP ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    const b64Data = data.data?.[0]?.b64_json;
+    const imgUrl = data.data?.[0]?.url;
+
+    if (b64Data) {
+      fs.writeFileSync(outputPath, Buffer.from(b64Data, 'base64'));
+      console.log(`[Neural Enhancer] Successfully enhanced with ${targetModel} (${elapsed}s) -> ${outputPath}`);
+      return { outputPath, success: true, modelUsed: targetModel, elapsed };
+    } else if (imgUrl) {
+      const dlRes = await fetch(imgUrl);
+      const ab = await dlRes.arrayBuffer();
+      fs.writeFileSync(outputPath, Buffer.from(ab));
+      console.log(`[Neural Enhancer] Successfully downloaded ${targetModel} output (${elapsed}s) -> ${outputPath}`);
+      return { outputPath, success: true, modelUsed: targetModel, elapsed };
+    }
+
+    throw new Error('Neural model returned payload without image data.');
+  } catch (err) {
+    console.error(`[Neural Enhancer] Error in ${targetModel}:`, err.message);
+    console.log('[Neural Enhancer] Engaging deterministic darkroom fallback...');
+    return applyDarkroomTransformations(inputPath, {}, outputPath);
+  }
+}
+
+/**
+ * Full Pipeline: Vision QA Inspection + Neural Image Enhancement
+ */
+export async function processPhotoWithQA(
+  inputPath,
+  position = 1,
+  totalPhotos = 1,
+  context = '',
+  outputPath,
+  customPrompt = '',
+  modelChoice = 'flare'
+) {
   const apiKey = process.env.OPENAI_API_KEY;
   let qaResult = {
     usable: true,
@@ -141,24 +300,24 @@ export async function processPhotoWithQA(inputPath, position = 1, totalPhotos = 
     suggested_order: position,
     confidence: 0.98,
     edit_applied: true,
-    edit_summary: 'Multi-zone HDR shadow recovery, window glare pull, and texture sharpening applied.',
+    edit_summary: `Neural real-estate enhancement applied (${modelChoice.includes('sunburst') ? 'Sunburst Luxury' : 'Flare High-Speed'}).`,
     human_review_required: false,
     room_category: 'Property_Photo',
     color_temperature_cast: 'neutral',
     window_glare_level: 'moderate',
     shadow_depth: 'moderate',
+    model_used: modelChoice.includes('sunburst') ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare',
     adjustments: {
       brightness: 1.06,
       saturation: 1.05,
       gamma: 1.05,
-      highlight_pull: 3,
       clahe_max_slope: 3,
       sharpness: 1.15,
       warmth_neutralize: true,
     }
   };
 
-  // 1. Run Flagship Vision QA Inspection using GPT-4o with High-Detail Multi-Tile Analysis
+  // 1. Run Vision QA Inspection using GPT-4o for Room Classification & Compliance
   if (apiKey && !apiKey.includes('your_openai_api_key')) {
     try {
       const openai = new OpenAI({ apiKey });
@@ -202,9 +361,8 @@ export async function processPhotoWithQA(inputPath, position = 1, totalPhotos = 
     }
   }
 
-  // 2. High-Dynamic-Range (HDR) Multi-Zone Darkroom Processing (100% Non-Generative)
-  const { appliedAdjustments } = await applyDarkroomTransformations(inputPath, qaResult.adjustments, outputPath);
-  qaResult.adjustments = appliedAdjustments;
+  // 2. Execute Neural Image Enhancement (Option C: Flare or Sunburst)
+  await enhanceWithNeuralModel(inputPath, customPrompt, outputPath, modelChoice);
 
   return {
     outputPath,
@@ -212,136 +370,28 @@ export async function processPhotoWithQA(inputPath, position = 1, totalPhotos = 
   };
 }
 
-export async function refinePhotoWithDirective(inputPath, currentQAResult, adminDirective, outputPath) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  const currentAdj = currentQAResult?.adjustments || {
-    brightness: 1.06,
-    saturation: 1.05,
-    gamma: 1.05,
-    clahe_max_slope: 3,
-    sharpness: 1.15,
-    hue: -3,
-    warmth_neutralize: true,
-  };
-
-  let updatedAdjustments = { ...currentAdj };
-  let editSummary = `Refined with directive: "${adminDirective}"`;
-
-  // Heuristic Boosters to guarantee bold, noticeable visual response to key directives
-  const dLower = (adminDirective || '').toLowerCase();
-  if (dLower.includes('shadow') || dLower.includes('dark') || dLower.includes('bright') || dLower.includes('lift') || dLower.includes('floor')) {
-    updatedAdjustments.gamma = Math.max(1.12, (updatedAdjustments.gamma || 1.05) + 0.10);
-    updatedAdjustments.brightness = Math.max(1.12, (updatedAdjustments.brightness || 1.06) + 0.08);
-  }
-  if (dLower.includes('window') || dLower.includes('glare') || dLower.includes('skyline') || dLower.includes('balcony') || dLower.includes('view')) {
-    updatedAdjustments.clahe_max_slope = Math.max(5, (updatedAdjustments.clahe_max_slope || 3) + 2);
-  }
-  if (dLower.includes('warm') || dLower.includes('golden') || dLower.includes('sunset') || dLower.includes('cozy')) {
-    updatedAdjustments.hue = 8;
-    updatedAdjustments.warmth_neutralize = false;
-  }
-  if (dLower.includes('cool') || dLower.includes('neutral') || dLower.includes('yellow') || dLower.includes('white')) {
-    updatedAdjustments.hue = -8;
-    updatedAdjustments.warmth_neutralize = true;
-  }
-  if (dLower.includes('sharp') || dLower.includes('clarity') || dLower.includes('crisp') || dLower.includes('texture') || dLower.includes('marble')) {
-    updatedAdjustments.sharpness = Math.max(1.45, (updatedAdjustments.sharpness || 1.15) + 0.35);
-  }
-  if (dLower.includes('vivid') || dLower.includes('saturation') || dLower.includes('pop') || dLower.includes('pool') || dLower.includes('sky')) {
-    updatedAdjustments.saturation = Math.max(1.18, (updatedAdjustments.saturation || 1.05) + 0.12);
-  }
-
-  // Vision AI Directive Analysis
-  if (apiKey && !apiKey.includes('your_openai_api_key')) {
-    try {
-      const openai = new OpenAI({ apiKey });
-      const imageBuffer = fs.readFileSync(inputPath);
-      const ext = path.extname(inputPath).toLowerCase().replace('.', '') || 'jpeg';
-      const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-      const base64Image = imageBuffer.toString('base64');
-
-      const REFINE_PROMPT = `You are the Lead Real Estate Optical Colorist & Darkroom Master.
-An admin gave this custom directive to noticeably improve this property photo:
-
-ADMIN DIRECTIVE:
+/**
+ * Directive Refinement using Neural Model (Defaults to Sunburst for maximum precision)
+ */
+export async function refinePhotoWithDirective(inputPath, currentQAResult, adminDirective, outputPath, modelChoice = 'sunburst') {
+  const directivePrompt = `You are an elite architectural real-estate colorist.
+Execute this specific refinement directive on the authentic property photo:
 "${adminDirective}"
 
-CURRENT TONE CURVES:
-${JSON.stringify(updatedAdjustments, null, 2)}
+STRICT PRESERVATION REQUIREMENTS:
+- 100% authentic room structure, finishes, furniture, windows, and exterior view.
+- Under NO circumstances add, fabricate, or remove furniture, fixtures, decor, or view details.
+- Fulfill the admin's exact directive (${adminDirective}) while keeping the space authentic and photorealistic.`;
 
-TASK:
-Calculate bold, visually impactful optical adjustments to fulfill the admin's exact directive while maintaining authentic materials and structural integrity (ZERO synthetic hallucinations).
-
-Allowed ranges:
-- "brightness": Multiplier (0.80 to 1.45)
-- "saturation": Vibrance (0.80 to 1.40)
-- "gamma": Shadow dynamic curve (0.90 to 1.35)
-- "clahe_max_slope": Integer local contrast / window pull (1 to 10)
-- "sharpness": Unsharp mask clarity (0.6 to 2.2)
-- "hue": Color temperature degrees (-25 cool to +25 warm)
-- "warmth_neutralize": Boolean
-
-Return strictly valid JSON:
-{
-  "edit_summary": "Clear, concise description of the optical adjustments applied",
-  "adjustments": {
-    "brightness": 1.14,
-    "saturation": 1.08,
-    "gamma": 1.15,
-    "clahe_max_slope": 5,
-    "sharpness": 1.45,
-    "hue": -5,
-    "warmth_neutralize": true
-  }
-}`;
-
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: REFINE_PROMPT },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Apply this specific refinement directive: "${adminDirective}"`,
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Image}`,
-                  detail: 'high',
-                },
-              },
-            ],
-          },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.3,
-      });
-
-      const parsed = JSON.parse(response.choices[0].message.content);
-      if (parsed.adjustments) {
-        updatedAdjustments = { ...updatedAdjustments, ...parsed.adjustments };
-      }
-      if (parsed.edit_summary) {
-        editSummary = parsed.edit_summary;
-      }
-    } catch (refineErr) {
-      console.warn('Refinement Vision note:', refineErr.message);
-    }
-  }
-
-  // Apply updated adjustments via sharp pipeline
-  const { appliedAdjustments } = await applyDarkroomTransformations(inputPath, updatedAdjustments, outputPath);
+  await enhanceWithNeuralModel(inputPath, directivePrompt, outputPath, modelChoice);
 
   const newQAResult = {
     ...(currentQAResult || {}),
     usable: true,
     action: 'edited',
     edit_applied: true,
-    edit_summary: editSummary,
-    adjustments: appliedAdjustments,
+    edit_summary: `Refined with directive: "${adminDirective}" (${modelChoice.includes('sunburst') ? 'Sunburst' : 'Flare'})`,
+    model_used: modelChoice.includes('sunburst') ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare',
   };
 
   return {

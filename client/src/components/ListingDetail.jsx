@@ -985,22 +985,20 @@ export default function ListingDetail({ listingId, onBack }) {
 
     setIsRefiningImage(true);
     try {
-      const isLocal = typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-      if (isLocal) {
-        try {
-          const response = await axios.post(`/api/images/${refineModalImage.id}/refine`, {
-            directive: String(textToApply).trim(),
-          }, { timeout: 3000 });
-          if (response.data?.success) {
-            showToast('AI Optical Refinement applied to photo!', 'success');
-            setCacheBuster(Date.now());
-            fetchListingDetails();
-            setIsRefiningImage(false);
-            return;
-          }
-        } catch (e) {}
+      try {
+        const response = await axios.post(`/api/images/${refineModalImage.id}/refine`, {
+          directive: String(textToApply).trim(),
+          model: 'gpt-image-2.5-sunburst',
+        }, { timeout: 60000 });
+        if (response.data?.success) {
+          showToast('✨ Sunburst AI Refinement applied to photo!', 'success');
+          setCacheBuster(Date.now());
+          fetchListingDetails();
+          setIsRefiningImage(false);
+          return;
+        }
+      } catch (e) {
+        console.warn('Backend refine note, attempting fallback:', e.message);
       }
 
       // Production Client-Side Photographic Darkroom Engine
@@ -1252,56 +1250,28 @@ export default function ListingDetail({ listingId, onBack }) {
     }
   };
 
-  const handleReProcessAll = async () => {
+  const handleReProcessAll = async (modelChoice = 'flare') => {
     setIsReProcessingAll(true);
-    showToast('Re-processing and enhancing all listing photos...', 'info');
+    const isSunburst = String(modelChoice).toLowerCase().includes('sunburst');
+    const targetModel = isSunburst ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare';
+    const label = isSunburst ? 'Sunburst Luxury' : 'Flare High-Speed';
+    showToast(`Re-processing all photos with ${label}...`, 'info');
     try {
-      let updatedCount = 0;
-      const updatedImages = [];
+      // Re-queue images
+      await sbFetch(`/real_estate_images?listing_id=eq.${listingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'queued', error_message: null })
+      });
 
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i];
-        const srcUrl = img.original_image_location || img.generated_image_location;
-        if (!srcUrl) continue;
+      // Trigger backend batch processing
+      const response = await axios.post(`/api/listings/${listingId}/process`, {
+        model: targetModel,
+        prompt: listing?.prompt || ''
+      });
 
-        try {
-          const enh = await enhanceRealEstatePhoto(srcUrl);
-          if (enh && enh.blob) {
-            const enhRes = await uploadEnhancedListingImage(
-              enh.blob,
-              listingId,
-              img.original_filename || `photo_${i}.jpg`
-            );
-            if (enhRes && enhRes.publicUrl) {
-              await sbFetch(`/real_estate_images?id=eq.${img.id}`, {
-                method: 'PATCH',
-                body: JSON.stringify({
-                  generated_image_location: enhRes.publicUrl,
-                  status: 'completed',
-                })
-              });
-              updatedImages.push({
-                ...img,
-                generated_image_location: enhRes.publicUrl,
-                status: 'completed'
-              });
-              updatedCount++;
-            }
-          }
-        } catch (e) {
-          console.warn(`Re-enhance warning for image ${img.id}:`, e.message);
-        }
-      }
-
-      if (updatedCount > 0) {
-        setImages((prev) => prev.map((img) => {
-          const found = updatedImages.find((u) => u.id === img.id);
-          return found || img;
-        }));
-        setCacheBuster(Date.now());
-        showToast(`✨ Successfully enhanced ${updatedCount} photos!`, 'success');
-      } else {
-        showToast('Photos re-processed.', 'info');
+      if (response.data?.success) {
+        showToast(`✨ Batch enhancement started with ${label}!`, 'success');
+        fetchListingDetails();
       }
     } catch (err) {
       console.error('Re-process error:', err);
@@ -1824,14 +1794,26 @@ export default function ListingDetail({ listingId, onBack }) {
               Enhancement Prompt & Directives (Editable)
             </span>
           </div>
-          <button
-            onClick={handleReProcessAll}
-            disabled={isReProcessingAll}
-            className="px-3 py-1.5 rounded-xl glass-pill hover:bg-white/[0.1] text-xs font-semibold text-blue-300 flex items-center gap-1.5 transition-all"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isReProcessingAll ? 'animate-spin' : ''}`} />
-            {isReProcessingAll ? 'Re-Processing...' : 'Re-Enhance All with Prompt'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleReProcessAll('flare')}
+              disabled={isReProcessingAll}
+              className="px-3 py-1.5 rounded-xl glass-pill hover:bg-blue-500/20 text-xs font-semibold text-blue-300 flex items-center gap-1.5 transition-all border border-blue-500/30"
+              title="Enhance all photos with high-speed Flare (~15s/photo)"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isReProcessingAll ? 'animate-spin' : ''}`} />
+              {isReProcessingAll ? 'Processing...' : '⚡ Re-Enhance (Flare)'}
+            </button>
+            <button
+              onClick={() => handleReProcessAll('sunburst')}
+              disabled={isReProcessingAll}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-xs font-semibold text-amber-300 flex items-center gap-1.5 transition-all border border-amber-500/30"
+              title="Enhance all photos with Sunburst Luxury Master (~25s/photo)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              ☀️ Re-Enhance (Sunburst Luxury)
+            </button>
+          </div>
         </div>
         <textarea
           rows={2}

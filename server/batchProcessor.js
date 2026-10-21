@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 // Active jobs lock map to prevent duplicate concurrent runs
 const activeJobs = new Set();
 
-export async function startBatchProcessing(listingId, customPrompt = '') {
+export async function startBatchProcessing(listingId, customPrompt = '', modelChoice = 'flare') {
   if (activeJobs.has(listingId)) {
     console.log(`Job ${listingId} is already processing.`);
     return;
@@ -91,13 +91,16 @@ export async function startBatchProcessing(listingId, customPrompt = '') {
             const position = i + chunkIdx + 1;
             const context = `${listing.name} (${listing.property_type || 'Apartment'})`;
 
-            // Run QA & conservative photographic enhancement
+            // Run QA & neural real-estate enhancement (Option C: Flare or Sunburst)
+            const effectiveModel = modelChoice || listing.enhancement_model || 'flare';
             const { qaResult } = await processPhotoWithQA(
               originalAbsPath,
               position,
               images.length,
               context,
-              generatedAbsPath
+              generatedAbsPath,
+              customPrompt || listing.prompt || '',
+              effectiveModel
             );
 
             // Upload Generated Image to Supabase Cloud

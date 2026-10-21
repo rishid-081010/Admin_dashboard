@@ -349,8 +349,8 @@ app.post('/api/listings', upload.array('images', 50), async (req, res) => {
 
     writeListingMeta(listing.id, meta);
 
-    // Trigger non-destructive batch processing
-    startBatchProcessing(listing.id);
+    // Trigger non-destructive batch processing with selected model (default: flare, optional: sunburst)
+    startBatchProcessing(listing.id, prompt, req.body.enhancement_model || req.body.model || 'flare');
 
     res.status(201).json({
       success: true,
@@ -662,7 +662,7 @@ app.post('/api/listings/create-with-dossier', dossierUploadFields, async (req, r
 
     // 9. Start batch photo processing if photos uploaded
     if (insertedImages.length > 0 && auto_enhance !== 'false') {
-      startBatchProcessing(listing.id);
+      startBatchProcessing(listing.id, req.body.prompt || '', req.body.enhancement_model || req.body.model || 'flare');
     }
 
     res.status(201).json({
@@ -916,7 +916,7 @@ app.post('/api/listings/:id/process', async (req, res) => {
       .update({ status: 'queued', error_message: null })
       .eq('listing_id', id);
 
-    startBatchProcessing(id, prompt);
+    startBatchProcessing(id, prompt, req.body.enhancement_model || req.body.model || 'flare');
     res.json({ success: true, message: 'Batch processing initiated.' });
   } catch (err) {
     console.error('Error starting processing:', err);
@@ -944,7 +944,7 @@ app.post('/api/images/:id/retry', async (req, res) => {
       .update({ status: 'queued', error_message: null })
       .eq('id', id);
 
-    startBatchProcessing(image.listing_id);
+    startBatchProcessing(image.listing_id, null, req.body.enhancement_model || req.body.model || 'flare');
 
     res.json({ success: true, message: 'Image requeued for processing.' });
   } catch (err) {
@@ -1012,7 +1012,7 @@ app.post('/api/listings/:id/images', upload.array('images', 50), async (req, res
     writeListingMeta(id, meta);
 
     // Start background processing for newly queued images
-    startBatchProcessing(id);
+    startBatchProcessing(id, null, req.body.enhancement_model || req.body.model || 'flare');
 
     res.json({
       success: true,
@@ -1143,12 +1143,14 @@ app.post('/api/images/:id/refine', async (req, res) => {
     const outRelPath = `/uploads/generated/${outFilename}`;
     const outAbsPath = path.join(generatedDir, outFilename);
 
-    // Run refinement engine
+    // Run refinement engine (defaults to Sunburst for maximum precision)
+    const modelChoice = req.body.enhancement_model || req.body.model || 'sunburst';
     const { qaResult } = await refinePhotoWithDirective(
       origAbsPath,
       currentQAReport,
       directive.trim(),
-      outAbsPath
+      outAbsPath,
+      modelChoice
     );
 
     // Update metadata
@@ -1500,6 +1502,19 @@ app.put('/api/listings/:id/reorder', async (req, res) => {
     res.json({ success: true, message: 'Image order updated.' });
   } catch (err) {
     console.error('Error reordering images:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DIRECT PORTAL COPY GENERATION (For listing creation)
+app.post('/api/generate-copy', async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const tone = payload.tone || 'luxury';
+    const copy = await generateDubaiPortalCopy(payload, tone);
+    res.json({ success: true, copy, copyData: copy });
+  } catch (err) {
+    console.error('Error generating direct copy:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

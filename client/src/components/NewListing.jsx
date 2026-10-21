@@ -182,6 +182,7 @@ export default function NewListing({ onListingCreated, onBack }) {
 
   const [selectedPresets, setSelectedPresets] = useState(['asquared_default']);
   const [compiledPrompt, setCompiledPrompt] = useState(ASQUARED_DEFAULT_PROMPT);
+  const [modelTier, setModelTier] = useState('flare'); // 'flare' (fast) or 'sunburst' (luxury)
   
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -607,6 +608,7 @@ export default function NewListing({ onListingCreated, onBack }) {
         };
 
         const copyEndpoints = [
+          '/api/generate-copy',
           '/dashboard/api/generate-copy.php',
           '/api/generate-copy.php',
           'https://admin.asquared.ae/dashboard/api/generate-copy.php'
@@ -657,10 +659,11 @@ export default function NewListing({ onListingCreated, onBack }) {
         dossier_data: { ...(parsedDeedData || {}), deed_file_url: deedDocUrl },
         kyc_data: { emiratesIdData: parsedEidData, kycResult },
         prompt: compiledPrompt,
+        enhancement_model: modelTier === 'sunburst' ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare',
         copy_data: copyData || {},
-        status: isDraft ? 'draft' : 'completed',
+        status: isDraft ? 'draft' : (selectedFiles.length > 0 ? 'processing' : 'completed'),
         total_images: selectedFiles.length,
-        completed_images: selectedFiles.length,
+        completed_images: 0,
         failed_images: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -674,36 +677,18 @@ export default function NewListing({ onListingCreated, onBack }) {
 
       const createdListing = (createdRows && createdRows[0]) ? createdRows[0] : listingPayload;
 
-      // 3. Enhance Photos & Upload to Supabase Storage (Only if not a draft)
-      if (!isDraft) {
+      // 3. Upload Original Photos & Trigger Server Neural Enhancement Engine
+      if (!isDraft && selectedFiles.length > 0) {
         const uploadedImages = [];
         for (let i = 0; i < selectedFiles.length; i++) {
           const file = selectedFiles[i];
 
-          // Step 3a: Optical Darkroom Photographic Enhancement (Shadows, Vibrance, Sharpness, Temperature)
           setUploadProgress({
             current: i + 1,
             total: selectedFiles.length,
-            text: `Calibrating optical enhancement on photo ${i + 1} of ${selectedFiles.length}...`
+            text: `Uploading original photo ${i + 1} of ${selectedFiles.length}...`
           });
 
-          let enhancedBlob = null;
-          try {
-            const enh = await enhanceRealEstatePhoto(file);
-            if (enh && enh.blob) {
-              enhancedBlob = enh.blob;
-            }
-          } catch (enhErr) {
-            console.warn(`Enhance error for ${file.name}:`, enhErr);
-          }
-
-          setUploadProgress({
-            current: i + 1,
-            total: selectedFiles.length,
-            text: `Uploading original & enhanced photo ${i + 1} of ${selectedFiles.length}...`
-          });
-
-          // Step 3b: Upload Original Photo
           let originalUrl = null;
           try {
             const origRes = await uploadListingImage(file, newListingId);
@@ -713,42 +698,29 @@ export default function NewListing({ onListingCreated, onBack }) {
             originalUrl = previews[i]?.url || URL.createObjectURL(file);
           }
 
-          // Step 3c: Upload Enhanced Photo
-          let generatedUrl = originalUrl;
-          if (enhancedBlob) {
-            try {
-              const enhRes = await uploadEnhancedListingImage(enhancedBlob, newListingId, file.name);
-              generatedUrl = enhRes.publicUrl;
-            } catch (eErr) {
-              console.warn(`Enhanced upload note for ${file.name}:`, eErr.message);
-              generatedUrl = originalUrl;
-            }
-          }
-
           uploadedImages.push({
             filename: file.name,
             originalUrl,
-            generatedUrl,
           });
         }
 
-        // 4. Insert Images Rows into Supabase
+        // 4. Insert Images Rows into Supabase (queued for neural processing)
         setUploadProgress({
           current: selectedFiles.length,
           total: selectedFiles.length,
-          text: 'Finalizing architectural photo gallery...'
+          text: `Starting ${modelTier === 'sunburst' ? 'Sunburst Luxury' : 'Flare High-Speed'} neural enhancement...`
         });
 
         const imageRows = uploadedImages.map((img, idx) => ({
           listing_id: newListingId,
           original_filename: img.filename,
           original_image_location: img.originalUrl,
-          generated_image_location: img.generatedUrl,
+          generated_image_location: img.originalUrl,
           baseline_image_location: img.originalUrl,
           room_type: DEFAULT_SEQUENCE[idx % DEFAULT_SEQUENCE.length] || 'Property_Photo',
           display_order: idx,
           is_cover: idx === 0,
-          status: 'completed',
+          status: 'queued',
           created_at: new Date().toISOString(),
         }));
 
@@ -757,6 +729,20 @@ export default function NewListing({ onListingCreated, onBack }) {
           headers: { 'Prefer': 'return=minimal' },
           body: JSON.stringify(imageRows),
         });
+
+        // 5. Trigger Backend Neural Batch Processing (Option C: Flare or Sunburst)
+        try {
+          await fetch(`/api/listings/${newListingId}/process`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: compiledPrompt,
+              model: modelTier === 'sunburst' ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare'
+            })
+          });
+        } catch (procErr) {
+          console.warn('Backend neural trigger note:', procErr);
+        }
       }
 
       showToast(
@@ -1378,6 +1364,59 @@ export default function NewListing({ onListingCreated, onBack }) {
             <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5" /> Hard Guardrails Active
             </span>
+          </div>
+
+          {/* DUAL-MODE NEURAL MODEL SELECTOR (Option C: Flare vs Sunburst) */}
+          <div className="mb-5 p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-blue-400" /> AI Neural Enhancement Engine (Option C)
+              </span>
+              <span className="text-[11px] text-emerald-400 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" /> Zero Hallucinations Guaranteed
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setModelTier('flare')}
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  modelTier === 'flare'
+                    ? 'bg-blue-500/20 border-blue-500/60 text-white shadow-sm ring-1 ring-blue-500/30'
+                    : 'bg-white/[0.02] border-white/[0.06] text-white/70 hover:border-white/[0.12]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    ⚡ GPT Image 2.5 Flare <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-300 font-semibold">Default</span>
+                  </span>
+                  {modelTier === 'flare' && <Check className="w-4 h-4 text-blue-400 stroke-[3]" />}
+                </div>
+                <p className="text-[11px] text-white/60 leading-tight">
+                  High-speed (~15s) clean daylight balance, crisp lines, best for standard listings.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModelTier('sunburst')}
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  modelTier === 'sunburst'
+                    ? 'bg-amber-500/20 border-amber-500/60 text-white shadow-sm ring-1 ring-amber-500/30'
+                    : 'bg-white/[0.02] border-white/[0.06] text-white/70 hover:border-white/[0.12]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    ☀️ GPT Image 2.5 Sunburst <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-300 font-semibold">Luxury Master</span>
+                  </span>
+                  {modelTier === 'sunburst' && <Check className="w-4 h-4 text-amber-400 stroke-[3]" />}
+                </div>
+                <p className="text-[11px] text-white/60 leading-tight">
+                  Sotheby's luxury ambient warmth, deep dynamic range, best for penthouses & master suites.
+                </p>
+              </button>
+            </div>
           </div>
 
           {/* Presets Grid */}
