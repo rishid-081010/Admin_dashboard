@@ -16,6 +16,7 @@ import { previewRentalPdfInNewTab, downloadRentalPdf, generateClientRentalPdf } 
 import { cleanBuildingNameOffline, shortenPropertyNameWithAI } from '../utils/aiPropertyShortener';
 import { sbFetch, uploadListingImage, uploadEnhancedListingImage, SUPABASE_BASE_URL, SUPABASE_KEY, SUPABASE_STORAGE_URL } from '../utils/supabaseClient';
 import { enhanceRealEstatePhoto } from '../utils/photoEnhancerClient';
+import { enhancePhotoWithAI, enhanceListingBatch } from '../utils/aiEnhanceService';
 
 const ROOM_CATEGORIES = [
   'Living_Room',
@@ -882,13 +883,13 @@ export default function ListingDetail({ listingId, onBack }) {
         room_type: DEFAULT_SEQUENCE[(currentCount + idx) % DEFAULT_SEQUENCE.length] || 'Property_Photo',
         display_order: currentCount + idx,
         is_cover: false,
-        status: 'completed',
+        status: 'queued',
         created_at: new Date().toISOString()
       }));
 
-      await sbFetch('/real_estate_images', {
+      const insertedRows = await sbFetch('/real_estate_images', {
         method: 'POST',
-        headers: { 'Prefer': 'return=minimal' },
+        headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify(newRows)
       });
 
@@ -897,15 +898,28 @@ export default function ListingDetail({ listingId, onBack }) {
         method: 'PATCH',
         body: JSON.stringify({
           total_images: currentCount + newRows.length,
-          completed_images: currentCount + newRows.length,
           updated_at: new Date().toISOString()
         })
       });
 
-      showToast(`✨ ${additionalFiles.length} new photo(s) added successfully!`, 'success');
+      showToast(`✨ ${additionalFiles.length} photo(s) uploaded. Enhancing with AI...`, 'info');
       additionalPreviews.forEach((p) => URL.revokeObjectURL(p.url));
       setAdditionalFiles([]);
       setAdditionalPreviews([]);
+      fetchListingDetails(false);
+
+      // Enhance new photos with AI
+      const targetNewImages = (insertedRows && insertedRows.length > 0) ? insertedRows : newRows;
+      await enhanceListingBatch({
+        listingId,
+        images: targetNewImages,
+        modelTier: 'flare',
+        prompt: listing?.prompt || '',
+        onProgress: (cur, tot, msg) => showToast(msg, 'info')
+      });
+
+      showToast(`✨ All ${additionalFiles.length} new photo(s) enhanced successfully!`, 'success');
+      setCacheBuster(Date.now());
       fetchListingDetails(false);
     } catch (err) {
       console.error('Upload more images error:', err);
@@ -985,23 +999,37 @@ export default function ListingDetail({ listingId, onBack }) {
 
     setIsRefiningImage(true);
     try {
-      try {
-        const response = await axios.post(`/api/images/${refineModalImage.id}/refine`, {
-          directive: String(textToApply).trim(),
-          model: 'gpt-image-2.5-sunburst',
-        }, { timeout: 60000 });
-        if (response.data?.success) {
-          showToast('✨ Sunburst AI Refinement applied to photo!', 'success');
-          setCacheBuster(Date.now());
-          fetchListingDetails();
-          setIsRefiningImage(false);
-          return;
-        }
-      } catch (e) {
-        console.warn('Backend refine note, attempting fallback:', e.message);
-      }
+      showToast('✨ Applying Sunburst AI luxury refinement...', 'info');
+      const res = await enhancePhotoWithAI({
+        imageId: refineModalImage.id,
+        imageUrl: refineModalImage.original_image_location || refineModalImage.generated_image_location,
+        listingId,
+        modelTier: 'sunburst',
+        directive: String(textToApply).trim(),
+      });
 
-      // Production Client-Side Photographic Darkroom Engine
+      if (res && res.generated_image_location) {
+        const newUrl = res.generated_image_location;
+        const updatedImg = {
+          ...refineModalImage,
+          generated_image_location: newUrl,
+          custom_refined_location: newUrl,
+          status: 'completed',
+        };
+
+        setRefineModalImage(updatedImg);
+        setImages((prev) => prev.map((img) => (img.id === updatedImg.id ? updatedImg : img)));
+        setCacheBuster(Date.now());
+        setAdminDirective('');
+        showToast('✨ Sunburst AI Refinement applied and saved!', 'success');
+        return;
+      }
+    } catch (err) {
+      console.warn('AI Refine error, attempting optical fallback:', err);
+    }
+
+    // Photographic Darkroom Fallback if network drops
+    try {
       const dirLower = String(textToApply).toLowerCase();
       let customAdj = {};
       if (dirLower.includes('bright') || dirLower.includes('light')) {
@@ -1056,7 +1084,7 @@ export default function ListingDetail({ listingId, onBack }) {
         showToast('Failed to apply refinement.', 'error');
       }
     } catch (err) {
-      console.error('Refine image error:', err);
+      console.error('Refine image fallback error:', err);
       showToast('Failed to apply refinement.', 'error');
     } finally {
       setIsRefiningImage(false);
@@ -1235,16 +1263,37 @@ export default function ListingDetail({ listingId, onBack }) {
   };
 
   const handleRetryImage = async (imageId) => {
+    const targetImg = images.find((i) => i.id === imageId);
+    if (!targetImg) return;
     setIsRetrying((prev) => ({ ...prev, [imageId]: true }));
     try {
-      const response = await axios.post(`/api/images/${imageId}/retry`);
-      if (response.data.success) {
-        showToast('Retrying photo enhancement...', 'info');
-        fetchListingDetails();
+      showToast('Enhancing photo with AI...', 'info');
+      const res = await enhancePhotoWithAI({
+        imageId,
+        imageUrl: targetImg.original_image_location,
+        listingId,
+        modelTier: 'flare',
+        prompt: listing?.prompt || '',
+      });
+      if (res && res.generated_image_location) {
+        showToast('✨ Photo enhanced successfully!', 'success');
+        setImages((prev) =>
+          prev.map((i) =>
+            i.id === imageId
+              ? {
+                  ...i,
+                  generated_image_location: res.generated_image_location,
+                  baseline_image_location: res.generated_image_location,
+                  status: 'completed',
+                }
+              : i
+          )
+        );
+        setCacheBuster(Date.now());
       }
     } catch (err) {
       console.error('Retry image error:', err);
-      showToast('Failed to retry image.', 'error');
+      showToast('Failed to enhance photo: ' + err.message, 'error');
     } finally {
       setIsRetrying((prev) => ({ ...prev, [imageId]: false }));
     }
@@ -1253,29 +1302,38 @@ export default function ListingDetail({ listingId, onBack }) {
   const handleReProcessAll = async (modelChoice = 'flare') => {
     setIsReProcessingAll(true);
     const isSunburst = String(modelChoice).toLowerCase().includes('sunburst');
-    const targetModel = isSunburst ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare';
     const label = isSunburst ? 'Sunburst Luxury' : 'Flare High-Speed';
     showToast(`Re-processing all photos with ${label}...`, 'info');
     try {
-      // Re-queue images
-      await sbFetch(`/real_estate_images?listing_id=eq.${listingId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'queued', error_message: null })
+      await enhanceListingBatch({
+        listingId,
+        images,
+        modelTier: isSunburst ? 'sunburst' : 'flare',
+        prompt: listing?.prompt || '',
+        onProgress: (cur, tot, msg, updatedImg) => {
+          showToast(msg, 'info');
+          if (updatedImg && updatedImg.generated_image_location) {
+            setImages((prev) =>
+              prev.map((i) =>
+                i.id === updatedImg.id
+                  ? {
+                      ...i,
+                      generated_image_location: updatedImg.generated_image_location,
+                      baseline_image_location: updatedImg.generated_image_location,
+                      status: 'completed',
+                    }
+                  : i
+              )
+            );
+          }
+        },
       });
-
-      // Trigger backend batch processing
-      const response = await axios.post(`/api/listings/${listingId}/process`, {
-        model: targetModel,
-        prompt: listing?.prompt || ''
-      });
-
-      if (response.data?.success) {
-        showToast(`✨ Batch enhancement started with ${label}!`, 'success');
-        fetchListingDetails();
-      }
+      showToast(`✨ All photos re-enhanced with ${label}!`, 'success');
+      setCacheBuster(Date.now());
+      fetchListingDetails(false);
     } catch (err) {
       console.error('Re-process error:', err);
-      showToast('Failed to trigger re-enhancement.', 'error');
+      showToast('Failed to complete re-enhancement: ' + err.message, 'error');
     } finally {
       setIsReProcessingAll(false);
     }

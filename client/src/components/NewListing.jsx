@@ -9,6 +9,7 @@ import axios from 'axios';
 import Toast from './Toast';
 import { sbFetch, uploadListingImage, uploadEnhancedListingImage, uploadListingDocument } from '../utils/supabaseClient';
 import { enhanceRealEstatePhoto } from '../utils/photoEnhancerClient';
+import { enhanceListingBatch } from '../utils/aiEnhanceService';
 
 const DEFAULT_SEQUENCE = [
   'Living_Room',
@@ -724,24 +725,26 @@ export default function NewListing({ onListingCreated, onBack }) {
           created_at: new Date().toISOString(),
         }));
 
-        await sbFetch('/real_estate_images', {
+        const createdImageRows = await sbFetch('/real_estate_images', {
           method: 'POST',
-          headers: { 'Prefer': 'return=minimal' },
+          headers: { 'Prefer': 'return=representation' },
           body: JSON.stringify(imageRows),
         });
 
-        // 5. Trigger Backend Neural Batch Processing (Option C: Flare or Sunburst)
+        // 5. Neural Photo Enhancement with Live UI Progress
+        const targetImages = (createdImageRows && createdImageRows.length > 0) ? createdImageRows : imageRows;
         try {
-          await fetch(`/api/listings/${newListingId}/process`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: compiledPrompt,
-              model: modelTier === 'sunburst' ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare'
-            })
+          await enhanceListingBatch({
+            listingId: newListingId,
+            images: targetImages,
+            modelTier,
+            prompt: compiledPrompt,
+            onProgress: (current, total, text) => {
+              setUploadProgress({ current, total, text });
+            }
           });
         } catch (procErr) {
-          console.warn('Backend neural trigger note:', procErr);
+          console.warn('Batch neural enhancement note:', procErr);
         }
       }
 
