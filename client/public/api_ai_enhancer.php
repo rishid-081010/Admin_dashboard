@@ -35,20 +35,43 @@ $action = $_GET['action'] ?? ($payload['action'] ?? 'enhance-image');
 
 // Health Check
 if ($action === 'health') {
+    $wmCandidates = [
+        __DIR__ . '/asquared-watermark.png',
+        __DIR__ . '/../asquared-watermark.png',
+        '/home/u292760294/domains/asquared.ae/public_html/asquared-watermark.png',
+        '/home/u292760294/domains/asquared.ae/public_html/dashboard/asquared-watermark.png',
+        '/home/u292760294/domains/asquared.ae/public_html/admin/asquared-watermark.png',
+    ];
+    $foundWm = false;
+    foreach ($wmCandidates as $p) {
+        if (file_exists($p) && is_file($p)) {
+            $foundWm = $p;
+            break;
+        }
+    }
+
     echo json_encode([
         'status' => 'online',
         'engine' => 'OpenAI Image Edits API',
         'models' => ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'],
+        'gd_available' => extension_loaded('gd') && function_exists('imagecreatefromstring'),
+        'watermark_path' => $foundWm,
         'timestamp' => gmdate('c')
     ]);
     exit;
 }
 
-// System Preservation Prompt
+// System Preservation Prompt with Strict Foreign Watermark Removal
 $ASQUARED_PRESERVATION_PROMPT = <<<EOT
 You are a real-estate property photo QA and enhancement assistant.
 
 Review the attached property photo for portal advertising.
+
+FOREIGN WATERMARK & BRANDING REMOVAL DIRECTIVE (MANDATORY):
+- If the image contains any competitor watermarks, third-party agency logos, portal watermarks (e.g., Property Finder, Bayut, Dubizzle, Houza, etc.), broker phone numbers, timestamps, agency banners, or overlaid text:
+  YOU MUST COMPLETELY AND SEAMLESSLY DETECT AND ERASE THEM.
+- Reconstruct and inpaint the underlying surface (wall, glass, tile, ceiling, sky, balcony railing, floor, cabinetry, or view) with clean, authentic architectural textures that naturally match the surrounding area.
+- Do NOT generate or add any artificial text, numbers, company logos, or badges in the edited photo — only clean, natural photographic surfaces.
 
 First assess:
 - brightness
@@ -57,7 +80,7 @@ First assess:
 - vertical lines and perspective
 - composition
 - visible people
-- watermarks
+- competitor watermarks and logos (to be erased)
 - reflections
 - clutter
 - CGI or AI-generated appearance
@@ -83,6 +106,7 @@ Improve only:
 - clarity
 - straightness
 - minor photographic imperfections
+- complete removal of any foreign watermarks, stamps, or broker phone numbers
 
 Preserve exactly:
 - actual room layout
@@ -96,6 +120,7 @@ Preserve exactly:
 - property condition
 
 Do not:
+- leave any third-party or competitor watermarks, stamps, or phone numbers visible
 - add furniture
 - remove furniture
 - add amenities
@@ -112,12 +137,101 @@ Do not:
 
 If the image contains a floor plan, do not treat it as a normal room photograph. Identify it as a floor plan and evaluate whether it should be included and where it should appear in the photo sequence.
 
-If the image contains people, watermarks, severe clutter, misleading reflections, obvious CGI, or other issues that cannot be safely corrected through conservative editing, flag the issue instead of attempting to hide or fabricate it.
+If the image contains people, severe clutter, misleading reflections, obvious CGI, or structural defects that cannot be safely corrected through conservative editing, flag the issue.
 
 For portal-ready output, target:
 1200 x 900 pixels
 Natural professional property-advertising style.
 EOT;
+
+/**
+ * Applies the official A Squared Real Estate watermark (isolated emblem + text)
+ * to the bottom-right corner of the enhanced property photograph.
+ */
+function applyASquaredWatermark($imageBinaryData) {
+    if (empty($imageBinaryData)) return $imageBinaryData;
+    if (!extension_loaded('gd') || !function_exists('imagecreatefromstring')) {
+        return $imageBinaryData;
+    }
+
+    $wmCandidates = [
+        __DIR__ . '/asquared-watermark.png',
+        __DIR__ . '/../asquared-watermark.png',
+        __DIR__ . '/client/public/asquared-watermark.png',
+        dirname(__DIR__) . '/asquared-watermark.png',
+        '/home/u292760294/domains/asquared.ae/public_html/asquared-watermark.png',
+        '/home/u292760294/domains/asquared.ae/public_html/dashboard/asquared-watermark.png',
+        '/home/u292760294/domains/asquared.ae/public_html/admin/asquared-watermark.png',
+    ];
+
+    $wmFile = null;
+    foreach ($wmCandidates as $p) {
+        if (file_exists($p) && is_file($p)) {
+            $wmFile = $p;
+            break;
+        }
+    }
+
+    if (!$wmFile) {
+        return $imageBinaryData;
+    }
+
+    $baseImg = @imagecreatefromstring($imageBinaryData);
+    if (!$baseImg) return $imageBinaryData;
+
+    $wmImg = @imagecreatefrompng($wmFile);
+    if (!$wmImg) {
+        imagedestroy($baseImg);
+        return $imageBinaryData;
+    }
+
+    $baseW = imagesx($baseImg);
+    $baseH = imagesy($baseImg);
+    $wmW = imagesx($wmImg);
+    $wmH = imagesy($wmImg);
+
+    if ($baseW <= 0 || $baseH <= 0 || $wmW <= 0 || $wmH <= 0) {
+        imagedestroy($baseImg);
+        imagedestroy($wmImg);
+        return $imageBinaryData;
+    }
+
+    // Portal Standard Watermark sizing: ~17% of image width
+    $targetW = max(100, (int)round($baseW * 0.17));
+    $targetH = (int)round($targetW * ($wmH / $wmW));
+
+    // Position: Bottom-Right corner with 3.5% padding
+    $padX = (int)round($baseW * 0.035);
+    $padY = (int)round($baseH * 0.035);
+    $destX = max(0, $baseW - $targetW - $padX);
+    $destY = max(0, $baseH - $targetH - $padY);
+
+    imagealphablending($baseImg, true);
+
+    // Resample and composite watermark onto base image
+    imagecopyresampled(
+        $baseImg,
+        $wmImg,
+        $destX,
+        $destY,
+        0,
+        0,
+        $targetW,
+        $targetH,
+        $wmW,
+        $wmH
+    );
+
+    // Render out as high-quality JPEG (quality 94)
+    ob_start();
+    imagejpeg($baseImg, null, 94);
+    $resultBinary = ob_get_clean();
+
+    imagedestroy($baseImg);
+    imagedestroy($wmImg);
+
+    return (!empty($resultBinary) && strlen($resultBinary) > 1000) ? $resultBinary : $imageBinaryData;
+}
 
 // Helper: Download URL or Read Local File to Temp File
 function downloadImageToTemp($url) {
@@ -292,6 +406,9 @@ if ($action === 'enhance-image') {
         echo json_encode(['success' => false, 'error' => 'No image data returned from OpenAI']);
         exit;
     }
+
+    // Apply official A Squared Real Estate transparent watermark (isolated emblem + typography)
+    $binaryData = applyASquaredWatermark($binaryData);
 
     // Upload enhanced image to Supabase Storage: generated/{listingId}/{timestamp}_enhanced.jpg
     $filename = round(microtime(true) * 1000) . '_enhanced_' . ($targetModel === 'gpt-image-2.5-sunburst' ? 'sunburst' : 'flare') . '.jpg';

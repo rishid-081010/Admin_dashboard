@@ -14,6 +14,12 @@ export const ASQUARED_PRESERVATION_PROMPT = `You are a real-estate property phot
 
 Review the attached property photo for portal advertising.
 
+FOREIGN WATERMARK & BRANDING REMOVAL DIRECTIVE (MANDATORY):
+- If the image contains any competitor watermarks, third-party agency logos, portal watermarks (e.g., Property Finder, Bayut, Dubizzle, Houza, etc.), broker phone numbers, timestamps, agency banners, or overlaid text:
+  YOU MUST COMPLETELY AND SEAMLESSLY DETECT AND ERASE THEM.
+- Reconstruct and inpaint the underlying surface (wall, glass, tile, ceiling, sky, balcony railing, floor, cabinetry, or view) with clean, authentic architectural textures that naturally match the surrounding area.
+- Do NOT generate or add any artificial text, numbers, company logos, or badges in the edited photo — only clean, natural photographic surfaces.
+
 First assess:
 - brightness
 - sharpness
@@ -21,7 +27,7 @@ First assess:
 - vertical lines and perspective
 - composition
 - visible people
-- watermarks
+- competitor watermarks and logos (to be erased)
 - reflections
 - clutter
 - CGI or AI-generated appearance
@@ -47,6 +53,7 @@ Improve only:
 - clarity
 - straightness
 - minor photographic imperfections
+- complete removal of any foreign watermarks, stamps, or broker phone numbers
 
 Preserve exactly:
 - actual room layout
@@ -60,6 +67,7 @@ Preserve exactly:
 - property condition
 
 Do not:
+- leave any third-party or competitor watermarks, stamps, or phone numbers visible
 - add furniture
 - remove furniture
 - add amenities
@@ -76,7 +84,7 @@ Do not:
 
 If the image contains a floor plan, do not treat it as a normal room photograph. Identify it as a floor plan and evaluate whether it should be included and where it should appear in the photo sequence.
 
-If the image contains people, watermarks, severe clutter, misleading reflections, obvious CGI, or other issues that cannot be safely corrected through conservative editing, flag the issue instead of attempting to hide or fabricate it.
+If the image contains people, severe clutter, misleading reflections, obvious CGI, or structural defects that cannot be safely corrected through conservative editing, flag the issue.
 
 For portal-ready output, target:
 1200 x 900 pixels
@@ -204,6 +212,62 @@ export async function applyDarkroomTransformations(inputPath, adjustments = {}, 
 }
 
 /**
+ * Applies the official A Squared Real Estate watermark (isolated emblem + text)
+ * to the bottom-right corner of the enhanced property photograph.
+ */
+export async function applyASquaredWatermark(imagePath) {
+  try {
+    const wmCandidates = [
+      path.join(__dirname, '../client/public/asquared-watermark.png'),
+      path.join(__dirname, 'asquared-watermark.png'),
+      'C:/Users/moham/.gemini/antigravity/scratch/asquared-watermark.png',
+      'C:/Users/moham/.gemini/antigravity/scratch/Admin_dashboard_cloned/client/public/asquared-watermark.png'
+    ];
+    let wmPath = null;
+    for (const p of wmCandidates) {
+      if (fs.existsSync(p)) {
+        wmPath = p;
+        break;
+      }
+    }
+    if (!wmPath) {
+      console.warn('[Watermark] asquared-watermark.png not found; skipping watermark overlay.');
+      return;
+    }
+
+    const metadata = await sharp(imagePath).metadata();
+    const baseW = metadata.width || 1200;
+    const baseH = metadata.height || 900;
+
+    const targetW = Math.max(100, Math.round(baseW * 0.17));
+    const padX = Math.round(baseW * 0.035);
+    const padY = Math.round(baseH * 0.035);
+
+    const resizedWm = await sharp(wmPath)
+      .resize({ width: targetW })
+      .toBuffer();
+
+    const wmMeta = await sharp(resizedWm).metadata();
+    const destX = Math.max(0, baseW - targetW - padX);
+    const destY = Math.max(0, baseH - wmMeta.height - padY);
+
+    const watermarkedBuf = await sharp(imagePath)
+      .composite([{
+        input: resizedWm,
+        left: destX,
+        top: destY
+      }])
+      .jpeg({ quality: 94 })
+      .toBuffer();
+
+    fs.writeFileSync(imagePath, watermarkedBuf);
+    console.log(`[Watermark] Official A Squared watermark successfully composited on ${path.basename(imagePath)}`);
+  } catch (err) {
+    console.error('[Watermark] Failed to composite watermark:', err.message);
+  }
+}
+
+/**
  * Neural Image Enhancement Engine using OpenAI's Image Edits API (Flare or Sunburst).
  * Dual-Mode: Defaults to 'gpt-image-2.5-flare', supports 'gpt-image-2.5-sunburst'.
  */
@@ -211,7 +275,9 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey || apiKey.includes('your_openai_api_key')) {
     console.warn('[Neural Enhancer] No valid OpenAI API key; using local photographic fallback.');
-    return applyDarkroomTransformations(inputPath, {}, outputPath);
+    const fbRes = await applyDarkroomTransformations(inputPath, {}, outputPath);
+    await applyASquaredWatermark(outputPath);
+    return fbRes;
   }
 
   // Determine model: Flare (default, fast) or Sunburst (luxury flagship)
@@ -261,12 +327,14 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
 
     if (b64Data) {
       fs.writeFileSync(outputPath, Buffer.from(b64Data, 'base64'));
+      await applyASquaredWatermark(outputPath);
       console.log(`[Neural Enhancer] Successfully enhanced with ${targetModel} (${elapsed}s) -> ${outputPath}`);
       return { outputPath, success: true, modelUsed: targetModel, elapsed };
     } else if (imgUrl) {
       const dlRes = await fetch(imgUrl);
       const ab = await dlRes.arrayBuffer();
       fs.writeFileSync(outputPath, Buffer.from(ab));
+      await applyASquaredWatermark(outputPath);
       console.log(`[Neural Enhancer] Successfully downloaded ${targetModel} output (${elapsed}s) -> ${outputPath}`);
       return { outputPath, success: true, modelUsed: targetModel, elapsed };
     }
@@ -275,7 +343,9 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
   } catch (err) {
     console.error(`[Neural Enhancer] Error in ${targetModel}:`, err.message);
     console.log('[Neural Enhancer] Engaging deterministic darkroom fallback...');
-    return applyDarkroomTransformations(inputPath, {}, outputPath);
+    const fbRes = await applyDarkroomTransformations(inputPath, {}, outputPath);
+    await applyASquaredWatermark(outputPath);
+    return fbRes;
   }
 }
 
