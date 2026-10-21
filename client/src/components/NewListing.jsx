@@ -258,6 +258,16 @@ export default function NewListing({ onListingCreated, onBack }) {
           if (titleDeedData.total_area_sqft || titleDeedData.suite_area_sqft) {
             setSizeSqft(formatNumberWithCommas(String(titleDeedData.total_area_sqft || titleDeedData.suite_area_sqft)));
           }
+          if (titleDeedData.price) {
+            const cleanNum = String(titleDeedData.price).replace(/[^0-9.]/g, '');
+            if (cleanNum) setPrice(formatNumberWithCommas(cleanNum));
+          }
+          if (titleDeedData.cheques) {
+            setCheques(titleDeedData.cheques);
+          }
+          if (titleDeedData.occupancy_status) {
+            setOccupancyStatus(titleDeedData.occupancy_status);
+          }
 
           const highlights = [
             `Building: ${titleDeedData.building_name || 'N/A'}`,

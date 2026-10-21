@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Disable max execution limits for OCR
 @set_time_limit(180);
-@ini_set('memory_limit', '256M');
+@ini_set('memory_limit', '512M');
 
 $secretsFile = __DIR__ . '/secrets.php';
 if (file_exists($secretsFile)) {
@@ -27,6 +27,10 @@ if (file_exists($secretsFile)) {
 $openaiApiKey = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : (getenv('OPENAI_API_KEY') ?: '');
 
 function callOpenAiChat($messages, $apiKey, $jsonMode = true) {
+    if (empty($apiKey)) {
+        throw new Exception("OpenAI API Key is missing on the server.");
+    }
+
     $url = 'https://api.openai.com/v1/chat/completions';
     $payload = [
         'model' => 'gpt-4o',
@@ -59,19 +63,84 @@ function callOpenAiChat($messages, $apiKey, $jsonMode = true) {
 
     $json = json_decode($response, true);
     $content = $json['choices'][0]['message']['content'] ?? '{}';
-    return json_decode($content, true) ?: [];
+    $decoded = json_decode($content, true);
+    if (!empty($decoded) && is_array($decoded)) {
+        return $decoded;
+    }
+    return [
+        'parse_error' => false,
+        'raw_content' => $content
+    ];
 }
 
-function fileToDataUrl($tmpPath, $origName) {
-    if (!file_exists($tmpPath)) return null;
+/**
+ * Converts uploaded documents (Image or PDF) to an array of high-res base64 image data URLs for GPT-4o Vision
+ */
+function convertDocumentToImages($tmpPath, $origName) {
+    if (!file_exists($tmpPath)) return [];
     $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
-    $mime = 'image/jpeg';
-    if ($ext === 'png') $mime = 'image/png';
-    else if ($ext === 'webp') $mime = 'image/webp';
-    else if ($ext === 'pdf') $mime = 'application/pdf';
 
-    $data = file_get_contents($tmpPath);
-    return 'data:' . $mime . ';base64,' . base64_encode($data);
+    // 1. Direct Image Files
+    if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+        $mime = ($ext === 'png') ? 'image/png' : (($ext === 'webp') ? 'image/webp' : 'image/jpeg');
+        $data = file_get_contents($tmpPath);
+        return ['data:' . $mime . ';base64,' . base64_encode($data)];
+    }
+
+    // 2. PDF Files: Render pages to JPEG using Imagick
+    if ($ext === 'pdf' && extension_loaded('imagick')) {
+        try {
+            $images = [];
+            $numPages = 1;
+            try {
+                $imPing = new Imagick();
+                $imPing->pingImage($tmpPath);
+                $numPages = min($imPing->getNumberImages(), 2);
+                $imPing->clear();
+                $imPing->destroy();
+            } catch (Exception $e) {
+                $numPages = 1;
+            }
+
+            for ($p = 0; $p < $numPages; $p++) {
+                $im = new Imagick();
+                $im->setResolution(150, 150);
+                $im->readImage($tmpPath . '[' . $p . ']');
+                $im->setImageFormat('jpeg');
+                $im->setImageCompressionQuality(88);
+                $blob = $im->getImageBlob();
+                if ($blob && strlen($blob) > 500) {
+                    $images[] = 'data:image/jpeg;base64,' . base64_encode($blob);
+                }
+                $im->clear();
+                $im->destroy();
+            }
+
+            if (!empty($images)) {
+                return $images;
+            }
+        } catch (Exception $e) {
+            error_log('Imagick PDF render note: ' . $e->getMessage());
+        }
+    }
+
+    // 3. Fallback: Extract raw JPEG streams embedded inside PDF
+    if ($ext === 'pdf') {
+        $content = file_get_contents($tmpPath);
+        $images = [];
+        if (preg_match_all('/stream[\r\n]+(\xFF\xD8\xFF.*?\xFF\xD9)[\r\n]+endstream/s', $content, $matches)) {
+            foreach (array_slice($matches[1], 0, 2) as $jpgStream) {
+                if (strlen($jpgStream) > 2000) {
+                    $images[] = 'data:image/jpeg;base64,' . base64_encode($jpgStream);
+                }
+            }
+        }
+        if (!empty($images)) {
+            return $images;
+        }
+    }
+
+    return [];
 }
 
 $titleDeedData = null;
@@ -82,59 +151,65 @@ try {
     // 1. Parse Title Deed if provided
     if (!empty($_FILES['title_deed']['tmp_name'])) {
         $deedFile = $_FILES['title_deed'];
-        $dataUrl = fileToDataUrl($deedFile['tmp_name'], $deedFile['name']);
-        
-        $systemPrompt = "You are the Lead Legal Registrar for the Dubai Land Department (DLD) and A SQUARED REAL ESTATE.
-Analyze this Dubai Title Deed (سند ملكية) or Oqood (عقود) document.
-CRITICAL RULES:
-- If Oqood, page 1 has developer, page 2 has BUYER. Extract the BUYER as owner_name_english and owner_name_arabic.
-- Extract building_name, unit_number, floor_number, community, plot_number, total_area_sqft, total_area_sqm, certificate_number, parking_bays, mortgage_status.
-Return strictly valid JSON:
-{
-  \"certificate_number\": \"...\",
-  \"owner_name_english\": \"...\",
-  \"owner_name_arabic\": \"...\",
-  \"building_name\": \"...\",
-  \"unit_number\": \"...\",
-  \"floor_number\": \"...\",
-  \"community\": \"...\",
-  \"plot_number\": \"...\",
-  \"property_type\": \"Apartment\",
-  \"total_area_sqft\": 1200.5,
-  \"total_area_sqm\": 111.5,
-  \"suite_area_sqft\": 1100,
-  \"parking_bays\": [\"1 Space\"],
-  \"mortgage_status\": \"Free & Clear (Unencumbered)\"
-}";
+        $deedImages = convertDocumentToImages($deedFile['tmp_name'], $deedFile['name']);
 
-        $messages = [
-            [
-                'role' => 'user',
-                'content' => [
-                    ['type' => 'text', 'text' => $systemPrompt],
-                    ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]]
-                ]
-            ]
-        ];
+        if (!empty($deedImages)) {
+            $systemPrompt = "You are the Lead Registrar & Property Intelligence Specialist for A SQUARED REAL ESTATE Dubai.
+Analyze the attached real estate document (which may be a Dubai Land Department Title Deed / سند ملكية, Oqood / عقود, Listing Agreement / Form A, Tenancy Contract, or Unit Registration Certificate).
 
-        $titleDeedData = callOpenAiChat($messages, $openaiApiKey, true);
+Extract all property and ownership details found:
+- building_name: Building, Project, or Tower name (e.g. 'Sobha Creek Vistas Reserve', 'Dania 1', 'V3 Tower', etc.)
+- unit_number: Unit, Apartment, Suite, or Villa number (e.g. 'B160', '1503', etc.)
+- floor_number: Floor number if specified
+- community: Community, District, or Master Development in Dubai (e.g. 'Sobha Hartland', 'JLT', 'Dubai', etc.)
+- property_type: 'Apartment', 'Villa', 'Penthouse', 'Townhouse', or 'Commercial'
+- total_area_sqft: Total gross area in sqft (numeric or formatted string)
+- total_area_sqm: Total area in sqm (numeric or formatted string)
+- suite_area_sqft: Net or Suite area in sqft (numeric or formatted string)
+- certificate_number: Title deed certificate number, registration number, or contract number
+- plot_number: Plot or parcel number
+- parking_bays: Array of parking spaces or count (e.g. [\"1 Space\"])
+- owner_name_english: Registered Owner, Landlord, Lessor, or Seller name in English
+- owner_name_arabic: Owner name in Arabic if present
+- mortgage_status: 'Free & Clear (Unencumbered)', 'Mortgaged', or 'N/A'
+- price: Annual rent, listing price, or sale price if stated
+- cheques: Cheque payment terms if mentioned (e.g. '4 Cheques', '1 Cheque')
+- occupancy_status: 'Vacant' or 'Tenanted' if stated
+
+CRITICAL: Extract all available information accurately. Return strictly valid JSON. If a specific field is not explicitly present, provide null or context-based default, but ALWAYS populate building_name, unit_number, community, and property_type if identifiable.";
+
+            $deedContent = [
+                ['type' => 'text', 'text' => $systemPrompt]
+            ];
+            foreach ($deedImages as $url) {
+                $deedContent[] = ['type' => 'image_url', 'image_url' => ['url' => $url]];
+            }
+
+            $messages = [
+                ['role' => 'user', 'content' => $deedContent]
+            ];
+
+            $titleDeedData = callOpenAiChat($messages, $openaiApiKey, true);
+        }
     }
 
     // 2. Parse Emirates ID if provided
-    $eidFiles = [];
+    $eidImages = [];
     if (!empty($_FILES['emirates_id']['tmp_name'])) {
         if (is_array($_FILES['emirates_id']['tmp_name'])) {
             foreach ($_FILES['emirates_id']['tmp_name'] as $idx => $tmpPath) {
                 if ($tmpPath && file_exists($tmpPath)) {
-                    $eidFiles[] = fileToDataUrl($tmpPath, $_FILES['emirates_id']['name'][$idx]);
+                    $imgs = convertDocumentToImages($tmpPath, $_FILES['emirates_id']['name'][$idx]);
+                    $eidImages = array_merge($eidImages, $imgs);
                 }
             }
         } else {
-            $eidFiles[] = fileToDataUrl($_FILES['emirates_id']['tmp_name'], $_FILES['emirates_id']['name']);
+            $imgs = convertDocumentToImages($_FILES['emirates_id']['tmp_name'], $_FILES['emirates_id']['name']);
+            $eidImages = array_merge($eidImages, $imgs);
         }
     }
 
-    if (!empty($eidFiles)) {
+    if (!empty($eidImages)) {
         $eidContent = [
             ['type' => 'text', 'text' => "Analyze the attached United Arab Emirates Resident Identity Card (Emirates ID / بطاقة الهوية).
 Extract:
@@ -155,7 +230,7 @@ Return strictly valid JSON:
 }"]
         ];
 
-        foreach ($eidFiles as $url) {
+        foreach (array_slice($eidImages, 0, 4) as $url) {
             $eidContent[] = ['type' => 'image_url', 'image_url' => ['url' => $url]];
         }
 
@@ -196,7 +271,7 @@ Return strictly valid JSON:
         'emiratesIdData' => $emiratesIdData,
         'kycResult' => $kycResult
     ]);
-} catch (Exception $e) {
+} catch (Throwable $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
