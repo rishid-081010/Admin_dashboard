@@ -25,6 +25,18 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       try {
         const data = await sbFetch('/real_estate_listings?select=*&order=created_at.desc.nullslast');
         if (isMounted) setListings(data || []);
+        if (data && data.length > 0) {
+          data.forEach((l) => {
+            const total = Number(l.total_images) || 0;
+            const comp = Number(l.completed_images) || 0;
+            if (l.status !== 'completed' && total > 0 && comp >= total) {
+              sbFetch(`/real_estate_listings?id=eq.${l.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 'completed' })
+              }).catch(() => {});
+            }
+          });
+        }
       } catch (err) {
         if (!isMounted) return;
         console.error('Fetch listings error:', err);
@@ -69,7 +81,23 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getDerivedStatus = (item) => {
+    if (!item) return 'draft';
+    if (typeof item === 'string') return item;
+    if (item.status === 'completed') return 'completed';
+    const total = Number(item.total_images) || 0;
+    const completed = Number(item.completed_images) || 0;
+    const failed = Number(item.failed_images) || 0;
+    if (total > 0 && (completed >= total || (completed + failed >= total && completed > 0))) {
+      return 'completed';
+    }
+    if (item.status === 'processing') return 'processing';
+    if (item.status === 'failed') return 'failed';
+    return item.status || 'draft';
+  };
+
+  const getStatusBadge = (itemOrStatus) => {
+    const status = getDerivedStatus(itemOrStatus);
     switch (status) {
       case 'completed':
         return (
@@ -110,10 +138,11 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       (item.property_type && item.property_type.toLowerCase().includes(query)) ||
       (item.purpose && item.purpose.toLowerCase().includes(query));
 
+    const derivedStatus = getDerivedStatus(item);
     let matchStatus = true;
-    if (statusFilter === 'Completed') matchStatus = item.status === 'completed';
-    else if (statusFilter === 'Processing') matchStatus = item.status === 'processing';
-    else if (statusFilter === 'Draft') matchStatus = item.status === 'draft' || item.status === 'queued';
+    if (statusFilter === 'Completed') matchStatus = derivedStatus === 'completed';
+    else if (statusFilter === 'Processing') matchStatus = derivedStatus === 'processing';
+    else if (statusFilter === 'Draft') matchStatus = derivedStatus === 'draft' || derivedStatus === 'queued';
 
     let matchType = true;
     if (typeFilter !== 'All Types') matchType = item.property_type === typeFilter;
@@ -267,7 +296,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                       </span>
                     )}
                   </div>
-                  {getStatusBadge(listing.status)}
+                  {getStatusBadge(listing)}
                 </div>
 
                 <h3 className="text-base font-sans font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-1 mb-1">

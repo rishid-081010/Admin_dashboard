@@ -355,6 +355,7 @@ export default function ListingDetail({ listingId, onBack }) {
   };
 
   const isMountedRef = useRef(true);
+  const isProcessingRef = useRef(false);
 
   const fetchListingDetails = async (isInitial = false) => {
     if (isInitial) setLoading(true);
@@ -400,6 +401,7 @@ export default function ListingDetail({ listingId, onBack }) {
           status: img.status || 'completed'
         }));
         setImages(enriched);
+        isProcessingRef.current = enriched.some((i) => i.status === 'processing' || i.status === 'queued') || sbListing.status === 'processing';
 
         if (sbListing.prompt && !customPrompt && !sbListing.prompt.startsWith('{')) {
           setCustomPrompt(sbListing.prompt);
@@ -414,6 +416,7 @@ export default function ListingDetail({ listingId, onBack }) {
           setListing(response.data.listing);
           const enriched = enrichImages(response.data.images || [], response.data.listing?.prompt);
           setImages(enriched);
+          isProcessingRef.current = enriched.some((i) => i.status === 'processing' || i.status === 'queued') || response.data.listing?.status === 'processing';
           return;
         }
       } catch (localErr) {}
@@ -431,7 +434,9 @@ export default function ListingDetail({ listingId, onBack }) {
 
     const interval = setInterval(() => {
       if (!isMountedRef.current) return;
-      fetchListingDetails(false);
+      if (isProcessingRef.current) {
+        fetchListingDetails(false);
+      }
     }, 8000);
 
     return () => {
@@ -1361,7 +1366,25 @@ export default function ListingDetail({ listingId, onBack }) {
   const queuedCount = images.filter((img) => img.status === 'queued').length;
   const totalCount = images.length;
   const progressPercentage = totalCount > 0 ? Math.round(((completedCount + failedCount) / totalCount) * 100) : 0;
+  const isAllPhotosProcessed = totalCount > 0 && processingCount === 0 && queuedCount === 0 && completedCount === totalCount;
   const copyData = listing?.copy_data;
+
+  // Auto-reconciliation: self-heal listing status when all photos are completed
+  useEffect(() => {
+    if (listing && isAllPhotosProcessed && listing.status !== 'completed') {
+      setListing((prev) => (prev ? { ...prev, status: 'completed' } : prev));
+      sbFetch(`/real_estate_listings?id=eq.${listingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: 'completed',
+          total_images: totalCount,
+          completed_images: completedCount,
+          failed_images: 0,
+          updated_at: new Date().toISOString(),
+        }),
+      }).catch((err) => console.warn('Auto-reconcile listing status warning:', err));
+    }
+  }, [listing, isAllPhotosProcessed, listingId, totalCount, completedCount]);
 
   if (loading) {
     return (
@@ -1555,21 +1578,29 @@ export default function ListingDetail({ listingId, onBack }) {
       </div>
 
       {/* AI Processing Progress Card */}
-      <div className="glass-card p-6 mb-8">
+      <div className={`glass-card p-6 mb-8 transition-all duration-300 ${isAllPhotosProcessed ? 'border-emerald-500/30 bg-gradient-to-br from-[#061826]/90 via-[#071322]/80 to-[#020b18]' : ''}`}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-sans font-bold text-white">Photographic Processing Status</h2>
+            {isAllPhotosProcessed ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-blue-400" />
+            )}
+            <h2 className="text-lg font-sans font-bold text-white">
+              {isAllPhotosProcessed ? 'Photographic Processing Complete' : 'Photographic Processing Status'}
+            </h2>
           </div>
-          <span className="text-sm font-bold text-blue-400 font-sans">
-            {completedCount} / {totalCount} images completed ({progressPercentage}%){images.some(i => i.status === 'processing') && ' • Auto-naming in progress...'}
+          <span className={`text-sm font-bold font-sans ${isAllPhotosProcessed ? 'text-emerald-400' : 'text-blue-400'}`}>
+            {isAllPhotosProcessed
+              ? `All ${totalCount} Photos Fully Enhanced & Calibrated (100%)`
+              : `${completedCount} / ${totalCount} images completed (${progressPercentage}%)${images.some((i) => i.status === 'processing') ? ' • Auto-naming in progress...' : ''}`}
           </span>
         </div>
 
         {/* Progress Bar */}
         <div className="w-full bg-black/40 rounded-full h-2.5 mb-6 overflow-hidden border border-white/[0.08]">
           <div
-            className="bg-gradient-to-r from-khaki-500 to-emerald-400 h-full transition-all duration-500 rounded-full"
+            className={`h-full transition-all duration-500 rounded-full ${isAllPhotosProcessed ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-khaki-500 to-emerald-400'}`}
             style={{ width: `${progressPercentage}%` }}
           ></div>
         </div>
@@ -1584,23 +1615,23 @@ export default function ListingDetail({ listingId, onBack }) {
           </div>
 
           <div className="glass-pill rounded-xl p-3.5 text-center">
-            <span className="text-2xl font-bold text-blue-400 block">{processingCount}</span>
+            <span className={`text-2xl font-bold block ${processingCount > 0 ? 'text-blue-400' : 'text-white/40'}`}>{processingCount}</span>
             <span className="text-xs text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
-              <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" /> Processing
+              <RefreshCw className={`w-3.5 h-3.5 ${processingCount > 0 ? 'text-blue-400 animate-spin' : 'text-white/40'}`} /> Processing
             </span>
           </div>
 
           <div className="glass-pill rounded-xl p-3.5 text-center">
-            <span className="text-2xl font-bold text-bone-200 block">{queuedCount}</span>
+            <span className={`text-2xl font-bold block ${queuedCount > 0 ? 'text-bone-200' : 'text-white/40'}`}>{queuedCount}</span>
             <span className="text-xs text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
-              <Clock className="w-3.5 h-3.5 text-white/60" /> Queued
+              <Clock className={`w-3.5 h-3.5 ${queuedCount > 0 ? 'text-white/60' : 'text-white/40'}`} /> Queued
             </span>
           </div>
 
           <div className="glass-pill rounded-xl p-3.5 text-center">
-            <span className="text-2xl font-bold text-red-400 block">{failedCount}</span>
+            <span className={`text-2xl font-bold block ${failedCount > 0 ? 'text-red-400' : 'text-white/40'}`}>{failedCount}</span>
             <span className="text-xs text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Failed
+              <AlertTriangle className={`w-3.5 h-3.5 ${failedCount > 0 ? 'text-red-400' : 'text-white/40'}`} /> Failed
             </span>
           </div>
         </div>
@@ -2690,7 +2721,7 @@ export default function ListingDetail({ listingId, onBack }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {additionalPreviews.map((prev, idx) => (
                 <div key={prev.id} className="relative group rounded-xl overflow-hidden border border-white/[0.1] bg-black/40">
-                  <img onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...'; }} src={prev.url} alt={prev.name} className="w-full h-24 object-cover" />
+                  <img onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/0a1321/64748b?text=Photo+Upload'; }} src={prev.url} alt={prev.name} className="w-full h-24 object-cover" />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -2810,7 +2841,7 @@ export default function ListingDetail({ listingId, onBack }) {
                           }
                         }
                         e.target.onerror = null;
-                        e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...';
+                        e.target.src = 'https://placehold.co/600x400/0a1321/64748b?text=Luxury+Property+Photo';
                       }}
                       src={withTimestamp(img.original_image_location)}
                       alt="Original"
@@ -2838,7 +2869,7 @@ export default function ListingDetail({ listingId, onBack }) {
                               }
                             }
                             e.target.onerror = null;
-                            e.target.src = 'https://placehold.co/600x400/0a1321/3b82f6?text=Image+Processing...';
+                            e.target.src = 'https://placehold.co/600x400/0a1321/64748b?text=Luxury+Property+Photo';
                           }}
                           src={withTimestamp(img.generated_image_location)}
                           alt="Enhanced"
