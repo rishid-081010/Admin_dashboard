@@ -94,10 +94,16 @@ if os.path.exists(root_dir):
         for f in r_files:
             lpath = os.path.join(r_dir, f)
             rel_f = os.path.relpath(lpath, root_dir).replace('\\', '/')
-            uploads_list.append((lpath, rel_f))
-            uploads_list.append((lpath, f"public/{rel_f}"))
-            uploads_list.append((lpath, f"dashboard/{rel_f}"))
-            uploads_list.append((lpath, f"admin/{rel_f}"))
+            # Root entrypoint files (index.html, index.php) should ONLY live at the root domain
+            # Never overwrite React client index.html in dashboard/ or admin/
+            if rel_f in ('index.html', 'index.php'):
+                uploads_list.append((lpath, rel_f))
+                uploads_list.append((lpath, f"public/{rel_f}"))
+            else:
+                uploads_list.append((lpath, rel_f))
+                uploads_list.append((lpath, f"public/{rel_f}"))
+                uploads_list.append((lpath, f"dashboard/{rel_f}"))
+                uploads_list.append((lpath, f"admin/{rel_f}"))
 
 # Sort uploads_list to deploy index.html, assets, and core UI first
 def priority_key(item):
