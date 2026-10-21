@@ -38,10 +38,15 @@ export async function enhancePhotoWithAI({
     ? 'gpt-image-2.5-sunburst'
     : 'gpt-image-2.5-flare';
 
+  let cleanUrl = imageUrl;
+  if (cleanUrl && !cleanUrl.startsWith('http') && !cleanUrl.startsWith('data:')) {
+    cleanUrl = 'https://dashboard.asquared.ae/' + cleanUrl.replace(/^\/+/, '');
+  }
+
   const payload = {
     action: 'enhance-image',
     image_id: imageId,
-    image_url: imageUrl,
+    image_url: cleanUrl,
     listing_id: listingId || 'general',
     model,
     prompt,
@@ -127,7 +132,10 @@ export async function enhanceListingBatch({
 
   for (let i = 0; i < total; i++) {
     const img = images[i];
-    const imgUrl = img.original_image_location || img.originalUrl || img.generated_image_location;
+    let imgUrl = img.original_image_location || img.originalUrl || img.generated_image_location;
+    if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('data:')) {
+      imgUrl = 'https://dashboard.asquared.ae/' + imgUrl.replace(/^\/+/, '');
+    }
     const imgId = img.id;
 
     onProgress(

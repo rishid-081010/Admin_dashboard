@@ -119,15 +119,62 @@ For portal-ready output, target:
 Natural professional property-advertising style.
 EOT;
 
-// Helper: Download URL to Temp File
+// Helper: Download URL or Read Local File to Temp File
 function downloadImageToTemp($url) {
+    if (empty($url)) return false;
+
+    // Handle base64 data URLs
+    if (preg_match('#^data:image/\w+;base64,(.+)$#i', $url, $m)) {
+        $bin = base64_decode($m[1]);
+        if ($bin) {
+            $tmp = tempnam(sys_get_temp_dir(), 'asq_b64_');
+            file_put_contents($tmp, $bin);
+            return $tmp;
+        }
+    }
+
+    // Handle local relative paths
+    if (!preg_match('#^https?://#i', $url)) {
+        $cleanPath = ltrim($url, '/');
+        $candidates = [
+            __DIR__ . '/' . $cleanPath,
+            __DIR__ . '/../' . $cleanPath,
+            '/home/u292760294/domains/asquared.ae/public_html/' . $cleanPath,
+            '/home/u292760294/domains/asquared.ae/public_html/dashboard/' . $cleanPath,
+            '/home/u292760294/domains/asquared.ae/public_html/admin/' . $cleanPath,
+        ];
+        foreach ($candidates as $cand) {
+            if (file_exists($cand) && is_file($cand)) {
+                $tmp = tempnam(sys_get_temp_dir(), 'asq_local_');
+                copy($cand, $tmp);
+                return $tmp;
+            }
+        }
+        // If not found on local disk, convert to absolute URL
+        $url = 'https://dashboard.asquared.ae/' . $cleanPath;
+    }
+
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     $data = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    if ($httpCode !== 200 || empty($data)) {
+        // Try fallback to admin domain if dashboard 404'd
+        if (strpos($url, 'dashboard.asquared.ae') !== false) {
+            $altUrl = str_replace('dashboard.asquared.ae', 'admin.asquared.ae', $url);
+            $chAlt = curl_init($altUrl);
+            curl_setopt($chAlt, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($chAlt, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($chAlt, CURLOPT_TIMEOUT, 30);
+            $data = curl_exec($chAlt);
+            $httpCode = curl_getinfo($chAlt, CURLINFO_HTTP_CODE);
+            curl_close($chAlt);
+        }
+    }
 
     if ($httpCode !== 200 || empty($data)) {
         return false;

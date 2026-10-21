@@ -1299,6 +1299,43 @@ export default function ListingDetail({ listingId, onBack }) {
     }
   };
 
+  const handleSingleEnhance = async (image, modelTier = 'flare') => {
+    if (!image) return;
+    setIsRetrying((prev) => ({ ...prev, [image.id]: true }));
+    const label = modelTier === 'sunburst' ? 'Sunburst Luxury' : 'Flare High-Speed';
+    showToast(`Enhancing with ${label}...`, 'info');
+    try {
+      const res = await enhancePhotoWithAI({
+        imageId: image.id,
+        imageUrl: image.original_image_location,
+        listingId,
+        modelTier,
+        prompt: listing?.prompt || '',
+      });
+      if (res && res.generated_image_location) {
+        setImages((prev) =>
+          prev.map((i) =>
+            i.id === image.id
+              ? {
+                  ...i,
+                  generated_image_location: res.generated_image_location,
+                  baseline_image_location: res.generated_image_location,
+                  status: 'completed',
+                }
+              : i
+          )
+        );
+        setCacheBuster(Date.now());
+        showToast(`✨ Photo enhanced with ${label}!`, 'success');
+      }
+    } catch (err) {
+      console.error('Single photo enhance error:', err);
+      showToast('Enhancement error: ' + err.message, 'error');
+    } finally {
+      setIsRetrying((prev) => ({ ...prev, [image.id]: false }));
+    }
+  };
+
   const handleReProcessAll = async (modelChoice = 'flare') => {
     setIsReProcessingAll(true);
     const isSunburst = String(modelChoice).toLowerCase().includes('sunburst');
@@ -1691,6 +1728,56 @@ export default function ListingDetail({ listingId, onBack }) {
       }).catch((err) => console.warn('Auto-reconcile listing status warning:', err));
     }
   }, [listing, isAllPhotosProcessed, listingId, totalCount, completedCount]);
+
+  // Auto-enhance unenhanced or queued photos on mount
+  const hasAutoStartedRef = useRef(false);
+  useEffect(() => {
+    if (!listingId || images.length === 0 || hasAutoStartedRef.current || isReProcessingAll) return;
+    const queued = images.filter(
+      (img) =>
+        img.status === 'queued' ||
+        (img.original_image_location &&
+          img.generated_image_location &&
+          img.original_image_location === img.generated_image_location &&
+          img.status !== 'failed' &&
+          !img.is_generative)
+    );
+    if (queued.length > 0) {
+      hasAutoStartedRef.current = true;
+      showToast(`✨ Starting neural enhancement for ${queued.length} photo(s)...`, 'info');
+      enhanceListingBatch({
+        listingId,
+        images: queued,
+        modelTier: listing?.enhancement_model || 'flare',
+        prompt: listing?.prompt || '',
+        onProgress: (cur, tot, msg, updatedImg) => {
+          showToast(msg, 'info');
+          if (updatedImg && updatedImg.generated_image_location) {
+            setImages((prev) =>
+              prev.map((i) =>
+                i.id === updatedImg.id
+                  ? {
+                      ...i,
+                      generated_image_location: updatedImg.generated_image_location,
+                      baseline_image_location: updatedImg.generated_image_location,
+                      status: 'completed',
+                    }
+                  : i
+              )
+            );
+            setCacheBuster(Date.now());
+          }
+        },
+      })
+        .then(() => {
+          showToast('✨ All queued photos enhanced successfully!', 'success');
+          fetchListingDetails(false);
+        })
+        .catch((err) => {
+          console.warn('Auto-enhancement note:', err.message);
+        });
+    }
+  }, [listingId, images, isReProcessingAll, listing]);
 
   if (loading) {
     return (
@@ -3562,12 +3649,12 @@ export default function ListingDetail({ listingId, onBack }) {
               </div>
 
               {/* Action Buttons Footer */}
-              <div className="p-3 bg-black/40 border-t border-white/[0.06] flex items-center justify-between gap-2">
+              <div className="p-3 bg-black/40 border-t border-white/[0.06] flex items-center justify-between gap-1.5 flex-wrap">
                 {img.status === 'completed' && img.generated_image_location ? (
                   <>
                     <button
                       onClick={() => openRefineModal(img)}
-                      className="py-2 px-3 bg-blue-500/15 hover:bg-white/[0.04] text-blue-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-blue-500/30 shadow-sm"
+                      className="py-1.5 px-2.5 bg-blue-500/15 hover:bg-white/[0.04] text-blue-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-blue-500/30 shadow-sm"
                       title="Direct AI or adjust sliders on this photo"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-blue-400" /> AI Refine
@@ -3575,9 +3662,19 @@ export default function ListingDetail({ listingId, onBack }) {
 
                     <button
                       onClick={() => openSliderForImage(img)}
-                      className="flex-1 py-2 px-3 glass-pill hover:bg-white/[0.1] text-bone-100 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      className="flex-1 py-1.5 px-2.5 glass-pill hover:bg-white/[0.1] text-bone-100 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
                     >
                       <Sliders className="w-3.5 h-3.5 text-white/60" /> Compare
+                    </button>
+
+                    <button
+                      onClick={() => handleSingleEnhance(img, 'flare')}
+                      disabled={isRetrying[img.id]}
+                      className="py-1.5 px-2 glass-pill hover:bg-blue-500/20 text-blue-300 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors border border-blue-500/20"
+                      title="Re-run Flare AI enhancement on this photo"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRetrying[img.id] ? 'animate-spin' : ''}`} />
+                      <span className="hidden sm:inline">Flare</span>
                     </button>
 
                     <button
@@ -3587,7 +3684,7 @@ export default function ListingDetail({ listingId, onBack }) {
                           `0${idx + 1}_${img.room_type || 'enhanced'}.jpg`
                         )
                       }
-                      className="py-2 px-2.5 glass-pill hover:bg-white/[0.1] text-bone-100 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors"
+                      className="py-1.5 px-2 glass-pill hover:bg-white/[0.1] text-bone-100 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors"
                       title="Download single photo"
                     >
                       <Download className="w-3.5 h-3.5 text-white/60" />
@@ -3603,9 +3700,18 @@ export default function ListingDetail({ listingId, onBack }) {
                     {isRetrying[img.id] ? 'Retrying...' : 'Retry Enhancement'}
                   </button>
                 ) : (
-                  <span className="text-xs text-white/40 italic py-1.5 text-center w-full font-sans">
-                    Awaiting photographic processing...
-                  </span>
+                  <div className="w-full flex items-center justify-between gap-2">
+                    <span className="text-xs text-white/40 italic py-1 font-sans">
+                      Awaiting processing...
+                    </span>
+                    <button
+                      onClick={() => handleSingleEnhance(img, 'flare')}
+                      disabled={isRetrying[img.id]}
+                      className="py-1 px-2.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-medium flex items-center gap-1 border border-blue-500/30"
+                    >
+                      <Sparkles className="w-3 h-3" /> Enhance Now
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -4198,13 +4304,30 @@ export default function ListingDetail({ listingId, onBack }) {
 
               {/* Slider Container */}
               <div className="p-4 sm:p-6 flex-1 flex items-center justify-center overflow-hidden bg-black/40">
-                <BeforeAfterSlider
-                  originalUrl={comp.leftUrl}
-                  enhancedUrl={comp.rightUrl}
-                  leftLabel={comp.leftLabel}
-                  rightLabel={comp.rightLabel}
-                  className="w-full h-[62vh] max-h-[600px]"
-                />
+                {comp.leftUrl === comp.rightUrl ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-center max-w-md bg-black/50 rounded-2xl border border-white/[0.08] shadow-2xl">
+                    <RefreshCw className="w-10 h-10 text-blue-400 animate-spin mb-4" />
+                    <h3 className="text-white font-bold text-base mb-1.5 font-sans">Photographic Enhancement In Progress</h3>
+                    <p className="text-white/60 text-xs mb-5 leading-relaxed font-sans">
+                      This photo is currently being processed by the OpenAI Neural Engine. Once finished, the interactive Before/After comparison slider will immediately become available.
+                    </p>
+                    <button
+                      onClick={() => handleSingleEnhance(sliderModalImage, 'flare')}
+                      disabled={isRetrying[sliderModalImage?.id]}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-blue-900/50 transition-colors"
+                    >
+                      <Sparkles className="w-4 h-4" /> Enhance Now (Flare)
+                    </button>
+                  </div>
+                ) : (
+                  <BeforeAfterSlider
+                    originalUrl={comp.leftUrl}
+                    enhancedUrl={comp.rightUrl}
+                    leftLabel={comp.leftLabel}
+                    rightLabel={comp.rightLabel}
+                    className="w-full h-[62vh] max-h-[600px]"
+                  />
+                )}
               </div>
 
               {/* Modal Footer Controls */}
