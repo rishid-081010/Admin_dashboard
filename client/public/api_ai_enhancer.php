@@ -272,8 +272,7 @@ if ($action === 'enhance-image') {
         $patchPayload = [
             'generated_image_location' => $publicGeneratedUrl,
             'baseline_image_location' => $publicGeneratedUrl,
-            'status' => 'completed',
-            'updated_at' => gmdate('c')
+            'status' => 'completed'
         ];
         if (!empty($directive)) {
             $patchPayload['custom_refined_location'] = $publicGeneratedUrl;
@@ -289,7 +288,8 @@ if ($action === 'enhance-image') {
             'Prefer: return=minimal'
         ]);
         curl_setopt($chPatch, CURLOPT_POSTFIELDS, json_encode($patchPayload));
-        curl_exec($chPatch);
+        $patchRes = curl_exec($chPatch);
+        $patchCode = curl_getinfo($chPatch, CURLINFO_HTTP_CODE);
         curl_close($chPatch);
 
         // Update listing completed count
