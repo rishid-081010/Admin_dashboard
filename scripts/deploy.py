@@ -59,10 +59,13 @@ for root, _, files in os.walk(dist_dir):
         local_path = os.path.join(root, file)
         # Convert path to posix format for URL
         rel_path = os.path.relpath(local_path, dist_dir).replace('\\\\', '/').replace('\\', '/')
-        # Deploy to public/dashboard/{rel_path}
+        # Deploy to all domain roots (dashboard, admin, root) to prevent version drift
         uploads_list.append((local_path, f"public/dashboard/{rel_path}"))
-        # Deploy to dashboard/{rel_path} to support direct /dashboard/ requests
         uploads_list.append((local_path, f"dashboard/{rel_path}"))
+        uploads_list.append((local_path, f"public/admin/{rel_path}"))
+        uploads_list.append((local_path, f"admin/{rel_path}"))
+        uploads_list.append((local_path, f"public/{rel_path}"))
+        uploads_list.append((local_path, rel_path))
         # If it's in audits/, also deploy to public/audits and audits
         if rel_path.startswith('audits/'):
             uploads_list.append((local_path, f"public/{rel_path}"))
@@ -84,14 +87,17 @@ for root, _, files in os.walk(dist_dir):
             uploads_list.append((local_path, f"public/{rel_path}"))
             uploads_list.append((local_path, rel_path))
 
-# Deploy root domain entrypoint files to automatically redirect admin.asquared.ae -> /dashboard/
+# Deploy root domain entrypoint files and API scripts
 root_dir = 'root_files'
 if os.path.exists(root_dir):
-    for f in os.listdir(root_dir):
-        lpath = os.path.join(root_dir, f)
-        if os.path.isfile(lpath):
-            uploads_list.append((lpath, f))
-            uploads_list.append((lpath, f"public/{f}"))
+    for r_dir, _, r_files in os.walk(root_dir):
+        for f in r_files:
+            lpath = os.path.join(r_dir, f)
+            rel_f = os.path.relpath(lpath, root_dir).replace('\\', '/')
+            uploads_list.append((lpath, rel_f))
+            uploads_list.append((lpath, f"public/{rel_f}"))
+            uploads_list.append((lpath, f"dashboard/{rel_f}"))
+            uploads_list.append((lpath, f"admin/{rel_f}"))
 
 # Sort uploads_list to deploy index.html, assets, and core UI first
 def priority_key(item):
