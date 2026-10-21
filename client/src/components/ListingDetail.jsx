@@ -133,33 +133,33 @@ const getInitialRentalSpecs = (id) => {
 
   return {
     form_date: cached.form_date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-    owner_name: cached.owner_name ?? '',
-    owner_phone: cached.owner_phone ?? '',
-    owner_email: cached.owner_email ?? '',
-    owner_nationality: cached.owner_nationality ?? 'United Arab Emirates',
+    owner_name: cached.owner_name != null ? String(cached.owner_name) : '',
+    owner_phone: cached.owner_phone != null ? String(cached.owner_phone) : '',
+    owner_email: cached.owner_email != null ? String(cached.owner_email) : '',
+    owner_nationality: cached.owner_nationality != null ? String(cached.owner_nationality) : 'United Arab Emirates',
     property_type: normalizePropertyType(cached.property_type),
     category: cached.category || (['Office', 'Shop', 'Warehouse'].includes(cached.property_type) ? 'Commercial' : 'Residential'),
-    building_name: cached.building_name ?? '',
-    community: cached.community ?? 'Dubai',
-    unit_number: cached.unit_number ?? '',
+    building_name: cached.building_name != null ? String(cached.building_name) : '',
+    community: cached.community != null ? String(cached.community) : 'Dubai',
+    unit_number: cached.unit_number != null ? String(cached.unit_number) : '',
     bedrooms: normalizeBedrooms(cached.bedrooms),
     bathrooms: normalizeBathrooms(cached.bathrooms),
     parking_bays: normalizeParking(cached.parking_bays),
-    bua_sqft: cached.bua_sqft ?? '',
-    plot_area: cached.plot_area ?? '00',
-    price: cached.price ?? '',
+    bua_sqft: cached.bua_sqft != null ? String(cached.bua_sqft) : '',
+    plot_area: cached.plot_area != null ? String(cached.plot_area) : '00',
+    price: cached.price != null ? String(cached.price) : '',
     cheques: normalizeCheques(cached.cheques),
-    security_deposit: cached.security_deposit ?? '5%',
-    occupancy_status: cached.occupancy_status ?? 'Vacant',
-    furnishing: cached.furnishing ?? 'Unfurnished',
-    agreement_type: cached.agreement_type ?? 'Non-Exclusive',
+    security_deposit: cached.security_deposit != null ? String(cached.security_deposit) : '5%',
+    occupancy_status: cached.occupancy_status != null ? String(cached.occupancy_status) : 'Vacant',
+    furnishing: cached.furnishing != null ? String(cached.furnishing) : 'Unfurnished',
+    agreement_type: cached.agreement_type != null ? String(cached.agreement_type) : 'Non-Exclusive',
     agreement_duration: normalizeAgreementDuration(cached.agreement_duration),
-    agreement_until_date: cached.agreement_until_date ?? '',
-    commission_rate: cached.commission_rate ?? '5% + VAT',
-    broker_name: cached.broker_name ?? 'A SQUARED REAL ESTATE',
-    broker_agent_name: cached.broker_agent_name ?? 'Melanie Simsiman',
-    broker_brn: cached.broker_brn ?? 'ORN: 28491 / BRN: 54120',
-    broker_phone: cached.broker_phone ?? '+971 4 000 0000',
+    agreement_until_date: cached.agreement_until_date != null ? String(cached.agreement_until_date) : '',
+    commission_rate: cached.commission_rate != null ? String(cached.commission_rate) : '5% + VAT',
+    broker_name: cached.broker_name != null ? String(cached.broker_name) : 'A SQUARED REAL ESTATE',
+    broker_agent_name: cached.broker_agent_name != null ? String(cached.broker_agent_name) : 'Melanie Simsiman',
+    broker_brn: cached.broker_brn != null ? String(cached.broker_brn) : 'ORN: 28491 / BRN: 54120',
+    broker_phone: cached.broker_phone != null ? String(cached.broker_phone) : '+971 4 000 0000',
   };
 };
 
@@ -508,40 +508,41 @@ export default function ListingDetail({ listingId, onBack }) {
     const e = listing.emirates_id_data || {};
     const p = listing.property_specs || {};
 
+    const rawPrice = c.price ?? c.asking_price ?? listing.price ?? '';
     const initial = {
       form_date: c.form_date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-      owner_name: c.owner_name || d.owner_name_english || e.full_name_english || '',
-      owner_phone: c.owner_phone || e.phone || '',
-      owner_email: c.owner_email || '',
-      owner_nationality: c.owner_nationality || e.nationality || d.nationality || 'United Arab Emirates',
+      owner_name: String(c.owner_name || d.owner_name_english || e.full_name_english || ''),
+      owner_phone: String(c.owner_phone || e.phone || ''),
+      owner_email: String(c.owner_email || ''),
+      owner_nationality: String(c.owner_nationality || e.nationality || d.nationality || 'United Arab Emirates'),
       property_type: normalizePropertyType(c.property_type || listing.property_type || d.property_type),
       category: c.category || (['Office', 'Shop', 'Warehouse'].includes(c.property_type || listing.property_type) ? 'Commercial' : 'Residential'),
       building_name: (() => {
         const rawBn = c.building_name || d.building_name || listing.name || '';
         return (rawBn.includes('Unit') || rawBn.includes(' - ') || rawBn.length > 25)
           ? cleanDefaultBuildingName(rawBn)
-          : rawBn;
+          : String(rawBn);
       })(),
-      community: c.community || d.community || 'Dubai',
-      unit_number: c.unit_number || d.unit_number || '',
+      community: String(c.community || d.community || 'Dubai'),
+      unit_number: String(c.unit_number || d.unit_number || ''),
       bedrooms: normalizeBedrooms(c.bedrooms || p.bedrooms || listing.bedrooms),
       bathrooms: normalizeBathrooms(c.bathrooms || p.bathrooms || listing.bathrooms),
       parking_bays: normalizeParking(c.parking_bays || c.parking || d.parking_bays?.[0]),
-      bua_sqft: c.bua_sqft || d.total_area_sqft || d.suite_area_sqft || p.size_sqft || '',
-      plot_area: c.plot_area || d.plot_number || '00',
-      price: c.price || c.asking_price || listing.price || '',
+      bua_sqft: String(c.bua_sqft || d.total_area_sqft || d.suite_area_sqft || p.size_sqft || listing.size_sqft || ''),
+      plot_area: String(c.plot_area || d.plot_number || '00'),
+      price: rawPrice !== '' && rawPrice !== null && rawPrice !== undefined ? String(rawPrice) : '',
       cheques: normalizeCheques(c.cheques),
-      security_deposit: c.security_deposit || '5%',
-      occupancy_status: c.occupancy_status || 'Vacant',
-      furnishing: c.furnishing || p.furnishing || 'Unfurnished',
-      agreement_type: c.agreement_type || 'Non-Exclusive',
+      security_deposit: String(c.security_deposit || '5%'),
+      occupancy_status: String(c.occupancy_status || 'Vacant'),
+      furnishing: String(c.furnishing || p.furnishing || 'Unfurnished'),
+      agreement_type: String(c.agreement_type || 'Non-Exclusive'),
       agreement_duration: normalizeAgreementDuration(c.agreement_duration),
-      agreement_until_date: c.agreement_until_date || c.until_date || '',
-      commission_rate: c.commission_rate || '5% + VAT',
-      broker_name: c.broker_name || 'A SQUARED REAL ESTATE',
-      broker_agent_name: c.broker_agent_name || 'Melanie Simsiman',
-      broker_brn: c.broker_brn || 'ORN: 28491 / BRN: 54120',
-      broker_phone: c.broker_phone || '+971 4 000 0000',
+      agreement_until_date: String(c.agreement_until_date || c.until_date || ''),
+      commission_rate: String(c.commission_rate || '5% + VAT'),
+      broker_name: String(c.broker_name || 'A SQUARED REAL ESTATE'),
+      broker_agent_name: String(c.broker_agent_name || 'Melanie Simsiman'),
+      broker_brn: String(c.broker_brn || 'ORN: 28491 / BRN: 54120'),
+      broker_phone: String(c.broker_phone || '+971 4 000 0000'),
     };
 
     setRentalSpecs(initial);
@@ -579,7 +580,7 @@ export default function ListingDetail({ listingId, onBack }) {
         if (getRes.ok) {
           const rows = await getRes.json();
           let promptPayload = {};
-          if (rows[0]?.prompt && rows[0].prompt.trim().startsWith('{')) {
+          if (rows[0]?.prompt && typeof rows[0].prompt === 'string' && rows[0].prompt.trim().startsWith('{')) {
             try { promptPayload = JSON.parse(rows[0].prompt); } catch {}
           }
           promptPayload.commercialSpecs = specsToSave;
@@ -1836,11 +1837,11 @@ export default function ListingDetail({ listingId, onBack }) {
 
         {/* Form Readiness Checklist */}
         {(() => {
-          const isMissingPhone = !rentalSpecs.owner_phone || !rentalSpecs.owner_phone.trim();
-          const isMissingEmail = !rentalSpecs.owner_email || !rentalSpecs.owner_email.trim();
-          const isMissingPrice = !rentalSpecs.price || !rentalSpecs.price.trim();
-          const isMissingBeds = !rentalSpecs.bedrooms || !rentalSpecs.bedrooms.trim();
-          const isMissingBaths = !rentalSpecs.bathrooms || !rentalSpecs.bathrooms.trim();
+          const isMissingPhone = !rentalSpecs.owner_phone || !String(rentalSpecs.owner_phone).trim();
+          const isMissingEmail = !rentalSpecs.owner_email || !String(rentalSpecs.owner_email).trim();
+          const isMissingPrice = !rentalSpecs.price || !String(rentalSpecs.price).trim();
+          const isMissingBeds = !rentalSpecs.bedrooms || !String(rentalSpecs.bedrooms).trim();
+          const isMissingBaths = !rentalSpecs.bathrooms || !String(rentalSpecs.bathrooms).trim();
           const missingCount = [isMissingPhone, isMissingEmail, isMissingPrice, isMissingBeds, isMissingBaths].filter(Boolean).length;
 
           return (
