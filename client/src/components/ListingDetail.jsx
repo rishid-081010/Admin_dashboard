@@ -1431,30 +1431,6 @@ export default function ListingDetail({ listingId, onBack }) {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Bitrix24 CRM Sync Button / Deal Badge */}
-          {listing.bitrix_deal_id ? (
-            <a
-              href={`https://crm.asquared.ae/crm/deal/details/${listing.bitrix_deal_id}/`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-4 py-3 rounded-2xl font-bold text-xs flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 transition-all shadow-lg cursor-pointer"
-            >
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Bitrix24 Deal #{listing.bitrix_deal_id}</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={handlePushToBitrix}
-              disabled={isPushingBitrix}
-              className="px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 transition-all shadow-lg disabled:opacity-50 cursor-pointer"
-            >
-              <Share2 className={`w-4 h-4 text-blue-400 ${isPushingBitrix ? 'animate-spin' : ''}`} />
-              <span>{isPushingBitrix ? 'Syncing to Bitrix...' : 'Push to Bitrix24'}</span>
-            </button>
-          )}
-
           {/* Single Luxury Download Dropdown Button */}
           <div className="relative" ref={downloadDropdownRef}>
             <button
