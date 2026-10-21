@@ -309,33 +309,64 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
       try {
         const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
         
-        let filter = null;
+        // Build candidate query filters in priority order
+        const queryCandidates = [];
+
         if (owner.match_criteria === 'EMIRATES_ID' && owner.emirates_id) {
-          filter = `emirates_id=eq.${encodeURIComponent(owner.emirates_id)}`;
-        } else if (owner.match_criteria === 'MOBILE_AND_NAME' && owner.phone_normalized && (owner.raw_full_name || owner.name)) {
+          queryCandidates.push(`emirates_id=eq.${encodeURIComponent(owner.emirates_id)}`);
+        }
+        if (owner.match_criteria === 'MOBILE_AND_NAME' && owner.phone_normalized && (owner.raw_full_name || owner.name)) {
           const matchName = owner.raw_full_name || owner.name;
-          filter = `phone_normalized=eq.${encodeURIComponent(owner.phone_normalized)}&full_name=eq.${encodeURIComponent(matchName)}`;
-        } else if (owner.sample_owner_id) {
-          filter = `owner_id=eq.${encodeURIComponent(owner.sample_owner_id)}`;
-        } else if (owner.id && owner.id !== 'UnknownID' && !owner.id.startsWith('MOB-') && !owner.id.startsWith('EID-')) {
-          filter = `owner_id=eq.${encodeURIComponent(owner.id)}`;
-        } else if (owner.phone && owner.phone !== 'N/A' && !owner.phone.startsWith('+9714') && !owner.phone.startsWith('04')) {
-          const normP = String(owner.phone).trim();
-          filter = `phone_normalized=eq.${encodeURIComponent(normP)}`;
+          queryCandidates.push(`phone_normalized=eq.${encodeURIComponent(owner.phone_normalized)}&full_name=eq.${encodeURIComponent(matchName)}`);
         }
 
-        if (filter) {
-          setCurrentFilter(filter);
-          const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${filter}&select=*&limit=50&offset=0`;
+        // 1. Phone number (normalized E.164 format e.g. +971505696496)
+        const rawPhone = owner.phone_normalized || owner.phone;
+        if (rawPhone && rawPhone !== 'N/A' && rawPhone !== 'null') {
+          const digits = String(rawPhone).replace(/\D/g, '');
+          if (digits.length >= 7) {
+            const pNorm = '+' + digits;
+            queryCandidates.push(`phone_normalized=eq.${encodeURIComponent(pNorm)}`);
+          }
+        }
+
+        // 2. Specific sample_owner_id from canonical group
+        if (owner.sample_owner_id) {
+          queryCandidates.push(`owner_id=eq.${encodeURIComponent(owner.sample_owner_id)}`);
+        }
+
+        // 3. owner_id if authentic (not composite MOB- or EID-)
+        if (owner.owner_id && !String(owner.owner_id).startsWith('MOB-') && !String(owner.owner_id).startsWith('EID-')) {
+          queryCandidates.push(`owner_id=eq.${encodeURIComponent(owner.owner_id)}`);
+        }
+
+        // 4. lead_id if authentic
+        if (owner.lead_id && !String(owner.lead_id).startsWith('MOB-') && !String(owner.lead_id).startsWith('EID-')) {
+          queryCandidates.push(`lead_id=eq.${encodeURIComponent(owner.lead_id)}`);
+        }
+
+        // 5. fallback id
+        if (owner.id && !String(owner.id).startsWith('MOB-') && !String(owner.id).startsWith('EID-') && owner.id !== 'UnknownID') {
+          queryCandidates.push(`owner_id=eq.${encodeURIComponent(owner.id)}`);
+        }
+
+        // Execute queries until matching units are returned
+        let foundProperties = false;
+        for (const clause of queryCandidates) {
+          setCurrentFilter(clause);
+          const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${clause}&select=*&limit=50&offset=0`;
           const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
           if (Array.isArray(res.data) && res.data.length > 0) {
             setRelatedProperties(res.data);
             const totalUnits = Number(owner.total_units || owner.units) || res.data.length;
             setHasMore(res.data.length === 50 && (totalUnits > 50 || res.data.length < totalUnits));
-          } else {
-            setRelatedProperties([]);
-            setHasMore(false);
+            foundProperties = true;
+            break;
           }
+        }
+        if (!foundProperties) {
+          setRelatedProperties([]);
+          setHasMore(false);
         }
       } catch (e) {
         console.error('Failed to load related properties:', e);
@@ -407,6 +438,12 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
 
   const assignedAgent = globalAgentName || 'Mayank';
 
+  // Primary unit number detection across owner record and related properties
+  const primaryUnitNumber = owner.unit_number 
+    || relatedProperties[0]?.unit_number 
+    || (relatedProperties.find(p => p.unit_number)?.unit_number) 
+    || null;
+
   const primaryPropertyName = (() => {
     if (cleanedProperties.length > 0) {
       const top = cleanedProperties[0];
@@ -414,9 +451,8 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
     }
     const bldg = (owner.building && owner.building !== 'N/A' && owner.building !== 'null') 
       ? owner.building 
-      : 'Primary Asset';
-    const unit = sanitizeUnit(owner.unit_number).unit;
-    return unit ? `${bldg} · Unit ${unit}` : bldg;
+: (relatedProperties[0]?.building_name || relatedProperties[0]?.building || 'Primary Asset');
+    return primaryUnitNumber ? `${bldg} · Unit ${String(primaryUnitNumber).replace(/^unit\s*[:#-]?\s*/i, '').trim()}` : bldg;
   })();
 
   const sourceFileName = owner.vendor_source_file 
@@ -528,8 +564,16 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
             <span className="text-[10px] font-mono tracking-widest uppercase text-blue-400 font-bold bg-[#06111e] border border-[#1b2b3d] px-2 py-0.5 rounded-md">
               {owner.lead_id || (owner.id ? `OWN-${owner.id}` : 'VERIFIED-OWNER')}
             </span>
+{primaryUnitNumber && (
+              <span className="text-[10px] font-mono font-bold text-sky-300 bg-sky-500/15 border border-sky-500/30 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+                Unit {String(primaryUnitNumber).replace(/^unit\s*[:#-]?\s*/i, '').trim()}
+              </span>
+            )}
             <span className="text-[10px] font-mono text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md">
               {propertiesCount} Unique {propertiesCount > 1 ? 'Assets' : 'Asset'}
+            </span>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" /> Verified Owner
             </span>
           </div>
 
@@ -541,6 +585,12 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
             <span>Person</span>
             <span>&bull;</span>
             <span>{owner.area || 'Dubai'}</span>
+            {primaryUnitNumber && (
+              <>
+                <span>&bull;</span>
+                <span className="text-sky-300 font-semibold font-mono">Unit {String(primaryUnitNumber).replace(/^unit\s*[:#-]?\s*/i, '').trim()}</span>
+              </>
+            )}
             <span>&bull;</span>
             <span className="text-emerald-400 font-medium">Cleaned &amp; Deduplicated by AI</span>
           </p>
@@ -553,7 +603,7 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
         {/* Card 1: Property Owned */}
         <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-3">
-            <span>Primary Asset</span>
+<span>Primary Asset &amp; Unit</span>
             <Building2 className="w-4 h-4 text-blue-400" />
           </div>
           <div>
@@ -571,7 +621,12 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
               <ExternalLink className="w-3.5 h-3.5 text-white/30 group-hover/primary:text-blue-400 transition-colors shrink-0 ml-1" />
             </div>
             <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
-              <span className="text-emerald-400/90 font-medium">{propertiesCount} verified {propertiesCount > 1 ? 'assets' : 'asset'}</span>
+<span className="text-emerald-400/90 font-medium">{propertiesCount} verified {propertiesCount > 1 ? 'assets' : 'asset'}</span>
+              {primaryUnitNumber && (
+                <span className="text-sky-300 font-mono font-bold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                  Unit {String(primaryUnitNumber).replace(/^unit\s*[:#-]?\s*/i, '').trim()}
+                </span>
+              )}
               <span className="text-blue-400/80">{owner.area || 'Dubai'}</span>
             </div>
           </div>
@@ -708,6 +763,7 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                   <thead className="border-b border-[#233549] text-slate-400 uppercase font-mono tracking-wider">
                     <tr>
                       <th className="pb-3 font-semibold">PROPERTY</th>
+                      <th className="pb-3 font-semibold">UNIT NUMBER</th>
                       <th className="pb-3 font-semibold">OWNER NAME</th>
                       <th className="pb-3 font-semibold">PROPERTY DETAILS</th>
                       <th className="pb-3 font-semibold">OWNERSHIP TYPE</th>
@@ -765,6 +821,23 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                               )}
                             </div>
                           </div>
+                        </td>
+
+                        {/* Dedicated Unit Number Column */}
+                        <td className="py-4 pr-3 align-middle">
+                          {prop.unit_number ? (
+                            <span className="px-2.5 py-1 rounded-lg bg-blue-600/20 border border-blue-500/35 text-blue-300 font-mono text-xs font-bold tracking-wide inline-flex items-center gap-1 shadow-sm">
+                              Unit {String(prop.unit_number).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim()}
+                            </span>
+                          ) : (idx === 0 && primaryUnitNumber) ? (
+                            <span className="px-2.5 py-1 rounded-lg bg-blue-600/20 border border-blue-500/35 text-blue-300 font-mono text-xs font-bold tracking-wide inline-flex items-center gap-1 shadow-sm">
+                              Unit {String(primaryUnitNumber).replace(/^unit\s*[:#-]?\s*/i, '').trim()}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-mono text-slate-500 italic">
+                              Unassigned
+                            </span>
+                          )}
                         </td>
 
                         {/* Owner / Party */}
@@ -1063,6 +1136,12 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                 <span className="text-white/40">Core Property</span>
                 <span className="font-semibold text-white truncate max-w-[170px]" title={primaryPropertyName}>
                   {primaryPropertyName}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-white/40">Unit Number</span>
+                <span className="font-mono font-semibold text-sky-300">
+                  {primaryUnitNumber ? `Unit ${String(primaryUnitNumber).replace(/^unit\s*[:#-]?\s*/i, '').trim()}` : 'Unassigned'}
                 </span>
               </div>
               <div className="flex justify-between items-center">

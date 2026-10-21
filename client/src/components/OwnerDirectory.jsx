@@ -406,7 +406,12 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       
       if (Array.isArray(response.data)) {
         const mapped = response.data.map(row => {
-          let cleanBuilding = row.primary_building ? String(row.primary_building).trim() : 'Dubai';
+          let cleanUnit = row.unit_number ? String(row.unit_number).replace(/^unit\s*[:#-]?\s*/i, '').replace(/[\s\-_/]+$/, '').trim() : null;
+          if (!cleanUnit && (row.primary_building || row.building_name)) {
+            const match = String(row.primary_building || row.building_name).match(/\b(?:Unit|Flat|Apt|Villa|Suite|#)\s*([A-Za-z0-9_-]+)/i);
+            if (match) cleanUnit = match[1];
+          }
+          let cleanBuilding = (row.primary_building || row.building_name) ? String(row.primary_building || row.building_name).trim() : 'Dubai';
           if (cleanBuilding === '1' || cleanBuilding.toLowerCase() === 'null') {
             cleanBuilding = row.primary_area || 'Dubai';
           }
@@ -444,7 +449,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             email: 'N/A',
             units: row.total_units || 1,
             total_units: row.total_units || 1,
-            unit_number: null,
+            unit_number: cleanUnit || null,
             property_type: row.total_units > 1 ? `${row.total_units} Properties Portfolio` : 'Individual Asset',
             property_category: 'Residential',
             nationality: row.nationality || null,
