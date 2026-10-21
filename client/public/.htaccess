@@ -4,13 +4,15 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /dashboard/
+  RewriteRule ^index\.html$ - [L]
 
-  # If direct file or directory exists, serve it
+  # If direct file or directory exists, serve it directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # For any other route, rewrite to index.html
+  # Never rewrite static assets or PHP endpoints to index.html
+  RewriteCond %{REQUEST_URI} !\.(css|js|png|jpg|jpeg|gif|svg|ico|csv|txt|pdf|php)$ [NC]
   RewriteRule ^ /dashboard/index.html [L]
 </IfModule>
 

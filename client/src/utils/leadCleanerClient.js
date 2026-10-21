@@ -366,8 +366,7 @@ export function detectColumns(headers, sampleRows = []) {
   nameCandidates.sort((a, b) => b.score - a.score);
   if (nameCandidates.length > 0) {
     colMap['name'] = nameCandidates[0].idx;
-    mappingUsed['NAME'] = nameCandidates[0].header;
-    mappingUsed['name'] = nameCandidates[0].header;
+    mappingUsed['full_name'] = nameCandidates[0].header;
   }
 
   // 2. Detect Phone Column
@@ -398,8 +397,7 @@ export function detectColumns(headers, sampleRows = []) {
   phoneCandidates.sort((a, b) => b.score - a.score);
   if (phoneCandidates.length > 0) {
     colMap['phone'] = phoneCandidates[0].idx;
-    mappingUsed['PHONE'] = phoneCandidates[0].header;
-    mappingUsed['phone'] = phoneCandidates[0].header;
+    mappingUsed['phone_number_normalized'] = phoneCandidates[0].header;
   }
 
   // 3. Detect Unit Column
@@ -436,8 +434,7 @@ export function detectColumns(headers, sampleRows = []) {
   unitCandidates.sort((a, b) => b.score - a.score);
   if (unitCandidates.length > 0) {
     colMap['unit'] = unitCandidates[0].idx;
-    mappingUsed['UNIT'] = unitCandidates[0].header;
-    mappingUsed['unit'] = unitCandidates[0].header;
+    mappingUsed['metadata.unit_number'] = unitCandidates[0].header;
   }
 
   // 4. Detect Project Column
@@ -446,8 +443,7 @@ export function detectColumns(headers, sampleRows = []) {
     const idx = lowerHeaders.findIndex(h => h === pTerm);
     if (idx !== -1 && colMap['project'] === undefined) {
       colMap['project'] = idx;
-      mappingUsed['PROJECT'] = headers[idx].trim();
-      mappingUsed['project'] = headers[idx].trim();
+      mappingUsed['property_reference'] = headers[idx].trim();
       break;
     }
   }
@@ -458,7 +454,6 @@ export function detectColumns(headers, sampleRows = []) {
     const idx = lowerHeaders.findIndex(h => h === ptTerm);
     if (idx !== -1 && colMap['property_type'] === undefined) {
       colMap['property_type'] = idx;
-      mappingUsed['PROPERTY_TYPE'] = headers[idx].trim();
       mappingUsed['property_type'] = headers[idx].trim();
       break;
     }
@@ -470,8 +465,62 @@ export function detectColumns(headers, sampleRows = []) {
     const idx = lowerHeaders.findIndex(h => h === lTerm);
     if (idx !== -1 && colMap['location'] === undefined) {
       colMap['location'] = idx;
-      mappingUsed['LOCATION'] = headers[idx].trim();
-      mappingUsed['location'] = headers[idx].trim();
+      mappingUsed['property_location'] = headers[idx].trim();
+      break;
+    }
+  }
+
+  // 7. Detect Bedrooms
+  const bedTerms = ['bedrooms', 'bedroom', 'beds', 'bed', 'br', 'noofbeds'];
+  for (const bTerm of bedTerms) {
+    const idx = lowerHeaders.findIndex(h => h === bTerm);
+    if (idx !== -1 && colMap['bedrooms'] === undefined) {
+      colMap['bedrooms'] = idx;
+      mappingUsed['property_bedrooms'] = headers[idx].trim();
+      break;
+    }
+  }
+
+  // 8. Detect Size Sqft
+  const sizeTerms = ['actualsize', 'size', 'sizesqft', 'builtuparea', 'bua', 'plotarea'];
+  for (const sTerm of sizeTerms) {
+    const idx = lowerHeaders.findIndex(h => h === sTerm);
+    if (idx !== -1 && colMap['size'] === undefined) {
+      colMap['size'] = idx;
+      mappingUsed['property_size_sqft'] = headers[idx].trim();
+      break;
+    }
+  }
+
+  // 9. Detect Transaction Amount
+  const amtTerms = ['transactionamount', 'amount', 'price', 'transactionprice', 'salesprice', 'value'];
+  for (const aTerm of amtTerms) {
+    const idx = lowerHeaders.findIndex(h => h === aTerm);
+    if (idx !== -1 && colMap['amount'] === undefined) {
+      colMap['amount'] = idx;
+      mappingUsed['metadata.transaction_amount'] = headers[idx].trim();
+      break;
+    }
+  }
+
+  // 10. Detect Email
+  const emailTerms = ['email', 'emailaddress', 'email1', 'mail', 'unnamed1'];
+  for (const eTerm of emailTerms) {
+    const idx = lowerHeaders.findIndex(h => h === eTerm);
+    if (idx !== -1 && colMap['email'] === undefined) {
+      colMap['email'] = idx;
+      mappingUsed['email'] = headers[idx].trim();
+      break;
+    }
+  }
+
+  // 11. Detect Source ID
+  const idTerms = ['procedureno', 'registrationno', 'regno', 'sourceid', 'leadid', 'procedurenumber'];
+  for (const idTerm of idTerms) {
+    const idx = lowerHeaders.findIndex(h => h === idTerm);
+    if (idx !== -1 && colMap['source_id'] === undefined) {
+      colMap['source_id'] = idx;
+      mappingUsed['source_lead_id'] = headers[idx].trim();
       break;
     }
   }
@@ -480,7 +529,7 @@ export function detectColumns(headers, sampleRows = []) {
 }
 
 // ─── 6. PROCESS LEADS CLIENT-SIDE ───
-export async function processLeadsClientSide(matrix, defaultPropType = 'Apartment', filename = 'file.xlsx') {
+export async function processLeadsClientSide(matrix, defaultPropType = 'Apartment', filename = 'file.xlsx', aiMapping = null) {
   if (!matrix || matrix.length < 2) {
     throw new Error('Spreadsheet has no data rows.');
   }
@@ -491,6 +540,42 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
 
   const { colMap, mappingUsed } = detectColumns(rawHeaders, sampleRows);
   const lowerHeaders = rawHeaders.map(h => (h || '').toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
+
+  // If AI mapping was provided from GPT-4o, override heuristic detections with AI selections
+  if (aiMapping && typeof aiMapping === 'object') {
+    const applyAi = (aiHeader, key, dbCol) => {
+      if (!aiHeader) return;
+      const cleanAi = String(aiHeader).toLowerCase().trim();
+      const idx = rawHeaders.findIndex(h => h.toLowerCase().trim() === cleanAi);
+      if (idx !== -1) {
+        colMap[key] = idx;
+        mappingUsed[dbCol] = rawHeaders[idx].trim();
+      }
+    };
+    const dbMap = aiMapping.db_column_map || {};
+    applyAi(dbMap.full_name || aiMapping.name_header, 'name', 'full_name');
+    applyAi(dbMap.phone_number_normalized || aiMapping.phone_header, 'phone', 'phone_number_normalized');
+    applyAi(dbMap['metadata.unit_number'] || aiMapping.unit_header, 'unit', 'metadata.unit_number');
+    applyAi(dbMap.property_reference || aiMapping.project_header, 'project', 'property_reference');
+    applyAi(dbMap.property_location || aiMapping.location_header, 'location', 'property_location');
+    applyAi(dbMap.property_type || aiMapping.property_type_header, 'property_type', 'property_type');
+    applyAi(dbMap.property_bedrooms || aiMapping.bedrooms_header, 'bedrooms', 'property_bedrooms');
+    applyAi(dbMap.property_size_sqft || aiMapping.size_header, 'size', 'property_size_sqft');
+    applyAi(dbMap['metadata.transaction_amount'] || aiMapping.amount_header, 'amount', 'metadata.transaction_amount');
+    applyAi(dbMap.email || aiMapping.email_header, 'email', 'email');
+    applyAi(dbMap.source_lead_id || aiMapping.source_id_header, 'source_id', 'source_lead_id');
+  }
+
+  // Build CSV-to-DB mapping for each original column
+  const csvToDb = {};
+  rawHeaders.forEach(h => {
+    csvToDb[h] = 'metadata.raw_csv_row';
+  });
+  Object.entries(mappingUsed).forEach(([dbCol, csvHeader]) => {
+    if (csvHeader) {
+      csvToDb[csvHeader] = dbCol;
+    }
+  });
 
   // Collect candidate fallback indices across all columns
   const allPhoneIndices = [];
@@ -522,7 +607,7 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
 
   const cleanCandidates = [];
   const invalidLeads = [];
-  const seenPhones = new Set();
+  const seenBatchKeys = new Set();
   const duplicatesInFile = [];
   let landlineCount = 0;
 
@@ -624,49 +709,107 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
     const bldgDisambiguated = disambiguateBuildingName(rawProject, rawUnit, rawLocation);
     rawProject = bldgDisambiguated.building;
 
+    // 6. Bedrooms extraction
+    let bedroomsNum = null;
+    if (colMap.bedrooms !== undefined) {
+      const rawBeds = cleanTxt(row[colMap.bedrooms]);
+      const m = rawBeds.match(/\d+/);
+      if (m) bedroomsNum = parseInt(m[0], 10);
+    }
+
+    // 7. Size Sqft extraction
+    let sizeNum = null;
+    if (colMap.size !== undefined) {
+      const rawSize = cleanTxt(row[colMap.size]).replace(/[^\d.]/g, '');
+      if (rawSize && !isNaN(parseFloat(rawSize))) sizeNum = parseFloat(rawSize);
+    }
+
+    // 8. Transaction Amount extraction
+    let amtNum = null;
+    if (colMap.amount !== undefined) {
+      const rawAmt = cleanTxt(row[colMap.amount]).replace(/[^\d.]/g, '');
+      if (rawAmt && !isNaN(parseFloat(rawAmt))) amtNum = parseFloat(rawAmt);
+    }
+
+    // 9. Email extraction
+    let cleanEmailVal = null;
+    if (colMap.email !== undefined) {
+      const rawEm = cleanTxt(row[colMap.email]);
+      if (rawEm && rawEm.includes('@')) cleanEmailVal = rawEm.toLowerCase().trim();
+    }
+
+    // 10. Source ID
+    let rawSourceId = colMap.source_id !== undefined ? cleanTxt(row[colMap.source_id]) : '';
+
     // Apply enterprise sanitizers
     const phoneRes = cleanPhone(rawPhone);
-    const cleanName = cleanOwnerName(rawName);
+    const cleanName = cleanOwnerName(rawName) || 'Property Owner';
     const cleanUnit = cleanUnitNumber(rawUnit, rawProject);
 
-    // Build Lead Item (100% of original columns preserved)
+    // Build raw CSV row dictionary for metadata preservation
+    const rawRowDict = {};
+    rawHeaders.forEach((h, idx) => {
+      rawRowDict[h] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '';
+    });
+
+    // Build Lead Item (100% compliant with master_leads_v2)
     const item = {
       row_num: rowNum,
       vapi_e164: phoneRes.vapi_e164,
       secondary_phone: phoneRes.secondary,
       source_file: filename,
-      is_cadastral_plot: bldgDisambiguated.isCadastral || false,
+is_cadastral_plot: bldgDisambiguated.isCadastral || false,
       ai_healed_cell_shift: cellShifted,
       ai_rescued_phone: shiftedPhoneRescued,
       ai_rescued_date: shiftedDateRescued,
+      ...rawRowDict,
+      // Canonical master_leads_v2 fields
+      full_name: cleanName,
+      owner_name: cleanName,
+      phone_number: String(rawPhone || ''),
+      contact_number: phoneRes.primary || rawPhone,
+      phone_number_normalized: phoneRes.vapi_e164 || (phoneRes.primary ? `+${phoneRes.primary}` : ''),
+      property_reference: rawProject || '',
+      project_name: rawProject || '',
+      property_location: rawLocation || '',
+      location: rawLocation || '',
+      property_type: rawPropType || defaultPropType,
+      property_bedrooms: bedroomsNum,
+      property_size_sqft: sizeNum,
+      transaction_amount: amtNum,
+      email: cleanEmailVal,
+      source_lead_id: rawSourceId || null,
+      unit_number: cleanUnit || '',
+      owner_type: 'owner',
+      listing_intent: 'unknown',
+      qualification_status: 'unqualified',
+      lead_status: 'fresh',
+      call_status: 'never_called',
+      attempt_count: 0,
+      is_suppressed: false,
+      metadata: {
+        unit_number: cleanUnit || '',
+        transaction_amount: amtNum,
+        raw_csv_row: rawRowDict
+      },
+      // Display labels for UI table
+      'Owner Name': cleanName,
+      'Contact Number': phoneRes.primary || rawPhone,
+      'Unit Number': cleanUnit || '',
+      'Project': rawProject || '',
+      'Location': rawLocation || '',
+      'Property Type': rawPropType || defaultPropType,
+      'Cleaned Unit Number': cleanUnit || '',
+      'Cleaned Phone (E.164)': phoneRes.vapi_e164 || (phoneRes.primary ? `+${phoneRes.primary}` : '')
     };
 
-    rawHeaders.forEach((h, idx) => {
-      item[h] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '';
-    });
-
-    item.owner_name = cleanName;
-    item.contact_number = phoneRes.primary || rawPhone;
-    item.unit_number = cleanUnit || '';
-    item.project_name = rawProject || '';
-    item.location = rawLocation || '';
     let finalPropType = rawPropType;
     if (finalPropType && /^(?:owner|buyer|tenant|unit owner|unknown|nan|null|n\/a|-)$/i.test(finalPropType)) {
       item.party_role = finalPropType.toUpperCase();
       finalPropType = defaultPropType;
     }
-
     item.property_type = finalPropType || defaultPropType;
-
-    item['Owner Name'] = cleanName;
-    item['Contact Number'] = phoneRes.primary || rawPhone;
-    item['Unit Number'] = cleanUnit || '';
-    item['Project'] = rawProject || '';
-    item['Location'] = rawLocation || '';
     item['Property Type'] = finalPropType || defaultPropType;
-    item['Cleaned Unit Number'] = cleanUnit || '';
-    item['Cleaned Phone (E.164)'] = phoneRes.vapi_e164 || (phoneRes.primary ? `+${phoneRes.primary}` : '');
-
     if (!phoneRes.valid) {
       if (phoneRes.is_landline) {
         landlineCount++;
@@ -677,44 +820,61 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
       return;
     }
 
-    if (seenPhones.has(phoneRes.primary)) {
+    // Composite deduplication key within file: phone + project + unit
+    // Allows the same owner to own multiple distinct properties/units!
+    const batchKey = (phoneRes.primary || '') + '|' + (rawProject || '').toLowerCase().trim() + '|' + (cleanUnit || '').toLowerCase().trim();
+    if (seenBatchKeys.has(batchKey)) {
       item.status = 'duplicate_file';
-      item.reason = 'Duplicate within uploaded file (repeated phone number)';
+      item.reason = 'Duplicate within file (identical phone, property & unit)';
       duplicatesInFile.push(item);
       return;
     }
 
-    seenPhones.add(phoneRes.primary);
+    seenBatchKeys.add(batchKey);
     item.status = 'ready';
     cleanCandidates.push(item);
   });
 
-  // Check CRM duplicates in Supabase
+  // Check composite duplicates against master_leads_v2 in Supabase
   let duplicatesInDb = [];
   let readyLeads = [];
 
   try {
     const phonesToCheck = cleanCandidates.map(c => c.contact_number).filter(Boolean);
-    const matchedPhones = new Set();
+    const matchedCompositeKeys = new Set();
     const BATCH_SIZE = 50;
 
     for (let i = 0; i < Math.min(phonesToCheck.length, 500); i += BATCH_SIZE) {
       const chunk = phonesToCheck.slice(i, i + BATCH_SIZE);
-      const res = await axios.get(
-        `${SUPABASE_URL}/rest/v1/owners_data?select=phone_normalized&phone_normalized=in.(${encodeURIComponent(chunk.join(','))})&limit=100`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-      );
-      if (res.data && Array.isArray(res.data)) {
-        res.data.forEach(r => {
-          if (r.phone_normalized) matchedPhones.add(r.phone_normalized);
-        });
+      const e164Chunk = chunk.map(p => p.startsWith('+') ? p : `+${p}`);
+
+      try {
+        const resV2 = await axios.get(
+          `${SUPABASE_URL}/rest/v1/master_leads_v2?select=phone_number_normalized,property_reference,metadata&phone_number_normalized=in.(${encodeURIComponent(e164Chunk.join(','))})&limit=200`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        if (resV2.data && Array.isArray(resV2.data)) {
+          resV2.data.forEach(r => {
+            const pNorm = (r.phone_number_normalized || '').replace(/\D/g, '');
+            const pProj = (r.property_reference || '').toLowerCase().trim();
+            const pUnit = ((r.metadata && r.metadata.unit_number) || '').toLowerCase().trim();
+            matchedCompositeKeys.add(`${pNorm}|${pProj}|${pUnit}`);
+          });
+        }
+      } catch (errV2) {
+        console.warn('master_leads_v2 duplicate check warning:', errV2.message);
       }
     }
 
     cleanCandidates.forEach(cand => {
-      if (matchedPhones.has(cand.contact_number)) {
+      const pNorm = (cand.contact_number || '').replace(/\D/g, '');
+      const pProj = (cand.property_reference || '').toLowerCase().trim();
+      const pUnit = (cand.unit_number || '').toLowerCase().trim();
+      const candKey = `${pNorm}|${pProj}|${pUnit}`;
+
+      if (matchedCompositeKeys.has(candKey)) {
         cand.status = 'duplicate_db';
-        cand.reason = 'Lead already present in CRM database';
+        cand.reason = 'Lead already present in master_leads_v2 for this property & unit';
         duplicatesInDb.push(cand);
       } else {
         readyLeads.push(cand);
@@ -735,6 +895,7 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
     original_headers: rawHeaders,
     total_columns: rawHeaders.length,
     mapping_used: mappingUsed,
+    csv_to_db: csvToDb,
     stats: {
       total: dataRows.length,
       ready: readyLeads.length,

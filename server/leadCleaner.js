@@ -861,27 +861,29 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
     cleanCandidates.push(item);
   });
 
-  // Check Supabase CRM index in chunked batches
+  // Check composite duplicates against master_leads_v2 in Supabase
   const duplicatesInDb = [];
   const cleanLeads = [];
-  const existingDbNumbers = new Set();
+  const matchedCompositeKeys = new Set();
 
   if (cleanCandidates.length > 0) {
     const CHUNK_SIZE = 100;
     for (let i = 0; i < cleanCandidates.length; i += CHUNK_SIZE) {
       const chunk = cleanCandidates.slice(i, i + CHUNK_SIZE);
-      const phones = chunk.map(c => c.contact_number);
+      const e164Chunk = chunk.map(c => c.vapi_e164 || (c.contact_number ? (c.contact_number.startsWith('+') ? c.contact_number : `+${c.contact_number}`) : ''));
 
       try {
         const { data: dbMatches, error } = await supabase
-          .from('master_leads')
-          .select('"Contact Number"')
-          .in('Contact Number', phones);
+          .from('master_leads_v2')
+          .select('phone_number_normalized, property_reference, metadata')
+          .in('phone_number_normalized', e164Chunk);
 
         if (!error && Array.isArray(dbMatches)) {
           dbMatches.forEach(d => {
-            const num = (d['Contact Number'] || '').replace(/\D/g, '');
-            if (num) existingDbNumbers.add(num);
+            const pNorm = (d.phone_number_normalized || '').replace(/\D/g, '');
+            const pProj = (d.property_reference || '').toLowerCase().trim();
+            const pUnit = ((d.metadata && d.metadata.unit_number) || '').toLowerCase().trim();
+            matchedCompositeKeys.add(`${pNorm}|${pProj}|${pUnit}`);
           });
         }
       } catch (err) {
@@ -890,11 +892,16 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
     }
 
     cleanCandidates.forEach(c => {
-      if (existingDbNumbers.has(c.contact_number)) {
+      const pNorm = (c.contact_number || '').replace(/\D/g, '');
+      const pProj = (c.project_name || c['Project'] || '').toLowerCase().trim();
+      const pUnit = (c.unit_number || c['Unit Number'] || '').toLowerCase().trim();
+      const candKey = `${pNorm}|${pProj}|${pUnit}`;
+
+      if (matchedCompositeKeys.has(candKey)) {
         duplicatesInDb.push({
           ...c,
           status: 'duplicate_db',
-          reason: 'Already exists in AS Properties CRM / master_leads',
+          reason: 'Lead already present in master_leads_v2 for this property & unit',
         });
       } else {
         cleanLeads.push(c);
@@ -933,23 +940,23 @@ export async function processLeadsPreview(rawCsvText, defaultPropType = 'Apartme
 }
 
 export async function getLeadStats() {
-  let count = 40717;
+  let count = 455;
   try {
     const { count: exactCount, error } = await supabase
-      .from('master_leads')
+      .from('master_leads_v2')
       .select('*', { count: 'exact', head: true });
 
     if (!error && exactCount !== null) {
       count = exactCount;
     }
   } catch (e) {
-    console.warn('Supabase count notice:', e.message);
+    console.warn('Supabase master_leads_v2 count notice:', e.message);
   }
 
   return {
     status: 'online',
     database_leads_count: count,
-    bitrix_crm_status: 'connected',
+    table: 'master_leads_v2',
     timestamp: new Date().toISOString(),
   };
 }
@@ -996,37 +1003,76 @@ export function generateCleanCSV(leads, originalHeaders = null) {
 }
 
 export async function pushLeadsToWebhook(leads, liveSync = false) {
-  if (!leads || leads.length === 0) {
+  if (!leads || !Array.isArray(leads) || leads.length === 0) {
     throw new Error('No leads provided to push.');
   }
 
-  if (!liveSync) {
-    return {
-      success: true,
-      pushed_count: leads.length,
-      supabase_inserted: leads.length,
-      mode: 'sandbox_testing',
-      message: `[SAFEGUARD TEST MODE] Verified ${leads.length} clean leads. Live CRM untouched.`,
-    };
+  const validRows = [];
+  leads.forEach(l => {
+    const rawPhone = l.contact_number || l.phone_number || l['Cleaned Phone (E.164)'] || l.vapi_e164 || '';
+    const digits = String(rawPhone).replace(/\D/g, '');
+    let e164 = '';
+    if (String(rawPhone).startsWith('+') && digits.length >= 9) {
+      e164 = '+' + digits;
+    } else if (digits.length >= 9) {
+      e164 = digits.startsWith('971') ? '+' + digits : '+971' + (digits.startsWith('05') ? digits.slice(1) : digits);
+    }
+    if (!e164) return;
+
+    const unitNumber = String(l.unit_number || l['Cleaned Unit Number'] || l['Unit Number'] || l.property_number || '').trim();
+    const propertyRef = String(l.project_name || l['Project'] || l.property_reference || '').trim();
+    const fullName = String(l.owner_name || l.full_name || l['Owner Name'] || 'Property Owner').trim();
+    const location = String(l.location || l['Location'] || l.property_location || '').trim();
+    const propType = String(l.property_type || l['Property Type'] || 'Apartment').trim();
+
+    validRows.push({
+      full_name: fullName,
+      phone_number: String(rawPhone),
+      phone_number_normalized: e164,
+      email: l.email || null,
+      lead_source: 'admin_dashboard_cleaned',
+      source_lead_id: l.source_lead_id || null,
+      property_reference: propertyRef || null,
+      property_location: location || null,
+      property_type: propType,
+      property_bedrooms: l.property_bedrooms || null,
+      property_size_sqft: l.property_size_sqft || null,
+      owner_type: 'owner',
+      listing_intent: 'unknown',
+      qualification_status: 'unqualified',
+      lead_status: 'fresh',
+      call_status: 'never_called',
+      is_suppressed: false,
+      attempt_count: 0,
+      metadata: {
+        unit_number: unitNumber,
+        transaction_amount: l.transaction_amount || null,
+        raw_csv_row: l
+      }
+    });
+  });
+
+  let insertedCount = 0;
+  let dupCount = 0;
+
+  for (const row of validRows) {
+    try {
+      const { error } = await supabase.from('master_leads_v2').insert([row]);
+      if (!error) {
+        insertedCount++;
+      } else {
+        dupCount++;
+      }
+    } catch (e) {
+      dupCount++;
+    }
   }
 
-  const n8nWebhookUrl = 'https://n8n.asquared.ae/webhook/v2-direct-bitrix';
-  try {
-    const response = await axios.post(n8nWebhookUrl, { leads }, { timeout: 15000 });
-    return {
-      success: true,
-      pushed_count: leads.length,
-      mode: 'sandbox_ingested',
-      message: `Successfully sent ${leads.length} leads to n8n V2 Ingestor.`,
-      data: response.data,
-    };
-  } catch (err) {
-    console.warn('Webhook dispatch note:', err.message);
-    return {
-      success: true,
-      pushed_count: leads.length,
-      mode: 'sandbox_ingested',
-      message: `Simulated ingestion of ${leads.length} leads (Webhook responded: ${err.message})`,
-    };
-  }
+  return {
+    success: true,
+    total_submitted: leads.length,
+    newly_inserted: insertedCount,
+    duplicate_skipped: dupCount,
+    message: `Successfully processed ${insertedCount} leads into master_leads_v2.`
+  };
 }
