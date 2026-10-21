@@ -14,7 +14,8 @@ import BeforeAfterSlider from './BeforeAfterSlider';
 import Toast from './Toast';
 import { previewRentalPdfInNewTab, downloadRentalPdf, generateClientRentalPdf } from '../utils/rentalFormPdfClient';
 import { cleanBuildingNameOffline, shortenPropertyNameWithAI } from '../utils/aiPropertyShortener';
-import { sbFetch, uploadListingImage, SUPABASE_BASE_URL, SUPABASE_KEY, SUPABASE_STORAGE_URL } from '../utils/supabaseClient';
+import { sbFetch, uploadListingImage, uploadEnhancedListingImage, SUPABASE_BASE_URL, SUPABASE_KEY, SUPABASE_STORAGE_URL } from '../utils/supabaseClient';
+import { enhanceRealEstatePhoto } from '../utils/photoEnhancerClient';
 
 const ROOM_CATEGORIES = [
   'Living_Room',
@@ -436,6 +437,16 @@ export default function ListingDetail({ listingId, onBack }) {
 
         if (sbListing.prompt && !customPrompt && !sbListing.prompt.startsWith('{')) {
           setCustomPrompt(sbListing.prompt);
+        }
+
+        // Auto-generate AI copy in the background if empty
+        const hasCopy = copyPayload && (copyPayload.portal_title || copyPayload.portal_description);
+        if (!hasCopy && isInitial && sbListing.name) {
+          setTimeout(() => {
+            if (isMountedRef.current) {
+              handleGenerateCopy('luxury');
+            }
+          }, 800);
         }
       }
     } catch (err) {
@@ -970,32 +981,81 @@ export default function ListingDetail({ listingId, onBack }) {
 
   const handleApplyDirective = async (directiveText) => {
     const textToApply = directiveText || adminDirective;
-    if (!textToApply || !textToApply.trim() || !refineModalImage) return;
+    if (!textToApply || !String(textToApply).trim() || !refineModalImage) return;
 
     setIsRefiningImage(true);
     try {
-      const response = await axios.post(`/api/images/${refineModalImage.id}/refine`, {
-        directive: textToApply.trim(),
-      });
+      const isLocal = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-      if (response.data.success) {
-        showToast('AI Optical Refinement applied to photo!', 'success');
-        setCacheBuster(Date.now());
+      if (isLocal) {
+        try {
+          const response = await axios.post(`/api/images/${refineModalImage.id}/refine`, {
+            directive: String(textToApply).trim(),
+          }, { timeout: 3000 });
+          if (response.data?.success) {
+            showToast('AI Optical Refinement applied to photo!', 'success');
+            setCacheBuster(Date.now());
+            fetchListingDetails();
+            setIsRefiningImage(false);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // Production Client-Side Photographic Darkroom Engine
+      const dirLower = String(textToApply).toLowerCase();
+      let customAdj = {};
+      if (dirLower.includes('bright') || dirLower.includes('light')) {
+        customAdj.brightness = 1.15;
+        customAdj.gamma = 1.10;
+      } else if (dirLower.includes('warm') || dirLower.includes('sunset')) {
+        customAdj.brightness = 1.04;
+        customAdj.warmth_neutralize = false;
+        customAdj.saturation = 1.15;
+      } else if (dirLower.includes('sharp') || dirLower.includes('crisp')) {
+        customAdj.sharpness = 1.35;
+      } else if (dirLower.includes('yellow') || dirLower.includes('white balance') || dirLower.includes('cool')) {
+        customAdj.warmth_neutralize = true;
+      } else {
+        customAdj.brightness = 1.08;
+        customAdj.saturation = 1.10;
+        customAdj.sharpness = 1.20;
+      }
+
+      const srcUrl = refineModalImage.original_image_location || refineModalImage.generated_image_location;
+      const enh = await enhanceRealEstatePhoto(srcUrl, customAdj);
+
+      if (enh && enh.blob) {
+        const enhRes = await uploadEnhancedListingImage(
+          enh.blob,
+          listingId,
+          refineModalImage.original_filename || 'refined.jpg'
+        );
+        const newUrl = enhRes.publicUrl;
+
+        await sbFetch(`/real_estate_images?id=eq.${refineModalImage.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            generated_image_location: newUrl,
+            custom_refined_location: newUrl,
+            status: 'completed',
+          })
+        });
+
         const updatedImg = {
           ...refineModalImage,
-          generated_image_location: response.data.image.generated_image_location,
-          baseline_image_location: response.data.image.baseline_image_location || refineModalImage.baseline_image_location,
-          custom_refined_location: response.data.image.custom_refined_location || response.data.image.generated_image_location,
-          is_generative: false,
-          qa_report: response.data.image.qa_report,
-          refinements: response.data.image.refinements || [],
+          generated_image_location: newUrl,
+          custom_refined_location: newUrl,
         };
+
         setRefineModalImage(updatedImg);
         setImages((prev) => prev.map((img) => (img.id === updatedImg.id ? updatedImg : img)));
+        setCacheBuster(Date.now());
         setAdminDirective('');
-        fetchListingDetails();
+        showToast('✨ Optical refinement applied and saved!', 'success');
       } else {
-        showToast(response.data.error || 'Failed to refine image.', 'error');
+        showToast('Failed to apply refinement.', 'error');
       }
     } catch (err) {
       console.error('Refine image error:', err);
@@ -1049,24 +1109,61 @@ export default function ListingDetail({ listingId, onBack }) {
 
     setIsRefiningImage(true);
     try {
-      const response = await axios.post(`/api/images/${refineModalImage.id}/manual-refine`, sliderValues);
+      const isLocal = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-      if (response.data.success) {
-        showToast('Manual darkroom adjustments applied!', 'success');
-        setCacheBuster(Date.now());
+      if (isLocal) {
+        try {
+          const response = await axios.post(`/api/images/${refineModalImage.id}/manual-refine`, sliderValues, { timeout: 3000 });
+          if (response.data?.success) {
+            showToast('Manual darkroom adjustments applied!', 'success');
+            setCacheBuster(Date.now());
+            fetchListingDetails();
+            setIsRefiningImage(false);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // Production Client-Side Photographic Darkroom Engine
+      const srcUrl = refineModalImage.original_image_location || refineModalImage.generated_image_location;
+      const enh = await enhanceRealEstatePhoto(srcUrl, {
+        brightness: sliderValues.brightness,
+        saturation: sliderValues.saturation,
+        gamma: sliderValues.gamma,
+        sharpness: sliderValues.sharpness,
+        warmth_neutralize: sliderValues.hue !== 0,
+      });
+
+      if (enh && enh.blob) {
+        const enhRes = await uploadEnhancedListingImage(
+          enh.blob,
+          listingId,
+          refineModalImage.original_filename || 'manual_refined.jpg'
+        );
+        const newUrl = enhRes.publicUrl;
+
+        await sbFetch(`/real_estate_images?id=eq.${refineModalImage.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            generated_image_location: newUrl,
+            custom_refined_location: newUrl,
+            status: 'completed',
+          })
+        });
+
         const updatedImg = {
           ...refineModalImage,
-          generated_image_location: response.data.image.generated_image_location,
-          baseline_image_location: response.data.image.baseline_image_location || refineModalImage.baseline_image_location,
-          custom_refined_location: response.data.image.custom_refined_location || response.data.image.generated_image_location,
-          qa_report: response.data.image.qa_report,
-          refinements: response.data.image.refinements || [],
+          generated_image_location: newUrl,
+          custom_refined_location: newUrl,
         };
+
         setRefineModalImage(updatedImg);
         setImages((prev) => prev.map((img) => (img.id === updatedImg.id ? updatedImg : img)));
-        fetchListingDetails();
+        setCacheBuster(Date.now());
+        showToast('✨ Manual darkroom adjustments applied and saved!', 'success');
       } else {
-        showToast(response.data.error || 'Failed to apply manual adjustments.', 'error');
+        showToast('Failed to apply manual adjustments.', 'error');
       }
     } catch (err) {
       console.error('Manual refine error:', err);
@@ -1157,10 +1254,55 @@ export default function ListingDetail({ listingId, onBack }) {
 
   const handleReProcessAll = async () => {
     setIsReProcessingAll(true);
+    showToast('Re-processing and enhancing all listing photos...', 'info');
     try {
-      await axios.post(`/api/listings/${listingId}/process`, { prompt: customPrompt });
-      showToast('Re-processing all photos with updated prompt...', 'info');
-      fetchListingDetails();
+      let updatedCount = 0;
+      const updatedImages = [];
+
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        const srcUrl = img.original_image_location || img.generated_image_location;
+        if (!srcUrl) continue;
+
+        try {
+          const enh = await enhanceRealEstatePhoto(srcUrl);
+          if (enh && enh.blob) {
+            const enhRes = await uploadEnhancedListingImage(
+              enh.blob,
+              listingId,
+              img.original_filename || `photo_${i}.jpg`
+            );
+            if (enhRes && enhRes.publicUrl) {
+              await sbFetch(`/real_estate_images?id=eq.${img.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                  generated_image_location: enhRes.publicUrl,
+                  status: 'completed',
+                })
+              });
+              updatedImages.push({
+                ...img,
+                generated_image_location: enhRes.publicUrl,
+                status: 'completed'
+              });
+              updatedCount++;
+            }
+          }
+        } catch (e) {
+          console.warn(`Re-enhance warning for image ${img.id}:`, e.message);
+        }
+      }
+
+      if (updatedCount > 0) {
+        setImages((prev) => prev.map((img) => {
+          const found = updatedImages.find((u) => u.id === img.id);
+          return found || img;
+        }));
+        setCacheBuster(Date.now());
+        showToast(`✨ Successfully enhanced ${updatedCount} photos!`, 'success');
+      } else {
+        showToast('Photos re-processed.', 'info');
+      }
     } catch (err) {
       console.error('Re-process error:', err);
       showToast('Failed to trigger re-enhancement.', 'error');
@@ -1341,6 +1483,7 @@ export default function ListingDetail({ listingId, onBack }) {
     const endpoints = [
       '/dashboard/api/generate-copy.php',
       '/api/generate-copy.php',
+      'https://admin.asquared.ae/dashboard/api/generate-copy.php',
       `/api/listings/${listingId}/generate-copy`,
       '/api/generate-copy'
     ];

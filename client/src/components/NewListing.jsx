@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import Toast from './Toast';
-import { sbFetch, uploadListingImage, uploadListingDocument } from '../utils/supabaseClient';
+import { sbFetch, uploadListingImage, uploadEnhancedListingImage, uploadListingDocument } from '../utils/supabaseClient';
+import { enhanceRealEstatePhoto } from '../utils/photoEnhancerClient';
 
 const DEFAULT_SEQUENCE = [
   'Living_Room',
@@ -586,6 +587,55 @@ export default function NewListing({ onListingCreated, onBack }) {
         }
       }
 
+      // 1.5 Generate AI Multi-Channel Marketing Copy & SEO Title
+      setUploadProgress({ current: 0, total: selectedFiles.length, text: 'Generating AI Marketing Copy & SEO Titles...' });
+      let copyData = null;
+      try {
+        const copyPayload = {
+          name: name.trim(),
+          reference: reference && reference.trim() ? reference.trim() : `ASQ-PROP-${Date.now().toString().slice(-4)}`,
+          property_type: propertyType || 'Apartment',
+          purpose: purpose || 'For Sale',
+          price: cleanPrice ? String(cleanPrice) : '',
+          bedrooms: bedrooms || '2 Bedrooms',
+          bathrooms: bathrooms || '2 Baths',
+          size_sqft: cleanSqft ? String(cleanSqft) : '',
+          furnishing: furnishing || 'Unfurnished',
+          community: parsedDeedData?.community || 'Dubai',
+          rough_notes: roughNotes || '',
+          tone: 'luxury',
+        };
+
+        const copyEndpoints = [
+          '/dashboard/api/generate-copy.php',
+          '/api/generate-copy.php',
+          'https://admin.asquared.ae/dashboard/api/generate-copy.php'
+        ];
+
+        for (const ep of copyEndpoints) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 14000);
+            const cRes = await fetch(ep, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(copyPayload),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (cRes.ok) {
+              const cJson = await cRes.json();
+              if (cJson && (cJson.copyData || cJson.copy)) {
+                copyData = cJson.copyData || cJson.copy;
+                break;
+              }
+            }
+          } catch (e) {}
+        }
+      } catch (copyErr) {
+        console.warn('AI copy generation note:', copyErr);
+      }
+
       // 2. Insert Listing Row into Supabase
       setUploadProgress({ current: 0, total: selectedFiles.length, text: 'Registering listing record...' });
       const listingPayload = {
@@ -607,6 +657,7 @@ export default function NewListing({ onListingCreated, onBack }) {
         dossier_data: { ...(parsedDeedData || {}), deed_file_url: deedDocUrl },
         kyc_data: { emiratesIdData: parsedEidData, kycResult },
         prompt: compiledPrompt,
+        copy_data: copyData || {},
         status: isDraft ? 'draft' : 'completed',
         total_images: selectedFiles.length,
         completed_images: selectedFiles.length,
@@ -623,31 +674,62 @@ export default function NewListing({ onListingCreated, onBack }) {
 
       const createdListing = (createdRows && createdRows[0]) ? createdRows[0] : listingPayload;
 
-      // 3. Upload Photos to Supabase Storage (Only if not a draft)
+      // 3. Enhance Photos & Upload to Supabase Storage (Only if not a draft)
       if (!isDraft) {
         const uploadedImages = [];
         for (let i = 0; i < selectedFiles.length; i++) {
           const file = selectedFiles[i];
+
+          // Step 3a: Optical Darkroom Photographic Enhancement (Shadows, Vibrance, Sharpness, Temperature)
           setUploadProgress({
             current: i + 1,
             total: selectedFiles.length,
-            text: `Uploading photo ${i + 1} of ${selectedFiles.length} (${file.name})...`
+            text: `Calibrating optical enhancement on photo ${i + 1} of ${selectedFiles.length}...`
           });
 
+          let enhancedBlob = null;
           try {
-            const { publicUrl } = await uploadListingImage(file, newListingId);
-            uploadedImages.push({
-              filename: file.name,
-              url: publicUrl,
-            });
+            const enh = await enhanceRealEstatePhoto(file);
+            if (enh && enh.blob) {
+              enhancedBlob = enh.blob;
+            }
+          } catch (enhErr) {
+            console.warn(`Enhance error for ${file.name}:`, enhErr);
+          }
+
+          setUploadProgress({
+            current: i + 1,
+            total: selectedFiles.length,
+            text: `Uploading original & enhanced photo ${i + 1} of ${selectedFiles.length}...`
+          });
+
+          // Step 3b: Upload Original Photo
+          let originalUrl = null;
+          try {
+            const origRes = await uploadListingImage(file, newListingId);
+            originalUrl = origRes.publicUrl;
           } catch (uploadErr) {
             console.warn(`Direct storage upload failed for ${file.name}, using data URL fallback:`, uploadErr.message);
-            const fallbackUrl = previews[i]?.url || URL.createObjectURL(file);
-            uploadedImages.push({
-              filename: file.name,
-              url: fallbackUrl,
-            });
+            originalUrl = previews[i]?.url || URL.createObjectURL(file);
           }
+
+          // Step 3c: Upload Enhanced Photo
+          let generatedUrl = originalUrl;
+          if (enhancedBlob) {
+            try {
+              const enhRes = await uploadEnhancedListingImage(enhancedBlob, newListingId, file.name);
+              generatedUrl = enhRes.publicUrl;
+            } catch (eErr) {
+              console.warn(`Enhanced upload note for ${file.name}:`, eErr.message);
+              generatedUrl = originalUrl;
+            }
+          }
+
+          uploadedImages.push({
+            filename: file.name,
+            originalUrl,
+            generatedUrl,
+          });
         }
 
         // 4. Insert Images Rows into Supabase
@@ -660,9 +742,9 @@ export default function NewListing({ onListingCreated, onBack }) {
         const imageRows = uploadedImages.map((img, idx) => ({
           listing_id: newListingId,
           original_filename: img.filename,
-          original_image_location: img.url,
-          generated_image_location: img.url,
-          baseline_image_location: img.url,
+          original_image_location: img.originalUrl,
+          generated_image_location: img.generatedUrl,
+          baseline_image_location: img.originalUrl,
           room_type: DEFAULT_SEQUENCE[idx % DEFAULT_SEQUENCE.length] || 'Property_Photo',
           display_order: idx,
           is_cover: idx === 0,
