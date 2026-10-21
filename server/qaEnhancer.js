@@ -86,8 +86,10 @@ If the image contains a floor plan, do not treat it as a normal room photograph.
 
 If the image contains people, severe clutter, misleading reflections, obvious CGI, or structural defects that cannot be safely corrected through conservative editing, flag the issue.
 
-For portal-ready output, target:
-1200 x 900 pixels
+ORIENTATION & ASPECT RATIO MANDATE (STRICT):
+- STRICTLY PRESERVE the authentic photo's original aspect ratio, camera framing, and orientation (landscape, square, or portrait).
+- NEVER outpaint, pad, widen, or invent new walls, floors, or ceilings to change a portrait photo into landscape or vice versa.
+- Keep the exact same camera angle, field of view, and optical perspective.
 Natural professional property-advertising style.`;
 
 const QA_SYSTEM_PROMPT = `You are the Principal Real Estate Photography Director & Darkroom Master for luxury Dubai properties (Downtown, Palm Jumeirah, Dubai Marina, Emirates Hills).
@@ -289,6 +291,13 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
   if (customPrompt && customPrompt.trim() && customPrompt.trim() !== ASQUARED_PRESERVATION_PROMPT.trim()) {
     effectivePrompt = `${customPrompt.trim()}\n\nSTRICT PRESERVATION REQUIREMENTS:\n- Keep the exact same room layout, architectural geometry, finishes, furniture, and real exterior view.\n- Zero new objects, zero altered room layout, zero CGI appearance.\n- Improve natural interior exposure, window clarity, and white balance without adding or removing features.`;
   }
+
+  try {
+    const inputMeta = await sharp(inputPath).metadata();
+    if (inputMeta.height > inputMeta.width) {
+      effectivePrompt = `MANDATORY ORIENTATION: This is a vertical PORTRAIT photo (height > width). You MUST maintain the exact vertical portrait orientation, framing, and aspect ratio without outpainting or widening into landscape.\n\n${effectivePrompt}`;
+    }
+  } catch (mErr) {}
 
   console.log(`[Neural Enhancer] Executing ${targetModel} on: ${path.basename(inputPath)} (Quality: high)...`);
   const startTime = Date.now();
