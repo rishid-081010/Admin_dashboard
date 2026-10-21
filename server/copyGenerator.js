@@ -37,41 +37,74 @@ export async function generateDubaiPortalCopy(data, tone = 'luxury') {
 
   const selectedToneGuideline = tonePrompts[tone] || tonePrompts.luxury;
 
-  const systemPrompt = `You are the Lead Real Estate Copywriter & Multi-Channel Marketing Specialist for A SQUARED REAL ESTATE in Dubai.
-Your mission is to produce authoritative, high-converting property marketing assets across multiple channels (Property Finder / Bayut, WhatsApp broker broadcasts, Instagram, VIP Investor Email, Arabic, and Russian).
+  const isRental = String(purpose).toLowerCase().includes('rent') || String(purpose).toLowerCase().includes('lease');
+  const actionVerb = isRental ? 'lease' : 'own';
+  const priceLabel = isRental ? 'Rental Price' : 'Selling Price';
+  const askingPriceLabel = isRental ? 'Rental Price' : 'Asking Price';
+  const opportunityHeader = isRental ? 'Lifestyle & Residence' : 'Investment Opportunity';
 
-TONE & STYLE DIRECTIVE:
-${selectedToneGuideline}
+  // Compute square meters from sqft
+  let sizeSqm = '';
+  if (size_sqft && !isNaN(parseFloat(String(size_sqft).replace(/,/g, '')))) {
+    sizeSqm = (parseFloat(String(size_sqft).replace(/,/g, '')) / 10.7639).toFixed(2);
+  }
 
-STRICT WORD CHOICE & VOCABULARY RULES:
-- BANNED CLICHÉS (NEVER USE): "Nestled in the heart of", "boasts stunning views", "look no further", "rare gem", "sought-after sanctuary", "a testament to luxury", "step into a world of", "haven of tranquility".
-- REQUIRED REAL ESTATE VOCABULARY: Use precise architectural terminology: "Panoramic vistas", "Floor-to-ceiling glazing", "Expansive floorplan", "Seamless indoor-outdoor flow", "Bespoke cabinetry", "Vacant on transfer", "Turnkey condition", "Sun-drenched interiors", "Generous terrace", "Chiller free", "En-suite bathrooms".
+  const systemPrompt = `You are the Executive Real Estate Copywriter for A SQUARED REAL ESTATE in Dubai.
+Your mission is to generate prestigious, authoritative property marketing copy that adheres STRICTLY to the signature A SQUARED editorial format.
 
-PORTAL SEO RULES:
-- Title must be under 80 characters for optimal mobile search display on Bayut and Property Finder apps.
-- Format: [Bedrooms + Type] | [Building Name] | [Top View or Feature] | [Status]
-  (Example: "Luxury 2BR | Marina Gate 2 | Full Marina View | Vacant on Transfer")
+SIGNATURE "portal_description" FORMAT (MANDATORY EXACT STRUCTURE):
 
-5-PART DESCRIPTION ARCHITECTURE (MANDATORY FORMAT FOR PORTAL):
-1. ✨ Executive Overview: 1-2 powerful sentences establishing the primary value proposition and view.
-2. 🏠 Property Specifications: Clean bulleted list (Type, BUA sq.ft, Bedrooms, En-suites, Parking, Chiller/Furnishing).
-3. 🏢 Interior Highlights & Layout: Bulleted list of layout strengths, kitchen specification, terrace access, and natural light.
-4. 🏊 World-Class Building Amenities: Bulleted list of authentic amenities (Infinity pool, gymnasium, 24/7 concierge, security, valet).
-5. 📞 Private Viewings: Authoritative CTA prompting private viewing appointments with A SQUARED REAL ESTATE.
+A Squared Real Estate proudly presents an exclusive opportunity to ${actionVerb} a [unit / property type] in the iconic [Building Name], located in [the heart of / prime] [Location / Community], one of Dubai's most prestigious and sought-after destinations.
 
-OUTPUT FORMAT:
-Return strictly valid JSON with these exact 7 keys:
+Positioned on the [Floor / e.g. 36th Floor / high floor], this property offers an opportunity to invest in a landmark development known for its striking architecture, prestigious address, and exceptional location.
+
+Property Details
+- Building: [Building Name]
+- Location: [Community], Dubai
+- Property Type: [Property Type]
+- Floor: [Floor / Level]
+- Size: [Size in Sq. M.] Sq. M. (Approx. [Size in Sq. Ft.] Sq. Ft.)
+- ${priceLabel}: AED [Formatted Price]
+- Usage: Residential (as per property record)
+[Include if provided:
+- Bedrooms: ...
+- Bathrooms: ...
+- Furnishing: ...
+- Parking: ...
+- Status: ...]
+
+Location Highlights
+- Prime location in [Community]
+- Close to [Prominent nearby walkway, waterfront, or landmark, e.g. Dubai Marina Walk / Burj Khalifa / Canal]
+- Convenient access to [Sheikh Zayed Road / Al Khail Road / major artery]
+- Near [Key Mall or shopping destination, e.g. Dubai Marina Mall / Mall of the Emirates]
+- Easy access to beaches, restaurants, and entertainment destinations
+- Situated in one of Dubai's most recognizable waterfront / urban communities
+
+${opportunityHeader}
+
+[Building Name] is an architectural landmark in [Community], offering a prestigious address in a highly desirable location.
+
+Whether you are seeking a distinctive real estate investment or an asset in one of Dubai's iconic developments, this property presents an opportunity worth exploring.
+
+${askingPriceLabel}: AED [Formatted Price]${isRental ? ' / Year' : ''}
+
+Contact A Squared Real Estate today for more information, property details, and viewing arrangements.
+
+CRITICAL RULES:
+1. Do NOT use cheesy bullet emojis (no 🏊, 🏠, ✨, 🏢) in the portal description. Use clean hyphens (-) exactly as demonstrated.
+2. In the Property Details section, format size as: [Sq. M.] Sq. M. (Approx. [Sq. Ft.] Sq. Ft.).
+3. Maintain the exact section titles: 'Property Details', 'Location Highlights', '${opportunityHeader}', '${askingPriceLabel}: AED ...', and the closing 'Contact A Squared Real Estate today...'.
+4. Return strictly valid JSON with these 7 keys:
 {
-  "portal_title": "String (SEO Title under 80 chars with pipes)",
-  "portal_description": "String (5-section description formatted with line breaks and emojis)",
-  "whatsapp_copy": "String (High-impact WhatsApp broker broadcast formatted with emojis and *bold* tags: headline, price, key specs, bullet points, and A SQUARED Real Estate viewing CTA)",
-  "instagram_copy": "String (Engaging Instagram caption with luxury hook, key highlights, swipe cue for photos, and top Dubai real estate hashtags)",
-  "investor_email": "String (VIP Investor Pitch: Subject Line + concise investment thesis highlighting yields, capital growth, floorplan efficiency, and viewing request)",
-  "arabic_summary": "String (Professional Arabic property summary tailored for GCC and Arab high-net-worth investors)",
-  "russian_summary": "String (Professional Russian property summary tailored for international CIS investors)"
-}
-
-Do NOT invent fake amenities or features not implied by the property details and notes.`;
+  "portal_title": "String (Under 80 characters, e.g. 'Ciel Tower | 36th Floor Unit | Dubai Marina | AED 2,000,000')",
+  "portal_description": "String (The exact signature A SQUARED format shown above)",
+  "whatsapp_copy": "String (WhatsApp broker broadcast formatted with bold * tags and clean contact details)",
+  "instagram_copy": "String (Refined Instagram caption with luxury hook, key highlights, and top Dubai real estate hashtags)",
+  "investor_email": "String (VIP Investor Pitch: Subject line + investment thesis + viewing CTA)",
+  "arabic_summary": "String (Formal Arabic real estate description matching the exact property details)",
+  "russian_summary": "String (High-end Russian real estate description matching the exact property details)"
+}`;
 
   const userPrompt = `
 Property Name: ${name}
@@ -81,10 +114,10 @@ Purpose: ${purpose}
 Price: ${price ? price + ' AED' : 'Price on Application'}
 Bedrooms: ${bedrooms || 'Not specified'}
 Bathrooms: ${bathrooms || 'Not specified'}
-Built-Up Area: ${size_sqft ? size_sqft + ' sq. ft.' : 'Not specified'}
+Built-Up Area: ${sizeSqm ? sizeSqm + ' Sq. M. / ' : ''}${size_sqft ? size_sqft + ' Sq. Ft.' : 'Not specified'}
 Furnishing: ${furnishing}
-Admin Rough Notes & Key Highlights:
-${rough_notes || 'High floor, prime location, stunning views, luxury finishing, vacant and ready for immediate viewing.'}
+Notes:
+${rough_notes || 'High floor, prime location, landmark architecture, luxury finishing, vacant and ready for immediate viewing.'}
 `;
 
   try {
@@ -95,7 +128,7 @@ ${rough_notes || 'High floor, prime location, stunning views, luxury finishing, 
         { role: 'user', content: userPrompt },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.45,
+      temperature: 0.3,
     });
 
     const content = response.choices[0].message.content;

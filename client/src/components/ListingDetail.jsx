@@ -1546,8 +1546,14 @@ export default function ListingDetail({ listingId, onBack }) {
     };
 
     const endpoints = [
-      '/dashboard/api/generate-copy.php',
+      '/api_ai_copywriter.php',
+      './api_ai_copywriter.php',
+      '/dashboard/api_ai_copywriter.php',
+      'https://dashboard.asquared.ae/api_ai_copywriter.php',
+      'https://admin.asquared.ae/api_ai_copywriter.php',
+      '/generate-copy.php',
       '/api/generate-copy.php',
+      '/dashboard/api/generate-copy.php',
       'https://admin.asquared.ae/dashboard/api/generate-copy.php',
       `/api/listings/${listingId}/generate-copy`,
       '/api/generate-copy'
