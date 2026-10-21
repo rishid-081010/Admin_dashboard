@@ -194,6 +194,7 @@ export default function NewListing({ onListingCreated, onBack }) {
   const [selectedPresets, setSelectedPresets] = useState(['asquared_default']);
   const [compiledPrompt, setCompiledPrompt] = useState(ASQUARED_DEFAULT_PROMPT);
   const [modelTier, setModelTier] = useState('flare'); // 'flare' (fast) or 'sunburst' (luxury)
+  const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -202,6 +203,49 @@ export default function NewListing({ onListingCreated, onBack }) {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState({ msg: '', type: 'success' });
   const [isDragging, setIsDragging] = useState(false);
+  const [draftRecovered, setDraftRecovered] = useState(false);
+
+  // Restore draft on mount if fields are empty
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('asquared_new_listing_draft');
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (draft && draft.name && !name) {
+          setName(draft.name || '');
+          if (draft.reference) setReference(draft.reference);
+          if (draft.purpose) setPurpose(draft.purpose);
+          if (draft.price) setPrice(draft.price);
+          if (draft.propertyType) setPropertyType(draft.propertyType);
+          if (draft.bedrooms) setBedrooms(draft.bedrooms);
+          if (draft.bathrooms) setBathrooms(draft.bathrooms);
+          if (draft.sizeSqft) setSizeSqft(draft.sizeSqft);
+          if (draft.roughNotes) setRoughNotes(draft.roughNotes);
+          if (draft.cheques) setCheques(draft.cheques);
+          if (draft.occupancyStatus) setOccupancyStatus(draft.occupancyStatus);
+          if (draft.furnishing) setFurnishing(draft.furnishing);
+          if (draft.ownerPhone) setOwnerPhone(draft.ownerPhone);
+          if (draft.ownerEmail) setOwnerEmail(draft.ownerEmail);
+          setDraftRecovered(true);
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  // Debounced draft auto-save
+  useEffect(() => {
+    if (name || price || sizeSqft || roughNotes) {
+      try {
+        const draft = {
+          name, reference, purpose, price, propertyType,
+          bedrooms, bathrooms, sizeSqft, roughNotes,
+          cheques, occupancyStatus, furnishing, ownerPhone, ownerEmail,
+          updatedAt: Date.now()
+        };
+        localStorage.setItem('asquared_new_listing_draft', JSON.stringify(draft));
+      } catch (e) {}
+    }
+  }, [name, reference, purpose, price, propertyType, bedrooms, bathrooms, sizeSqft, roughNotes, cheques, occupancyStatus, furnishing, ownerPhone, ownerEmail]);
 
   const [titleDeedFile, setTitleDeedFile] = useState(null);
   const [emiratesIdFiles, setEmiratesIdFiles] = useState([]);
@@ -229,12 +273,13 @@ export default function NewListing({ onListingCreated, onBack }) {
       eids.forEach((f) => formData.append('emirates_id', f));
     }
 
-    const candidateEndpoints = [
-      '/dashboard/api/parse-documents.php',
-      '/api/parse-documents.php',
-      '/api/listings/parse-documents',
-      '/api/parse-documents'
-    ];
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const primaryEndpoint = isLocal 
+      ? '/api/listings/parse-documents'
+      : (window.location.origin + window.location.pathname.replace(/\/([^\/]*)$/, '/') + 'api/parse-documents.php');
+    const candidateEndpoints = isLocal
+      ? ['/api/listings/parse-documents']
+      : [primaryEndpoint, 'https://dashboard.asquared.ae/api/parse-documents.php'];
 
     let parsed = null;
     for (const ep of candidateEndpoints) {
@@ -618,18 +663,13 @@ export default function NewListing({ onListingCreated, onBack }) {
           tone: 'luxury',
         };
 
-        const copyEndpoints = [
-          '/api_ai_copywriter.php',
-          './api_ai_copywriter.php',
-          '/dashboard/api_ai_copywriter.php',
-          'https://dashboard.asquared.ae/api_ai_copywriter.php',
-          'https://admin.asquared.ae/api_ai_copywriter.php',
-          '/generate-copy.php',
-          '/api/generate-copy.php',
-          '/dashboard/api/generate-copy.php',
-          'https://admin.asquared.ae/dashboard/api/generate-copy.php',
-          '/api/generate-copy',
-        ];
+        const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const copyDirect = isLocalHost
+          ? 'http://localhost:5000/api_ai_copywriter.php'
+          : (window.location.origin + window.location.pathname.replace(/\/([^\/]*)$/, '/') + 'api_ai_copywriter.php');
+        const copyEndpoints = isLocalHost
+          ? ['http://localhost:5000/api_ai_copywriter.php']
+          : [copyDirect, 'https://dashboard.asquared.ae/api_ai_copywriter.php'];
 
         for (const ep of copyEndpoints) {
           try {
@@ -770,6 +810,9 @@ export default function NewListing({ onListingCreated, onBack }) {
           : '✨ Property listing and enhanced photos created successfully!',
         'success'
       );
+      try {
+        localStorage.removeItem('asquared_new_listing_draft');
+      } catch (e) {}
       if (onListingCreated) {
         onListingCreated(createdListing);
       }
@@ -916,10 +959,12 @@ export default function NewListing({ onListingCreated, onBack }) {
             {/* Row 1: Name & Reference */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="md:col-span-2">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                <label htmlFor="listing_name_field" className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
                   PROPERTY / BUILDING NAME <span className="text-blue-500">*</span>
                 </label>
                 <input
+                  id="listing_name_field"
+                  name="listing_name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -930,10 +975,12 @@ export default function NewListing({ onListingCreated, onBack }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                <label htmlFor="listing_ref_field" className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
                   # REFERENCE (OPTIONAL)
                 </label>
                 <input
+                  id="listing_ref_field"
+                  name="listing_reference"
                   type="text"
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
@@ -976,10 +1023,12 @@ export default function NewListing({ onListingCreated, onBack }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
+                <label htmlFor="listing_price_field" className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
                   <span className="text-blue-500 font-bold">$</span> PRICE (AED)
                 </label>
                 <input
+                  id="listing_price_field"
+                  name="listing_price"
                   type="text"
                   value={price}
                   onChange={handlePriceChange}
@@ -989,10 +1038,12 @@ export default function NewListing({ onListingCreated, onBack }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
+                <label htmlFor="listing_type_field" className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
                   <Home className="w-3.5 h-3.5 text-white/60" /> PROPERTY TYPE
                 </label>
                 <select
+                  id="listing_type_field"
+                  name="listing_property_type"
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-bone-100 focus:outline-none transition-all text-sm cursor-pointer"
@@ -1012,10 +1063,12 @@ export default function NewListing({ onListingCreated, onBack }) {
             {/* Row 3: Bedrooms, Bathrooms, Size */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
+                <label htmlFor="listing_beds_field" className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
                   <BedDouble className="w-3.5 h-3.5 text-white/60" /> BEDROOMS
                 </label>
                 <select
+                  id="listing_beds_field"
+                  name="listing_bedrooms"
                   value={bedrooms}
                   onChange={(e) => setBedrooms(e.target.value)}
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-bone-100 focus:outline-none transition-all text-sm cursor-pointer"
@@ -1030,10 +1083,12 @@ export default function NewListing({ onListingCreated, onBack }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
+                <label htmlFor="listing_baths_field" className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
                   <Bath className="w-3.5 h-3.5 text-white/60" /> BATHROOMS
                 </label>
                 <select
+                  id="listing_baths_field"
+                  name="listing_bathrooms"
                   value={bathrooms}
                   onChange={(e) => setBathrooms(e.target.value)}
                   className="w-full glass-input rounded-xl px-4 py-2.5 text-bone-100 focus:outline-none transition-all text-sm cursor-pointer"
@@ -1046,10 +1101,12 @@ export default function NewListing({ onListingCreated, onBack }) {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
+                <label htmlFor="listing_size_field" className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
                   <Maximize2 className="w-3.5 h-3.5 text-white/60" /> SIZE (SQ. FT.)
                 </label>
                 <input
+                  id="listing_size_field"
+                  name="listing_size_sqft"
                   type="text"
                   value={sizeSqft}
                   onChange={handleSizeChange}
@@ -1078,10 +1135,12 @@ export default function NewListing({ onListingCreated, onBack }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                    <label htmlFor="rental_cheques_select" className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
                       Cheques
                     </label>
                     <select
+                      id="rental_cheques_select"
+                      name="rental_cheques"
                       value={cheques}
                       onChange={(e) => setCheques(e.target.value)}
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
@@ -1096,10 +1155,12 @@ export default function NewListing({ onListingCreated, onBack }) {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                    <label htmlFor="rental_occupancy_select" className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
                       Occupancy Status
                     </label>
                     <select
+                      id="rental_occupancy_select"
+                      name="rental_occupancy_status"
                       value={occupancyStatus}
                       onChange={(e) => setOccupancyStatus(e.target.value)}
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
@@ -1111,10 +1172,12 @@ export default function NewListing({ onListingCreated, onBack }) {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                    <label htmlFor="rental_furnishing_select" className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
                       Furnishing
                     </label>
                     <select
+                      id="rental_furnishing_select"
+                      name="rental_furnishing"
                       value={furnishing}
                       onChange={(e) => setFurnishing(e.target.value)}
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
@@ -1126,10 +1189,12 @@ export default function NewListing({ onListingCreated, onBack }) {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                    <label htmlFor="rental_deposit_input" className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
                       Security Deposit
                     </label>
                     <input
+                      id="rental_deposit_input"
+                      name="rental_security_deposit"
                       type="text"
                       value={securityDeposit ?? ''}
                       onChange={(e) => setSecurityDeposit(e.target.value)}
@@ -1141,10 +1206,12 @@ export default function NewListing({ onListingCreated, onBack }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                    <label htmlFor="rental_owner_phone_input" className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
                       Landlord Contact Phone
                     </label>
                     <input
+                      id="rental_owner_phone_input"
+                      name="rental_owner_phone"
                       type="text"
                       value={ownerPhone ?? ''}
                       onChange={(e) => setOwnerPhone(e.target.value)}
@@ -1154,10 +1221,12 @@ export default function NewListing({ onListingCreated, onBack }) {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                    <label htmlFor="rental_owner_email_input" className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
                       Landlord Email
                     </label>
                     <input
+                      id="rental_owner_email_input"
+                      name="rental_owner_email"
                       type="email"
                       value={ownerEmail ?? ''}
                       onChange={(e) => setOwnerEmail(e.target.value)}
@@ -1167,10 +1236,12 @@ export default function NewListing({ onListingCreated, onBack }) {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                    <label htmlFor="rental_mandate_select" className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
                       Mandate Representation
                     </label>
                     <select
+                      id="rental_mandate_select"
+                      name="rental_mandate_type"
                       value={agreementType}
                       onChange={(e) => setAgreementType(e.target.value)}
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
@@ -1181,10 +1252,12 @@ export default function NewListing({ onListingCreated, onBack }) {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
+                    <label htmlFor="rental_duration_select" className="block text-[10px] font-bold uppercase tracking-wider text-blue-300 mb-1.5">
                       Mandate Duration
                     </label>
                     <select
+                      id="rental_duration_select"
+                      name="rental_mandate_duration"
                       value={agreementDuration}
                       onChange={(e) => setAgreementDuration(e.target.value)}
                       className="w-full glass-input rounded-xl px-3 py-2 text-bone-100 text-xs focus:outline-none cursor-pointer"
@@ -1196,6 +1269,8 @@ export default function NewListing({ onListingCreated, onBack }) {
                     </select>
                     {agreementDuration === 'Or Until' && (
                       <input
+                        id="rental_until_date_input"
+                        name="rental_until_date"
                         type="text"
                         value={agreementUntilDate}
                         onChange={(e) => setAgreementUntilDate(e.target.value)}
@@ -1210,10 +1285,12 @@ export default function NewListing({ onListingCreated, onBack }) {
 
             {/* Row 4: Rough Notes */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
+              <label htmlFor="listing_rough_notes_textarea" className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
                 <FileText className="w-3.5 h-3.5 text-blue-500" /> ROUGH NOTES & HIGHLIGHTS (FOR BAYUT & PROPERTY FINDER GENERATOR)
               </label>
               <textarea
+                id="listing_rough_notes_textarea"
+                name="listing_rough_notes"
                 rows={3}
                 value={roughNotes}
                 onChange={(e) => setRoughNotes(e.target.value)}
@@ -1468,19 +1545,40 @@ export default function NewListing({ onListingCreated, onBack }) {
             })}
           </div>
 
-          {/* COMPILED AI INSTRUCTIONS (EDITABLE) */}
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center justify-between">
-              <span>ACTIVE QA & ENHANCEMENT PROMPT (EDITABLE)</span>
-              <span className="text-[10px] text-white/60 font-normal">Strict Real Estate Protocol</span>
-            </label>
-            <textarea
-              rows={8}
-              value={compiledPrompt}
-              onChange={(e) => setCompiledPrompt(e.target.value)}
-              placeholder="QA & enhancement prompt instructions..."
-              className="w-full glass-input rounded-xl p-3.5 text-bone-100 text-xs font-mono placeholder-slate-500 focus:outline-none transition-all leading-relaxed"
-            ></textarea>
+          {/* COMPILED AI INSTRUCTIONS (EDITABLE & COLLAPSIBLE FOR MOBILE) */}
+          <div className="border border-white/[0.08] rounded-2xl p-4 bg-white/[0.02]">
+            <button
+              type="button"
+              id="toggle-prompt-accordion"
+              name="toggle_prompt_accordion"
+              onClick={() => setIsPromptExpanded(!isPromptExpanded)}
+              className="w-full flex items-center justify-between text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-400" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">
+                  Active QA & Enhancement Prompt Directives
+                </span>
+                <span className="text-[10px] text-white/50 font-normal hidden sm:inline">• Strict Real Estate Protocol</span>
+              </div>
+              <span className="text-xs font-semibold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/20 transition-colors">
+                {isPromptExpanded ? '▲ Collapse Prompt' : '▼ Customize Prompt Directives'}
+              </span>
+            </button>
+
+            {isPromptExpanded && (
+              <div className="mt-3 animate-fade-in">
+                <textarea
+                  id="compiled-prompt-textarea"
+                  name="compiled_prompt"
+                  rows={7}
+                  value={compiledPrompt}
+                  onChange={(e) => setCompiledPrompt(e.target.value)}
+                  placeholder="QA & enhancement prompt instructions..."
+                  className="w-full glass-input rounded-xl p-3.5 text-bone-100 text-xs font-mono placeholder-slate-500 focus:outline-none transition-all leading-relaxed"
+                />
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,18 +1,31 @@
 /**
  * AI Real Estate Photo Enhancement Service
  * Unified client-side orchestrator connecting directly to Hostinger's OpenAI Neural Pipeline
- * (api_ai_enhancer.php) with multi-endpoint fallback and live progress updates.
+ * (api_ai_enhancer.php) with deterministic URI resolution and live progress updates.
  */
 
 import { sbFetch } from './supabaseClient';
 
-const ENHANCER_ENDPOINTS = [
-  '/api_ai_enhancer.php',
-  './api_ai_enhancer.php',
-  '/dashboard/api_ai_enhancer.php',
-  'https://dashboard.asquared.ae/api_ai_enhancer.php',
-  'https://admin.asquared.ae/api_ai_enhancer.php',
-];
+/**
+ * Deterministically resolve the primary enhancement endpoint based on the runtime origin.
+ */
+function getEnhancerEndpoints() {
+  if (typeof window === 'undefined') {
+    return ['https://dashboard.asquared.ae/api_ai_enhancer.php'];
+  }
+
+  const { origin, pathname, hostname } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return ['/api_ai_enhancer.php', 'http://localhost:5000/api/ai/enhance'];
+  }
+
+  // In production (dashboard.asquared.ae or admin.asquared.ae)
+  const basePath = pathname.replace(/\/([^\/]*)$/, '/');
+  const directUrl = `${origin}${basePath}api_ai_enhancer.php`;
+  const canonicalUrl = 'https://dashboard.asquared.ae/api_ai_enhancer.php';
+
+  return directUrl === canonicalUrl ? [directUrl] : [directUrl, canonicalUrl];
+}
 
 /**
  * Enhance a single property photo with OpenAI Neural Engine (Flare or Sunburst).
@@ -54,9 +67,9 @@ export async function enhancePhotoWithAI({
   };
 
   let lastError = null;
+  const endpoints = getEnhancerEndpoints();
 
-  // 1. Try production PHP endpoints on Hostinger
-  for (const endpoint of ENHANCER_ENDPOINTS) {
+  for (const endpoint of endpoints) {
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -76,12 +89,11 @@ export async function enhancePhotoWithAI({
       }
     } catch (err) {
       lastError = err;
-      // Try next endpoint in list
     }
   }
 
-  // 2. Try local Node Express server if running in local dev
-  if (imageId) {
+  // Fallback to local Node Express server if in development
+  if (imageId && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
     try {
       const localRes = await fetch(`/api/images/${imageId}/enhance`, {
         method: 'POST',
@@ -98,7 +110,7 @@ export async function enhancePhotoWithAI({
     } catch (ignore) {}
   }
 
-  throw lastError || new Error('All AI enhancement endpoints failed to respond.');
+  throw lastError || new Error('AI photo enhancement pipeline failed to respond.');
 }
 
 /**

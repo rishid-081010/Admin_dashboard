@@ -1,26 +1,46 @@
 DirectoryIndex index.php index.html
 
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+  </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # API Route Rewrites
+  # AI Engine Endpoints
+  RewriteRule ^api/ai/enhance/?$ api_ai_enhancer.php [L,QSA]
+  RewriteRule ^dashboard/api/ai/enhance/?$ api_ai_enhancer.php [L,QSA]
+  RewriteRule ^admin/api/ai/enhance/?$ api_ai_enhancer.php [L,QSA]
+
+  RewriteRule ^api/ai/copy/?$ api_ai_copywriter.php [L,QSA]
+  RewriteRule ^dashboard/api/ai/copy/?$ api_ai_copywriter.php [L,QSA]
+  RewriteRule ^admin/api/ai/copy/?$ api_ai_copywriter.php [L,QSA]
+
+  # Document OCR Endpoints
   RewriteRule ^api/listings/parse-documents/?$ api/parse-documents.php [L,QSA]
   RewriteRule ^api/parse-documents/?$ api/parse-documents.php [L,QSA]
   RewriteRule ^dashboard/api/listings/parse-documents/?$ api/parse-documents.php [L,QSA]
   RewriteRule ^dashboard/api/parse-documents/?$ api/parse-documents.php [L,QSA]
+  RewriteRule ^admin/api/parse-documents/?$ api/parse-documents.php [L,QSA]
 
+  # Marketing Copy Endpoints
   RewriteRule ^api/listings/[^/]+/generate-copy/?$ api/generate-copy.php [L,QSA]
   RewriteRule ^api/generate-copy/?$ api/generate-copy.php [L,QSA]
   RewriteRule ^dashboard/api/listings/[^/]+/generate-copy/?$ api/generate-copy.php [L,QSA]
   RewriteRule ^dashboard/api/generate-copy/?$ api/generate-copy.php [L,QSA]
+  RewriteRule ^admin/api/generate-copy/?$ api/generate-copy.php [L,QSA]
 
+  # Bitrix CRM Endpoints
   RewriteRule ^api/push-listing-bitrix/?$ api/push-listing-bitrix.php [L,QSA]
   RewriteRule ^dashboard/api/push-listing-bitrix/?$ api/push-listing-bitrix.php [L,QSA]
-
   RewriteRule ^api/push-to-bitrix/?$ api/push-to-bitrix.php [L,QSA]
   RewriteRule ^dashboard/api/push-to-bitrix/?$ api/push-to-bitrix.php [L,QSA]
 
-  # Redirect root to dashboard
+  # Redirect bare root to dashboard
   RewriteRule ^$ /dashboard/ [R=301,L]
   RewriteRule ^dashboard$ /dashboard/ [R=301,L]
 </IfModule>

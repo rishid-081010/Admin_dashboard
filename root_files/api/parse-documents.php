@@ -235,6 +235,17 @@ Return strictly valid JSON:
         }
 
         $emiratesIdData = callOpenAiChat([['role' => 'user', 'content' => $eidContent]], $openaiApiKey, true);
+
+        // PII Masking: Redact raw Emirates ID number for UAE PDPL compliance
+        if (!empty($emiratesIdData['id_number'])) {
+            $rawId = (string)$emiratesIdData['id_number'];
+            $masked = preg_replace('/(\d{3}-)\d{4}-\d{7}(-\d)/', '$1****-*******$2', $rawId);
+            if ($masked === $rawId && strlen($rawId) > 6) {
+                $masked = substr($rawId, 0, 4) . '****' . substr($rawId, -3);
+            }
+            $emiratesIdData['id_number_masked'] = $masked;
+            $emiratesIdData['id_number'] = $masked;
+        }
     }
 
     // 3. KYC Match Verification
