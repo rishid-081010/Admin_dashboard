@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 import BeforeAfterSlider from './BeforeAfterSlider';
 import Toast from './Toast';
-import { previewRentalPdfInNewTab, downloadRentalPdf } from '../utils/rentalFormPdfClient';
+import { previewRentalPdfInNewTab, downloadRentalPdf, generateClientRentalPdf } from '../utils/rentalFormPdfClient';
 import { cleanBuildingNameOffline, shortenPropertyNameWithAI } from '../utils/aiPropertyShortener';
 import { sbFetch, uploadListingImage, SUPABASE_BASE_URL, SUPABASE_KEY, SUPABASE_STORAGE_URL } from '../utils/supabaseClient';
 
@@ -189,6 +189,26 @@ export default function ListingDetail({ listingId, onBack }) {
   const hasInitializedRentalSpecsRef = useRef(null);
   const hasUserEditedRentalSpecsRef = useRef(false);
   const autoSaveDebounceRef = useRef(null);
+
+  // Official Sales Commercials & Amenities Studio State (For Sale Listings)
+  const [saleSpecs, setSaleSpecs] = useState({
+    asking_price: '',
+    service_charge_sqft: '18',
+    expected_roi: '7.8%',
+    transfer_fee_terms: '4% DLD Paid by Buyer',
+    mortgage_status: 'Free & Clear',
+    handover_date: 'Immediate / Vacant on Transfer',
+    amenities: [
+      'Balcony',
+      'Central A/C & Heating',
+      'Built-in Wardrobes',
+      'Covered Parking',
+      'Shared Swimming Pool',
+      'Shared Gymnasium'
+    ]
+  });
+  const [isSavingSaleSpecs, setIsSavingSaleSpecs] = useState(false);
+  const [saleActiveTab, setSaleActiveTab] = useState('commercials'); // 'commercials' | 'amenities' | 'title'
 
   // Staged additional photos state
   const [additionalFiles, setAdditionalFiles] = useState([]);
@@ -392,6 +412,17 @@ export default function ListingDetail({ listingId, onBack }) {
         sbListing.title_deed_data = deedData;
         sbListing.emirates_id_data = eidData;
         if (copyPayload) sbListing.copy_data = copyPayload;
+
+        if (commSpecs && Object.keys(commSpecs).length > 0) {
+          setSaleSpecs((prev) => ({
+            ...prev,
+            ...commSpecs,
+            asking_price: commSpecs.asking_price || (sbListing.price ? String(sbListing.price) : prev.asking_price),
+            amenities: commSpecs.amenities || prev.amenities || []
+          }));
+        } else if (sbListing.price) {
+          setSaleSpecs((prev) => ({ ...prev, asking_price: String(sbListing.price) }));
+        }
 
         setListing(sbListing);
 
@@ -651,6 +682,49 @@ export default function ListingDetail({ listingId, onBack }) {
     } finally {
       setIsSavingRentalSpecs(false);
     }
+  };
+
+  const handleSaveSaleSpecs = async () => {
+    setIsSavingSaleSpecs(true);
+    try {
+      const cleanPrice = saleSpecs.asking_price ? Number(String(saleSpecs.asking_price).replace(/[^0-9.]/g, '')) : null;
+      const updatedCommercialSpecs = {
+        ...saleSpecs,
+        asking_price: saleSpecs.asking_price || (listing?.price ? String(listing.price) : '')
+      };
+
+      await sbFetch(`/real_estate_listings?id=eq.${listingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          commercial_specs: updatedCommercialSpecs,
+          price: cleanPrice || listing?.price,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      setListing((prev) => (prev ? {
+        ...prev,
+        commercial_specs: updatedCommercialSpecs,
+        price: cleanPrice || prev.price
+      } : prev));
+
+      showToast('✨ Sales commercials & portal amenities saved successfully!', 'success');
+    } catch (err) {
+      console.error('Save sale specs error:', err);
+      showToast('Failed to save sales commercials: ' + (err.message || 'Network error'), 'error');
+    } finally {
+      setIsSavingSaleSpecs(false);
+    }
+  };
+
+  const toggleAmenity = (amenity) => {
+    setSaleSpecs((prev) => {
+      const current = prev.amenities || [];
+      const next = current.includes(amenity)
+        ? current.filter((a) => a !== amenity)
+        : [...current, amenity];
+      return { ...prev, amenities: next };
+    });
   };
 
   const handlePreviewPdf = async () => {
@@ -1238,17 +1312,28 @@ export default function ListingDetail({ listingId, onBack }) {
 
   const handleGenerateCopy = async (tone = 'luxury') => {
     setIsGeneratingCopy(true);
+
+    const selectedAmenitiesList = saleSpecs?.amenities || [];
+    const amenitiesText = selectedAmenitiesList.length > 0 ? `Selected Amenities: ${selectedAmenitiesList.join(', ')}.` : '';
+    const roiText = (listing?.purpose !== 'For Rent' && saleSpecs?.expected_roi) ? `Expected ROI: ${saleSpecs.expected_roi}, Service Charges: ${saleSpecs.service_charge_sqft} AED/sqft.` : '';
+    const baseNotes = listing?.prompt && !listing.prompt.startsWith('{') ? listing.prompt : (listing?.rough_notes || '');
+    const combinedNotes = [baseNotes, amenitiesText, roiText].filter(Boolean).join(' ');
+
+    const activePrice = listing?.purpose === 'For Rent'
+      ? (rentalSpecs?.price || listing?.price || '')
+      : (saleSpecs?.asking_price || listing?.price || '');
+
     const copyPayload = {
       name: listing?.name || 'Luxury Property',
       reference: listing?.reference || 'ASQ-PROP',
       property_type: listing?.property_type || 'Apartment',
       purpose: listing?.purpose || 'For Sale',
-      price: listing?.price || rentalSpecs?.price || '',
+      price: activePrice,
       bedrooms: listing?.bedrooms || rentalSpecs?.bedrooms || '',
       bathrooms: listing?.bathrooms || rentalSpecs?.bathrooms || '',
       size_sqft: listing?.size_sqft || rentalSpecs?.bua_sqft || '',
       furnishing: listing?.furnishing || rentalSpecs?.furnishing || 'Unfurnished',
-      rough_notes: listing?.prompt && !listing.prompt.startsWith('{') ? listing.prompt : (listing?.rough_notes || ''),
+      rough_notes: combinedNotes,
       tone
     };
 
@@ -1342,7 +1427,56 @@ export default function ListingDetail({ listingId, onBack }) {
 
       if (packageType === 'gov_docs' || packageType === 'master_bundle') {
         const docFolder = packageType === 'master_bundle' ? zip.folder('Government_NOC_Files') : zip;
-        const summaryText = `PROPERTY LISTING DOSSIER\n-------------------------\nListing Name: ${listing?.name || 'Luxury Property'}\nProperty Type: ${listing?.property_type || 'Apartment'}\nGenerated Date: ${new Date().toLocaleDateString()}\nStatus: Verified\nTotal Photos: ${images.length}\n`;
+
+        // 1. Generate & bundle official filled Rental Form & NOC PDF
+        try {
+          const pdfRes = await generateClientRentalPdf({
+            listing,
+            commercialSpecs: rentalSpecs,
+            titleDeedData: listing?.title_deed_data || listing?.dossier_data,
+            emiratesIdData: listing?.emirates_id_data || listing?.kyc_data?.emiratesIdData
+          });
+          if (pdfRes && pdfRes.pdfBytes) {
+            docFolder.file(pdfRes.filename || '01_A_SQUARED_Rental_Form_NOC.pdf', pdfRes.pdfBytes);
+          }
+        } catch (pdfErr) {
+          console.warn('PDF bundling note:', pdfErr);
+        }
+
+        // 2. Bundle Title Deed attachment if present
+        const deedUrl = listing?.dossier_data?.deed_file_url || listing?.title_deed_data?.deed_file_url;
+        if (deedUrl) {
+          try {
+            const dRes = await fetch(deedUrl);
+            if (dRes.ok) {
+              const dBlob = await dRes.blob();
+              docFolder.file('02_Registered_Title_Deed.pdf', dBlob);
+            }
+          } catch (dErr) {
+            console.warn('Deed bundling note:', dErr);
+          }
+        }
+
+        // 3. Bundle 5-Channel Marketing Copy Assets
+        if (listing?.copy_data) {
+          const c = listing.copy_data;
+          let copyContent = `A-SQUARED REAL ESTATE | MULTI-CHANNEL MARKETING ASSETS\n`;
+          copyContent += `=========================================================\n`;
+          copyContent += `PROPERTY: ${listing.name || 'Listing'}\n`;
+          copyContent += `REFERENCE: ${listing.reference || 'ASQ-PROP'}\n`;
+          copyContent += `PURPOSE: ${listing.purpose || 'For Sale'}\n`;
+          copyContent += `DATE: ${new Date().toLocaleDateString()}\n\n`;
+          if (c.portal_title) copyContent += `[SEO PORTAL TITLE (BAYUT & PROPERTY FINDER)]\n${c.portal_title}\n\n`;
+          if (c.portal_description) copyContent += `[5-PART EDITORIAL PORTAL DESCRIPTION]\n${c.portal_description}\n\n`;
+          if (c.whatsapp_copy) copyContent += `[HIGH-CONVERTING WHATSAPP BROADCAST]\n${c.whatsapp_copy}\n\n`;
+          if (c.instagram_copy) copyContent += `[INSTAGRAM & SOCIAL MEDIA CAPTION]\n${c.instagram_copy}\n\n`;
+          if (c.investor_email) copyContent += `[VIP INVESTOR EMAIL BRIEF]\n${c.investor_email}\n\n`;
+          if (c.arabic_summary) copyContent += `[ARABIC PROPERTY SUMMARY]\n${c.arabic_summary}\n\n`;
+          if (c.russian_summary) copyContent += `[RUSSIAN LUXURY SUMMARY]\n${c.russian_summary}\n\n`;
+          docFolder.file('03_Portal_Marketing_Copy.txt', copyContent);
+        }
+
+        const summaryText = `PROPERTY LISTING DOSSIER\n-------------------------\nListing Name: ${listing?.name || 'Luxury Property'}\nProperty Type: ${listing?.property_type || 'Apartment'}\nPurpose: ${listing?.purpose || 'For Sale'}\nPrice: ${listing?.price ? 'AED ' + Number(listing.price).toLocaleString() : 'Price on Application'}\nReference: ${listing?.reference || 'N/A'}\nTotal Photos: ${images.length}\nGenerated Date: ${new Date().toLocaleDateString()}\nStatus: Verified\n`;
         docFolder.file('Dossier_Summary.txt', summaryText);
       }
 
@@ -1397,15 +1531,26 @@ export default function ListingDetail({ listingId, onBack }) {
 
   if (error || !listing) {
     return (
-      <div className="max-w-7xl mx-auto py-12 px-4 text-center">
-        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-red-400 max-w-md mx-auto mb-4">
-          {error || 'Listing not found'}
+      <div className="max-w-7xl mx-auto py-16 px-4 text-center animate-fade-in">
+        <div className="bg-[#0c1829] border border-red-500/30 rounded-3xl p-8 text-center max-w-md mx-auto mb-5 shadow-2xl shadow-black/80">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3 border border-red-500/30">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h3 className="font-bold text-lg text-white mb-1.5">Property Listing Not Found</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {error || 'This listing may have been deleted, moved, or the link has expired.'}
+          </p>
         </div>
         <button
-          onClick={onBack}
-          className="inline-flex items-center gap-2 text-bone-100 hover:text-white bg-navy-800 border border-navy-700 px-4 py-2 rounded-xl text-sm"
+          onClick={() => {
+            try {
+              localStorage.removeItem('asquared_selected_listing_id');
+            } catch (e) {}
+            onBack();
+          }}
+          className="inline-flex items-center gap-2 text-white bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-2xl text-xs font-bold transition-all shadow-lg shadow-blue-600/30 cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Return to Dashboard
+          <ArrowLeft className="w-4 h-4" /> Return to Listings Dashboard
         </button>
       </div>
     );
@@ -1614,8 +1759,9 @@ export default function ListingDetail({ listingId, onBack }) {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* DEDICATED SECTION: OFFICIAL A-SQUARED RENTAL FORM & NOC STUDIO    */}
+      {/* DEDICATED SECTION: DUAL SPECIFICATIONS STUDIO                     */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
+      {listing.purpose === 'For Rent' ? (
       <div className="glass-card p-6 mb-8 border border-blue-500/25 bg-gradient-to-br from-[#0c1829] via-[#071322] to-[#020b18] shadow-2xl relative overflow-hidden">
         <div className="absolute -right-20 -top-20 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
         
@@ -2299,6 +2445,302 @@ export default function ListingDetail({ listingId, onBack }) {
             </div>
           </div>
       </div>
+      ) : (
+        /* SALES COMMERCIALS & PORTAL AMENITIES STUDIO (FOR SALE LISTINGS) */
+        <div className="glass-card p-6 mb-8 border border-blue-500/25 bg-gradient-to-br from-[#0c1829] via-[#071322] to-[#020b18] shadow-2xl relative overflow-hidden">
+          <div className="absolute -right-20 -top-20 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Header */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.08] pb-5 mb-5 relative z-10">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <Building2 className="w-5 h-5 text-emerald-400" />
+                <h2 className="text-lg font-sans font-bold text-white tracking-tight">
+                  Executive Sales Commercials &amp; Portal Amenities Studio
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> For Sale Specifications Active
+                </span>
+              </div>
+              <p className="text-xs text-white/60 max-w-2xl leading-relaxed">
+                Define sales pricing, expected ROI yields, transfer fee terms, and select verified portal amenities. These metrics directly power the AI marketing copywriter and buyer dossiers.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              <button
+                type="button"
+                onClick={handleSaveSaleSpecs}
+                disabled={isSavingSaleSpecs}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <FileCheck className={`w-4 h-4 ${isSavingSaleSpecs ? 'animate-spin' : ''}`} />
+                <span>{isSavingSaleSpecs ? 'Saving Commercials...' : 'Save Sales Commercials'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tab Selection Bar */}
+          <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-white/[0.06] pb-3 relative z-10">
+            <button
+              type="button"
+              onClick={() => setSaleActiveTab('commercials')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                saleActiveTab === 'commercials'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400'
+                  : 'bg-white/[0.04] text-white/70 hover:text-white hover:bg-white/[0.08] border border-white/[0.05]'
+              }`}
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <span>1. Financials &amp; Transfer Terms</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSaleActiveTab('amenities')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                saleActiveTab === 'amenities'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400'
+                  : 'bg-white/[0.04] text-white/70 hover:text-white hover:bg-white/[0.08] border border-white/[0.05]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>2. Portal Amenities &amp; Features ({saleSpecs.amenities?.length || 0})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSaleActiveTab('title')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                saleActiveTab === 'title'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400'
+                  : 'bg-white/[0.04] text-white/70 hover:text-white hover:bg-white/[0.08] border border-white/[0.05]'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+              <span>3. Title Deed &amp; Ownership Verification</span>
+            </button>
+          </div>
+
+          {/* Tab 1: Financials & Transfer Terms */}
+          {saleActiveTab === 'commercials' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 relative z-10 animate-fade-in">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  ASKING PRICE (AED)
+                </label>
+                <input
+                  type="text"
+                  value={saleSpecs.asking_price || (listing?.price ? String(listing.price) : '')}
+                  onChange={(e) => setSaleSpecs((prev) => ({ ...prev, asking_price: e.target.value }))}
+                  placeholder="e.g. 3,500,000"
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white font-semibold text-sm focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  PRICE / SQ.FT (AUTO-CALCULATED)
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={
+                    listing?.size_sqft && (saleSpecs.asking_price || listing?.price)
+                      ? `AED ${Math.round(Number(String(saleSpecs.asking_price || listing.price).replace(/[^0-9.]/g, '')) / Number(String(listing.size_sqft).replace(/[^0-9.]/g, ''))).toLocaleString()} / sqft`
+                      : 'N/A'
+                  }
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-emerald-400 font-mono font-bold text-sm bg-black/40 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  EXPECTED NET RENTAL YIELD (ROI %)
+                </label>
+                <input
+                  type="text"
+                  value={saleSpecs.expected_roi || '7.8%'}
+                  onChange={(e) => setSaleSpecs((prev) => ({ ...prev, expected_roi: e.target.value }))}
+                  placeholder="e.g. 7.5% - 8.2%"
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  SERVICE CHARGES (AED / SQ.FT)
+                </label>
+                <input
+                  type="text"
+                  value={saleSpecs.service_charge_sqft || '18'}
+                  onChange={(e) => setSaleSpecs((prev) => ({ ...prev, service_charge_sqft: e.target.value }))}
+                  placeholder="e.g. 16.50 AED/sqft"
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  TRANSFER FEE MANDATE
+                </label>
+                <select
+                  value={saleSpecs.transfer_fee_terms || '4% DLD Paid by Buyer'}
+                  onChange={(e) => setSaleSpecs((prev) => ({ ...prev, transfer_fee_terms: e.target.value }))}
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none cursor-pointer"
+                >
+                  <option value="4% DLD Paid by Buyer">4% DLD Paid by Buyer</option>
+                  <option value="4% DLD Split 50/50">4% DLD Split 50/50</option>
+                  <option value="4% DLD Paid by Seller">4% DLD Paid by Seller</option>
+                  <option value="Developer Fee Waiver">Developer Fee Waiver (0% DLD)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  MORTGAGE / TITLE STATUS
+                </label>
+                <select
+                  value={saleSpecs.mortgage_status || 'Free & Clear'}
+                  onChange={(e) => setSaleSpecs((prev) => ({ ...prev, mortgage_status: e.target.value }))}
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none cursor-pointer"
+                >
+                  <option value="Free & Clear">Free & Clear (No Mortgage)</option>
+                  <option value="Mortgaged to Bank">Mortgaged to Bank</option>
+                  <option value="NOC in Hand">NOC in Hand (Ready for Transfer)</option>
+                  <option value="Off-Plan Oqood">Off-Plan / Oqood Registered</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 2: Portal Amenities Checklist */}
+          {saleActiveTab === 'amenities' && (
+            <div className="relative z-10 animate-fade-in space-y-4">
+              <p className="text-xs text-white/70">
+                Check all amenities and highlights that apply to this property. These will be automatically incorporated into the AI portal descriptions and marketing briefs.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {[
+                  'Balcony',
+                  'Full Sea View',
+                  'Marina Skyline View',
+                  'Burj Khalifa View',
+                  'Private Swimming Pool',
+                  'Shared Swimming Pool',
+                  'Shared Gymnasium',
+                  'Central A/C & Heating',
+                  'Fully Fitted Kitchen',
+                  'Maid Room with Bath',
+                  'Walk-in Closet',
+                  'Built-in Wardrobes',
+                  'Concierge & Valet',
+                  'Covered Parking',
+                  'Pet-Friendly',
+                  'High Floor',
+                  'Chiller Free',
+                  'Children Play Area'
+                ].map((amenity) => {
+                  const isChecked = (saleSpecs.amenities || []).includes(amenity);
+                  return (
+                    <button
+                      key={amenity}
+                      type="button"
+                      onClick={() => toggleAmenity(amenity)}
+                      className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                        isChecked
+                          ? 'bg-blue-600/20 border-blue-500/50 text-white shadow-sm'
+                          : 'bg-white/[0.03] border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span>{amenity}</span>
+                      {isChecked && <Check className="w-4 h-4 text-blue-400 stroke-[3]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Tab 3: Title Deed & Ownership Verification */}
+          {saleActiveTab === 'title' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 relative z-10 animate-fade-in">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  REGISTERED OWNER (ENGLISH)
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={listing?.title_deed_data?.owner_name_english || listing?.commercial_specs?.owner_name || 'Verified Landlord'}
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white bg-black/40 text-sm focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  TITLE DEED / OQOOD NUMBER
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={listing?.title_deed_data?.certificate_number || 'DLD Registered'}
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-emerald-400 font-mono text-sm bg-black/40 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  PLOT NUMBER
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={listing?.title_deed_data?.plot_number || 'N/A'}
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white text-sm bg-black/40 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  GROSS TOTAL AREA
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={listing?.title_deed_data?.total_area_sqft ? `${listing.title_deed_data.total_area_sqft} sqft` : (listing?.size_sqft ? `${listing.size_sqft} sqft` : 'N/A')}
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white text-sm bg-black/40 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  SUITE (NET) AREA
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={listing?.title_deed_data?.suite_area_sqft ? `${listing.title_deed_data.suite_area_sqft} sqft` : 'N/A'}
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white text-sm bg-black/40 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2">
+                  ALLOCATED PARKING BAYS
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={listing?.title_deed_data?.parking_bays?.[0] || '1 Allocated Space'}
+                  className="w-full glass-input rounded-xl px-4 py-2.5 text-white text-sm bg-black/40 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Multi-Channel Dubai Marketing Copywriter Suite */}
       <div className="glass-card p-6 mb-8">

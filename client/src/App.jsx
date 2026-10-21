@@ -39,29 +39,36 @@ const ROUTE_MAP = {
   detail: '/dashboard/listing-detail'
 };
 
-function getTabFromUrl() {
-  if (typeof window === 'undefined') return 'overview';
+function getRouteInfo() {
+  if (typeof window === 'undefined') return { tab: 'overview', id: null };
   const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
-  const hash = (window.location.hash || '').toLowerCase().replace(/^#\/?/, '').split('?')[0];
+  const hash = window.location.hash || '';
+  const [hashPath, hashQuery] = hash.replace(/^#\/?/, '').split('?');
+  const searchParams = new URLSearchParams(hashQuery || window.location.search || '');
+  const listingId = searchParams.get('id') || searchParams.get('listing_id');
+
+  const target = (hashPath || path.split('/').pop() || '').toLowerCase();
   
-  const target = hash || path.split('/').pop() || '';
-  
-  if (target === 'myactivity' || target === 'activity') return 'activity';
-  if (target === 'datalibrary' || target === 'sources') return 'sources';
-  if (target === 'datacleaning' || target === 'leads') return 'leads';
-  if (target === 'voiceagent' || target === 'voice') return 'voice';
-  if (target === 'agent' || target === 'ai-agent') return 'agent';
-  if (target === 'owners') return 'owners';
-  if (target === 'buildings') return 'buildings';
-  if (target === 'search') return 'search';
-  if (target === 'team') return 'team';
-  if (target === 'listing') return 'listing';
-  if (target === 'roles' || target === 'role') return 'roles';
-  if (target === 'settings') return 'settings';
-  if (target === 'workflows' || target === 'workflow') return 'workflows';
-  if (target === 'new-listing' || target === 'new') return 'new';
-  if (target === 'listing-detail' || target === 'detail') return 'detail';
-  return 'overview';
+  if (target === 'myactivity' || target === 'activity') return { tab: 'activity', id: listingId };
+  if (target === 'datalibrary' || target === 'sources') return { tab: 'sources', id: listingId };
+  if (target === 'datacleaning' || target === 'leads') return { tab: 'leads', id: listingId };
+  if (target === 'voiceagent' || target === 'voice') return { tab: 'voice', id: listingId };
+  if (target === 'agent' || target === 'ai-agent') return { tab: 'agent', id: listingId };
+  if (target === 'owners') return { tab: 'owners', id: listingId };
+  if (target === 'buildings') return { tab: 'buildings', id: listingId };
+  if (target === 'search') return { tab: 'search', id: listingId };
+  if (target === 'team') return { tab: 'team', id: listingId };
+  if (target === 'listing') return { tab: 'listing', id: listingId };
+  if (target === 'roles' || target === 'role') return { tab: 'roles', id: listingId };
+  if (target === 'settings') return { tab: 'settings', id: listingId };
+  if (target === 'workflows' || target === 'workflow') return { tab: 'workflows', id: listingId };
+  if (target === 'new-listing' || target === 'new') return { tab: 'new', id: listingId };
+  if (target === 'listing-detail' || target === 'detail') return { tab: 'detail', id: listingId };
+  return { tab: 'overview', id: listingId };
+}
+
+function getTabFromUrl() {
+  return getRouteInfo().tab;
 }
 
 class TabErrorBoundary extends React.Component {
@@ -104,8 +111,10 @@ class TabErrorBoundary extends React.Component {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
-  const [activeTab, setActiveTabState] = useState(() => getTabFromUrl());
+  const initialRoute = getRouteInfo();
+  const [activeTab, setActiveTabState] = useState(() => initialRoute.tab);
   const [selectedListingId, setSelectedListingId] = useState(() => {
+    if (initialRoute.id) return initialRoute.id;
     try {
       return localStorage.getItem('asquared_selected_listing_id') || '62b2e8ce-7bcf-4c2a-875a-a8dd10ac1d96';
     } catch (e) {
@@ -134,8 +143,14 @@ export default function App() {
 
   useEffect(() => {
     const handleUrlChange = () => {
-      const tabFromUrl = getTabFromUrl();
-      setActiveTabState(tabFromUrl);
+      const currentRoute = getRouteInfo();
+      setActiveTabState(currentRoute.tab);
+      if (currentRoute.id) {
+        setSelectedListingId(currentRoute.id);
+        try {
+          localStorage.setItem('asquared_selected_listing_id', currentRoute.id);
+        } catch (e) {}
+      }
     };
     window.addEventListener('popstate', handleUrlChange);
     window.addEventListener('hashchange', handleUrlChange);
@@ -148,7 +163,8 @@ export default function App() {
   // Normalize legacy pathname route (e.g. /dashboard/overview) to resilient hash URL to prevent 404 on refresh
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const currentTab = getTabFromUrl();
+    const currentRoute = getRouteInfo();
+    const currentTab = currentRoute.tab;
     const isPathRoute = window.location.pathname.includes('/overview') ||
                         window.location.pathname.includes('/workflows') ||
                         window.location.pathname.includes('/owners') ||
@@ -162,7 +178,8 @@ export default function App() {
       const basePath = window.location.pathname.startsWith('/public/dashboard')
         ? '/public/dashboard/'
         : '/dashboard/';
-      window.history.replaceState({ tab: currentTab }, '', `${basePath}#${currentTab}`);
+      const hashSuffix = currentRoute.id ? `${currentTab}?id=${currentRoute.id}` : currentTab;
+      window.history.replaceState({ tab: currentTab }, '', `${basePath}#${hashSuffix}`);
     }
   }, []);
 
@@ -185,7 +202,7 @@ export default function App() {
       localStorage.setItem('asquared_selected_listing_id', newListing.id);
     } catch (e) {}
     setSelectedListingId(newListing.id);
-    setActiveTab('detail');
+    setActiveTab(`detail?id=${newListing.id}`);
   };
 
   const handleSelectListing = (listing) => {
@@ -193,7 +210,7 @@ export default function App() {
       localStorage.setItem('asquared_selected_listing_id', listing.id);
     } catch (e) {}
     setSelectedListingId(listing.id);
-    setActiveTab('detail');
+    setActiveTab(`detail?id=${listing.id}`);
   };
 
   // If user is not authenticated, display luxury login screen
@@ -270,7 +287,7 @@ export default function App() {
               /></div>
             )}
 
-            {activeTab === 'detail' && (
+            {(activeTab === 'detail' || activeTab.startsWith('detail')) && (
               <div className="h-full overflow-y-auto pr-2 custom-scrollbar">{selectedListingId ? (
                 <ListingDetail
                   listingId={selectedListingId}

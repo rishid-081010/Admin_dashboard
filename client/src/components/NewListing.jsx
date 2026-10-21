@@ -420,20 +420,58 @@ export default function NewListing({ onListingCreated, onBack }) {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleSetCover = (index) => {
+    if (index === 0) return;
+    setPreviews((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.unshift(item);
+      return next;
+    });
+    setSelectedFiles((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.unshift(item);
+      return next;
+    });
+    showToast('Cover photo set to position #1', 'info');
+  };
+
+  const handleMoveImage = (index, delta) => {
+    const targetIdx = index + delta;
+    if (targetIdx < 0 || targetIdx >= previews.length) return;
+    setPreviews((prev) => {
+      const next = [...prev];
+      const temp = next[index];
+      next[index] = next[targetIdx];
+      next[targetIdx] = temp;
+      return next;
+    });
+    setSelectedFiles((prev) => {
+      const next = [...prev];
+      const temp = next[index];
+      next[index] = next[targetIdx];
+      next[targetIdx] = temp;
+      return next;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Please enter a listing or property name (or drop Title Deed to auto-fill).');
       return;
     }
-    if (selectedFiles.length === 0) {
-      setError('Please upload at least one property image.');
-      return;
-    }
+
+    const isDraft = selectedFiles.length === 0;
 
     setIsSubmitting(true);
     setError(null);
-    setUploadProgress({ current: 0, total: selectedFiles.length, text: 'Preparing listing package...' });
+    setUploadProgress({
+      current: 0,
+      total: selectedFiles.length,
+      text: isDraft ? 'Saving draft listing record...' : 'Preparing listing package...'
+    });
 
     const cleanPrice = price ? Number(String(price).replace(/[^0-9.]/g, '')) : null;
     const cleanSqft = sizeSqft ? Number(String(sizeSqft).replace(/[^0-9.]/g, '')) : null;
@@ -566,7 +604,7 @@ export default function NewListing({ onListingCreated, onBack }) {
         dossier_data: { ...(parsedDeedData || {}), deed_file_url: deedDocUrl },
         kyc_data: { emiratesIdData: parsedEidData, kycResult },
         prompt: compiledPrompt,
-        status: 'completed',
+        status: isDraft ? 'draft' : 'completed',
         total_images: selectedFiles.length,
         completed_images: selectedFiles.length,
         failed_images: 0,
@@ -582,59 +620,66 @@ export default function NewListing({ onListingCreated, onBack }) {
 
       const createdListing = (createdRows && createdRows[0]) ? createdRows[0] : listingPayload;
 
-      // 3. Upload Photos to Supabase Storage
-      const uploadedImages = [];
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
+      // 3. Upload Photos to Supabase Storage (Only if not a draft)
+      if (!isDraft) {
+        const uploadedImages = [];
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          setUploadProgress({
+            current: i + 1,
+            total: selectedFiles.length,
+            text: `Uploading photo ${i + 1} of ${selectedFiles.length} (${file.name})...`
+          });
+
+          try {
+            const { publicUrl } = await uploadListingImage(file, newListingId);
+            uploadedImages.push({
+              filename: file.name,
+              url: publicUrl,
+            });
+          } catch (uploadErr) {
+            console.warn(`Direct storage upload failed for ${file.name}, using data URL fallback:`, uploadErr.message);
+            const fallbackUrl = previews[i]?.url || URL.createObjectURL(file);
+            uploadedImages.push({
+              filename: file.name,
+              url: fallbackUrl,
+            });
+          }
+        }
+
+        // 4. Insert Images Rows into Supabase
         setUploadProgress({
-          current: i + 1,
+          current: selectedFiles.length,
           total: selectedFiles.length,
-          text: `Uploading photo ${i + 1} of ${selectedFiles.length} (${file.name})...`
+          text: 'Finalizing architectural photo gallery...'
         });
 
-        try {
-          const { publicUrl } = await uploadListingImage(file, newListingId);
-          uploadedImages.push({
-            filename: file.name,
-            url: publicUrl,
-          });
-        } catch (uploadErr) {
-          console.warn(`Direct storage upload failed for ${file.name}, using data URL fallback:`, uploadErr.message);
-          const fallbackUrl = previews[i]?.url || URL.createObjectURL(file);
-          uploadedImages.push({
-            filename: file.name,
-            url: fallbackUrl,
-          });
-        }
+        const imageRows = uploadedImages.map((img, idx) => ({
+          listing_id: newListingId,
+          original_filename: img.filename,
+          original_image_location: img.url,
+          generated_image_location: img.url,
+          baseline_image_location: img.url,
+          room_type: DEFAULT_SEQUENCE[idx % DEFAULT_SEQUENCE.length] || 'Property_Photo',
+          display_order: idx,
+          is_cover: idx === 0,
+          status: 'completed',
+          created_at: new Date().toISOString(),
+        }));
+
+        await sbFetch('/real_estate_images', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify(imageRows),
+        });
       }
 
-      // 4. Insert Images Rows into Supabase
-      setUploadProgress({
-        current: selectedFiles.length,
-        total: selectedFiles.length,
-        text: 'Finalizing architectural photo gallery...'
-      });
-
-      const imageRows = uploadedImages.map((img, idx) => ({
-        listing_id: newListingId,
-        original_filename: img.filename,
-        original_image_location: img.url,
-        generated_image_location: img.url,
-        baseline_image_location: img.url,
-        room_type: DEFAULT_SEQUENCE[idx % DEFAULT_SEQUENCE.length] || 'Property_Photo',
-        display_order: idx,
-        is_cover: idx === 0,
-        status: 'completed',
-        created_at: new Date().toISOString(),
-      }));
-
-      await sbFetch('/real_estate_images', {
-        method: 'POST',
-        headers: { 'Prefer': 'return=minimal' },
-        body: JSON.stringify(imageRows),
-      });
-
-      showToast('✨ Property listing and enhanced photos created successfully!', 'success');
+      showToast(
+        isDraft
+          ? '✨ Draft listing created! You can drop photos anytime from the details page.'
+          : '✨ Property listing and enhanced photos created successfully!',
+        'success'
+      );
       if (onListingCreated) {
         onListingCreated(createdListing);
       }
@@ -1167,13 +1212,59 @@ export default function NewListing({ onListingCreated, onBack }) {
                       alt={item.name}
                       className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
+
+                    {/* Order Controls & Cover Selector */}
+                    <div className="absolute top-1 left-1 flex items-center gap-1 z-10">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSetCover(idx);
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold backdrop-blur-md transition-all cursor-pointer ${
+                          idx === 0 
+                            ? 'bg-amber-500 text-white shadow-sm' 
+                            : 'bg-black/70 hover:bg-amber-500/80 text-white/80'
+                        }`}
+                        title={idx === 0 ? 'Main Cover Photo (#1)' : 'Click to make Cover Photo'}
+                      >
+                        {idx === 0 ? '★ COVER' : 'COVER'}
+                      </button>
+                      {idx > 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveImage(idx, -1);
+                          }}
+                          className="w-4 h-4 rounded bg-black/70 hover:bg-white/20 text-white flex items-center justify-center text-[10px] cursor-pointer"
+                          title="Move Left"
+                        >
+                          ‹
+                        </button>
+                      )}
+                      {idx < previews.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveImage(idx, 1);
+                          }}
+                          className="w-4 h-4 rounded bg-black/70 hover:bg-white/20 text-white flex items-center justify-center text-[10px] cursor-pointer"
+                          title="Move Right"
+                        >
+                          ›
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRemoveImage(idx);
                       }}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-red-600 text-white flex items-center justify-center backdrop-blur-md transition-colors shadow-md"
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-red-600 text-white flex items-center justify-center backdrop-blur-md transition-colors shadow-md cursor-pointer z-10"
                       title="Remove photo"
                     >
                       <X className="w-3 h-3" />
@@ -1275,15 +1366,21 @@ export default function NewListing({ onListingCreated, onBack }) {
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={isSubmitting || selectedFiles.length === 0}
-              className={`px-8 py-4 rounded-2xl font-bold text-white text-base flex items-center gap-3 transition-all shadow-xl ${
-                isSubmitting || selectedFiles.length === 0
+              disabled={isSubmitting || !name.trim()}
+              className={`px-8 py-4 rounded-2xl font-bold text-white text-base flex items-center gap-3 transition-all shadow-xl cursor-pointer ${
+                isSubmitting || !name.trim()
                   ? 'bg-navy-800 text-white/40 cursor-not-allowed border border-white/[0.08]'
+                  : selectedFiles.length === 0
+                  ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 shadow-amber-950/40 hover:scale-[1.02] active:scale-[0.98]'
                   : 'bg-gradient-to-r from-[#00284b] to-[#003d73] hover:from-[#003666] hover:to-[#004b8c] shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98]'
               }`}
             >
               <Sparkles className="w-5 h-5" />
-              {isSubmitting ? 'Evaluating QA & Uploading Photos...' : `RUN QA & ENHANCE ${selectedFiles.length} PHOTOS`}
+              {isSubmitting
+                ? 'Processing Listing Package...'
+                : selectedFiles.length === 0
+                ? 'SAVE LISTING AS DRAFT (PHOTOS PENDING)'
+                : `RUN QA & ENHANCE ${selectedFiles.length} PHOTOS`}
             </button>
           </div>
         </div>
