@@ -4,6 +4,36 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+    // Dynamic voice agent card colors (amber for Maya)
+    'hover:border-amber-500/50',
+    'bg-amber-500/20',
+    'border-amber-400/30',
+    'text-amber-300',
+    'group-hover:text-amber-300',
+    'bg-amber-500/10',
+    'text-amber-400',
+    'border-amber-500/20',
+    'from-amber-600/30',
+    'to-orange-600/20',
+    'border-amber-500/30',
+    // Existing colors also used dynamically
+    'hover:border-blue-500/50',
+    'bg-blue-500/20',
+    'border-blue-400/30',
+    'text-blue-300',
+    'group-hover:text-blue-300',
+    'hover:border-purple-500/50',
+    'bg-purple-500/20',
+    'border-purple-400/30',
+    'text-purple-300',
+    'group-hover:text-purple-300',
+    'hover:border-emerald-500/50',
+    'bg-emerald-500/20',
+    'border-emerald-400/30',
+    'text-emerald-300',
+    'group-hover:text-emerald-300',
+  ],
   theme: {
     extend: {
       colors: {

@@ -159,7 +159,7 @@ export default function VoiceAgent() {
         </div>
       </div>
 
-      {/* ─── 3 Real Voice Agents Section ───────────────────────────── */}
+      {/* ─── Voice Agents Section ───────────────────────────── */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col p-6 mb-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-bold text-white text-base">
@@ -167,7 +167,7 @@ export default function VoiceAgent() {
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {agents.map((agent) => (
             <div 
               key={agent.id}

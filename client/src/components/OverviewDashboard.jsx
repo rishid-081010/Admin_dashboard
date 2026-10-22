@@ -5,7 +5,7 @@ import {
   Building2, Radio, ExternalLink, ChevronDown, Check,
   Phone, MessageSquare
 } from 'lucide-react';
-import { fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount, markLeadAsCompleted } from '../utils/voiceAgentService';
+import { fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount, markLeadAsCompleted, AGENTS_CONFIG, AGENT_IDS } from '../utils/voiceAgentService';
 import { fetchN8nWorkflows } from '../utils/n8nService';
 import N8nLogo from './N8nLogo';
 
@@ -20,9 +20,11 @@ export default function OverviewDashboard({ onNavigate }) {
     totalCallsToday: 0,
     answeredCallsToday: 0,
     qualifiedLeadsToday: 0,
-    agent1: { name: 'Sarah', role: 'AI Acquisition Specialist', callsToday: 0, health: 'Active Running' },
-    agent2: { name: 'James', role: 'Portfolio & Investor Outreach', callsToday: 0, health: 'Active Running' },
-    agent3: { name: 'Aisha', role: 'Prime Community Specialist', callsToday: 0, health: 'Standby' }
+    agents: AGENT_IDS.map(id => ({
+      ...AGENTS_CONFIG[id],
+      callsToday: 0,
+      health: 'Standby'
+    }))
   });
 
   // Live Immediate Activities from Supabase
@@ -51,9 +53,6 @@ export default function OverviewDashboard({ onNavigate }) {
   const updateVoiceStats = (res) => {
     if (!res) return;
     const agents = res.agents || [];
-    const sAgent = agents.find(a => a.id === '682cf6ae-23fd-44f3-a4a3-756998cd62c1') || {};
-    const jAgent = agents.find(a => a.id === '91732d4e-3b60-4950-8aa6-4060c0803119') || {};
-    const aAgent = agents.find(a => a.id === 'f99e8e9a-48b1-411f-806e-6cb7d1dde58b') || {};
     const parseNum = (val, fallback = 0) => {
       if (typeof val === 'number') return isNaN(val) ? fallback : val;
       if (typeof val === 'string') {
@@ -67,32 +66,22 @@ export default function OverviewDashboard({ onNavigate }) {
     const answeredCallsNum = res.rawAnsweredCalls ?? parseNum(res.answeredCalls, 0);
     const qualifiedLeadsNum = res.rawQualifiedLeads ?? parseNum(res.qualifiedLeads, 0);
 
-    const sCalls = sAgent.rawCalls ?? parseNum(sAgent.calls, 0);
-    const jCalls = jAgent.rawCalls ?? parseNum(jAgent.calls, 0);
-    const aCalls = aAgent.rawCalls ?? parseNum(aAgent.calls, 0);
+    // Build dynamic agents array from the response
+    const agentCards = AGENT_IDS.map(id => {
+      const agentData = agents.find(a => a.id === id) || {};
+      const calls = agentData.rawCalls ?? parseNum(agentData.calls, 0);
+      return {
+        ...AGENTS_CONFIG[id],
+        callsToday: calls,
+        health: calls > 0 ? 'Active Running' : 'Standby'
+      };
+    });
 
     setVoiceData({
       totalCallsToday: totalCallsNum,
       answeredCallsToday: answeredCallsNum,
       qualifiedLeadsToday: qualifiedLeadsNum,
-      agent1: {
-        name: 'Sarah',
-        role: 'AI Acquisition Specialist',
-        callsToday: sCalls,
-        health: sCalls > 0 ? 'Active Running' : 'Standby'
-      },
-      agent2: {
-        name: 'James',
-        role: 'Portfolio & Investor Outreach',
-        callsToday: jCalls,
-        health: jCalls > 0 ? 'Active Running' : 'Standby'
-      },
-      agent3: {
-        name: 'Aisha',
-        role: 'Prime Community Specialist',
-        callsToday: aCalls,
-        health: aCalls > 0 ? 'Active Running' : 'Standby'
-      }
+      agents: agentCards
     });
   };
 
@@ -385,91 +374,45 @@ export default function OverviewDashboard({ onNavigate }) {
           </button>
         </div>
 
-        {/* Consolidated Voice Agent Telemetry Strip (UI-001) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Agent 1: Sarah */}
-          <div 
-            onClick={() => onNavigate && onNavigate('voice')}
-            className="p-4 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-blue-500/50 transition-all cursor-pointer shadow-lg shadow-black/40 flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 font-bold text-sm shadow-inner shrink-0">
-                1
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors truncate">
-                    Sarah
-                  </h4>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
+        {/* Dynamic Voice Agent Telemetry Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {voiceData.agents.map((agent, idx) => {
+            const colorMap = { blue: 'blue', purple: 'purple', emerald: 'emerald', amber: 'amber' };
+            const c = colorMap[agent.color] || 'blue';
+            return (
+              <div 
+                key={agent.id}
+                onClick={() => onNavigate && onNavigate('voice')}
+                className={`p-4 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-${c}-500/50 transition-all cursor-pointer shadow-lg shadow-black/40 flex items-center justify-between group`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl bg-${c}-500/20 border border-${c}-400/30 flex items-center justify-center text-${c}-300 font-bold text-sm shadow-inner shrink-0`}>
+                    {idx + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className={`text-sm font-bold text-white group-hover:text-${c}-300 transition-colors truncate`}>
+                        {agent.name}
+                      </h4>
+                      {agent.health === 'Active Running' ? (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-slate-500 inline-block shrink-0"></span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400 truncate">{agent.line} · {agent.role.split(' ').slice(0, 2).join(' ')}</div>
+                  </div>
                 </div>
-                <div className="text-[11px] text-slate-400 truncate">Line 1 · Acquisition Specialist</div>
-              </div>
-            </div>
 
-            <div className="text-right shrink-0 pl-2">
-              <div className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight leading-none">
-                {voiceData.agent1.callsToday.toLocaleString()}
-              </div>
-              <div className="text-[10px] uppercase font-semibold text-slate-400 mt-1">Calls Today</div>
-            </div>
-          </div>
-
-          {/* Agent 2: James */}
-          <div 
-            onClick={() => onNavigate && onNavigate('voice')}
-            className="p-4 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-purple-500/50 transition-all cursor-pointer shadow-lg shadow-black/40 flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 font-bold text-sm shadow-inner shrink-0">
-                2
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors truncate">
-                    James
-                  </h4>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
+                <div className="text-right shrink-0 pl-2">
+                  <div className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight leading-none">
+                    {agent.callsToday.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] uppercase font-semibold text-slate-400 mt-1">Calls Today</div>
                 </div>
-                <div className="text-[11px] text-slate-400 truncate">Line 2 · Investor Outreach</div>
               </div>
-            </div>
-
-            <div className="text-right shrink-0 pl-2">
-              <div className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight leading-none">
-                {voiceData.agent2.callsToday.toLocaleString()}
-              </div>
-              <div className="text-[10px] uppercase font-semibold text-slate-400 mt-1">Calls Today</div>
-            </div>
-          </div>
-
-          {/* Agent 3: Aisha */}
-          <div 
-            onClick={() => onNavigate && onNavigate('voice')}
-            className="p-4 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-emerald-500/50 transition-all cursor-pointer shadow-lg shadow-black/40 flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 font-bold text-sm shadow-inner shrink-0">
-                3
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors truncate">
-                    Aisha
-                  </h4>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
-                </div>
-                <div className="text-[11px] text-slate-400 truncate">Line 3 · Prime Specialist</div>
-              </div>
-            </div>
-
-            <div className="text-right shrink-0 pl-2">
-              <div className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight leading-none">
-                {voiceData.agent3.callsToday.toLocaleString()}
-              </div>
-              <div className="text-[10px] uppercase font-semibold text-slate-400 mt-1">Calls Today</div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
 

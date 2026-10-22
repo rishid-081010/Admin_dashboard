@@ -19,7 +19,7 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Spearheads high-priority residential villa & luxury apartment owner qualification.',
-    allTimeTotal: 27967,
+    allTimeTotal: 29746,
   },
   '91732d4e-3b60-4950-8aa6-4060c0803119': {
     id: '91732d4e-3b60-4950-8aa6-4060c0803119',
@@ -35,7 +35,7 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Executes high-velocity campaigns across prime developer towers & repeat investors.',
-    allTimeTotal: 41476,
+    allTimeTotal: 41792,
   },
   'f99e8e9a-48b1-411f-806e-6cb7d1dde58b': {
     id: 'f99e8e9a-48b1-411f-806e-6cb7d1dde58b',
@@ -51,29 +51,99 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Specializes in prime areas (Palm Jumeirah, Downtown, Jumeirah Islands) and owner valuation queries.',
-    allTimeTotal: 16530,
+    allTimeTotal: 16952,
+  },
+  '2816c620-9705-450e-9683-5652dc1194a6': {
+    id: '2816c620-9705-450e-9683-5652dc1194a6',
+    name: 'Maya',
+    role: 'AI Acquisition Specialist (High-Performance)',
+    line: 'Line 4 (High-Performance)',
+    accent: 'Neutral / International',
+    color: 'amber',
+    badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    avatarBg: 'from-amber-600/30 to-orange-600/20',
+    borderColor: 'border-amber-500/30',
+    textColor: 'text-amber-400',
+    voiceModel: 'ElevenLabs Flash v2',
+    engine: 'Claude Haiku 4.5',
+    description: 'High-performance acquisition dialer running parallel owner qualification campaigns.',
+    allTimeTotal: 236,
   }
 };
 
 export const AGENT_IDS = Object.keys(AGENTS_CONFIG);
 
 // Helper to check if a call resulted in a qualified lead
+// Uses CRM voice_call_status ('awaiting availability') as primary signal,
+// supplemented by positive/negative note analysis for accurate qualification.
 export function isQualifiedLead(call) {
   const vStatus = (call.voice_call_status || '').toLowerCase();
+  const note = (call.note || '').toLowerCase();
   const summary = (call.summary || '').toLowerCase();
-  const dur = Number(call.duration_seconds) || 0;
   const status = (call.status || '').toLowerCase();
 
-  if (vStatus.includes('awaiting availability') || vStatus.includes('interested') || vStatus.includes('appointment')) {
+  // Explicit negative CRM statuses — never qualified
+  if (
+    vStatus.includes('no action') ||
+    vStatus.includes('did_not_answer') ||
+    vStatus.includes('no answer') ||
+    vStatus.includes('busy')
+  ) {
+    return false;
+  }
+
+  // Unanswered / failed calls — only qualified if CRM explicitly tagged awaiting
+  if (
+    status === 'voicemail' ||
+    status === 'customer-did-not-answer' ||
+    status === 'customer-busy' ||
+    status === 'silence-timed-out' ||
+    status.includes('error') ||
+    status.includes('failed')
+  ) {
+    if (!vStatus.includes('awaiting availability')) return false;
+  }
+
+  // Negative indications in note or summary disqualify
+  const combined = (note + ' ' + summary).toLowerCase();
+  if (
+    note.startsWith('negative -') ||
+    combined.includes('not open') ||
+    combined.includes('not interested') ||
+    combined.includes('no interest') ||
+    combined.includes('not willing') ||
+    combined.includes("don't want") ||
+    combined.includes('do not want') ||
+    combined.includes('wrong number') ||
+    combined.includes('do not call') ||
+    combined.includes('declined') ||
+    combined.includes('refused') ||
+    combined.includes('hung up')
+  ) {
+    return false;
+  }
+
+  // Primary qualification signal: CRM workflow tag
+  if (vStatus.includes('awaiting availability')) {
     return true;
   }
-  if (summary.includes('interested') || summary.includes('sell') || summary.includes('rent') || summary.includes('available')) {
+
+  // Secondary qualification: positive note/summary indicators
+  if (
+    note.startsWith('positive -') ||
+    combined.includes('wants to sell') ||
+    combined.includes('wants to rent') ||
+    combined.includes('willing to sell') ||
+    combined.includes('open to sell') ||
+    combined.includes('open to rent') ||
+    combined.includes('callback requested') ||
+    combined.includes('agreed to callback') ||
+    combined.includes('book an appointment') ||
+    combined.includes('price expectations')
+  ) {
     return true;
   }
-  // If human spoke for 25+ seconds
-  if ((status === 'customer-ended-call' || status === 'assistant-ended-call') && dur >= 25) {
-    return true;
-  }
+
   return false;
 }
 
@@ -82,14 +152,11 @@ export function isCallAnswered(call) {
   const status = (call.status || '').toLowerCase();
   const dur = Number(call.duration_seconds) || 0;
   
-  // Explicit human conversation endings
+  // Only count as answered if human actually spoke (customer-ended or assistant-ended with duration)
   if (status === 'customer-ended-call' || status === 'assistant-ended-call') {
-    return true;
+    return dur > 0;
   }
-  if (status === 'voicemail' || status === 'customer-did-not-answer' || status === 'customer-busy' || status.includes('error') || status.includes('failed')) {
-    return false;
-  }
-  return dur > 0;
+  return false;
 }
 
 // Helper to check if dropped / voicemail / unanswered
@@ -237,7 +304,7 @@ export async function fetchVoiceOverview(filterParams) {
   }
 
   // Build query - selective projection strips heavy URLs and PII to accelerate overview metric load
-  let url = `${SUPABASE_BASE_URL}/vapi_call_logs?select=id,status,duration_seconds,cost_usd,voice_call_status,assistantId,created_at,summary`;
+  let url = `${SUPABASE_BASE_URL}/vapi_call_logs?select=id,status,duration_seconds,cost_usd,voice_call_status,assistantId,created_at,summary,note`;
   if (start) url += `&created_at=gte.${encodeURIComponent(start)}`;
   if (end) url += `&created_at=lt.${encodeURIComponent(end)}`;
   url += `&order=created_at.desc.nullslast&limit=1500`;
@@ -281,12 +348,11 @@ export async function fetchVoiceOverview(filterParams) {
   let durationSamples = 0;
   let totalCostUsd = 0;
 
-  // Agent breakdowns
-  const agentStats = {
-    '682cf6ae-23fd-44f3-a4a3-756998cd62c1': { calls: 0, drops: 0, qualified: 0, answered: 0, dur: 0, durCount: 0, cost: 0 },
-    '91732d4e-3b60-4950-8aa6-4060c0803119': { calls: 0, drops: 0, qualified: 0, answered: 0, dur: 0, durCount: 0, cost: 0 },
-    'f99e8e9a-48b1-411f-806e-6cb7d1dde58b': { calls: 0, drops: 0, qualified: 0, answered: 0, dur: 0, durCount: 0, cost: 0 },
-  };
+  // Agent breakdowns — dynamically initialize from AGENTS_CONFIG
+  const agentStats = {};
+  for (const id of AGENT_IDS) {
+    agentStats[id] = { calls: 0, drops: 0, qualified: 0, answered: 0, dur: 0, durCount: 0, cost: 0 };
+  }
 
   for (const c of calls) {
     const isQual = isQualifiedLead(c);
@@ -326,7 +392,7 @@ export async function fetchVoiceOverview(filterParams) {
   const scaledCost = totalCostUsd * sampleRatio;
   const avgDuration = durationSamples > 0 ? Math.round(totalDurationSec / durationSamples) : 0;
 
-  // Format 3 agents data
+  // Format all configured agents data
   const agentsList = AGENT_IDS.map(id => {
     const conf = AGENTS_CONFIG[id];
     const st = agentStats[id];
