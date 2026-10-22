@@ -36,11 +36,13 @@ for (const localPath of allDistFiles) {
 
 // PHP endpoints and static brand assets
 const phpFiles = [
+  { file: 'client/public/.htaccess', remotes: ['.htaccess', 'dashboard/.htaccess', 'admin/.htaccess'] },
   { file: 'client/public/asquared-watermark.png', remotes: ['asquared-watermark.png', 'dashboard/asquared-watermark.png', 'admin/asquared-watermark.png'] },
   { file: 'client/public/api_ai_enhancer.php', remotes: ['api_ai_enhancer.php', 'dashboard/api_ai_enhancer.php', 'admin/api_ai_enhancer.php'] },
   { file: 'client/public/api_ai_copywriter.php', remotes: ['api_ai_copywriter.php', 'dashboard/api_ai_copywriter.php', 'admin/api_ai_copywriter.php'] },
-  { file: 'client/public/generate-copy.php', remotes: ['generate-copy.php', 'dashboard/generate-copy.php', 'admin/generate-copy.php'] },
-  { file: 'client/public/api/generate-copy.php', remotes: ['api/generate-copy.php', 'dashboard/api/generate-copy.php', 'admin/api/generate-copy.php'] }
+  { file: 'root_files/api/generate-copy.php', remotes: ['api/generate-copy.php', 'dashboard/api/generate-copy.php', 'admin/api/generate-copy.php'] },
+  { file: 'root_files/api/parse-documents.php', remotes: ['api/parse-documents.php', 'dashboard/api/parse-documents.php', 'admin/api/parse-documents.php'] },
+  { file: 'client/public/generate-copy.php', remotes: ['generate-copy.php', 'dashboard/generate-copy.php', 'admin/generate-copy.php'] }
 ];
 
 for (const pf of phpFiles) {

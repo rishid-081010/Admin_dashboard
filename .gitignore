@@ -3,6 +3,8 @@ node_modules/
 dist/
 build/
 secrets.php
+root_files/api/secrets.php
+*.secrets.php
 __pycache__/
 *.pyc
 check_hostinger.py
