@@ -2,6 +2,7 @@ import requests
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 token = os.environ.get('HOSTINGER_TOKEN')
 if not token:
@@ -32,7 +33,7 @@ def get_upload_credentials(domain):
     print(f"Requesting upload URL for {domain}...")
     for attempt in range(1, 4):
         try:
-            res = requests.post(gen_url, headers=gen_headers, json=payload, timeout=30)
+            res = requests.post(gen_url, headers=gen_headers, json=payload, timeout=(10, 30))
             if res.status_code == 200:
                 print(f"✓ Obtained upload URL for {domain}")
                 data = res.json()
@@ -50,25 +51,20 @@ def deploy_to_domain(domain):
         return False
 
     print(f"\n--- Deploying assets to {domain} ---")
-    uploads_list = []
+    uploads_set = set()
 
     for root, _, files in os.walk(dist_dir):
         for file in files:
             local_path = os.path.join(root, file)
             rel_path = os.path.relpath(local_path, dist_dir).replace('\\\\', '/').replace('\\', '/')
             
-            if domain == 'dashboard.asquared.ae':
-                # Direct root for dashboard subdomain
-                uploads_list.append((local_path, rel_path))
-                uploads_list.append((local_path, f"public/{rel_path}"))
-            else:
-                # admin subdomain mirrors
-                uploads_list.append((local_path, f"public/dashboard/{rel_path}"))
-                uploads_list.append((local_path, f"dashboard/{rel_path}"))
-                uploads_list.append((local_path, f"public/admin/{rel_path}"))
-                uploads_list.append((local_path, f"admin/{rel_path}"))
-                uploads_list.append((local_path, f"public/{rel_path}"))
-                uploads_list.append((local_path, rel_path))
+            # Subdomain root and /dashboard/ paths
+            uploads_set.add((local_path, rel_path))
+            uploads_set.add((local_path, f"dashboard/{rel_path}"))
+            uploads_set.add((local_path, f"public/{rel_path}"))
+            uploads_set.add((local_path, f"public/dashboard/{rel_path}"))
+            if domain == 'admin.asquared.ae':
+                uploads_set.add((local_path, f"admin/{rel_path}"))
 
     # Add root_files for server APIs
     if os.path.exists(root_dir):
@@ -78,10 +74,13 @@ def deploy_to_domain(domain):
                 rel_f = os.path.relpath(lpath, root_dir).replace('\\', '/')
                 if rel_f in ('index.html', 'index.php') and domain == 'dashboard.asquared.ae':
                     continue # Do not overwrite React index.html on dashboard
-                uploads_list.append((lpath, rel_f))
-                uploads_list.append((lpath, f"public/{rel_f}"))
+                uploads_set.add((lpath, rel_f))
+                uploads_set.add((lpath, f"dashboard/{rel_f}"))
+                uploads_set.add((lpath, f"public/{rel_f}"))
 
-    # Priority sorting
+    uploads_list = list(uploads_set)
+
+    # Priority sorting: index.html & index-*.js first
     def priority_key(item):
         _, remote_path = item
         if 'index.html' in remote_path:
@@ -93,8 +92,11 @@ def deploy_to_domain(domain):
         return 3
 
     uploads_list.sort(key=priority_key)
+    total_files = len(uploads_list)
+    print(f"Total targets to deploy to {domain}: {total_files}")
 
-    def upload_file(local_path, remote_rel_path):
+    def upload_file(item):
+        local_path, remote_rel_path = item
         size = os.path.getsize(local_path)
         with open(local_path, 'rb') as f:
             file_bytes = f.read()
@@ -110,14 +112,14 @@ def deploy_to_domain(domain):
 
         for attempt in range(1, 4):
             try:
-                r_post = requests.post(target_url, headers=post_headers, timeout=30)
+                r_post = requests.post(target_url, headers=post_headers, timeout=(10, 25))
                 if r_post.status_code not in (200, 201):
-                    time.sleep(1)
+                    time.sleep(0.5)
                     continue
 
                 loc = r_post.headers.get('Location')
                 if not loc:
-                    time.sleep(1)
+                    time.sleep(0.5)
                     continue
                     
                 real_patch_url = loc if loc.startswith('http') else f"https://srv529-files.hstgr.io/rest{loc}"
@@ -128,23 +130,26 @@ def deploy_to_domain(domain):
                     'Content-Type': 'application/offset+octet-stream',
                     'Upload-Offset': '0'
                 }
-                r_patch = requests.patch(real_patch_url, headers=patch_headers, data=file_bytes, timeout=45)
+                r_patch = requests.patch(real_patch_url, headers=patch_headers, data=file_bytes, timeout=(10, 35))
                 if r_patch.status_code in (200, 204):
                     print(f"  ✓ {remote_rel_path} ({size} B)", flush=True)
                     return True
-                time.sleep(1)
-            except Exception as e:
-                time.sleep(1)
+                time.sleep(0.5)
+            except Exception:
+                time.sleep(0.5)
 
         print(f"  ✗ Failed {remote_rel_path}", flush=True)
         return False
 
     success_count = 0
-    for local, remote in uploads_list:
-        if upload_file(local, remote):
-            success_count += 1
+    # Concurrent pool of 6 workers
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        results = executor.map(upload_file, uploads_list)
+        for r in results:
+            if r:
+                success_count += 1
 
-    print(f"✓ Deployed {success_count}/{len(uploads_list)} files to {domain}", flush=True)
+    print(f"✓ Successfully deployed {success_count}/{total_files} targets to {domain}", flush=True)
     return True
 
 for d in target_domains:
