@@ -12,6 +12,11 @@ import SearchableCombobox from './SearchableCombobox';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 
+// In-Memory Tab Cache to eliminate refetching top entities on repeated tab switches
+const buildingsTabCache = new Map();
+
+const BUILDINGS_SELECT_FIELDS = 'canonical_name,primary_building_name,master_area,property_category,entity_type,total_owners,total_units,total_contacts,contact_coverage,source_count';
+
 export default function Buildings() {
   // Navigation & Entity Type State
   const [activeTab, setActiveTab] = useState('building'); // 'building', 'community', 'single_unit'
@@ -125,16 +130,25 @@ export default function Buildings() {
     return () => clearTimeout(timer);
   }, [searchTerm, activeTab]);
 
-  // Main Data Fetcher
+  // Main Data Fetcher with instant tab caching and selective projection
   const fetchBuildingsData = async (type = 'building') => {
+    // Instant 0ms render from memory if already loaded
+    if (buildingsTabCache.has(type)) {
+      const cached = buildingsTabCache.get(type);
+      setBuildings(cached.list);
+      setTabTotals(cached.totals);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const apikey = SUPABASE_API_KEY;
       const headers = { apikey, Authorization: `Bearer ${apikey}` };
 
-      // Load top 1000 entities of the selected type
+      // Load top 250 entities with selective projection to eliminate payload bloat
       const res = await axios.get(
-        `${SUPABASE_BASE_URL}/canonical_buildings?entity_type=eq.${type}&order=total_owners.desc&limit=1000`,
+        `${SUPABASE_BASE_URL}/canonical_buildings?entity_type=eq.${type}&select=${BUILDINGS_SELECT_FIELDS}&order=total_owners.desc&limit=250`,
         { headers }
       );
 
@@ -148,12 +162,15 @@ export default function Buildings() {
         const sumContacts = list.reduce((acc, b) => acc + b.contactsCount, 0);
         const avgCoverage = sumOwners > 0 ? Math.round((sumContacts / sumOwners) * 100) : 0;
 
-        setTabTotals({
+        const totals = {
           totalCount: list.length,
           totalUnits: sumUnits,
           totalOwners: sumOwners,
           contactCoverage: avgCoverage
-        });
+        };
+
+        setTabTotals(totals);
+        buildingsTabCache.set(type, { list, totals });
       } else {
         setBuildings([]);
         setTabTotals({ totalCount: 0, totalUnits: 0, totalOwners: 0, contactCoverage: 0 });

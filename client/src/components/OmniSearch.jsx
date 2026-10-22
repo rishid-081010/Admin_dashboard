@@ -80,6 +80,16 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
   const inputRef = useRef(null);
   const searchSeqRef = useRef(0);
+  const abortControllerRef = useRef(null);
+
+  // Clean up any in-flight request when component unmounts
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
   
   // Results
   const [ownerResults, setOwnerResults] = useState([]);
@@ -191,17 +201,32 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
     const seq = ++searchSeqRef.current;
     setLoading(true);
+
+    // Cancel any previous in-flight search request to prevent query storms & race conditions
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
+
     const headers = { 
       apikey: SUPABASE_API_KEY, 
       Authorization: `Bearer ${SUPABASE_API_KEY}` 
     };
 
-    // Safe fetch helper that always returns an Array and never throws
+    const CANONICAL_OWNER_FIELDS = 'canonical_owner_id,full_name,primary_building,primary_area,phone_normalized,nationality,emirates_id,total_units,total_portfolio_valuation,bitrix_id,bitrix_status,assigned_agent,sample_owner_id,match_criteria';
+    const RAW_OWNER_FIELDS = 'id,owner_id,lead_id,full_name,building_name,master_area,phone_normalized,phone,nationality,emirates_id,unit_number,verified_purchase_price,bitrix_id,bitrix_status,assigned_agent,vendor_source_file';
+
+    // Safe fetch helper that respects AbortController signal and handles cancellation gracefully
     const safeGet = async (url) => {
       try {
-        const res = await axios.get(url, { headers, timeout: 9000 });
+        const res = await axios.get(url, { headers, timeout: 9000, signal });
         return Array.isArray(res.data) ? res.data : [];
       } catch (err) {
+        if (axios.isCancel(err) || err?.name === 'CanceledError') {
+          return [];
+        }
         console.warn('Search query warning:', url, err?.message);
         return [];
       }
@@ -237,7 +262,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
     };
 
     const fetchOwners = async () => {
-      const rows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?full_name=ilike.*${encodeURIComponent(q)}*&select=*&order=total_portfolio_valuation.desc.nullslast&limit=30`);
+      const rows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?full_name=ilike.*${encodeURIComponent(q)}*&select=${CANONICAL_OWNER_FIELDS}&order=total_portfolio_valuation.desc.nullslast&limit=30`);
       return rows;
     };
 
@@ -276,11 +301,11 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       if (uniqueClauses.length === 0) return [];
 
       // Primary: query canonical_owners (indexed)
-      const canonicalRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?or=(${uniqueClauses.join(',')})&select=*&limit=30`);
+      const canonicalRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?or=(${uniqueClauses.join(',')})&select=${CANONICAL_OWNER_FIELDS}&limit=30`);
       if (canonicalRows.length > 0) return canonicalRows;
 
       // Secondary fallback: query owners_data
-      const rawRows = await safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${uniqueClauses.join(',')})&select=*&limit=30`);
+      const rawRows = await safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${uniqueClauses.join(',')})&select=${RAW_OWNER_FIELDS}&limit=30`);
       return rawRows;
     };
 
@@ -290,11 +315,11 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       const orClauses = variants.map(v => `emirates_id.eq.${encodeURIComponent(v)}`);
 
       // 1. Query canonical_owners (indexed by idx_canonical_owners_eid)
-      const canonicalRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?or=(${orClauses.join(',')})&select=*&limit=30`);
+      const canonicalRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?or=(${orClauses.join(',')})&select=${CANONICAL_OWNER_FIELDS}&limit=30`);
       if (canonicalRows.length > 0) return canonicalRows;
 
       // 2. Secondary fallback: query owners_data
-      const rawRows = await safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=30`);
+      const rawRows = await safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=${RAW_OWNER_FIELDS}&limit=30`);
       return rawRows;
     };
 
@@ -302,9 +327,9 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       const parsed = parseIdQuery(q);
       if (parsed) {
         const orClauses = parsed.leadVariants.map(v => `lead_id.eq.${encodeURIComponent(v)}`);
-        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=${RAW_OWNER_FIELDS}&limit=50`);
       }
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?lead_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`);
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?lead_id=eq.${encodeURIComponent(q.trim())}&select=${RAW_OWNER_FIELDS}&limit=50`);
     };
 
     const fetchBitrixId = async () => {
@@ -313,20 +338,20 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
       if (!bitrixVal) return [];
 
       // Query canonical_owners first (indexed by idx_canonical_owners_bitrix_id)
-      const cRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?bitrix_id=eq.${encodeURIComponent(bitrixVal)}&select=*&limit=30`);
+      const cRows = await safeGet(`${SUPABASE_BASE_URL}/canonical_owners?bitrix_id=eq.${encodeURIComponent(bitrixVal)}&select=${CANONICAL_OWNER_FIELDS}&limit=30`);
       if (cRows.length > 0) return cRows;
 
       // Fallback: owners_data
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(bitrixVal)}&select=*&limit=50`);
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?bitrix_id=eq.${encodeURIComponent(bitrixVal)}&select=${RAW_OWNER_FIELDS}&limit=50`);
     };
 
     const fetchSupabaseId = () => {
       const parsed = parseIdQuery(q);
       if (parsed) {
         const orClauses = parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`);
-        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=*&limit=50`);
+        return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${orClauses.join(',')})&select=${RAW_OWNER_FIELDS}&limit=50`);
       }
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?owner_id=eq.${encodeURIComponent(q.trim())}&select=*&limit=50`);
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?owner_id=eq.${encodeURIComponent(q.trim())}&select=${RAW_OWNER_FIELDS}&limit=50`);
     };
 
     const fetchAllIds = async () => {
@@ -344,7 +369,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         ...parsed.ownerVariants.map(v => `owner_id.eq.${encodeURIComponent(v)}`),
         ...parsed.bitrixVariants.map(v => `bitrix_id.eq.${encodeURIComponent(v)}`)
       ];
-      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${Array.from(new Set(orClauses)).join(',')})&select=*&limit=50`);
+      return safeGet(`${SUPABASE_BASE_URL}/owners_data?or=(${Array.from(new Set(orClauses)).join(',')})&select=${RAW_OWNER_FIELDS}&limit=50`);
     };
 
     try {

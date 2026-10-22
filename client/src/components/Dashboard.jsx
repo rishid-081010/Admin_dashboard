@@ -28,18 +28,6 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       try {
         const data = await sbFetch('/real_estate_listings?select=*,images:real_estate_images(id,is_cover,generated_image_location,original_image_location,display_order)&order=created_at.desc.nullslast');
         if (isMounted) setListings(data || []);
-        if (data && data.length > 0) {
-          data.forEach((l) => {
-            const total = Number(l.total_images) || 0;
-            const comp = Number(l.completed_images) || 0;
-            if (l.status !== 'completed' && total > 0 && comp >= total) {
-              sbFetch(`/real_estate_listings?id=eq.${l.id}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ status: 'completed' })
-              }).catch(() => {});
-            }
-          });
-        }
       } catch (err) {
         if (!isMounted) return;
         console.error('Fetch listings error:', err);

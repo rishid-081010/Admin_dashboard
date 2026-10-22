@@ -8,20 +8,84 @@ const defaultHeaders = {
   'Content-Type': 'application/json',
 };
 
+// High-Performance In-Memory Query Cache & In-Flight Request Deduplicator
+const queryCache = new Map();
+const inFlightRequests = new Map();
+
 /**
- * Perform a PostgREST query against Supabase
+ * Invalidate cached queries by resource prefix (or all if omitted)
+ */
+export function clearSbCache(endpointPrefix) {
+  if (!endpointPrefix) {
+    queryCache.clear();
+    return;
+  }
+  for (const key of queryCache.keys()) {
+    if (key.includes(endpointPrefix)) {
+      queryCache.delete(key);
+    }
+  }
+}
+
+/**
+ * Perform a PostgREST query against Supabase with in-memory caching and in-flight deduplication
  */
 export async function sbFetch(endpoint, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
   const url = `${SUPABASE_BASE_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
   const headers = { ...defaultHeaders, ...(options.headers || {}) };
-  
-  const res = await fetch(url, { ...options, headers });
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Supabase error (${res.status}): ${errorText}`);
+  const ttlMs = options.cacheTtlMs ?? (options.noCache ? 0 : 30000); // 30s default cache for GET
+
+  // Non-GET operations bypass cache and invalidate affected cache entries
+  if (method !== 'GET') {
+    const resource = endpoint.split('?')[0].replace(/^\//, '');
+    clearSbCache(resource);
+    const res = await fetch(url, { ...options, headers });
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Supabase error (${res.status}): ${errorText}`);
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
   }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+
+  // GET requests: Check in-memory cache first
+  const cacheKey = `${url}|${JSON.stringify(options.headers || {})}`;
+  const now = Date.now();
+
+  if (ttlMs > 0 && queryCache.has(cacheKey)) {
+    const entry = queryCache.get(cacheKey);
+    if (now - entry.timestamp < ttlMs) {
+      return entry.data;
+    }
+    queryCache.delete(cacheKey);
+  }
+
+  // Deduplicate in-flight identical requests to prevent race conditions & network floods
+  if (inFlightRequests.has(cacheKey)) {
+    return inFlightRequests.get(cacheKey);
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const res = await fetch(url, { ...options, headers });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Supabase error (${res.status}): ${errorText}`);
+      }
+      const text = await res.text();
+      const parsed = text ? JSON.parse(text) : null;
+      if (ttlMs > 0) {
+        queryCache.set(cacheKey, { data: parsed, timestamp: Date.now() });
+      }
+      return parsed;
+    } finally {
+      inFlightRequests.delete(cacheKey);
+    }
+  })();
+
+  inFlightRequests.set(cacheKey, fetchPromise);
+  return fetchPromise;
 }
 
 /**

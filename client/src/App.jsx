@@ -1,24 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import axios from 'axios';
-import { Search, Clock, Database, ShieldCheck, Sparkles, User } from 'lucide-react';
+import { Search, Clock, Database, ShieldCheck, Sparkles, User, Loader2 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import NewListing from './components/NewListing';
-import ListingDetail from './components/ListingDetail';
-import LeadIngestionStudio from './components/LeadIngestionStudio';
-import OwnerDirectory from './components/OwnerDirectory';
 import OverviewDashboard from './components/OverviewDashboard';
-import Buildings from './components/Buildings';
-import OmniSearch from './components/OmniSearch';
-import WorkflowsDirectory from './components/WorkflowsDirectory';
-import SourcesDirectory from './components/SourcesDirectory';
-import MyActivity from './components/MyActivity';
-import VoiceAgent from './components/VoiceAgent';
-import AIAgent from './components/AIAgent';
-import AccountSettings from './components/AccountSettings';
-import RolesManagement from './components/RolesManagement';
 import Login from './components/Login';
 import { authService } from './utils/authService';
+
+// Lazy-loaded routes for sub-400kB initial bundle and instant page startup
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const NewListing = lazy(() => import('./components/NewListing'));
+const ListingDetail = lazy(() => import('./components/ListingDetail'));
+const LeadIngestionStudio = lazy(() => import('./components/LeadIngestionStudio'));
+const OwnerDirectory = lazy(() => import('./components/OwnerDirectory'));
+const Buildings = lazy(() => import('./components/Buildings'));
+const OmniSearch = lazy(() => import('./components/OmniSearch'));
+const WorkflowsDirectory = lazy(() => import('./components/WorkflowsDirectory'));
+const SourcesDirectory = lazy(() => import('./components/SourcesDirectory'));
+const MyActivity = lazy(() => import('./components/MyActivity'));
+const VoiceAgent = lazy(() => import('./components/VoiceAgent'));
+const AIAgent = lazy(() => import('./components/AIAgent'));
+const AccountSettings = lazy(() => import('./components/AccountSettings'));
+const RolesManagement = lazy(() => import('./components/RolesManagement'));
+
+function TabLoadingSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full min-h-[360px] w-full p-8 text-center animate-fade-in">
+      <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-400 mb-4 shadow-xl shadow-blue-500/10">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+      </div>
+      <div className="h-3.5 w-36 bg-white/10 rounded-full animate-pulse mb-2.5" />
+      <div className="h-2.5 w-24 bg-white/5 rounded-full animate-pulse" />
+    </div>
+  );
+}
 
 const ROUTE_MAP = {
   overview: '/dashboard/overview',
@@ -241,80 +255,81 @@ export default function App() {
           activeTab === 'overview' ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden'
         }`}>
           <TabErrorBoundary key={activeTab} onReset={() => setActiveTab('overview')}>
-            {/* Tab Views */}
-            {activeTab === 'overview' && (
-              <OverviewDashboard onNavigate={(tab) => setActiveTab(tab)} />
-            )}
+            <Suspense fallback={<TabLoadingSkeleton />}>
+              {/* Tab Views */}
+              {activeTab === 'overview' && (
+                <OverviewDashboard onNavigate={(tab) => setActiveTab(tab)} />
+              )}
 
-            {activeTab === 'owners' && (
-              <OwnerDirectory 
-                globalAgentId="6"
-                globalAgentName="Melanie Simsiman" 
-                agentsList={[]}
-              />
-            )}
-
-            {activeTab === 'buildings' && <Buildings />}
-
-            {activeTab === 'search' && <OmniSearch />}
-
-
-            {activeTab === 'workflows' && <WorkflowsDirectory />}
-
-            {activeTab === 'sources' && <SourcesDirectory />}
-
-            {activeTab === 'activity' && <MyActivity currentUser={currentUser} />}
-
-            {activeTab === 'voice' && <VoiceAgent />}
-
-            {activeTab === 'agent' && <AIAgent setActiveTab={setActiveTab} />}
-
-            {activeTab === 'leads' && (
-              <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><LeadIngestionStudio /></div>
-            )}
-
-            {activeTab === 'listing' && (
-              <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Dashboard
-                onNewListingClick={() => setActiveTab('new')}
-                onSelectListing={handleSelectListing}
-              /></div>
-            )}
-
-            {activeTab === 'new' && (
-              <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><NewListing 
-                onListingCreated={handleListingCreated} 
-                onBack={() => setActiveTab('listing')}
-              /></div>
-            )}
-
-            {(activeTab === 'detail' || activeTab.startsWith('detail')) && (
-              <div className="h-full overflow-y-auto pr-2 custom-scrollbar">{selectedListingId ? (
-                <ListingDetail
-                  listingId={selectedListingId}
-                  onBack={() => {
-                    setActiveTab('listing');
-                    setSelectedListingId(null);
-                  }}
+              {activeTab === 'owners' && (
+                <OwnerDirectory 
+                  globalAgentId="6"
+                  globalAgentName="Melanie Simsiman" 
+                  agentsList={[]}
                 />
-              ) : (
-                <Dashboard
+              )}
+
+              {activeTab === 'buildings' && <Buildings />}
+
+              {activeTab === 'search' && <OmniSearch />}
+
+              {activeTab === 'workflows' && <WorkflowsDirectory />}
+
+              {activeTab === 'sources' && <SourcesDirectory />}
+
+              {activeTab === 'activity' && <MyActivity currentUser={currentUser} />}
+
+              {activeTab === 'voice' && <VoiceAgent />}
+
+              {activeTab === 'agent' && <AIAgent setActiveTab={setActiveTab} />}
+
+              {activeTab === 'leads' && (
+                <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><LeadIngestionStudio /></div>
+              )}
+
+              {activeTab === 'listing' && (
+                <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Dashboard
                   onNewListingClick={() => setActiveTab('new')}
                   onSelectListing={handleSelectListing}
+                /></div>
+              )}
+
+              {activeTab === 'new' && (
+                <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><NewListing 
+                  onListingCreated={handleListingCreated} 
+                  onBack={() => setActiveTab('listing')}
+                /></div>
+              )}
+
+              {(activeTab === 'detail' || activeTab.startsWith('detail')) && (
+                <div className="h-full overflow-y-auto pr-2 custom-scrollbar">{selectedListingId ? (
+                  <ListingDetail
+                    listingId={selectedListingId}
+                    onBack={() => {
+                      setActiveTab('listing');
+                      setSelectedListingId(null);
+                    }}
+                  />
+                ) : (
+                  <Dashboard
+                    onNewListingClick={() => setActiveTab('new')}
+                    onSelectListing={handleSelectListing}
+                  />
+                )}</div>
+              )}
+
+              {activeTab === 'roles' && (
+                <RolesManagement currentUser={currentUser} />
+              )}
+
+              {activeTab === 'settings' && (
+                <AccountSettings 
+                  currentUser={currentUser} 
+                  onLogout={handleLogout}
+                  onUpdateUser={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
                 />
-              )}</div>
-            )}
-
-            {activeTab === 'roles' && (
-              <RolesManagement currentUser={currentUser} />
-            )}
-
-            {activeTab === 'settings' && (
-              <AccountSettings 
-                currentUser={currentUser} 
-                onLogout={handleLogout}
-                onUpdateUser={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
-              />
-            )}
+              )}
+            </Suspense>
           </TabErrorBoundary>
         </main>
       </div>
@@ -329,10 +344,12 @@ export default function App() {
             className="w-full max-w-5xl h-[88vh] bg-[#001428] border border-blue-500/40 rounded-2xl shadow-2xl flex flex-col relative overflow-hidden p-4 sm:p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <OmniSearch 
-              isModal={true} 
-              onClose={() => setIsOmniSearchModalOpen(false)} 
-            />
+            <Suspense fallback={<TabLoadingSkeleton />}>
+              <OmniSearch 
+                isModal={true} 
+                onClose={() => setIsOmniSearchModalOpen(false)} 
+              />
+            </Suspense>
           </div>
         </div>
       )}

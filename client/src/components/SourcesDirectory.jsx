@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Download, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
-import { SOURCES_DATA } from '../data/sourcesData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Download, ChevronLeft, ChevronRight, Search, X, Loader2 } from 'lucide-react';
 
 const escRegex = (s) => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
@@ -41,6 +40,8 @@ function getMatchScore(item, query) {
 }
 
 export default function SourcesDirectory() {
+  const [sourcesList, setSourcesList] = useState([]);
+  const [loadingSources, setLoadingSources] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('All');
   const [selectedSizeFilter, setSelectedSizeFilter] = useState('All');
@@ -57,6 +58,25 @@ export default function SourcesDirectory() {
     }
   });
 
+  // Dynamically load sourcesData on mount to strip 646 kB from initial JS bundle
+  useEffect(() => {
+    let active = true;
+    import('../data/sourcesData')
+      .then((mod) => {
+        if (active) {
+          setSourcesList(mod.SOURCES_DATA || []);
+          setLoadingSources(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Sources data dynamic load note:', err);
+        if (active) setLoadingSources(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const dismissBanner = () => {
     setShowCatalogBanner(false);
     try {
@@ -70,7 +90,7 @@ export default function SourcesDirectory() {
   const filteredAndSorted = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
 
-    let result = SOURCES_DATA.filter(item => {
+    let result = sourcesList.filter(item => {
       // 1. Exact filename or status search
       const matchesSearch = !q || 
         item.filename.toLowerCase().includes(q) || 
@@ -334,7 +354,23 @@ export default function SourcesDirectory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1b2b3d]/60">
-              {paginated.map((item) => (
+              {loadingSources ? (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+                      <span className="text-xs font-medium">Loading catalog sources...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginated.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center text-slate-400 text-xs">
+                    No files found matching the selected filters.
+                  </td>
+                </tr>
+              ) : (
+                paginated.map((item) => (
                 <tr 
                   key={item.id}
                   className="hover:bg-[#102035] transition-colors group cursor-pointer"
@@ -388,7 +424,7 @@ export default function SourcesDirectory() {
                     {item.duplicate_of || '—'}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

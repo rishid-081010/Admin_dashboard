@@ -236,8 +236,8 @@ export async function fetchVoiceOverview(filterParams) {
     triggerBackgroundVapiSync(currentDubaiDate);
   }
 
-  // Build query
-  let url = `${SUPABASE_BASE_URL}/vapi_call_logs?select=id,status,duration_seconds,cost_usd,voice_call_status,assistantId,created_at,started_at,customer_name,customer_phone,recording_url,summary`;
+  // Build query - selective projection strips heavy URLs and PII to accelerate overview metric load
+  let url = `${SUPABASE_BASE_URL}/vapi_call_logs?select=id,status,duration_seconds,cost_usd,voice_call_status,assistantId,created_at,summary`;
   if (start) url += `&created_at=gte.${encodeURIComponent(start)}`;
   if (end) url += `&created_at=lt.${encodeURIComponent(end)}`;
   url += `&order=created_at.desc.nullslast&limit=1500`;
