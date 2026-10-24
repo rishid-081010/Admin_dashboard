@@ -468,47 +468,6 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
         </div>
       </div>
 
-      {/* ─── AI DATA QUALITY REVIEW BANNER ───────────────────────────────── */}
-      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-[#0c1829] border border-blue-500/30 shadow-xl shadow-black/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-        <div className="flex items-start gap-3.5">
-          <div className="p-2.5 rounded-xl bg-blue-500/20 border border-blue-400/30 text-blue-300 mt-0.5 shrink-0">
-            <Sparkles className="w-5 h-5 text-blue-400 animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-bold text-white tracking-wide">
-                AI Data Quality Review: 100% Zero-Error Sanitized
-              </h3>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                Verified Clean
-              </span>
-              {rescuedPhone && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                  Phone Rescued from Unit Cell
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-              Autonomous AI review inspected {processedData.rawCount} raw vendor deeds. 
-              {processedData.duplicatesCollapsedCount > 0 && ` Collapsed ${processedData.duplicatesCollapsedCount} duplicate spreadsheet imports.`}
-              {processedData.shiftedPhonesCount > 0 && ` Rescued & realigned ${processedData.shiftedPhonesCount} shifted phone numbers.`}
-              {processedData.cadastralPlotsCount > 0 && ` Demarcated ${processedData.cadastralPlotsCount} Land Plot Demarcations.`}
-              {processedData.ghostDragDownsDetected > 0 && ` Protected portfolio from vendor drag-down duplication.`}
-              {' '}Only verified, non-corrupted data is presented.
-            </p>
-          </div>
-        </div>
-
-        <button 
-          onClick={() => setShowAuditModal(true)}
-          className="px-3.5 py-2 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-400/30 text-blue-300 hover:text-white text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 self-start md:self-auto cursor-pointer"
-        >
-          <ShieldCheck className="w-4 h-4 text-blue-400" />
-          AI Audit Log ({processedData.auditLogs.length})
-        </button>
-      </div>
-
       {/* --- Profile Header Widget (Clean Display Only) --- */}
       <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 mb-6 shadow-xl shadow-black/40 relative overflow-hidden flex items-center gap-5 shrink-0">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
