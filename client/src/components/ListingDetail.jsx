@@ -75,6 +75,7 @@ export default function ListingDetail({ listingId, onBack }) {
 
   // Comparison & modal states
   const [comparisonModalImage, setComparisonModalImage] = useState(null);
+  const [refineModalImage, setRefineModalImage] = useState(null);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [sliderMode, setSliderMode] = useState('orig-vs-refined');
 
@@ -643,6 +644,8 @@ export default function ListingDetail({ listingId, onBack }) {
           const idx = completedImages.findIndex((i) => i.id === img.id);
           setSliderIndex(idx >= 0 ? idx : 0);
         }}
+        refineModalImage={refineModalImage}
+        setRefineModalImage={setRefineModalImage}
         onSingleEnhance={handleSingleEnhance}
         isRetrying={isRetrying}
         onDownloadSingle={handleDownloadSingle}
@@ -689,6 +692,7 @@ export default function ListingDetail({ listingId, onBack }) {
           totalCount={completedImages.length}
           sliderMode={sliderMode}
           setSliderMode={setSliderMode}
+          onOpenRefine={(img) => setRefineModalImage(img)}
           onPrev={() => {
             if (completedImages.length <= 1) return;
             const newIdx = sliderIndex > 0 ? sliderIndex - 1 : completedImages.length - 1;

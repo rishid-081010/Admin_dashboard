@@ -43,11 +43,15 @@ export default function PhotoStudio({
   customPrompt,
   setCustomPrompt,
   onOpenComparison,
+  refineModalImage: externalRefineModalImage,
+  setRefineModalImage: externalSetRefineModalImage,
   onSingleEnhance,
   isRetrying = {},
   onDownloadSingle,
 }) {
-  const [refineModalImage, setRefineModalImage] = useState(null);
+  const [internalRefineModalImage, setInternalRefineModalImage] = useState(null);
+  const refineModalImage = externalRefineModalImage !== undefined ? externalRefineModalImage : internalRefineModalImage;
+  const setRefineModalImage = externalSetRefineModalImage || setInternalRefineModalImage;
   const [refineDirective, setRefineDirective] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const fileInputRef = useRef(null);

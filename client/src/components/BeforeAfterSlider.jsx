@@ -67,16 +67,16 @@ export default function BeforeAfterSlider({
   }, [isDragging, updatePosition]);
 
   return (
-    <div className={`relative flex flex-col w-full h-full select-none ${className}`}>
+    <div className={`relative flex flex-col w-full h-full min-h-0 select-none ${className}`}>
       {/* View Mode Toggle Controls */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center bg-black/70 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-xl">
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/15 shadow-2xl">
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setViewMode('slider'); }}
-          className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             viewMode === 'slider'
-              ? 'bg-blue-600 text-white shadow'
-              : 'text-white/70 hover:text-white'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+              : 'text-white/70 hover:text-white hover:bg-white/[0.06]'
           }`}
         >
           <SplitSquareHorizontal className="w-3.5 h-3.5" />
@@ -85,10 +85,10 @@ export default function BeforeAfterSlider({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setViewMode('side-by-side'); }}
-          className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             viewMode === 'side-by-side'
-              ? 'bg-blue-600 text-white shadow'
-              : 'text-white/70 hover:text-white'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+              : 'text-white/70 hover:text-white hover:bg-white/[0.06]'
           }`}
         >
           <Columns className="w-3.5 h-3.5" />
@@ -98,16 +98,17 @@ export default function BeforeAfterSlider({
 
       {viewMode === 'side-by-side' ? (
         /* ── Side-by-Side Dual View ── */
-        <div className="flex-1 w-full h-full grid grid-cols-1 md:grid-cols-2 gap-3 p-2 bg-navy-950/60 rounded-2xl border border-white/[0.08] overflow-hidden">
+        <div className="flex-1 min-h-0 w-full h-full grid grid-cols-1 md:grid-cols-2 gap-3 p-2 bg-[#050811] rounded-2xl border border-white/[0.08] overflow-hidden">
           {/* Left: Original */}
           <div className="relative flex flex-col items-center justify-center bg-black/40 rounded-xl overflow-hidden border border-white/5">
             <img
               src={originalUrl}
               alt={leftLabel}
-              className="w-full h-full object-contain pointer-events-none select-none"
+              loading="eager"
+              className="w-full h-full object-contain pointer-events-none select-none block"
               draggable={false}
             />
-            <span className="absolute bottom-3 left-3 bg-navy-950/90 text-bone-100 text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-sm tracking-wider border border-white/10">
+            <span className="absolute bottom-3 left-3 bg-black/80 text-bone-100 text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-sm tracking-wider border border-white/10">
               {leftLabel}
             </span>
           </div>
@@ -117,7 +118,8 @@ export default function BeforeAfterSlider({
             <img
               src={enhancedUrl}
               alt={rightLabel}
-              className="w-full h-full object-contain pointer-events-none select-none"
+              loading="eager"
+              className="w-full h-full object-contain pointer-events-none select-none block"
               draggable={false}
             />
             <span className="absolute bottom-3 right-3 bg-blue-600/90 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-sm tracking-wider border border-white/10">
@@ -131,13 +133,14 @@ export default function BeforeAfterSlider({
           ref={containerRef}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          className="relative flex-1 w-full h-full select-none overflow-hidden rounded-2xl cursor-ew-resize bg-navy-950 border border-white/[0.08]"
+          className="relative flex-1 min-h-0 w-full h-full select-none overflow-hidden rounded-2xl cursor-ew-resize bg-[#050811] border border-white/[0.08]"
           style={{ touchAction: 'none' }}
         >
           {/* 1. Enhanced Image (Base Layer - Right Side) */}
           <img
             src={enhancedUrl}
             alt={rightLabel}
+            loading="eager"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none block"
             draggable={false}
           />
@@ -155,6 +158,7 @@ export default function BeforeAfterSlider({
           <img
             src={originalUrl}
             alt={leftLabel}
+            loading="eager"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none block"
             style={{
               clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
@@ -163,7 +167,7 @@ export default function BeforeAfterSlider({
             draggable={false}
           />
           <span
-            className="absolute top-3.5 left-3.5 bg-navy-950/90 text-bone-100 text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-sm z-10 pointer-events-none tracking-wider border border-white/10"
+            className="absolute top-3.5 left-3.5 bg-black/80 text-bone-100 text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-sm z-10 pointer-events-none tracking-wider border border-white/10"
             style={{
               opacity: sliderPosition > 12 ? 1 : Math.max(0, sliderPosition / 12),
               transition: 'opacity 0.15s ease'
