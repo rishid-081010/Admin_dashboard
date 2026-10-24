@@ -42,7 +42,7 @@ function getMatchScore(item, query) {
 }
 
 export default function SourcesDirectory() {
-  const [sourcesList, setSourcesList] = useState(SOURCES_DATA || []);
+
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('All');
@@ -73,7 +73,7 @@ export default function SourcesDirectory() {
   const filteredAndSorted = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
 
-    let result = sourcesList.filter(item => {
+    let result = (SOURCES_DATA || []).filter(item => {
       // 1. Exact filename or status search
       const matchesSearch = !q || 
         item.filename.toLowerCase().includes(q) || 
@@ -81,7 +81,7 @@ export default function SourcesDirectory() {
         (item.duplicate_of && item.duplicate_of.toLowerCase().includes(q));
 
       // 2. Real format/extension filter
-      const matchesFormat = selectedFormat === 'All' || item.extension === selectedFormat;
+      const matchesFormat = !selectedFormat || selectedFormat === 'All' || selectedFormat === 'All Formats' || selectedFormat.toLowerCase() === 'all' || (item.extension && item.extension.toUpperCase() === selectedFormat.toUpperCase());
 
       // 3. Real size filter
       let matchesSize = true;
@@ -93,8 +93,8 @@ export default function SourcesDirectory() {
 
       // 4. Status filter
       let matchesStatus = true;
-      if (selectedStatusFilter === 'processed') matchesStatus = item.status === 'processed';
-      else if (selectedStatusFilter === 'duplicate') matchesStatus = !!item.duplicate_of;
+      if (selectedStatusFilter === 'processed') matchesStatus = (item.status || 'processed').toLowerCase() === 'processed';
+      else if (selectedStatusFilter === 'duplicate') matchesStatus = !!item.duplicate_of || (item.status || '').toLowerCase() === 'duplicate';
 
       return matchesSearch && matchesFormat && matchesSize && matchesStatus;
     });
