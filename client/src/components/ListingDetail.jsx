@@ -80,6 +80,7 @@ export default function ListingDetail({ listingId, onBack }) {
 
   // Enhancement & processing states
   const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(null);
   const [isRetrying, setIsRetrying] = useState({});
   const [customPrompt, setCustomPrompt] = useState('');
 
@@ -180,11 +181,17 @@ export default function ListingDetail({ listingId, onBack }) {
     }
   };
 
-  // Handle batch enhancement
+  // Handle batch enhancement with concurrent queue
   const handleBatchEnhance = async (modelTier = 'flare') => {
     if (images.length === 0) return;
     setIsProcessingBatch(true);
-    showToast(`Batch enhancing ${images.length} photos with ${modelTier}...`, 'info');
+    setBatchProgress({
+      current: 0,
+      total: images.length,
+      pct: 0,
+      message: `Starting concurrent neural enhancement (${modelTier === 'sunburst' ? 'Sunburst Luxury' : 'Flare 2.5'})...`,
+      modelTier
+    });
 
     try {
       const { completed, failed } = await enhanceListingBatch({
@@ -192,8 +199,16 @@ export default function ListingDetail({ listingId, onBack }) {
         images,
         modelTier,
         prompt: customPrompt,
+        concurrency: 2,
         onProgress: (cur, tot, msg) => {
-          showToast(msg, 'info');
+          const pct = Math.round((cur / (tot || 1)) * 100);
+          setBatchProgress({
+            current: cur,
+            total: tot,
+            pct,
+            message: msg,
+            modelTier
+          });
         },
       });
 
@@ -203,6 +218,7 @@ export default function ListingDetail({ listingId, onBack }) {
       showToast(err.message || 'Batch enhancement failed.', 'error');
     } finally {
       setIsProcessingBatch(false);
+      setTimeout(() => setBatchProgress(null), 4000);
     }
   };
 
@@ -562,6 +578,40 @@ export default function ListingDetail({ listingId, onBack }) {
         onDownloadZip={handleDownloadZip}
         onDeleteListing={handleDeleteListing}
       />
+
+      {/* Active Batch Queue Progress Card */}
+      {batchProgress && (
+        <div className="mb-6 bg-gradient-to-r from-blue-950/70 via-[#0a1b33] to-[#041224] border border-blue-500/40 rounded-2xl p-4 sm:p-5 shadow-2xl animate-fade-in relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+              <h3 className="text-sm font-bold text-white tracking-wide">
+                Neural Enhancement Queue: {batchProgress.current} / {batchProgress.total} Complete ({batchProgress.pct}%)
+              </h3>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] font-mono text-cyan-300">
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-500/30">
+                Parallel Concurrency: 2 active
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/30 text-emerald-300">
+                A-Squared Branding Applied
+              </span>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden border border-white/10 mb-2">
+            <div 
+              style={{ width: `${batchProgress.pct}%` }}
+              className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 transition-all duration-300 rounded-full"
+            />
+          </div>
+
+          <p className="text-xs text-slate-300 truncate">
+            {batchProgress.message}
+          </p>
+        </div>
+      )}
 
       {/* 2. Photo Processing & Management Studio */}
       <PhotoStudio

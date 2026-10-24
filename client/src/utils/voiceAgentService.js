@@ -1,7 +1,9 @@
 // Voice Agent Service & Data Pipeline
 // Connects to Supabase vapi_call_logs table to provide real-time call intelligence
+import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
+const SUPABASE_PROJECT_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54';
 
 export const AGENTS_CONFIG = {
@@ -197,9 +199,35 @@ export function formatCurrency(amount) {
 }
 
 // Build ISO Date Range from filter parameters
-export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek }) {
+export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek, customStartDate, customEndDate }) {
   if (timeFilter === 'All Time') {
-    return { start: null, end: null, label: 'All Time (81,597 Historical Calls)' };
+    return { start: null, end: null, label: 'All Time (88,729 Historical Calls)' };
+  }
+
+  if (timeFilter === 'Custom') {
+    const startStr = customStartDate || selectedDate;
+    const endStr = customEndDate || selectedDate || startStr;
+    const start = startStr ? `${startStr}T00:00:00.000Z` : null;
+    let end = null;
+    if (endStr) {
+      const d = new Date(endStr);
+      d.setUTCDate(d.getUTCDate() + 1);
+      end = d.toISOString().split('T')[0] + 'T00:00:00.000Z';
+    }
+    const fmt = (s) => {
+      try {
+        const parts = s.split('-');
+        const dateObj = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
+        return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+      } catch {
+        return s;
+      }
+    };
+    return {
+      start,
+      end,
+      label: startStr && endStr ? `Custom Range · ${fmt(startStr)} – ${fmt(endStr)}` : 'Custom Range'
+    };
   }
 
   if (timeFilter === 'Daily') {
@@ -911,5 +939,67 @@ export async function markLeadAsCompleted(callId, phone) {
   } catch (err) {
     console.warn('Supabase update failed:', err);
     return false;
+  }
+}
+
+let _realtimeClient = null;
+
+function getRealtimeClient() {
+  if (!_realtimeClient) {
+    _realtimeClient = createClient(SUPABASE_PROJECT_URL, SUPABASE_KEY, {
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      }
+    });
+  }
+  return _realtimeClient;
+}
+
+/**
+ * Subscribe to live telephony call events via Supabase Realtime WebSocket.
+ * Throttles burst events with a 350ms buffer and notifies listeners.
+ * Returns an unsubscribe cleanup function.
+ */
+export function subscribeToVoiceTelemetry(onEvents) {
+  try {
+    const client = getRealtimeClient();
+    let buffer = [];
+    let timer = null;
+
+    const flush = () => {
+      if (buffer.length > 0 && typeof onEvents === 'function') {
+        const batch = [...buffer];
+        buffer = [];
+        onEvents(batch);
+      }
+    };
+
+    const channelName = 'voice_telemetry_' + Math.random().toString(36).slice(2, 9);
+    const channel = client
+      .channel(channelName)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vapi_call_logs' }, (payload) => {
+        buffer.push(payload);
+        if (!timer) {
+          timer = setTimeout(() => {
+            timer = null;
+            flush();
+          }, 350);
+        }
+      })
+      .subscribe((status, err) => {
+        if (err) {
+          console.warn('[Realtime Telemetry] Connection status:', status, err.message);
+        }
+      });
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      client.removeChannel(channel);
+    };
+  } catch (err) {
+    console.warn('[Realtime Telemetry] Failed to initiate subscription:', err);
+    return () => {};
   }
 }

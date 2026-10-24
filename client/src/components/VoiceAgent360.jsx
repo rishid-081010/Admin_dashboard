@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ArrowLeft, Mic, Phone, PhoneOff, PhoneOutgoing, Clock, Activity, 
   DollarSign, CheckCircle2, AlertCircle, Copy, ExternalLink, ShieldCheck, 
-  Search, Play, Pause, Volume2, FileText, Bot, User, Sparkles, Filter, 
-  ChevronLeft, ChevronRight, X, RefreshCw
+  Search, Play, Pause, Volume2, VolumeX, FileText, Bot, User, Sparkles, Filter, 
+  ChevronLeft, ChevronRight, X, RefreshCw, RotateCcw, RotateCw
 } from 'lucide-react';
 import { 
   fetchVoiceAgent360, formatDuration, formatCurrency, 
@@ -23,6 +23,98 @@ export default function VoiceAgent360({
   const [copiedField, setCopiedField] = useState(null);
   const [activeCallModal, setActiveCallModal] = useState(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioPlaybackRate, setAudioPlaybackRate] = useState(1.0);
+  const [audioIsMuted, setAudioIsMuted] = useState(false);
+  const audioRef = useRef(null);
+
+  // Reset audio playback whenever active call modal opens or changes
+  useEffect(() => {
+    setIsPlayingAudio(false);
+    setAudioCurrentTime(0);
+    setAudioDuration(Number(activeCallModal?.duration_seconds) || 0);
+    setAudioPlaybackRate(1.0);
+    setAudioIsMuted(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.playbackRate = 1.0;
+      audioRef.current.muted = false;
+    }
+  }, [activeCallModal?.id]);
+
+  // Deterministic natural conversational waveform envelope
+  const waveformBars = useMemo(() => {
+    if (!activeCallModal) return [];
+    const seed = activeCallModal.id 
+      ? activeCallModal.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0) 
+      : 42;
+    const bars = [];
+    for (let i = 0; i < 48; i++) {
+      const raw = Math.sin(i * 0.38 + seed) * 0.35 + Math.cos(i * 0.85 + seed * 0.5) * 0.28 + 0.5;
+      const height = Math.max(18, Math.min(95, Math.round(raw * 90)));
+      bars.push(height);
+    }
+    return bars;
+  }, [activeCallModal?.id]);
+
+  const handleTogglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlayingAudio) {
+      audioRef.current.pause();
+      setIsPlayingAudio(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsPlayingAudio(true);
+      }).catch(err => {
+        console.warn('Audio playback error:', err);
+      });
+    }
+  };
+
+  const handleSeek = (newSec) => {
+    if (!audioRef.current) return;
+    const dur = audioDuration || Number(activeCallModal?.duration_seconds) || 1;
+    const clamped = Math.max(0, Math.min(dur, newSec));
+    audioRef.current.currentTime = clamped;
+    setAudioCurrentTime(clamped);
+    if (!isPlayingAudio) {
+      audioRef.current.play().then(() => setIsPlayingAudio(true)).catch(() => {});
+    }
+  };
+
+  const handleWaveformClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const pct = Math.max(0, Math.min(1, clickX / rect.width));
+    const dur = audioDuration || Number(activeCallModal?.duration_seconds) || 1;
+    handleSeek(pct * dur);
+  };
+
+  const handleCycleSpeed = () => {
+    const speeds = [1.0, 1.25, 1.5, 2.0];
+    const currentIdx = speeds.indexOf(audioPlaybackRate);
+    const nextSpeed = speeds[(currentIdx + 1) % speeds.length];
+    setAudioPlaybackRate(nextSpeed);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextSpeed;
+    }
+  };
+
+  const handleToggleMute = () => {
+    if (!audioRef.current) return;
+    const nextMuted = !audioIsMuted;
+    setAudioIsMuted(nextMuted);
+    audioRef.current.muted = nextMuted;
+  };
+
+  const formatAudioTime = (seconds) => {
+    const s = Math.floor(seconds || 0);
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m}:${rem.toString().padStart(2, '0')}`;
+  };
 
   // Stable string key to avoid re-running on object reference changes
   const filterKey = `${filterParams?.timeFilter}_${filterParams?.selectedDate}_${filterParams?.selectedYear}_${filterParams?.selectedMonth}_${filterParams?.selectedWeek}`;
@@ -89,20 +181,31 @@ export default function VoiceAgent360({
   const qualRate = ((qualifiedInBatch / batchCount) * 100).toFixed(1) + '%';
   const avgDuration = durSamples > 0 ? formatDuration(totalDurBatch / durSamples) : '24s';
 
-  // Format transcript into lines
-  const parseTranscript = (raw) => {
+  // Format transcript into lines with estimated audio timeline offsets
+  const parseTranscript = (raw, totalDurSec = 0) => {
     if (!raw) return [];
-    if (typeof raw !== 'string') return [String(raw)];
-    return raw
-      .split('\n')
+    const lines = (typeof raw !== 'string' ? [String(raw)] : raw.split('\n'))
       .map(line => line.trim())
-      .filter(Boolean)
-      .map(line => {
-        const isAI = line.startsWith('AI:') || line.startsWith('Assistant:');
-        const isUser = line.startsWith('User:') || line.startsWith('Human:') || line.startsWith('Customer:');
-        const text = line.replace(/^(AI|Assistant|User|Human|Customer):\s*/i, '');
-        return { isAI, isUser, speaker: isAI ? 'Sarah (AI)' : (isUser ? 'Customer' : 'Dialogue'), text };
-      });
+      .filter(Boolean);
+
+    const totalChars = lines.reduce((acc, l) => acc + l.length, 0) || 1;
+    let accumulatedChars = 0;
+
+    return lines.map((line, idx) => {
+      const isAI = line.startsWith('AI:') || line.startsWith('Assistant:');
+      const isUser = line.startsWith('User:') || line.startsWith('Human:') || line.startsWith('Customer:');
+      const text = line.replace(/^(AI|Assistant|User|Human|Customer):\s*/i, '');
+      const startSec = Math.round((accumulatedChars / totalChars) * (totalDurSec || 30));
+      accumulatedChars += line.length;
+      return { 
+        id: idx,
+        isAI, 
+        isUser, 
+        speaker: isAI ? `${agent?.name || 'Voice Bot'} (AI)` : (isUser ? 'Property Owner' : 'Dialogue'), 
+        text,
+        startSec
+      };
+    });
   };
 
   return (
@@ -490,28 +593,138 @@ export default function VoiceAgent360({
               </button>
             </div>
 
-            {/* Audio Recording Player */}
+            {/* Interactive Audio Waveform Player */}
             {activeCallModal.recording_url ? (
-              <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-4 mb-4 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <div className="flex items-center gap-2 font-semibold text-white">
-                    <Volume2 className="w-4 h-4 text-emerald-400" />
-                    <span>Telephony Voice Audio Recording</span>
+              <div className="bg-[#06111e] border border-[#1b2b3d] rounded-2xl p-4 sm:p-5 mb-4 shadow-xl">
+                {/* Audio Element Hidden */}
+                <audio
+                  ref={audioRef}
+                  src={activeCallModal.recording_url}
+                  preload="metadata"
+                  onTimeUpdate={() => {
+                    if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
+                  }}
+                  onLoadedMetadata={() => {
+                    if (audioRef.current) {
+                      const dur = audioRef.current.duration;
+                      if (dur && !isNaN(dur) && isFinite(dur)) setAudioDuration(dur);
+                    }
+                  }}
+                  onPlay={() => setIsPlayingAudio(true)}
+                  onPause={() => setIsPlayingAudio(false)}
+                  onEnded={() => {
+                    setIsPlayingAudio(false);
+                    setAudioCurrentTime(0);
+                  }}
+                />
+
+                {/* Header row */}
+                <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
+                  <div className="flex items-center gap-2 font-bold text-white tracking-wide">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Telephony Voice Waveform</span>
                   </div>
                   <a
                     href={activeCallModal.recording_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 font-mono"
+                    className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 font-mono transition-colors"
                   >
-                    Open Raw WAV <ExternalLink className="w-3 h-3" />
+                    Raw Stream <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
-                <audio 
-                  controls 
-                  src={activeCallModal.recording_url} 
-                  className="w-full mt-1 outline-none rounded-lg"
-                />
+
+                {/* Interactive Waveform Scrubber Bars */}
+                <div 
+                  onClick={handleWaveformClick}
+                  className="h-16 flex items-center gap-[3px] bg-[#071322] border border-[#16273b] hover:border-emerald-500/40 rounded-xl px-3 py-2 cursor-pointer transition-all relative select-none group"
+                  title="Click anywhere along the waveform to jump directly to that moment in the call"
+                >
+                  {waveformBars.map((barHeight, idx) => {
+                    const totalBars = waveformBars.length;
+                    const barTime = (idx / totalBars) * (audioDuration || Number(activeCallModal.duration_seconds) || 1);
+                    const isPlayed = audioCurrentTime >= barTime;
+
+                    return (
+                      <div
+                        key={idx}
+                        className="flex-1 h-full flex items-center justify-center pointer-events-none"
+                      >
+                        <div
+                          style={{ height: `${barHeight}%` }}
+                          className={`w-full rounded-full transition-all duration-75 ${
+                            isPlayed
+                              ? 'bg-gradient-to-t from-emerald-500 to-teal-300 shadow-[0_0_6px_rgba(52,211,153,0.5)]'
+                              : 'bg-slate-700/70 group-hover:bg-slate-600/80'
+                          }`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Audio Controls Bar */}
+                <div className="flex items-center justify-between mt-3 pt-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    {/* Rewind 10s */}
+                    <button
+                      onClick={() => handleSeek(audioCurrentTime - 10)}
+                      className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+                      title="Rewind 10 seconds"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Big Play / Pause */}
+                    <button
+                      onClick={handleTogglePlay}
+                      className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold shadow-lg shadow-emerald-500/25 transition-all transform active:scale-95"
+                      title={isPlayingAudio ? 'Pause' : 'Play'}
+                    >
+                      {isPlayingAudio ? (
+                        <Pause className="w-4 h-4 fill-current" />
+                      ) : (
+                        <Play className="w-4 h-4 fill-current ml-0.5" />
+                      )}
+                    </button>
+
+                    {/* Forward 10s */}
+                    <button
+                      onClick={() => handleSeek(audioCurrentTime + 10)}
+                      className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+                      title="Forward 10 seconds"
+                    >
+                      <RotateCw className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Time Counter */}
+                    <div className="font-mono text-xs text-white/90 ml-2 font-medium tracking-tight">
+                      <span className="text-emerald-400">{formatAudioTime(audioCurrentTime)}</span>
+                      <span className="text-white/30 mx-1">/</span>
+                      <span className="text-white/60">{formatAudioTime(audioDuration || activeCallModal.duration_seconds)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Playback speed multiplier */}
+                    <button
+                      onClick={handleCycleSpeed}
+                      className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 font-mono text-[11px] font-semibold text-white/80 hover:text-white transition-colors"
+                      title="Change playback speed"
+                    >
+                      {audioPlaybackRate}x
+                    </button>
+
+                    {/* Mute button */}
+                    <button
+                      onClick={handleToggleMute}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                      title={audioIsMuted ? 'Unmute' : 'Mute'}
+                    >
+                      {audioIsMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-slate-300" />}
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 mb-4 text-xs text-slate-400 flex items-center gap-2">
@@ -532,32 +745,70 @@ export default function VoiceAgent360({
               </div>
             )}
 
-            {/* Dialogue Transcript */}
+            {/* Dialogue Transcript with Click-to-Seek Synchronization */}
             <div className="flex-1 min-h-0 flex flex-col">
-              <div className="text-xs font-bold text-slate-300 uppercase font-mono tracking-wider mb-2 flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-blue-400" />
-                <span>Dialogue Transcript</span>
+              <div className="text-xs font-bold text-slate-300 uppercase font-mono tracking-wider mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Interactive Dialogue Transcript</span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-normal lowercase">
+                  Click any dialogue timestamp to jump audio
+                </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto max-h-[280px] custom-scrollbar bg-[#06111e] border border-[#1b2b3d] rounded-xl p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto max-h-[300px] custom-scrollbar bg-[#06111e] border border-[#1b2b3d] rounded-xl p-4 space-y-3">
                 {activeCallModal.transcript ? (
-                  parseTranscript(activeCallModal.transcript).map((turn, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`flex flex-col ${turn.isAI ? 'items-start' : 'items-end'}`}
-                    >
-                      <span className="text-[10px] font-mono text-white/40 mb-1 px-1">
-                        {turn.speaker}
-                      </span>
-                      <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
-                        turn.isAI 
-                          ? 'bg-blue-600/20 border border-blue-500/30 text-blue-100 rounded-tl-sm' 
-                          : 'bg-white/10 border border-white/15 text-white rounded-tr-sm'
-                      }`}>
-                        {turn.text}
-                      </div>
-                    </div>
-                  ))
+                  (() => {
+                    const parsed = parseTranscript(activeCallModal.transcript, activeCallModal.duration_seconds);
+                    return parsed.map((turn, idx) => {
+                      const isNextTurn = idx < parsed.length - 1;
+                      const nextTurnStart = isNextTurn ? parsed[idx + 1].startSec : Infinity;
+                      const isActiveTurn = audioCurrentTime >= turn.startSec && audioCurrentTime < nextTurnStart;
+
+                      return (
+                        <div 
+                          key={turn.id} 
+                          className={`flex flex-col transition-all duration-150 ${turn.isAI ? 'items-start' : 'items-end'}`}
+                        >
+                          <div className="flex items-center gap-2 mb-1 px-1">
+                            <span className="text-[10px] font-mono text-white/50">
+                              {turn.speaker}
+                            </span>
+                            {activeCallModal.recording_url && (
+                              <button
+                                onClick={() => handleSeek(turn.startSec)}
+                                className={`flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded transition-all ${
+                                  isActiveTurn
+                                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                                    : 'bg-white/5 hover:bg-emerald-500/20 text-emerald-400'
+                                }`}
+                                title={`Jump audio to ${formatAudioTime(turn.startSec)}`}
+                              >
+                                <Play className="w-2.5 h-2.5 fill-current" />
+                                <span>{formatAudioTime(turn.startSec)}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div 
+                            onClick={() => activeCallModal.recording_url && handleSeek(turn.startSec)}
+                            className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed cursor-pointer transition-all ${
+                              turn.isAI 
+                                ? (isActiveTurn 
+                                    ? 'bg-blue-600/40 border-2 border-emerald-400 text-white rounded-tl-sm shadow-lg shadow-emerald-500/10' 
+                                    : 'bg-blue-600/20 border border-blue-500/30 text-blue-100 rounded-tl-sm hover:border-blue-400/50')
+                                : (isActiveTurn 
+                                    ? 'bg-white/20 border-2 border-emerald-400 text-white rounded-tr-sm shadow-lg shadow-emerald-500/10' 
+                                    : 'bg-white/10 border border-white/15 text-white rounded-tr-sm hover:border-white/30')
+                            }`}
+                          >
+                            {turn.text}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()
                 ) : (
                   <div className="text-center py-8 text-xs text-white/40 italic">
                     No speech transcript captured for this call attempt.

@@ -6,7 +6,7 @@ import {
 import VoiceDateFilter from './VoiceDateFilter';
 import VoiceAuditDownload from './VoiceAuditDownload';
 import VoiceAgent360 from './VoiceAgent360';
-import { fetchVoiceOverview } from '../utils/voiceAgentService';
+import { fetchVoiceOverview, subscribeToVoiceTelemetry } from '../utils/voiceAgentService';
 
 function getDubaiToday() {
   try {
@@ -28,37 +28,51 @@ export default function VoiceAgent() {
   const [selectedYear, setSelectedYear] = useState(initialParts.year);
   const [selectedMonth, setSelectedMonth] = useState(initialParts.month);
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [customStartDate, setCustomStartDate] = useState(initialToday);
+  const [customEndDate, setCustomEndDate] = useState(initialToday);
   
   const [loading, setLoading] = useState(true);
   const [overviewData, setOverviewData] = useState(null);
   const [selectedAgentFor360, setSelectedAgentFor360] = useState(null);
 
   // Fetch real data from Supabase whenever date filters change
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetchVoiceOverview({
         timeFilter,
         selectedDate,
         selectedYear,
         selectedMonth,
-        selectedWeek
+        selectedWeek,
+        customStartDate,
+        customEndDate
       });
       setOverviewData(res);
     } catch (err) {
       console.error('Failed to load voice overview from Supabase:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
-  }, [timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek]);
+  }, [timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek, customStartDate, customEndDate]);
+
+  // Subscribe to live Realtime WebSocket updates
+  useEffect(() => {
+    const unsubscribe = subscribeToVoiceTelemetry(() => {
+      loadData(true); // silent background update
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek, customStartDate, customEndDate]);
 
   const filterParams = useMemo(() => ({
-    timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek
-  }), [timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek]);
+    timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek, customStartDate, customEndDate
+  }), [timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek, customStartDate, customEndDate]);
 
   // If user opened an Agent's 360 view
   if (selectedAgentFor360) {
@@ -87,14 +101,21 @@ export default function VoiceAgent() {
           </h1>
         </div>
 
-        <button
-          onClick={loadData}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Realtime Active</span>
+          </div>
+
+          <button
+            onClick={() => loadData(false)}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all shadow-sm"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* ─── Filter & Audit Download Controls (Side-by-Side) ───────── */}
@@ -110,6 +131,10 @@ export default function VoiceAgent() {
           setSelectedMonth={setSelectedMonth}
           selectedWeek={selectedWeek}
           setSelectedWeek={setSelectedWeek}
+          customStartDate={customStartDate}
+          setCustomStartDate={setCustomStartDate}
+          customEndDate={customEndDate}
+          setCustomEndDate={setCustomEndDate}
           activeLabel={overviewData?.label}
           loading={loading}
         />

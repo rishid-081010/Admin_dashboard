@@ -5,7 +5,10 @@ import {
   Building2, Radio, ExternalLink, ChevronDown, Check,
   Phone, MessageSquare
 } from 'lucide-react';
-import { fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount, markLeadAsCompleted, AGENTS_CONFIG, AGENT_IDS } from '../utils/voiceAgentService';
+import { 
+  fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount, 
+  markLeadAsCompleted, AGENTS_CONFIG, AGENT_IDS, subscribeToVoiceTelemetry 
+} from '../utils/voiceAgentService';
 import { fetchN8nWorkflows } from '../utils/n8nService';
 import N8nLogo from './N8nLogo';
 
@@ -119,6 +122,29 @@ export default function OverviewDashboard({ onNavigate }) {
   // Fetch live daily telemetry from Supabase & n8n
   useEffect(() => {
     loadAllTelemetry();
+  }, [selectedDate]);
+
+  // Subscribe to live Realtime WebSocket updates for voice telemetry
+  useEffect(() => {
+    const unsubscribe = subscribeToVoiceTelemetry((events) => {
+      // Re-fetch voice stats in background without displaying full screen spinner
+      fetchVoiceOverview({ timeFilter: 'Daily', selectedDate })
+        .then(res => {
+          if (res) updateVoiceStats(res);
+        })
+        .catch(err => console.warn('Background realtime sync error:', err));
+      
+      // Also silently refresh immediate activities stream
+      fetchImmediateActivities()
+        .then(acts => {
+          if (Array.isArray(acts)) setImmediateActivities(acts);
+        })
+        .catch(() => {});
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [selectedDate]);
 
   const handleRefresh = async () => {

@@ -32,6 +32,10 @@ export default function VoiceDateFilter({
   setSelectedMonth,
   selectedWeek,
   setSelectedWeek,
+  customStartDate,
+  setCustomStartDate,
+  customEndDate,
+  setCustomEndDate,
   activeLabel,
   loading
 }) {
@@ -116,9 +120,31 @@ export default function VoiceDateFilter({
       setTimeFilter('Monthly');
       setSelectedYear(viewYear);
       setSelectedMonth(viewMonth + 1);
+    } else if (mode === 'Custom') {
+      setTimeFilter('Custom');
     } else if (mode === 'All Time') {
       setTimeFilter('All Time');
     }
+  };
+
+  // Quick preset ranges for Custom mode
+  const handleCustomPreset = (days) => {
+    const end = new Date(TODAY_STR + 'T00:00:00Z');
+    const start = new Date(end);
+    start.setUTCDate(start.getUTCDate() - (days - 1));
+    const sStr = start.toISOString().split('T')[0];
+    const eStr = end.toISOString().split('T')[0];
+    if (setCustomStartDate) setCustomStartDate(sStr);
+    if (setCustomEndDate) setCustomEndDate(eStr);
+    setTimeFilter('Custom');
+  };
+
+  const handleThisMonthPreset = () => {
+    const parts = TODAY_STR.split('-');
+    const sStr = `${parts[0]}-${parts[1]}-01`;
+    if (setCustomStartDate) setCustomStartDate(sStr);
+    if (setCustomEndDate) setCustomEndDate(TODAY_STR);
+    setTimeFilter('Custom');
   };
 
   // Handle day click (Day mode)
@@ -163,7 +189,10 @@ export default function VoiceDateFilter({
   // Format active scope label for footer
   const formatScopeLabel = () => {
     if (timeFilter === 'All Time') {
-      return 'All Time (81,597 Historical Calls)';
+      return 'All Time (88,729 Historical Calls)';
+    }
+    if (timeFilter === 'Custom') {
+      return activeLabel || `Custom (${customStartDate || ''} to ${customEndDate || ''})`;
     }
     if (timeFilter === 'Monthly') {
       const activeM = (selectedMonth ? selectedMonth - 1 : viewMonth);
@@ -199,17 +228,19 @@ export default function VoiceDateFilter({
   const currentMode = 
     timeFilter === 'Daily' ? 'Day' :
     timeFilter === 'Weekly' ? 'Week' :
-    timeFilter === 'Monthly' ? 'Month' : 'All Time';
+    timeFilter === 'Monthly' ? 'Month' :
+    timeFilter === 'Custom' ? 'Custom' : 'All Time';
 
   return (
     <div className="w-full h-full bg-[#0c1829] border border-[#233549] rounded-2xl p-5 sm:p-6 shadow-xl shadow-black/40 flex flex-col justify-between">
-      {/* ─── Mode Selector Pills (Day / Week / Month / All Time) ───── */}
+      {/* ─── Mode Selector Pills (Day / Week / Month / Custom / All Time) ───── */}
       <div className="flex items-center justify-center mb-4 shrink-0">
-        <div className="bg-[#06111e] border border-[#1b2b3d] p-1 rounded-xl flex items-center gap-1 w-full max-w-xs justify-between">
+        <div className="bg-[#06111e] border border-[#1b2b3d] p-1 rounded-xl flex items-center gap-1 w-full max-w-md justify-between overflow-x-auto">
           {[
             { id: 'Day', label: 'Day' },
             { id: 'Week', label: 'Week' },
             { id: 'Month', label: 'Month' },
+            { id: 'Custom', label: 'Custom Range' },
             { id: 'All Time', label: 'All Time' }
           ].map(({ id, label }) => {
             const isActive = currentMode === id;
@@ -217,7 +248,7 @@ export default function VoiceDateFilter({
               <button
                 key={id}
                 onClick={() => handleModeChange(id)}
-                className={`flex-1 py-1 px-2 rounded-lg text-xs font-semibold whitespace-nowrap text-center transition-all ${
+                className={`flex-1 py-1 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap text-center transition-all ${
                   isActive
                     ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -436,7 +467,73 @@ export default function VoiceDateFilter({
         </div>
       )}
 
-      {/* ─── 4. ALL TIME MODE: CENTERED STATUS VIEW ─────────────────── */}
+      {/* ─── 4. CUSTOM RANGE MODE: DUAL DATE PICKER & PRESETS ─────────── */}
+      {currentMode === 'Custom' && (
+        <div className="flex-1 flex flex-col justify-between animate-fade-in my-1 space-y-4">
+          <div>
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Quick Filter Presets
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              {[
+                { label: 'Last 7 Days', days: 7 },
+                { label: 'Last 14 Days', days: 14 },
+                { label: 'Last 30 Days', days: 30 },
+              ].map(({ label, days }) => (
+                <button
+                  key={label}
+                  onClick={() => handleCustomPreset(days)}
+                  className="py-1.5 px-2 bg-[#06111e] hover:bg-[#1b2b3d] border border-[#1b2b3d] hover:border-emerald-500/40 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all text-center"
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                onClick={handleThisMonthPreset}
+                className="py-1.5 px-2 bg-[#06111e] hover:bg-[#1b2b3d] border border-[#1b2b3d] hover:border-emerald-500/40 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all text-center"
+              >
+                This Month
+              </button>
+            </div>
+
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Custom Date Window (Dubai GST)
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#06111e] border border-[#1b2b3d] rounded-2xl p-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">
+                  Start Date (From)
+                </label>
+                <input
+                  type="date"
+                  value={customStartDate || ''}
+                  onChange={(e) => setCustomStartDate && setCustomStartDate(e.target.value)}
+                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">
+                  End Date (To)
+                </label>
+                <input
+                  type="date"
+                  value={customEndDate || ''}
+                  onChange={(e) => setCustomEndDate && setCustomEndDate(e.target.value)}
+                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-2.5 text-xs text-emerald-300">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Telemetry data dynamically aggregated across selected period</span>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 5. ALL TIME MODE: CENTERED STATUS VIEW ─────────────────── */}
       {currentMode === 'All Time' && (
         <div className="flex-1 flex flex-col items-center justify-center animate-fade-in py-8 px-4 text-center my-auto">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 shadow-inner">
@@ -446,7 +543,7 @@ export default function VoiceDateFilter({
             Complete Historical Database
           </h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed mb-4">
-            Displaying all 81,597 calls placed across Sarah, James, and Aisha in the Supabase telephony cluster.
+            Displaying all 88,729 calls placed across Sarah, Maya, James, and Aisha in the Supabase telephony cluster.
           </p>
           <div className="inline-flex items-center gap-2 text-xs text-emerald-400/90 font-medium">
             <Check className="w-4 h-4 text-emerald-400" />

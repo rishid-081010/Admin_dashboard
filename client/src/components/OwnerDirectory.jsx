@@ -1365,100 +1365,49 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                 disabled={currentPage === 1} 
-                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
+                className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
               >
                 Previous
               </button>
               
-              {/* First Page */}
-              <button 
-                onClick={() => setCurrentPage(1)} 
-                className={`px-3 py-1 rounded-md text-xs font-medium ${currentPage === 1 ? 'bg-blue-600 text-white shadow-sm' : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white transition-colors'}`}
-              >
-                1
-              </button>
-              
-              {/* Ellipsis if beyond page 3 */}
-              {currentPage > 3 && (
-                <button 
-                  onClick={() => customPageInputRef.current?.focus()} 
-                  title="Click to jump to custom page"
-                  className="px-1.5 py-1 text-slate-500 hover:text-slate-300 text-xs transition-colors cursor-pointer"
-                >
-                  ...
-                </button>
-              )}
-              
-              {/* Preceding page */}
-              {currentPage > 2 && (
-                <button 
-                  onClick={() => setCurrentPage(currentPage - 1)} 
-                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white text-xs font-medium transition-colors"
-                >
-                  {currentPage - 1}
-                </button>
-              )}
+              {/* Dynamic Numbered Pages: 1, 2, 3 ... 5000 */}
+              {(() => {
+                const getPages = (cur, tot) => {
+                  if (tot <= 7) return Array.from({ length: tot }, (_, i) => i + 1);
+                  if (cur <= 4) return [1, 2, 3, 4, 5, '...', tot];
+                  if (cur >= tot - 3) return [1, '...', tot - 4, tot - 3, tot - 2, tot - 1, tot];
+                  return [1, '...', cur - 1, cur, cur + 1, '...', tot];
+                };
 
-              {/* Current page (if not first and not last) */}
-              {currentPage !== 1 && currentPage !== totalPages && (
-                <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs font-medium shadow-sm">
-                  {currentPage}
-                </button>
-              )}
-              
-              {/* Following page */}
-              {currentPage < totalPages - 1 && (
-                <button 
-                  onClick={() => setCurrentPage(currentPage + 1)} 
-                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white text-xs font-medium transition-colors"
-                >
-                  {currentPage + 1}
-                </button>
-              )}
-
-              {/* Second following page if near start */}
-              {currentPage === 1 && totalPages > 2 && (
-                <button 
-                  onClick={() => setCurrentPage(2)} 
-                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white text-xs font-medium transition-colors"
-                >
-                  2
-                </button>
-              )}
-              {currentPage === 1 && totalPages > 3 && (
-                <button 
-                  onClick={() => setCurrentPage(3)} 
-                  className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white text-xs font-medium transition-colors"
-                >
-                  3
-                </button>
-              )}
-              
-              {/* Ellipsis if not near end */}
-              {currentPage < totalPages - 2 && (
-                <button 
-                  onClick={() => customPageInputRef.current?.focus()} 
-                  title="Click to jump to custom page"
-                  className="px-1.5 py-1 text-slate-500 hover:text-slate-300 text-xs transition-colors cursor-pointer"
-                >
-                  ...
-                </button>
-              )}
-
-              {/* Last Page */}
-              {totalPages > 1 && currentPage !== 1 && (
-                <button 
-                  onClick={() => setCurrentPage(totalPages)} 
-                  className={`px-3 py-1 rounded-md text-xs font-medium ${currentPage === totalPages ? 'bg-blue-600 text-white shadow-sm' : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white transition-colors'}`}
-                >
-                  {totalPages.toLocaleString()}
-                </button>
-              )}
+                return getPages(currentPage, totalPages).map((p, idx) => {
+                  if (p === '...') {
+                    return (
+                      <span key={`dots-${idx}`} className="px-1.5 py-1 text-slate-500 font-mono text-xs select-none">
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = currentPage === p;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`min-w-[32px] px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all ${
+                        isCurrent
+                          ? 'bg-blue-600 text-white shadow-sm font-bold ring-1 ring-blue-400/50'
+                          : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white hover:border-blue-500/40 hover:bg-[#102035]'
+                      }`}
+                    >
+                      {p.toLocaleString()}
+                    </button>
+                  );
+                });
+              })()}
 
               <button 
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
                 disabled={currentPage >= totalPages} 
-                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
+                className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
               >
                 Next
               </button>
@@ -1644,25 +1593,49 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                 disabled={currentPage === 1}
-                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
+                className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
               >
                 Previous
               </button>
-              <button 
-                onClick={() => setCurrentPage(1)} 
-                className={`px-3 py-1 rounded-md text-xs font-medium ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white transition-colors'}`}
-              >
-                1
-              </button>
-              {currentPage !== 1 && (
-                <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs font-medium">
-                  {currentPage}
-                </button>
-              )}
+
+              {/* Dynamic Numbered Pages: 1, 2, 3 ... 5000 */}
+              {(() => {
+                const getPages = (cur, tot) => {
+                  if (tot <= 7) return Array.from({ length: tot }, (_, i) => i + 1);
+                  if (cur <= 4) return [1, 2, 3, 4, 5, '...', tot];
+                  if (cur >= tot - 3) return [1, '...', tot - 4, tot - 3, tot - 2, tot - 1, tot];
+                  return [1, '...', cur - 1, cur, cur + 1, '...', tot];
+                };
+
+                return getPages(currentPage, totalPages).map((p, idx) => {
+                  if (p === '...') {
+                    return (
+                      <span key={`grid-dots-${idx}`} className="px-1.5 py-1 text-slate-500 font-mono text-xs select-none">
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = currentPage === p;
+                  return (
+                    <button
+                      key={`grid-${p}`}
+                      onClick={() => setCurrentPage(p)}
+                      className={`min-w-[32px] px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all ${
+                        isCurrent
+                          ? 'bg-blue-600 text-white shadow-sm font-bold ring-1 ring-blue-400/50'
+                          : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white hover:border-blue-500/40 hover:bg-[#102035]'
+                      }`}
+                    >
+                      {p.toLocaleString()}
+                    </button>
+                  );
+                });
+              })()}
+
               <button 
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
-                className="px-3 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
+                className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
               >
                 Next
               </button>
@@ -1683,7 +1656,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                 <button
                   onClick={handleCustomPageSubmit}
                   disabled={!customPageInput || isNaN(parseInt(customPageInput, 10))}
-                  className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30"
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30"
                 >
                   Go
                 </button>

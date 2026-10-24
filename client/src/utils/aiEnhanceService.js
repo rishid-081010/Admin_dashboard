@@ -114,14 +114,16 @@ export async function enhancePhotoWithAI({
 }
 
 /**
- * Batch enhance multiple photos sequentially with live progress callbacks.
+ * Batch enhance multiple photos concurrently with live progress callbacks.
+ * Uses a concurrency pool of 2 to balance maximum speed with OpenAI rate limits.
  * 
  * @param {Object} params
  * @param {string} params.listingId
  * @param {Array<Object>} params.images - Array of image objects { id, original_image_location }
  * @param {string} [params.modelTier='flare']
  * @param {string} [params.prompt='']
- * @param {Function} [params.onProgress] - Callback (current, total, msg, img) => void
+ * @param {number} [params.concurrency=2] - Number of concurrent workers (default 2)
+ * @param {Function} [params.onProgress] - Callback (current, total, msg, img, stats) => void
  * @returns {Promise<{completed: number, failed: number, results: Array}>}
  */
 export async function enhanceListingBatch({
@@ -129,6 +131,7 @@ export async function enhanceListingBatch({
   images = [],
   modelTier = 'flare',
   prompt = '',
+  concurrency = 2,
   onProgress = () => {},
 }) {
   const total = images.length;
@@ -137,62 +140,82 @@ export async function enhanceListingBatch({
   const results = [];
   let completed = 0;
   let failed = 0;
+  let nextQueueIndex = 0;
 
   const modelLabel = String(modelTier).toLowerCase().includes('sunburst')
     ? 'Sunburst Luxury'
     : 'Flare High-Speed';
 
-  for (let i = 0; i < total; i++) {
-    const img = images[i];
-    let imgUrl = img.original_image_location || img.originalUrl || img.generated_image_location;
-    if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('data:')) {
-      imgUrl = 'https://dashboard.asquared.ae/' + imgUrl.replace(/^\/+/, '');
-    }
-    const imgId = img.id;
-
-    onProgress(
-      i + 1,
-      total,
-      `AI Enhancing photo ${i + 1} of ${total} with ${modelLabel}...`,
-      img
-    );
-
-    try {
-      const res = await enhancePhotoWithAI({
-        imageId: imgId,
-        imageUrl: imgUrl,
-        listingId,
-        modelTier,
-        prompt,
-      });
-
-      completed++;
-      results.push({ ...img, ...res, success: true });
+  // Worker loop pulling jobs from the shared queue
+  async function worker(workerId) {
+    while (nextQueueIndex < total) {
+      const idx = nextQueueIndex++;
+      const img = images[idx];
+      let imgUrl = img.original_image_location || img.originalUrl || img.generated_image_location;
+      if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('data:')) {
+        imgUrl = 'https://dashboard.asquared.ae/' + imgUrl.replace(/^\/+/, '');
+      }
+      const imgId = img.id;
 
       onProgress(
-        i + 1,
+        completed + failed,
         total,
-        `✨ Photo ${i + 1} of ${total} enhanced (${res.elapsed_seconds || 18}s)!`,
-        { ...img, ...res }
+        `AI Enhancing photo ${idx + 1} of ${total} (${modelLabel})...`,
+        img,
+        { completed, failed, inProgress: idx + 1, total }
       );
-    } catch (err) {
-      console.error(`Failed to enhance photo ${i + 1} (${img.id}):`, err);
-      failed++;
-      results.push({ ...img, success: false, error: err.message });
 
-      // Mark failed in Supabase so it can be retried
-      if (imgId) {
-        sbFetch(`/real_estate_images?id=eq.${imgId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            status: 'failed',
-            error_message: err.message,
-            updated_at: new Date().toISOString(),
-          }),
-        }).catch(() => {});
+      try {
+        const res = await enhancePhotoWithAI({
+          imageId: imgId,
+          imageUrl: imgUrl,
+          listingId,
+          modelTier,
+          prompt,
+        });
+
+        completed++;
+        results.push({ ...img, ...res, success: true });
+
+        onProgress(
+          completed + failed,
+          total,
+          `✨ Photo ${idx + 1} of ${total} finished (${res.elapsed_seconds || 16}s)!`,
+          { ...img, ...res },
+          { completed, failed, inProgress: idx + 1, total }
+        );
+      } catch (err) {
+        console.error(`Failed to enhance photo ${idx + 1} (${img.id}):`, err);
+        failed++;
+        results.push({ ...img, success: false, error: err.message });
+
+        // Mark failed in Supabase so it can be retried
+        if (imgId) {
+          sbFetch(`/real_estate_images?id=eq.${imgId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              status: 'failed',
+              error_message: err.message,
+              updated_at: new Date().toISOString(),
+            }),
+          }).catch(() => {});
+        }
+
+        onProgress(
+          completed + failed,
+          total,
+          `⚠ Photo ${idx + 1} of ${total} skipped (${err.message})`,
+          img,
+          { completed, failed, inProgress: idx + 1, total }
+        );
       }
     }
   }
+
+  // Execute with concurrency pool (default 2 concurrent workers)
+  const workerCount = Math.min(concurrency, total);
+  const workers = Array.from({ length: workerCount }, (_, i) => worker(i + 1));
+  await Promise.all(workers);
 
   // Final reconcile listing status in Supabase
   if (listingId && listingId !== 'general') {
