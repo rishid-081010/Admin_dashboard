@@ -172,7 +172,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
   // ─── People & Assignment Filters (All default to 'Any') ──────────────────
   const [agentFilter, setAgentFilter] = useState('Any');           // 'Any' | 'Unassigned' | agent name
-  const [bitrixStatusFilter, setBitrixStatusFilter] = useState('Any');
   const [phoneFilter, setPhoneFilter] = useState('Any');           // 'Any' | 'Yes' | 'No'
   const [classificationFilter, setClassificationFilter] = useState('Any'); // 'Any' | 'OWNER' | 'BUYER' | 'TENANT' | 'UNKNOWN'
   const [portfolioSizeFilter, setPortfolioSizeFilter] = useState('Any');   // 'Any' | 'Single Unit' | 'Multi-Unit (2+)' | 'Large Portfolio (5+)'
@@ -245,7 +244,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     if (sourceFileFilter !== 'Any') count++;
     if (dateFrom || dateTo) count++;
     if (agentFilter !== 'Any') count++;
-    if (bitrixStatusFilter !== 'Any') count++;
     if (phoneFilter !== 'Any') count++;
     if (classificationFilter !== 'Any') count++;
     if (portfolioSizeFilter !== 'Any') count++;
@@ -253,7 +251,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   }, [
     areaFilter, buildingFilter, propertyTypeFilter, bedroomsFilter, 
     sourceFileFilter, dateFrom, dateTo, 
-    agentFilter, bitrixStatusFilter, phoneFilter, classificationFilter, portfolioSizeFilter
+    agentFilter, phoneFilter, classificationFilter, portfolioSizeFilter
   ]);
 
   const clearFilters = () => {
@@ -265,7 +263,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     setDateFrom('');
     setDateTo('');
     setAgentFilter('Any');
-    setBitrixStatusFilter('Any');
     setPhoneFilter('Any');
     setClassificationFilter('Any');
     setPortfolioSizeFilter('Any');
@@ -343,12 +340,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         }
       }
 
-      // 8. Bitrix Status
-      if (bitrixStatusFilter !== 'Any') {
-        url += `&bitrix_status=eq.${encodeURIComponent(bitrixStatusFilter)}`;
-      }
-
-      // 9. Phone
+      // 7. Phone
       if (phoneFilter === 'Yes') {
         url += '&phone_normalized=not.is.null';
       } else if (phoneFilter === 'No') {
@@ -479,7 +471,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   }, [
     currentPage, searchTerm, areaFilter, buildingFilter, propertyTypeFilter,
     bedroomsFilter, sourceFileFilter, dateFrom, dateTo,
-    agentFilter, bitrixStatusFilter, phoneFilter, classificationFilter, portfolioSizeFilter, sortBy
+    agentFilter, phoneFilter, classificationFilter, portfolioSizeFilter, sortBy
   ]);
 
   // ─── Bitrix24 Integration Actions ────────────────────────────────────────
@@ -809,13 +801,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               </span>
             )}
 
-            {bitrixStatusFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
-                Status: {BITRIX_STATUSES.find(s => s.id === bitrixStatusFilter)?.name || bitrixStatusFilter}
-                <button onClick={() => setBitrixStatusFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-
             {phoneFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 font-medium">
                 Phone: {phoneFilter}
@@ -989,25 +974,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       <option value="Unassigned" className="bg-slate-900 text-white">Unassigned</option>
                       {availableAgents.map(ag => (
                         <option key={ag.id} value={ag.name} className="bg-slate-900 text-white">{ag.name}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="text-xs font-semibold text-white/70 block mb-1.5">
-                    Status
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={bitrixStatusFilter}
-                      onChange={(e) => { setBitrixStatusFilter(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm font-medium text-white outline-none cursor-pointer transition-all appearance-none"
-                    >
-                      {BITRIX_STATUSES.map(st => (
-                        <option key={st.id} value={st.id} className="bg-slate-900 text-white">{st.name}</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
