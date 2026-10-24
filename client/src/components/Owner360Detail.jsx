@@ -312,21 +312,26 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
         let filter = null;
         if (owner.match_criteria === 'EMIRATES_ID' && owner.emirates_id) {
           filter = `emirates_id=eq.${encodeURIComponent(owner.emirates_id)}`;
-        } else if (owner.match_criteria === 'MOBILE_AND_NAME' && owner.phone_normalized && (owner.raw_full_name || owner.name)) {
-          const matchName = owner.raw_full_name || owner.name;
-          filter = `phone_normalized=eq.${encodeURIComponent(owner.phone_normalized)}&full_name=eq.${encodeURIComponent(matchName)}`;
+        } else if (owner.phone_normalized || owner.phone) {
+          const rawP = String(owner.phone_normalized || owner.phone).trim();
+          const cleanP = rawP.startsWith('+') ? rawP : (rawP.startsWith('00') ? '+' + rawP.slice(2) : '+' + rawP.replace(/\D/g, ''));
+          const matchName = (owner.raw_full_name || owner.name || '').replace(/\s*\([^)]*\)/g, '').trim();
+          if (matchName) {
+            filter = `phone_normalized=eq.${encodeURIComponent(cleanP)}&full_name=ilike.${encodeURIComponent(matchName)}*`;
+          } else {
+            filter = `phone_normalized=eq.${encodeURIComponent(cleanP)}`;
+          }
+        } else if (owner.canonical_owner_id) {
+          filter = `canonical_owner_id=eq.${encodeURIComponent(owner.canonical_owner_id)}`;
         } else if (owner.sample_owner_id) {
           filter = `owner_id=eq.${encodeURIComponent(owner.sample_owner_id)}`;
         } else if (owner.id && owner.id !== 'UnknownID' && !owner.id.startsWith('MOB-') && !owner.id.startsWith('EID-')) {
           filter = `owner_id=eq.${encodeURIComponent(owner.id)}`;
-        } else if (owner.phone && owner.phone !== 'N/A' && !owner.phone.startsWith('+9714') && !owner.phone.startsWith('04')) {
-          const normP = String(owner.phone).trim();
-          filter = `phone_normalized=eq.${encodeURIComponent(normP)}`;
         }
 
         if (filter) {
           setCurrentFilter(filter);
-          const fields = 'id,owner_id,lead_id,full_name,building_name,master_area,unit_number,verified_size_sqft,verified_purchase_price,verified_purchase_date,verified_property_type,reported_property_type,property_type,property_category,vendor_source_file,phone_normalized,phone,emirates_id';
+          const fields = 'owner_id,lead_id,full_name,building_name,master_area,unit_number,verified_size_sqft,verified_purchase_price,verified_purchase_date,verified_property_type,reported_property_type,property_category,vendor_source_file,phone_normalized,phone_raw,emirates_id';
           const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${filter}&select=${fields}&limit=50&offset=0`;
           const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
           if (Array.isArray(res.data) && res.data.length > 0) {
@@ -353,7 +358,7 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
     try {
       const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
       const offset = relatedProperties.length;
-      const fields = 'id,owner_id,lead_id,full_name,building_name,master_area,unit_number,verified_size_sqft,verified_purchase_price,verified_purchase_date,verified_property_type,reported_property_type,property_type,property_category,vendor_source_file,phone_normalized,phone,emirates_id';
+      const fields = 'owner_id,lead_id,full_name,building_name,master_area,unit_number,verified_size_sqft,verified_purchase_price,verified_purchase_date,verified_property_type,reported_property_type,property_category,vendor_source_file,phone_normalized,phone_raw,emirates_id';
       const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${currentFilter}&select=${fields}&limit=50&offset=${offset}`;
       const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
       if (Array.isArray(res.data) && res.data.length > 0) {
@@ -403,9 +408,10 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
     : 'Unlisted Phone';
 
   // Resolved clean property metrics
-  const propertiesCount = processedData.cleanedCount > 0 
-    ? processedData.cleanedCount 
-    : (Number(owner.total_units || owner.units) || 1);
+  const totalKnownUnits = Number(owner.total_units || owner.units || 0);
+  const propertiesCount = totalKnownUnits > processedData.cleanedCount 
+    ? totalKnownUnits 
+    : (processedData.cleanedCount > 0 ? processedData.cleanedCount : 1);
 
   const assignedAgent = globalAgentName || 'Mayank';
 
@@ -686,7 +692,16 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                 <div>
                   <h2 className="text-lg font-bold text-white tracking-tight">Registered Properties</h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Showing <strong className="text-white">{cleanedProperties.length}</strong> unique verified {cleanedProperties.length > 1 ? 'assets' : 'asset'}
+                    Showing <strong className="text-white">{cleanedProperties.length}</strong>
+                    {propertiesCount > cleanedProperties.length && (
+                      <> of <strong className="text-white">{propertiesCount.toLocaleString()}</strong></>
+                    )}{' '}
+                    unique verified {propertiesCount > 1 ? 'assets' : 'asset'}
+                    {hasMore && (
+                      <span className="text-blue-400 ml-1.5 font-medium">
+                        ({(propertiesCount - cleanedProperties.length).toLocaleString()} more available)
+                      </span>
+                    )}
                     {processedData.duplicatesCollapsedCount > 0 && (
                       <span className="text-emerald-400 ml-1.5 font-medium">
                         (Collapsed {processedData.duplicatesCollapsedCount} duplicate vendor import rows)
