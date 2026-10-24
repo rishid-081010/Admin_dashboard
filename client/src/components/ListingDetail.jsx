@@ -138,9 +138,20 @@ export default function ListingDetail({ listingId, onBack }) {
         setRentalSpecs((prev) => ({ ...prev, price: String(currentListing.price) }));
       }
 
-      // Fetch images
-      const imagesData = await sbFetch(`/real_estate_images?listing_id=eq.${listingId}&select=*&order=order_index.asc,created_at.asc`);
-      setImages(imagesData || []);
+      // Fetch images with resilient sorting
+      try {
+        const imagesData = await sbFetch(`/real_estate_images?listing_id=eq.${listingId}&select=*&order=display_order.asc,order_index.asc,created_at.asc`);
+        setImages(imagesData || []);
+      } catch (imgErr) {
+        console.warn('Compound image order query failed, attempting created_at fallback:', imgErr);
+        try {
+          const fallbackData = await sbFetch(`/real_estate_images?listing_id=eq.${listingId}&select=*&order=created_at.asc`);
+          setImages(fallbackData || []);
+        } catch (innerErr) {
+          console.error('Failed to load listing images:', innerErr);
+          setImages([]);
+        }
+      }
     } catch (err) {
       console.error('Failed to load listing:', err);
       setError(err.message);
@@ -390,6 +401,7 @@ export default function ListingDetail({ listingId, onBack }) {
               listing_id: listingId,
               original_image_location: res.publicUrl,
               original_filename: file.name,
+              display_order: images.length + i,
               order_index: images.length + i,
               status: 'queued',
               room_type: 'Property_Photo',
@@ -437,7 +449,7 @@ export default function ListingDetail({ listingId, onBack }) {
       for (let i = 0; i < reordered.length; i++) {
         await sbFetch(`/real_estate_images?id=eq.${reordered[i].id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ order_index: i }),
+          body: JSON.stringify({ display_order: i, order_index: i }),
         });
       }
     } catch (ignore) {}
