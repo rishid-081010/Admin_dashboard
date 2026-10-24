@@ -341,7 +341,10 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
       } else {
         filter = `phone_normalized=eq.${encodeURIComponent(cleanP)}`;
       }
-    } else if (owner.canonical_owner_id) {
+    } else if (owner.match_criteria === 'CORPORATE_ENTITY' || (!owner.phone_normalized && !owner.phone && !owner.emirates_id && (owner.raw_full_name || owner.name))) {
+      const matchName = (owner.raw_full_name || owner.name || '').replace(/\s*\([^)]*\)/g, '').trim();
+      filter = `full_name=ilike.${encodeURIComponent(matchName)}*`;
+    } else if (owner.canonical_owner_id && !owner.canonical_owner_id.startsWith('DEED-')) {
       filter = `canonical_owner_id=eq.${encodeURIComponent(owner.canonical_owner_id)}`;
     } else if (owner.sample_owner_id) {
       filter = `owner_id=eq.${encodeURIComponent(owner.sample_owner_id)}`;
