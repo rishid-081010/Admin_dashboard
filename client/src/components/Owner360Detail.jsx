@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ArrowLeft, Building2, User, Users, UserCheck, FileText, Sparkles, 
   Phone, Mail, MapPin, CheckCircle2, AlertCircle, AlertTriangle,
-  Copy, ExternalLink, ShieldCheck, ChevronDown, Send, MessageSquare, 
+  Copy, ExternalLink, ShieldCheck, ChevronDown, ChevronLeft, ChevronRight, Loader2, Send, MessageSquare, 
   HelpCircle, Bot, Share2, Layers, Tag, Check, Filter
 } from 'lucide-react';
 import axios from 'axios';
@@ -293,87 +293,75 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
   const [activeTab, setActiveTab] = useState('portfolio');
   const [relatedProperties, setRelatedProperties] = useState([]);
   const [loadingProps, setLoadingProps] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
   const [currentFilter, setCurrentFilter] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [customPageInput, setCustomPageInput] = useState('');
   const [showAskModal, setShowAskModal] = useState(false);
   const [showFollowupModal, setShowFollowupModal] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+  const itemsPerPage = 50;
 
-  // Fetch related properties from Supabase
-  useEffect(() => {
-    const fetchRelated = async () => {
-      if (!owner) return;
-      setLoadingProps(true);
-      try {
-        const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
-        
-        let filter = null;
-        if (owner.match_criteria === 'EMIRATES_ID' && owner.emirates_id) {
-          filter = `emirates_id=eq.${encodeURIComponent(owner.emirates_id)}`;
-        } else if (owner.phone_normalized || owner.phone) {
-          const rawP = String(owner.phone_normalized || owner.phone).trim();
-          const cleanP = rawP.startsWith('+') ? rawP : (rawP.startsWith('00') ? '+' + rawP.slice(2) : '+' + rawP.replace(/\D/g, ''));
-          const matchName = (owner.raw_full_name || owner.name || '').replace(/\s*\([^)]*\)/g, '').trim();
-          if (matchName) {
-            filter = `phone_normalized=eq.${encodeURIComponent(cleanP)}&full_name=ilike.${encodeURIComponent(matchName)}*`;
-          } else {
-            filter = `phone_normalized=eq.${encodeURIComponent(cleanP)}`;
-          }
-        } else if (owner.canonical_owner_id) {
-          filter = `canonical_owner_id=eq.${encodeURIComponent(owner.canonical_owner_id)}`;
-        } else if (owner.sample_owner_id) {
-          filter = `owner_id=eq.${encodeURIComponent(owner.sample_owner_id)}`;
-        } else if (owner.id && owner.id !== 'UnknownID' && !owner.id.startsWith('MOB-') && !owner.id.startsWith('EID-')) {
-          filter = `owner_id=eq.${encodeURIComponent(owner.id)}`;
-        }
+  // Resolve total units and total pages
+  const totalUnits = Number(owner?.total_units || owner?.units || 0);
+  const totalPages = Math.max(1, Math.ceil(totalUnits / itemsPerPage));
 
-        if (filter) {
-          setCurrentFilter(filter);
-          const fields = 'owner_id,lead_id,full_name,building_name,master_area,unit_number,verified_size_sqft,verified_purchase_price,verified_purchase_date,verified_property_type,reported_property_type,property_category,vendor_source_file,phone_normalized,phone_raw,emirates_id';
-          const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${filter}&select=${fields}&limit=50&offset=0`;
-          const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
-          if (Array.isArray(res.data) && res.data.length > 0) {
-            setRelatedProperties(res.data);
-            const totalUnits = Number(owner.total_units || owner.units) || res.data.length;
-            setHasMore(res.data.length === 50 && (totalUnits > 50 || res.data.length < totalUnits));
-          } else {
-            setRelatedProperties([]);
-            setHasMore(false);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load related properties:', e);
-      } finally {
-        setLoadingProps(false);
-      }
-    };
-    fetchRelated();
-  }, [owner]);
-
-  const handleLoadMore = async () => {
-    if (!currentFilter || loadingMore) return;
-    setLoadingMore(true);
+  const fetchPropertiesForPage = async (page, activeFilter) => {
+    const f = activeFilter || currentFilter;
+    if (!f) return;
+    setLoadingProps(true);
     try {
       const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
-      const offset = relatedProperties.length;
+      const offset = (page - 1) * itemsPerPage;
       const fields = 'owner_id,lead_id,full_name,building_name,master_area,unit_number,verified_size_sqft,verified_purchase_price,verified_purchase_date,verified_property_type,reported_property_type,property_category,vendor_source_file,phone_normalized,phone_raw,emirates_id';
-      const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${currentFilter}&select=${fields}&limit=50&offset=${offset}`;
+      const url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/owners_data?${f}&select=${fields}&limit=${itemsPerPage}&offset=${offset}`;
       const res = await axios.get(url, { headers: { apikey, Authorization: `Bearer ${apikey}` } });
-      if (Array.isArray(res.data) && res.data.length > 0) {
-        const nextList = [...relatedProperties, ...res.data];
-        setRelatedProperties(nextList);
-        const totalUnits = Number(owner.total_units || owner.units) || 0;
-        setHasMore(res.data.length === 50 && (totalUnits === 0 || nextList.length < totalUnits));
-      } else {
-        setHasMore(false);
+      if (Array.isArray(res.data)) {
+        setRelatedProperties(res.data);
       }
     } catch (e) {
-      console.error('Failed to load more properties:', e);
+      console.error('Failed to load properties for page:', e);
     } finally {
-      setLoadingMore(false);
+      setLoadingProps(false);
     }
+  };
+
+  // Determine query filter and load page 1 on mount or when owner changes
+  useEffect(() => {
+    if (!owner) return;
+    let filter = null;
+    if (owner.match_criteria === 'EMIRATES_ID' && owner.emirates_id) {
+      filter = `emirates_id=eq.${encodeURIComponent(owner.emirates_id)}`;
+    } else if (owner.phone_normalized || owner.phone) {
+      const rawP = String(owner.phone_normalized || owner.phone).trim();
+      const cleanP = rawP.startsWith('+') ? rawP : (rawP.startsWith('00') ? '+' + rawP.slice(2) : '+' + rawP.replace(/\D/g, ''));
+      const matchName = (owner.raw_full_name || owner.name || '').replace(/\s*\([^)]*\)/g, '').trim();
+      if (matchName) {
+        filter = `phone_normalized=eq.${encodeURIComponent(cleanP)}&full_name=ilike.${encodeURIComponent(matchName)}*`;
+      } else {
+        filter = `phone_normalized=eq.${encodeURIComponent(cleanP)}`;
+      }
+    } else if (owner.canonical_owner_id) {
+      filter = `canonical_owner_id=eq.${encodeURIComponent(owner.canonical_owner_id)}`;
+    } else if (owner.sample_owner_id) {
+      filter = `owner_id=eq.${encodeURIComponent(owner.sample_owner_id)}`;
+    } else if (owner.id && owner.id !== 'UnknownID' && !owner.id.startsWith('MOB-') && !owner.id.startsWith('EID-')) {
+      filter = `owner_id=eq.${encodeURIComponent(owner.id)}`;
+    }
+
+    setCurrentFilter(filter);
+    setCurrentPage(1);
+
+    if (filter) {
+      fetchPropertiesForPage(1, filter);
+    }
+  }, [owner]);
+
+  const goToPage = (targetPage) => {
+    const pageNum = Math.max(1, Math.min(totalPages, targetPage));
+    if (pageNum === currentPage && relatedProperties.length > 0) return;
+    setCurrentPage(pageNum);
+    fetchPropertiesForPage(pageNum, currentFilter);
   };
 
   const copyToClipboard = (text, field) => {
@@ -688,35 +676,44 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
           {/* TAB 1: PORTFOLIO */}
           {activeTab === 'portfolio' && (
             <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 shadow-xl shadow-black/40">
-              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#1c2e42]">
                 <div>
-                  <h2 className="text-lg font-bold text-white tracking-tight">Registered Properties</h2>
+                  <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                    <span>Registered Properties</span>
+                    {loadingProps && <Loader2 className="w-4 h-4 animate-spin text-blue-400" />}
+                  </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Showing <strong className="text-white">{cleanedProperties.length}</strong>
-                    {propertiesCount > cleanedProperties.length && (
-                      <> of <strong className="text-white">{propertiesCount.toLocaleString()}</strong></>
-                    )}{' '}
-                    unique verified {propertiesCount > 1 ? 'assets' : 'asset'}
-                    {hasMore && (
-                      <span className="text-blue-400 ml-1.5 font-medium">
-                        ({(propertiesCount - cleanedProperties.length).toLocaleString()} more available)
-                      </span>
-                    )}
-                    {processedData.duplicatesCollapsedCount > 0 && (
-                      <span className="text-emerald-400 ml-1.5 font-medium">
-                        (Collapsed {processedData.duplicatesCollapsedCount} duplicate vendor import rows)
+                    Showing <strong className="text-white">{((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong className="text-white">{Math.min(currentPage * itemsPerPage, propertiesCount)}</strong> of <strong className="text-white">{propertiesCount.toLocaleString()}</strong> unique verified assets
+                    {totalPages > 1 && (
+                      <span className="text-blue-400 font-semibold ml-1.5 font-mono">
+                        · Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()}
                       </span>
                     )}
                   </p>
                 </div>
-                {hasMore && (
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="self-start sm:self-auto px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                  >
-                    {loadingMore ? 'Loading Next 50...' : 'Load Next 50 Deeds'}
-                  </button>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                    <button
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1 || loadingProps}
+                      className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-lg text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span>Prev</span>
+                    </button>
+                    <span className="px-2.5 py-1 rounded-lg bg-[#06111e] border border-[#1a2c42] text-xs font-mono font-bold text-blue-400">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage >= totalPages || loadingProps}
+                      className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-lg text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -828,25 +825,92 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                 </table>
               </div>
 
-              {hasMore && (
-                <div className="mt-4 pt-4 border-t border-[#1b2b3d] flex items-center justify-between">
-                  <div className="text-xs text-slate-400">
-                    Loaded <strong className="text-white">{relatedProperties.length}</strong> raw deed rows
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#1c2e42] mt-4">
+                  <div className="text-xs text-slate-400 font-mono">
+                    Page <strong className="text-white">{currentPage.toLocaleString()}</strong> of <strong className="text-white">{totalPages.toLocaleString()}</strong> ({itemsPerPage} properties per page)
                   </div>
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="px-4 py-2 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-md"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Loading Next 50 Deeds...</span>
-                      </>
-                    ) : (
-                      <span>Load Next 50 Deeds</span>
-                    )}
-                  </button>
+
+                  <div className="flex items-center gap-1.5 flex-wrap justify-center sm:justify-end">
+                    {/* Previous Button */}
+                    <button
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1 || loadingProps}
+                      className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span>Previous</span>
+                    </button>
+
+                    {/* Numbered Page Buttons: 1, 2, 3 ... totalPages */}
+                    {(() => {
+                      const getPages = (cur, tot) => {
+                        if (tot <= 7) return Array.from({ length: tot }, (_, i) => i + 1);
+                        if (cur <= 4) return [1, 2, 3, 4, 5, '...', tot];
+                        if (cur >= tot - 3) return [1, '...', tot - 4, tot - 3, tot - 2, tot - 1, tot];
+                        return [1, '...', cur - 1, cur, cur + 1, '...', tot];
+                      };
+
+                      return getPages(currentPage, totalPages).map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span key={`dots-${idx}`} className="px-1.5 py-1 text-slate-500 font-mono text-xs select-none">
+                              ...
+                            </span>
+                          );
+                        }
+                        const isCurrent = currentPage === p;
+                        return (
+                          <button
+                            key={p}
+                            onClick={() => goToPage(p)}
+                            disabled={loadingProps}
+                            className={`min-w-[32px] px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all ${
+                              isCurrent
+                                ? 'bg-blue-600 text-white shadow-sm font-bold ring-1 ring-blue-400/50'
+                                : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white hover:border-blue-500/40 hover:bg-[#102035]'
+                            }`}
+                          >
+                            {p.toLocaleString()}
+                          </button>
+                        );
+                      });
+                    })()}
+
+                    {/* Next Button */}
+                    <button
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage >= totalPages || loadingProps}
+                      className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Custom Page Input Box */}
+                    <div className="flex items-center gap-1.5 ml-2 pl-2.5 border-l border-[#233549]">
+                      <span className="text-xs text-slate-400 whitespace-nowrap font-medium">Go to:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={totalPages}
+                        value={customPageInput}
+                        onChange={(e) => setCustomPageInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const val = parseInt(customPageInput, 10);
+                            if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                              goToPage(val);
+                              setCustomPageInput('');
+                            }
+                          }
+                        }}
+                        placeholder="Page #"
+                        className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
