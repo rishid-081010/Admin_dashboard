@@ -1,18 +1,45 @@
 Options -MultiViews
 DirectoryIndex index.html
 
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE application/javascript
+  AddOutputFilterByType DEFLATE text/javascript
+  AddOutputFilterByType DEFLATE text/css
+  AddOutputFilterByType DEFLATE text/plain
+  AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/xml
+  AddOutputFilterByType DEFLATE application/json
+  AddOutputFilterByType DEFLATE application/xml
+  AddOutputFilterByType DEFLATE image/svg+xml
+  AddOutputFilterByType DEFLATE application/x-font-ttf
+  AddOutputFilterByType DEFLATE font/opentype
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Disable caching for index.html so users always receive latest bundle
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+  </FilesMatch>
+
+  # Cache static hashed assets (JS, CSS, images) for 1 year
+  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$">
+    Header set Cache-Control "max-age=31536000, public, immutable"
+  </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /dashboard/
 
-  # If direct file or directory exists, serve it
+  # Pass through existing files and directories
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # For any other route, rewrite to index.html
-  RewriteRule ^ /dashboard/index.html [L]
+  # Fallback to local index.html for Single Page Application routing
+  RewriteRule ^ index.html [L]
 </IfModule>
 
-# Fallback 404 handler for LiteSpeed
-ErrorDocument 404 /dashboard/index.html
+# Fallback 404 handler
+ErrorDocument 404 index.html

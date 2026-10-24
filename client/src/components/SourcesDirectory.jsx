@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Download, ChevronLeft, ChevronRight, Search, X, Loader2 } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, Search, X, ChevronDown, FileSpreadsheet, FileText, Check } from 'lucide-react';
+import { SOURCES_DATA } from '../data/sourcesData';
+
 
 const escRegex = (s) => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
@@ -40,8 +42,8 @@ function getMatchScore(item, query) {
 }
 
 export default function SourcesDirectory() {
-  const [sourcesList, setSourcesList] = useState([]);
-  const [loadingSources, setLoadingSources] = useState(true);
+
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('All');
   const [selectedSizeFilter, setSelectedSizeFilter] = useState('All');
@@ -50,6 +52,7 @@ export default function SourcesDirectory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   const [showCatalogBanner, setShowCatalogBanner] = useState(() => {
     try {
       return localStorage.getItem('asq_dismiss_parquet_banner') !== 'true';
@@ -58,24 +61,33 @@ export default function SourcesDirectory() {
     }
   });
 
-  // Dynamically load sourcesData on mount to strip 646 kB from initial JS bundle
+  // Dismiss dropdown on click outside or Escape key
   useEffect(() => {
-    let active = true;
-    import('../data/sourcesData')
-      .then((mod) => {
-        if (active) {
-          setSourcesList(mod.SOURCES_DATA || []);
-          setLoadingSources(false);
-        }
-      })
-      .catch((err) => {
-        console.warn('Sources data dynamic load note:', err);
-        if (active) setLoadingSources(false);
-      });
+    const handlePointerDown = (e) => {
+      if (!e.target.closest('[data-dropdown-container]')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
-      active = false;
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  // Close dropdown on filter, search, sort, or pagination change
+  useEffect(() => {
+    setOpenDropdownId(null);
+  }, [currentPage, itemsPerPage, searchTerm, selectedFormat, selectedSizeFilter, selectedStatusFilter, sortBy]);
 
   const dismissBanner = () => {
     setShowCatalogBanner(false);
@@ -90,19 +102,19 @@ export default function SourcesDirectory() {
   const filteredAndSorted = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
 
-    let result = sourcesList.filter(item => {
+    let result = (SOURCES_DATA || []).filter(item => {
       // 1. Exact filename or status search
       const matchesSearch = !q || 
-        item.filename.toLowerCase().includes(q) || 
+        ((item.filename || '').toLowerCase().includes(q)) || 
         (item.status && item.status.toLowerCase().includes(q)) ||
         (item.duplicate_of && item.duplicate_of.toLowerCase().includes(q));
 
       // 2. Real format/extension filter
-      const matchesFormat = selectedFormat === 'All' || item.extension === selectedFormat;
+      const matchesFormat = !selectedFormat || selectedFormat === 'All' || selectedFormat === 'All Formats' || selectedFormat.toLowerCase() === 'all' || (item.extension && item.extension.toUpperCase() === selectedFormat.toUpperCase());
 
       // 3. Real size filter
       let matchesSize = true;
-      const kb = item.size_bytes / 1024;
+      const kb = (item.size_bytes || 0) / 1024;
       if (selectedSizeFilter === '<500KB') matchesSize = kb < 500;
       else if (selectedSizeFilter === '500KB-2MB') matchesSize = kb >= 500 && kb <= 2048;
       else if (selectedSizeFilter === '2MB-10MB') matchesSize = kb > 2048 && kb <= 10240;
@@ -110,20 +122,20 @@ export default function SourcesDirectory() {
 
       // 4. Status filter
       let matchesStatus = true;
-      if (selectedStatusFilter === 'processed') matchesStatus = item.status === 'processed';
-      else if (selectedStatusFilter === 'duplicate') matchesStatus = !!item.duplicate_of;
+      if (selectedStatusFilter === 'processed') matchesStatus = (item.status || 'processed').toLowerCase() === 'processed';
+      else if (selectedStatusFilter === 'duplicate') matchesStatus = !!item.duplicate_of || (item.status || '').toLowerCase() === 'duplicate';
 
       return matchesSearch && matchesFormat && matchesSize && matchesStatus;
     });
 
     // Sorting
     result.sort((a, b) => {
-      if (sortBy === 'name_asc') return a.filename.localeCompare(b.filename);
-      if (sortBy === 'name_desc') return b.filename.localeCompare(a.filename);
+      if (sortBy === 'name_asc') return (a.filename || '').localeCompare(b.filename || '');
+      if (sortBy === 'name_desc') return (b.filename || '').localeCompare(a.filename || '');
       if (sortBy === 'rows_desc') return (b.accepted_rows || 0) - (a.accepted_rows || 0);
       if (sortBy === 'rows_asc') return (a.accepted_rows || 0) - (b.accepted_rows || 0);
-      if (sortBy === 'size_desc') return b.size_bytes - a.size_bytes;
-      if (sortBy === 'size_asc') return a.size_bytes - b.size_bytes;
+      if (sortBy === 'size_desc') return (b.size_bytes || 0) - (a.size_bytes || 0);
+      if (sortBy === 'size_asc') return (a.size_bytes || 0) - (b.size_bytes || 0);
       
       // When Default Order is selected AND user has entered a search term:
       // Prioritize files starting with the query (e.g. "Al Satwa", "Al Barsha" appear first)
@@ -133,7 +145,7 @@ export default function SourcesDirectory() {
         if (scoreB !== scoreA) {
           return scoreB - scoreA;
         }
-        return a.filename.localeCompare(b.filename);
+        return (a.filename || '').localeCompare(b.filename || '');
       }
 
       return 0; // Default order matches Image 1
@@ -149,17 +161,37 @@ export default function SourcesDirectory() {
     return filteredAndSorted.slice(start, start + itemsPerPage);
   }, [filteredAndSorted, currentPage, itemsPerPage]);
 
-  const handleDownload = (item, e) => {
-    if (e) e.stopPropagation();
-    setDownloadingId(item.id);
+  const handleDownload = (item, type = 'raw', e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setOpenDropdownId(null);
+    setDownloadingId(`${item.id}-${type}`);
+
+    const isCleaned = type === 'cleaned';
+    const cleanBaseName = (item.filename || 'source').replace(/\.[^/.]+$/, '');
     
-    const link = document.createElement('a');
-    link.href = item.download_url;
-    link.download = item.filename;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    let targetUrl = item.download_url;
+    let targetFilename = item.filename || 'source.xlsx';
+
+    if (isCleaned) {
+      targetFilename = item.cleaned_filename || `${cleanBaseName}_cleaned.csv`;
+      targetUrl = item.cleaned_url 
+        || item.cleaned_download_url 
+        || `https://qgxgtavkovqklijfpnfl.supabase.co/storage/v1/object/public/dubai_real_estate/cleaned_sources/${encodeURIComponent(targetFilename)}`;
+    }
+
+    if (targetUrl) {
+      const link = document.createElement('a');
+      link.href = targetUrl;
+      link.download = targetFilename;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
     setTimeout(() => {
       setDownloadingId(null);
@@ -354,77 +386,152 @@ export default function SourcesDirectory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1b2b3d]/60">
-              {loadingSources ? (
-                <tr>
-                  <td colSpan="6" className="py-16 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
-                      <span className="text-xs font-medium">Loading catalog sources...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : paginated.length === 0 ? (
+              {paginated.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-16 text-center text-slate-400 text-xs">
                     No files found matching the selected filters.
                   </td>
                 </tr>
               ) : (
-                paginated.map((item) => (
-                <tr 
-                  key={item.id}
-                  className="hover:bg-[#102035] transition-colors group cursor-pointer"
-                  onClick={() => handleDownload(item)}
-                >
-                  {/* File name */}
-                  <td className="py-3.5 px-5 text-sm text-slate-200 font-normal">
-                    <div className="flex items-center justify-between gap-3">
-                      <span 
-                        className="truncate max-w-[460px] group-hover:text-blue-300 transition-colors" 
-                        title={item.filename}
-                      >
-                        {item.filename}
-                      </span>
-                      <button 
-                        onClick={(e) => handleDownload(item, e)}
-                        title="Download file"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[#1b2b3d] rounded text-slate-400 hover:text-white shrink-0"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
+                paginated.map((item, index) => {
+                  const isOpen = openDropdownId === item.id;
+                  const isNearBottom = paginated.length > 3 && index >= paginated.length - 3;
+                  const isDownloadingThis = downloadingId && downloadingId.startsWith(`${item.id}-`);
 
-                  {/* Tabs */}
-                  <td className="py-3.5 px-4 text-sm text-slate-400">
-                    {item.tabs || 1}
-                  </td>
+                  return (
+                    <tr 
+                      key={item.id}
+                      className={`hover:bg-[#102035] transition-colors group cursor-pointer ${
+                        isOpen ? 'bg-[#102035]/80 relative z-30' : ''
+                      }`}
+                      onClick={() => setOpenDropdownId(prev => (prev === item.id ? null : item.id))}
+                    >
+                      {/* File name */}
+                      <td className="py-3.5 px-5 text-sm text-slate-200 font-normal">
+                        <div className="flex items-center justify-between gap-3">
+                          <span 
+                            className="truncate max-w-[460px] group-hover:text-blue-300 transition-colors" 
+                            title={item.filename}
+                          >
+                            {item.filename}
+                          </span>
 
-                  {/* Accepted rows */}
-                  <td className="py-3.5 px-4 text-sm text-slate-300 font-mono">
-                    {item.accepted_rows !== null && item.accepted_rows !== undefined 
-                      ? item.accepted_rows.toLocaleString() 
-                      : '—'}
-                  </td>
+                          {/* Action Dropdown Container */}
+                          <div 
+                            className="relative shrink-0" 
+                            data-dropdown-container
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDropdownId(prev => (prev === item.id ? null : item.id));
+                              }}
+                              title="Download options"
+                              aria-expanded={isOpen}
+                              aria-haspopup="true"
+                              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                                isOpen
+                                  ? 'opacity-100 bg-blue-600/25 text-blue-300 border border-blue-500/40 shadow-sm'
+                                  : isDownloadingThis
+                                  ? 'opacity-100 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                  : 'max-sm:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 hover:bg-[#1b2b3d] text-slate-400 hover:text-white border border-transparent hover:border-[#233549]'
+                              }`}
+                            >
+                              {isDownloadingThis ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <Download className="w-3.5 h-3.5" />
+                              )}
+                              <ChevronDown className={`w-3 h-3 transition-transform duration-150 ${isOpen ? 'rotate-180 text-blue-300' : 'text-slate-400'}`} />
+                            </button>
 
-                  {/* Quarantined */}
-                  <td className="py-3.5 px-4 text-sm text-slate-500 font-mono">
-                    {item.quarantined ? item.quarantined.toLocaleString() : '—'}
-                  </td>
+                            {isOpen && (
+                              <div 
+                                data-dropdown-menu
+                                onClick={(e) => e.stopPropagation()}
+                                className={`absolute right-0 ${
+                                  isNearBottom ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                                } z-50 w-60 bg-[#0c1829] border border-[#233549] rounded-xl shadow-2xl shadow-black/80 py-1.5 text-xs select-none backdrop-blur-md`}
+                              >
+                                <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider uppercase text-slate-400 border-b border-[#1b2b3d]/60 mb-1">
+                                  Download Options
+                                </div>
 
-                  {/* Status pill */}
-                  <td className="py-3.5 px-4 text-sm">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#06111e] text-slate-300 border border-[#1b2b3d]">
-                      {item.status || 'processed'}
-                    </span>
-                  </td>
+                                {/* Option 1: Original (Raw) */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDownload(item, 'raw', e)}
+                                  className="w-full flex items-start gap-2.5 px-3 py-2 text-left hover:bg-[#102035] transition-colors group/item cursor-pointer text-slate-200 hover:text-white"
+                                >
+                                  <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-slate-200 group-hover/item:text-white flex items-center justify-between">
+                                      <span>Original (Raw)</span>
+                                      <span className="text-[10px] font-normal text-slate-400 uppercase">{item.extension || 'XLSX'}</span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 truncate">
+                                      {item.size_formatted ? `${item.size_formatted} vendor file` : 'Vendor spreadsheet'}
+                                    </div>
+                                  </div>
+                                </button>
 
-                  {/* Duplicate of */}
-                  <td className="py-3.5 px-5 text-sm text-slate-500 truncate max-w-[150px]" title={item.duplicate_of || ''}>
-                    {item.duplicate_of || '—'}
-                  </td>
-                </tr>
-              )))}
+                                {/* Option 2: Cleaned (CSV) */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDownload(item, 'cleaned', e)}
+                                  className="w-full flex items-start gap-2.5 px-3 py-2 text-left hover:bg-[#102035] transition-colors group/item cursor-pointer text-slate-200 hover:text-white"
+                                >
+                                  <FileText className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-slate-200 group-hover/item:text-blue-300 flex items-center justify-between">
+                                      <span>Cleaned (CSV)</span>
+                                      <span className="text-[10px] font-normal text-blue-400/80 uppercase">CSV</span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 truncate">
+                                      Normalized standard columns
+                                    </div>
+                                  </div>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Tabs */}
+                      <td className="py-3.5 px-4 text-sm text-slate-400">
+                        {item.tabs || 1}
+                      </td>
+
+                      {/* Accepted rows */}
+                      <td className="py-3.5 px-4 text-sm text-slate-300 font-mono">
+                        {item.accepted_rows !== null && item.accepted_rows !== undefined 
+                          ? item.accepted_rows.toLocaleString() 
+                          : '—'}
+                      </td>
+
+                      {/* Quarantined */}
+                      <td className="py-3.5 px-4 text-sm text-slate-500 font-mono">
+                        {item.quarantined ? item.quarantined.toLocaleString() : '—'}
+                      </td>
+
+                      {/* Status pill */}
+                      <td className="py-3.5 px-4 text-sm">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#06111e] text-slate-300 border border-[#1b2b3d]">
+                          {item.status || 'processed'}
+                        </span>
+                      </td>
+
+                      {/* Duplicate of */}
+                      <td className="py-3.5 px-5 text-sm text-slate-500 truncate max-w-[150px]" title={item.duplicate_of || ''}>
+                        {item.duplicate_of || '—'}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

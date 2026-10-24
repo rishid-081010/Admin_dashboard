@@ -25,21 +25,26 @@ if (!$data) {
     exit;
 }
 
-// 1. Asynchronously forward a copy to n8n (bypassing expired SSL)
-$n8nUrl = 'https://n8n.asquared.ae/webhook/owner-call-outcome';
-$chFwd = curl_init();
-curl_setopt_array($chFwd, [
-    CURLOPT_URL => $n8nUrl,
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => $rawInput,
-    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-    CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_SSL_VERIFYHOST => false,
-    CURLOPT_TIMEOUT => 3,
-    CURLOPT_RETURNTRANSFER => true
-]);
-curl_exec($chFwd);
-curl_close($chFwd);
+// 1. Asynchronously forward copies to n8n V1 & V2 (bypassing expired SSL)
+$n8nEndpoints = [
+    'https://n8n.asquared.ae/webhook/owner-call-outcome',
+    'https://n8n.asquared.ae/webhook/v2-vapi-webhook'
+];
+foreach ($n8nEndpoints as $url) {
+    $chFwd = curl_init();
+    curl_setopt_array($chFwd, [
+        CURLOPT_URL => $url,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $rawInput,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
+        CURLOPT_TIMEOUT => 3,
+        CURLOPT_RETURNTRANSFER => true
+    ]);
+    curl_exec($chFwd);
+    curl_close($chFwd);
+}
 
 // 2. Extract call details
 $call = $data['message']['call'] ?? $data['call'] ?? $data;

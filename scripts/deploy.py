@@ -4,7 +4,35 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+# Force UTF-8 stdout and stderr on Windows
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+
 token = os.environ.get('HOSTINGER_TOKEN')
+if not token:
+    for env_path in ['.env', '../.env', '../.env.backend']:
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, 'r', encoding='latin-1') as ef:
+                    for line in ef:
+                        line = line.strip()
+                        if line.startswith('HOSTINGER_TOKEN='):
+                            token = line.split('=', 1)[1].strip().strip('"\'')
+                            break
+            except Exception:
+                pass
+        if token:
+            break
+
 if not token:
     print("Error: HOSTINGER_TOKEN environment variable is missing.")
     sys.exit(1)
@@ -23,7 +51,7 @@ target_domains = ['admin.asquared.ae', 'asquared.ae', 'dashboard.asquared.ae']
 
 dist_dir = 'client/dist'
 if not os.path.exists(dist_dir):
-    print(f"Error: {dist_dir} does not exist. Did you run npm run build?")
+    print(f"Error: {dist_dir} does not exist. Did you run npm run build[OK]")
     sys.exit(1)
 
 root_dir = 'root_files'
@@ -103,7 +131,7 @@ def deploy_to_domain(domain):
         with open(local_path, 'rb') as f:
             file_bytes = f.read()
 
-        target_url = f"{upload_base_url}/{remote_rel_path}?override=true"
+        target_url = f"{upload_base_url}/{remote_rel_path}[OK]override=true"
         post_headers = {
             'X-Auth': auth_key,
             'X-Auth-Rest': rest_auth_key,
