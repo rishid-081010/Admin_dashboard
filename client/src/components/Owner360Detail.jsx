@@ -678,13 +678,13 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="border-b border-[#233549] text-slate-400 uppercase font-mono tracking-wider">
+                  <thead className="border-b border-[#233549] text-slate-400 uppercase font-mono tracking-wider text-[11px]">
                     <tr>
-                      <th className="pb-3 font-semibold">PROPERTY</th>
-                      <th className="pb-3 font-semibold">OWNER NAME</th>
-                      <th className="pb-3 font-semibold">PROPERTY DETAILS</th>
-                      <th className="pb-3 font-semibold">OWNERSHIP TYPE</th>
-                      <th className="pb-3 font-semibold text-right">AI VERIFICATION STATUS</th>
+                      <th className="pb-2.5 font-semibold min-w-[200px]">PROPERTY</th>
+                      <th className="pb-2.5 font-semibold whitespace-nowrap pr-4 min-w-[160px]">OWNER NAME</th>
+                      <th className="pb-2.5 font-semibold whitespace-nowrap pr-4">PROPERTY DETAILS</th>
+                      <th className="pb-2.5 font-semibold whitespace-nowrap pr-4">OWNERSHIP TYPE</th>
+                      <th className="pb-2.5 font-semibold text-right whitespace-nowrap">AI VERIFICATION STATUS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#1b2b3d]/60">
@@ -692,13 +692,13 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                       <tr key={idx} className="hover:bg-[#102035] transition-colors">
                         
                         {/* Property */}
-                        <td className="py-4 pr-3">
+                        <td className="py-2.5 pr-4">
                           <div className="flex items-start gap-2.5">
-                            <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 mt-0.5 shrink-0">
-                              <Building2 className="w-4 h-4" />
+                            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                              <Building2 className="w-3.5 h-3.5" />
                             </div>
-                            <div>
-                              <div className="font-semibold text-white text-sm flex items-center gap-2 flex-wrap">
+                            <div className="min-w-0">
+                              <div className="font-semibold text-white text-xs flex items-center gap-1.5 flex-wrap">
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -717,22 +717,22 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                                   <ExternalLink className="w-3 h-3 text-white/30 group-hover/bldg:text-blue-400 transition-colors shrink-0" />
                                 </button>
                                 {prop.isCadastralPlot && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold whitespace-nowrap">
                                     {prop.buildingInfo?.badgeText || 'Land Plot Demarcation'}
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[11px] text-white/50 flex items-center gap-1 mt-0.5">
-                                <MapPin className="w-3 h-3 text-white/40" />
+                              <div className="text-[10px] text-white/50 flex items-center gap-1 mt-0.5 whitespace-nowrap">
+                                <MapPin className="w-3 h-3 text-white/40 shrink-0" />
                                 {prop.cleanArea}
                               </div>
                               {prop.cleanUnit && (
-                                <div className="text-[10px] font-mono text-blue-400/90 mt-1 bg-blue-500/10 px-1.5 py-0.5 rounded inline-block">
+                                <div className="text-[10px] font-mono text-blue-400/90 mt-0.5 bg-blue-500/10 px-1.5 py-0.2 rounded inline-block whitespace-nowrap">
                                   Unit: {prop.cleanUnit}
                                 </div>
                               )}
                               {prop.duplicateCount > 1 && (
-                                <div className="text-[10px] text-purple-300 mt-1 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20 inline-block ml-1">
+                                <div className="text-[10px] text-purple-300 mt-0.5 bg-purple-500/10 px-1.5 py-0.2 rounded border border-purple-500/20 inline-block ml-1 whitespace-nowrap">
                                   Collapsed {prop.duplicateCount} files ({prop.sourceFiles?.slice(0, 2).map(f => f.replace(/\.xlsx?$/, '')).join(', ')})
                                 </div>
                               )}
@@ -741,22 +741,22 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                         </td>
 
                         {/* Owner / Party */}
-                        <td className="py-4 pr-3">
-                          <div className="font-medium text-white">{prop.full_name || owner.name}</div>
-                          <div className="text-[11px] text-white/40">Buyer / Primary Owner</div>
+                        <td className="py-2.5 pr-4 whitespace-nowrap">
+                          <div className="font-medium text-white text-xs">{prop.full_name || owner.name}</div>
+                          <div className="text-[10px] text-white/40">Buyer / Primary Owner</div>
                         </td>
 
                         {/* Details */}
-                        <td className="py-4 pr-3 text-white/70">
-                          <div>{resolveCleanPropertyType(prop)}</div>
+                        <td className="py-2.5 pr-4 text-white/70 whitespace-nowrap">
+                          <div className="font-medium text-white/90 text-xs">{resolveCleanPropertyType(prop)}</div>
                           {prop.verified_size_sqft && (
-                            <div className="text-[11px] text-white/40">{Math.round(prop.verified_size_sqft)} sq.ft</div>
+                            <div className="text-[10px] text-white/40">{Math.round(prop.verified_size_sqft)} sq.ft</div>
                           )}
                           {prop.verified_purchase_price && (
-                            <div className="text-[11px] text-emerald-400 font-medium">
+                            <div className="text-[10px] text-emerald-400 font-medium">
                               {formatPrice(prop.verified_purchase_price)}
                               {prop.isGhostValuation && (
-                                <span className="ml-1 text-[10px] text-amber-400 font-normal" title="This valuation appeared repeatedly in vendor files; AI re-anchored portfolio to avoid false inflation">
+                                <span className="ml-1 text-[9px] text-amber-400 font-normal" title="This valuation appeared repeatedly in vendor files; AI re-anchored portfolio to avoid false inflation">
                                   (Verified Asset)
                                 </span>
                               )}
@@ -765,17 +765,17 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
                         </td>
 
                         {/* Relationship */}
-                        <td className="py-4 pr-3">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                        <td className="py-2.5 pr-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 whitespace-nowrap">
                             Property Owner
                           </span>
                         </td>
 
                         {/* Data Quality */}
-                        <td className="py-4 text-right">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border bg-emerald-500/10 text-emerald-300 border-emerald-500/20">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            Clean &amp; Verified
+                        <td className="py-2.5 text-right whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-emerald-500/10 text-emerald-300 border-emerald-500/20 whitespace-nowrap">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>Clean &amp; Verified</span>
                           </span>
                         </td>
                       </tr>
