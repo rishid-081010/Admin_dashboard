@@ -375,58 +375,95 @@ export default function OverviewDashboard({ onNavigate }) {
       </div>
 
       {/* ─── 4. VOICE AGENTS ─────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 pt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-6 sm:p-7 shadow-xl shadow-black/40">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[#1c2e42]">
+          <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400">
               <PhoneCall className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">
+              <h3 className="text-lg font-bold text-white tracking-tight">
                 Voice Agents
-              </h2>
+              </h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 AI outbound acquisition dialers screening owner registries and booking qualified callbacks
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => onNavigate && onNavigate('voice')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all shadow-md self-start sm:self-auto"
-          >
-            <span>View all dialers</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              {voiceData.totalCallsToday > 0 
+                ? `4 Dialers Active · ${voiceData.totalCallsToday.toLocaleString()} Calls Today`
+                : '4 Dialers Online · Standby'}
+            </span>
+            <button
+              onClick={() => onNavigate && onNavigate('voice')}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-[#06111e] border border-[#1b2b3d] hover:bg-[#091728] transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              <span>View all dialers</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Dynamic Voice Agent Telemetry Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {voiceData.agents.map((agent, idx) => {
-            const colorMap = { blue: 'blue', purple: 'purple', emerald: 'emerald', amber: 'amber' };
-            const c = colorMap[agent.color] || 'blue';
+            const agentThemes = {
+              blue: {
+                bgPill: 'bg-blue-500/15',
+                borderPill: 'border-blue-400/30',
+                textPill: 'text-blue-300',
+                hoverBorder: 'hover:border-blue-500/50',
+                hoverText: 'group-hover:text-blue-300'
+              },
+              purple: {
+                bgPill: 'bg-purple-500/15',
+                borderPill: 'border-purple-400/30',
+                textPill: 'text-purple-300',
+                hoverBorder: 'hover:border-purple-500/50',
+                hoverText: 'group-hover:text-purple-300'
+              },
+              emerald: {
+                bgPill: 'bg-emerald-500/15',
+                borderPill: 'border-emerald-400/30',
+                textPill: 'text-emerald-300',
+                hoverBorder: 'hover:border-emerald-500/50',
+                hoverText: 'group-hover:text-emerald-300'
+              },
+              amber: {
+                bgPill: 'bg-amber-500/15',
+                borderPill: 'border-amber-400/30',
+                textPill: 'text-amber-300',
+                hoverBorder: 'hover:border-amber-500/50',
+                hoverText: 'group-hover:text-amber-300'
+              }
+            };
+            const theme = agentThemes[agent.color] || agentThemes.blue;
             return (
               <div 
                 key={agent.id}
                 onClick={() => onNavigate && onNavigate('voice')}
-                className={`p-4 bg-[#0c1829] border border-[#233549] rounded-2xl hover:border-${c}-500/50 transition-all cursor-pointer shadow-lg shadow-black/40 flex items-center justify-between group`}
+                className={`p-4 sm:p-5 bg-[#081322] border border-[#1d3047] rounded-xl ${theme.hoverBorder} hover:bg-[#0b1a2e] transition-all cursor-pointer shadow-md flex items-center justify-between group`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-10 h-10 rounded-xl bg-${c}-500/20 border border-${c}-400/30 flex items-center justify-center text-${c}-300 font-bold text-sm shadow-inner shrink-0`}>
+                  <div className={`w-10 h-10 rounded-xl ${theme.bgPill} border ${theme.borderPill} flex items-center justify-center ${theme.textPill} font-bold text-sm shadow-inner shrink-0`}>
                     {idx + 1}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className={`text-sm font-bold text-white group-hover:text-${c}-300 transition-colors truncate`}>
+                      <h4 className={`text-sm font-bold text-white ${theme.hoverText} transition-colors truncate`}>
                         {agent.name}
                       </h4>
-                      {agent.health === 'Active Running' ? (
+                      {agent.health === 'Active Running' || agent.callsToday > 0 ? (
                         <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
                       ) : (
                         <span className="w-2 h-2 rounded-full bg-slate-500 inline-block shrink-0"></span>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-400 truncate">{agent.line} · {agent.role.split(' ').slice(0, 2).join(' ')}</div>
+                    <div className="text-[11px] text-slate-400 truncate mt-0.5">{agent.line} · {agent.role.split(' ').slice(0, 2).join(' ')}</div>
                   </div>
                 </div>
 
