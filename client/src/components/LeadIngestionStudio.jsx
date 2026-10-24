@@ -163,7 +163,17 @@ export default function LeadIngestionStudio() {
       return;
     }
 
-    // 1. AI-First Column Mapping: Query GPT-4o directly before cleaning
+    // 1. Instant client-side clean with heuristic column detection
+    let initialCleanResult = null;
+    try {
+      initialCleanResult = await processLeadsClientSide(localMatrix, defaultPropertyType, file.name);
+      setPreviewData(initialCleanResult);
+      setActiveTab('clean');
+    } catch (e) {
+      console.warn('Client-side processing note:', e.message);
+    }
+
+    // 2. Query GPT-4o AI Column Mapping for precision detection
     try {
       const endpoint = window.location.pathname.includes('/dashboard') 
         ? '/dashboard/api_leads_intake.php' 
@@ -176,19 +186,15 @@ export default function LeadIngestionStudio() {
         action: 'ai_column_map',
         headers: rawHeaders,
         samples: sampleRows
-      }, { timeout: 15000 });
+      }, { timeout: 10000 });
 
       if (aiRes.data?.success && aiRes.data?.mapping) {
-        // Run deep regex and formatting clean using AI-mapped columns
         const aiCleanResult = await processLeadsClientSide(localMatrix, defaultPropertyType, file.name, aiRes.data.mapping);
         setPreviewData(aiCleanResult);
         setActiveTab('clean');
-      } else {
-        throw new Error('AI mapping returned unverified structure');
       }
     } catch (aiErr) {
-      console.error('AI column mapping failed:', aiErr.message);
-      setError('AI Column Mapping encountered an error: ' + aiErr.message + '. Please check network connection or try again.');
+      console.warn('AI column mapping fallback (heuristic retained):', aiErr.message);
     } finally {
       setLoading(false);
     }
@@ -495,7 +501,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
           {loading ? (
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="w-10 h-10 text-blue-400 animate-spin" />
-              <p className="text-sm font-semibold text-blue-300">AI Mapping Columns with GPT-4o &amp; Sanitizing Leads...</p>
+              <p className="text-sm font-semibold text-blue-300">Sanitizing Phone Numbers &amp; Detecting Columns...</p>
             </div>
           ) : previewData ? (
             <div className="flex flex-col items-center gap-2">
