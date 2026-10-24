@@ -246,11 +246,18 @@ export function cleanUnitNumber(rawUnit, buildingName = '') {
   // Handle DEWA Premise strings (e.g. "BB | DXB | NA | BBET TOWER M 1208", "PJC | DXB | Apartment 229 | Kempinski Apartment 229")
   if (u.includes('|')) {
     const segments = u.split('|').map(s => s.trim()).filter(Boolean);
-    const aptSeg = segments.find(s => /^(?:Apartment|Flat|Unit|Villa|TH)\s+\d+/i.test(s));
+    const aptSeg = segments.find(s => /^(?:Apartment|Flat|Unit|Villa|TH)\s+([A-Za-z0-9_-]+)/i.test(s));
     if (aptSeg) {
-      return aptSeg.replace(/^(?:Apartment|Flat|Unit|Villa|TH)\s+/i, '').trim();
+      const m = aptSeg.match(/^(?:Apartment|Flat|Unit|Villa|TH)\s+([A-Za-z0-9_-]+)/i);
+      return m ? m[1] : aptSeg;
     }
-    return segments[segments.length - 1] || u;
+    const lastSeg = segments[segments.length - 1] || '';
+    const lastSpace = lastSeg.lastIndexOf(' ');
+    if (lastSpace !== -1) {
+      const potUnit = lastSeg.slice(lastSpace + 1).trim();
+      if (/\d/.test(potUnit)) return potUnit;
+    }
+    return lastSeg || u;
   }
 
   // If unit starts with the building name or community code, extract the specific unit suffix
@@ -703,6 +710,17 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
         cellShifted = true;
       }
       rawName = 'Property Owner';
+    }
+
+    // Disambiguate DEWA compound strings in Project/Unit
+    if (rawProject && rawProject.includes('|')) {
+      const pSegs = rawProject.split('|').map(s => s.trim()).filter(Boolean);
+      if (pSegs.length >= 2) {
+        if (!rawLocation || rawLocation === rawProject) rawLocation = pSegs[0];
+        const lastPart = pSegs[pSegs.length - 1];
+        const lastSpace = lastPart.lastIndexOf(' ');
+        rawProject = lastSpace !== -1 ? lastPart.slice(0, lastSpace).trim() : lastPart;
+      }
     }
 
     // D. Autonomous Building & Cadastral Disambiguation

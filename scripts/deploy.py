@@ -19,7 +19,7 @@ gen_headers = {
 gen_url = 'https://developers.hostinger.com/api/hosting/v1/files/upload-urls'
 
 # Deploy to both subdomains to ensure zero drift
-target_domains = ['admin.asquared.ae', 'dashboard.asquared.ae']
+target_domains = ['admin.asquared.ae', 'asquared.ae', 'dashboard.asquared.ae']
 
 dist_dir = 'client/dist'
 if not os.path.exists(dist_dir):
@@ -72,7 +72,9 @@ def deploy_to_domain(domain):
             for f in r_files:
                 lpath = os.path.join(r_dir, f)
                 rel_f = os.path.relpath(lpath, root_dir).replace('\\', '/')
-                if rel_f in ('index.html', 'index.php') and domain == 'dashboard.asquared.ae':
+                if rel_f in ('index.html', 'index.php'):
+                    if domain != 'dashboard.asquared.ae':
+                        uploads_set.add((lpath, rel_f))
                     continue # Do not overwrite React index.html on dashboard
                 uploads_set.add((lpath, rel_f))
                 uploads_set.add((lpath, f"dashboard/{rel_f}"))
