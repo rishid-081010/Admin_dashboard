@@ -332,7 +332,7 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
     let filter = null;
     if (owner.match_criteria === 'EMIRATES_ID' && owner.emirates_id) {
       filter = `emirates_id=eq.${encodeURIComponent(owner.emirates_id)}`;
-    } else if (owner.phone_normalized || owner.phone) {
+    } else if ((owner.phone_normalized || owner.phone) && owner.phone !== 'N/A' && owner.phone_normalized !== 'N/A' && String(owner.phone_normalized || owner.phone).replace(/\D/g, '').length >= 5) {
       const rawP = String(owner.phone_normalized || owner.phone).trim();
       const cleanP = rawP.startsWith('+') ? rawP : (rawP.startsWith('00') ? '+' + rawP.slice(2) : '+' + rawP.replace(/\D/g, ''));
       const matchName = (owner.raw_full_name || owner.name || '').replace(/\s*\([^)]*\)/g, '').trim();
@@ -341,7 +341,7 @@ export default function Owner360Detail({ owner, onBack, onSelectBuilding, onPush
       } else {
         filter = `phone_normalized=eq.${encodeURIComponent(cleanP)}`;
       }
-    } else if (owner.match_criteria === 'CORPORATE_ENTITY' || (!owner.phone_normalized && !owner.phone && !owner.emirates_id && (owner.raw_full_name || owner.name))) {
+    } else if (owner.match_criteria === 'CORPORATE_ENTITY' || (!owner.phone_normalized && !owner.phone && !owner.emirates_id && (owner.raw_full_name || owner.name)) || (!owner.emirates_id && (owner.raw_full_name || owner.name))) {
       const matchName = (owner.raw_full_name || owner.name || '').replace(/\s*\([^)]*\)/g, '').trim();
       filter = `full_name=ilike.${encodeURIComponent(matchName)}*`;
     } else if (owner.canonical_owner_id && !owner.canonical_owner_id.startsWith('DEED-')) {

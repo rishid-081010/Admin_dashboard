@@ -37,13 +37,26 @@ function sanitizeUnitNumber(rawUnit) {
 
 function getFloorFromUnit(unit) {
   if (!unit || unit === '—' || unit === 'N/A' || unit === 'Unit Unspecified') return 'G';
+  const str = String(unit).trim().toUpperCase();
+  if (/^PH/i.test(str)) return 'PH';
+  if (/^TH/i.test(str)) return 'TH';
+  if (/^B\d/i.test(str)) return str.slice(0, 2);
+  if (/^M/i.test(str)) return 'M';
+  if (/^G/i.test(str)) return 'G';
+
   // Strip any trailing -0 first just in case
-  const cleanStr = String(unit).replace(/^(\d+)-0+$/, '$1');
+  const cleanStr = str.replace(/^(\d+)-0+$/, '$1');
   const clean = cleanStr.replace(/[^\d]/g, '');
   if (!clean) return 'G';
   if (clean.length <= 2) return '1';
   if (clean.length === 3) return clean.slice(0, 1);
   return clean.slice(0, clean.length - 2);
+}
+
+function isCommercialUnit(type, category, reportedType) {
+  if (category && String(category).toLowerCase() === 'commercial') return true;
+  const combined = `${type || ''} ${reportedType || ''}`.toLowerCase();
+  return /commercial|office|shop|retail|hotel|warehouse|showroom|land|business|restaurant|store|clinic/i.test(combined);
 }
 
 function resolveBuildingUnitType(r, building = {}) {
@@ -193,7 +206,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
               name: cleanName,
               unit: unit,
               floor: floor,
-              phone: hasPhone ? r.phone_normalized : 'N/A',
+              phone: hasPhone ? r.phone_normalized : null,
               phone_normalized: hasPhone ? r.phone_normalized : null,
               hasPhone: hasPhone,
               email: r.email || 'N/A',
@@ -246,8 +259,8 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
     return owners.filter(o => {
       if (unitFilter === 'with_phone' && !o.hasPhone) return false;
       if (unitFilter === 'unlisted' && o.hasPhone) return false;
-      if (unitFilter === 'commercial' && !o.type.toLowerCase().includes('office') && !o.type.toLowerCase().includes('commercial')) return false;
-      if (unitFilter === 'residential' && (o.type.toLowerCase().includes('office') || o.type.toLowerCase().includes('commercial'))) return false;
+      if (unitFilter === 'commercial' && !isCommercialUnit(o.type, o.rawRecord?.property_category, o.rawRecord?.reported_property_type)) return false;
+      if (unitFilter === 'residential' && isCommercialUnit(o.type, o.rawRecord?.property_category, o.rawRecord?.reported_property_type)) return false;
 
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
@@ -300,16 +313,26 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
   const copyPhone = (phone, e) => {
     if (e) e.stopPropagation();
     if (!phone || phone === 'N/A') return;
-    navigator.clipboard.writeText(phone);
-    setCopiedPhone(phone);
-    setTimeout(() => setCopiedPhone(null), 1800);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(phone)
+        .then(() => {
+          setCopiedPhone(phone);
+          setTimeout(() => setCopiedPhone(null), 1800);
+        })
+        .catch(() => {});
+    }
   };
 
   const copyTowerName = (e) => {
     if (e) e.stopPropagation();
-    navigator.clipboard.writeText(building.name);
-    setCopiedTowerName(true);
-    setTimeout(() => setCopiedTowerName(false), 1800);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(building.name)
+        .then(() => {
+          setCopiedTowerName(true);
+          setTimeout(() => setCopiedTowerName(false), 1800);
+        })
+        .catch(() => {});
+    }
   };
 
   const handleExportCsv = () => {
@@ -328,15 +351,17 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
       `"${String(o.crmStatus || '').replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', blobUrl);
     const fileName = (building.canonical_name || building.name || 'Building').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_');
     link.setAttribute('download', `${fileName}_Verified_Units.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   };
 
   const handleOpenOwner = (owner) => {
@@ -602,7 +627,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
 
                     {/* Direct Contact Phone */}
                     <td className="py-2.5 px-4">
-                      {owner.hasPhone ? (
+                      {owner.hasPhone && owner.phone ? (
                         <button
                           onClick={(e) => copyPhone(owner.phone, e)}
                           className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 transition-all"
@@ -684,7 +709,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-white/5 gap-2">
-                  {owner.hasPhone ? (
+                  {owner.hasPhone && owner.phone ? (
                     <button
                       onClick={(e) => copyPhone(owner.phone, e)}
                       className="px-2 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 transition-all"

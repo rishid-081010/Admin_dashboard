@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Building2, MapPin, Users, ChevronRight, Search, 
   ArrowLeft, X, Filter, ChevronDown, RefreshCw, Layers, 
@@ -12,57 +12,87 @@ import SearchableCombobox from './SearchableCombobox';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 
-// In-Memory Tab Cache to eliminate refetching top entities on repeated tab switches
-const buildingsTabCache = new Map();
-
 const BUILDINGS_SELECT_FIELDS = 'canonical_name,primary_building_name,master_area,property_category,entity_type,total_owners,total_units,total_contacts,contact_coverage,source_count';
+
+// Verified global totals from database aggregation
+const CATEGORY_TOTALS = {
+  building: { label: 'Buildings & Towers', totalUnits: 955164, totalOwners: 858820, count: 28891 },
+  community: { label: 'Communities & Districts', totalUnits: 352081, totalOwners: 419072, count: 639 },
+  single_unit: { label: 'Plots & Standalone Villas', totalUnits: 35888, totalOwners: 72161, count: 35882 }
+};
 
 export default function Buildings() {
   // Navigation & Entity Type State
   const [activeTab, setActiveTab] = useState('building'); // 'building', 'community', 'single_unit'
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCommunity, setSelectedCommunity] = useState('All');
   const [sortBy, setSortBy] = useState('most_owners');
+  const [communitiesList, setCommunitiesList] = useState(['All']);
+
+  // Data & Pagination State
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  const [serverBuildings, setServerBuildings] = useState([]);
-  const [isSearchingServer, setIsSearchingServer] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(CATEGORY_TOTALS.building.count);
+  const [totalPages, setTotalPages] = useState(Math.ceil(CATEGORY_TOTALS.building.count / 24));
+  const itemsPerPage = 24;
+  const [customPageInput, setCustomPageInput] = useState('');
+  const customPageInputRef = useRef(null);
 
   // Detail views state
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [selectedOwner, setSelectedOwner] = useState(null);
 
-  // Tab totals state (verified database numbers)
-  const [tabTotals, setTabTotals] = useState({
-    totalCount: 0,
-    totalUnits: 0,
-    totalOwners: 0,
-    contactCoverage: 0
-  });
+  // Request race-condition counter
+  const requestSeqRef = useRef(0);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 24;
-  const [customPageInput, setCustomPageInput] = useState('');
-  const customPageInputRef = useRef(null);
-
-  // 1. Initial Load & Tab Switching
+  // 1. Load distinct master communities on mount
   useEffect(() => {
-    setCurrentPage(1);
-    setSearchTerm('');
-    setSelectedCommunity('All');
-    fetchBuildingsData(activeTab);
-  }, [activeTab]);
+    let isMounted = true;
+    async function loadCommunities() {
+      try {
+        const headers = { apikey: SUPABASE_API_KEY, Authorization: `Bearer ${SUPABASE_API_KEY}` };
+        const res = await axios.get(
+          `${SUPABASE_BASE_URL}/canonical_buildings?entity_type=eq.building&select=master_area&master_area=not.is.null&order=total_owners.desc&limit=300`,
+          { headers }
+        );
+        if (isMounted && res.data) {
+          const set = new Set();
+          res.data.forEach(r => {
+            const a = (r.master_area || '').trim();
+            if (a && a.toLowerCase() !== 'null' && a.toLowerCase() !== 'dubai' && a.length > 2) {
+              set.add(a);
+            }
+          });
+          setCommunitiesList(['All', ...Array.from(set).sort()]);
+        }
+      } catch (e) {
+        console.error('Failed to load communities:', e);
+      }
+    }
+    loadCommunities();
+    return () => { isMounted = false; };
+  }, []);
 
-  // 2. URL Hash Deep-Linking & Browser History Handling
+  // 2. Debounce search term by 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // 3. Resilient URL Hash Deep-Linking & Browser History Handling
   useEffect(() => {
     function parseHash() {
       const hash = window.location.hash || '';
-      const towerMatch = hash.match(/[?&]tower=([^&]+)/);
-      if (towerMatch) {
-        const towerName = decodeURIComponent(towerMatch[1]);
-        loadBuildingByName(towerName);
+      const hashQuery = hash.includes('?') ? hash.split('?')[1] : '';
+      const params = new URLSearchParams(hashQuery);
+      const tower = params.get('tower');
+      if (tower) {
+        loadBuildingByName(tower);
       } else {
         setSelectedBuilding(null);
       }
@@ -73,113 +103,25 @@ export default function Buildings() {
     return () => window.removeEventListener('hashchange', parseHash);
   }, []);
 
-  // Fetch specific building by canonical or raw name if deep linked
+  // Fetch specific building by canonical or raw name with comma safety
   const loadBuildingByName = async (name) => {
+    if (!name || !name.trim()) return;
     try {
       const headers = { 
         apikey: SUPABASE_API_KEY, 
         Authorization: `Bearer ${SUPABASE_API_KEY}` 
       };
-      const cleanName = encodeURIComponent(name.trim());
+      // Wrap in double quotes inside PostgREST or=(...) to prevent comma PGRST100 syntax errors
+      const cleanQuoted = encodeURIComponent(`"${name.trim()}"`);
       const res = await axios.get(
-        `${SUPABASE_BASE_URL}/canonical_buildings?or=(canonical_name.eq.${cleanName},building_name.eq.${cleanName})&limit=1`,
+        `${SUPABASE_BASE_URL}/canonical_buildings?or=(canonical_name.eq.${cleanQuoted},building_name.eq.${cleanQuoted},primary_building_name.eq.${cleanQuoted})&limit=1`,
         { headers }
       );
       if (res.data && res.data.length > 0) {
-        const row = res.data[0];
-        setSelectedBuilding(mapCanonicalRow(row));
+        setSelectedBuilding(mapCanonicalRow(res.data[0]));
       }
     } catch (e) {
       console.error('Failed to load deep-linked building:', e);
-    }
-  };
-
-  // Server-side debounced search across all 69k+ canonical entities in DB
-  useEffect(() => {
-    if (!searchTerm || searchTerm.trim().length < 2) {
-      setServerBuildings([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setIsSearchingServer(true);
-      try {
-        const apikey = SUPABASE_API_KEY;
-        const headers = { apikey, Authorization: `Bearer ${apikey}` };
-        const q = encodeURIComponent(searchTerm.trim());
-        
-        // Search canonical_buildings by name or area
-        const res = await axios.get(
-          `${SUPABASE_BASE_URL}/canonical_buildings?entity_type=eq.${activeTab}&canonical_name=ilike.*${q}*&order=total_owners.desc&limit=150`,
-          { headers }
-        );
-
-        if (res.data && res.data.length > 0) {
-          const list = res.data.map(mapCanonicalRow);
-          setServerBuildings(list);
-        } else {
-          setServerBuildings([]);
-        }
-      } catch (e) {
-        console.error('Server search buildings error:', e);
-      } finally {
-        setIsSearchingServer(false);
-      }
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, activeTab]);
-
-  // Main Data Fetcher with instant tab caching and selective projection
-  const fetchBuildingsData = async (type = 'building') => {
-    // Instant 0ms render from memory if already loaded
-    if (buildingsTabCache.has(type)) {
-      const cached = buildingsTabCache.get(type);
-      setBuildings(cached.list);
-      setTabTotals(cached.totals);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const apikey = SUPABASE_API_KEY;
-      const headers = { apikey, Authorization: `Bearer ${apikey}` };
-
-      // Load top 250 entities with selective projection to eliminate payload bloat
-      const res = await axios.get(
-        `${SUPABASE_BASE_URL}/canonical_buildings?entity_type=eq.${type}&select=${BUILDINGS_SELECT_FIELDS}&order=total_owners.desc&limit=250`,
-        { headers }
-      );
-
-      if (res.data && res.data.length > 0) {
-        const list = res.data.map(mapCanonicalRow);
-        setBuildings(list);
-
-        // Compute verified aggregate numbers
-        const sumUnits = list.reduce((acc, b) => acc + b.unitsCount, 0);
-        const sumOwners = list.reduce((acc, b) => acc + b.ownersCount, 0);
-        const sumContacts = list.reduce((acc, b) => acc + b.contactsCount, 0);
-        const avgCoverage = sumOwners > 0 ? Math.round((sumContacts / sumOwners) * 100) : 0;
-
-        const totals = {
-          totalCount: list.length,
-          totalUnits: sumUnits,
-          totalOwners: sumOwners,
-          contactCoverage: avgCoverage
-        };
-
-        setTabTotals(totals);
-        buildingsTabCache.set(type, { list, totals });
-      } else {
-        setBuildings([]);
-        setTabTotals({ totalCount: 0, totalUnits: 0, totalOwners: 0, contactCoverage: 0 });
-      }
-    } catch (err) {
-      console.error('Error fetching canonical buildings from Supabase:', err);
-      setBuildings([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -211,6 +153,92 @@ export default function Buildings() {
     };
   }
 
+  // 4. Server-Side Data Fetcher with strict pagination, dynamic sorting, and dual-field search
+  const fetchBuildingsData = useCallback(async () => {
+    const currentSeq = ++requestSeqRef.current;
+    setLoading(true);
+
+    try {
+      const apikey = SUPABASE_API_KEY;
+      const headers = { 
+        apikey, 
+        Authorization: `Bearer ${apikey}`,
+        Prefer: 'count=exact'
+      };
+
+      // Map sortBy to PostgREST order string
+      let orderParam = 'total_owners.desc.nullslast';
+      if (sortBy === 'most_units') orderParam = 'total_units.desc.nullslast';
+      if (sortBy === 'coverage') orderParam = 'contact_coverage.desc.nullslast';
+      if (sortBy === 'name') orderParam = 'canonical_name.asc';
+
+      const offset = (currentPage - 1) * itemsPerPage;
+      let url = `${SUPABASE_BASE_URL}/canonical_buildings?entity_type=eq.${activeTab}&select=${BUILDINGS_SELECT_FIELDS}&order=${orderParam}&limit=${itemsPerPage}&offset=${offset}`;
+
+      // Filter by community
+      if (selectedCommunity && selectedCommunity !== 'All') {
+        url += `&master_area=eq.${encodeURIComponent(selectedCommunity)}`;
+      }
+
+      // Dual-field search: searches canonical_name, master_area, and primary_building_name
+      if (debouncedSearch && debouncedSearch.length >= 2) {
+        const cleanQ = debouncedSearch.replace(/[,():]/g, ' ').replace(/\s+/g, ' ').trim();
+        const encQ = encodeURIComponent(cleanQ);
+        url += `&or=(canonical_name.ilike.*${encQ}*,master_area.ilike.*${encQ}*,primary_building_name.ilike.*${encQ}*)`;
+      }
+
+      const res = await axios.get(url, { headers });
+
+      if (currentSeq !== requestSeqRef.current) return; // Prevent race conditions
+
+      // Parse exact count from Content-Range header (e.g. "0-23/28891")
+      const cr = res.headers['content-range'] || res.headers.get?.('content-range') || '';
+      let total = 0;
+      if (cr.includes('/')) {
+        total = parseInt(cr.split('/')[1], 10) || 0;
+      } else if (res.data) {
+        total = res.data.length;
+      }
+
+      if (res.data && Array.isArray(res.data)) {
+        const list = res.data.map(mapCanonicalRow);
+        setBuildings(list);
+        setTotalCount(total);
+        setTotalPages(Math.max(1, Math.ceil((total || 1) / itemsPerPage)));
+      } else {
+        setBuildings([]);
+        setTotalCount(0);
+        setTotalPages(1);
+      }
+    } catch (err) {
+      if (currentSeq === requestSeqRef.current) {
+        console.error('Error fetching canonical buildings from Supabase:', err);
+        setBuildings([]);
+        setTotalCount(0);
+        setTotalPages(1);
+      }
+    } finally {
+      if (currentSeq === requestSeqRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [activeTab, currentPage, sortBy, selectedCommunity, debouncedSearch]);
+
+  // Trigger data fetch on filter/sort/page change
+  useEffect(() => {
+    fetchBuildingsData();
+  }, [fetchBuildingsData]);
+
+  // Reset page when tab changes
+  const handleTabChange = (tab) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    setSelectedCommunity('All');
+    setSearchTerm('');
+    setDebouncedSearch('');
+    setCurrentPage(1);
+  };
+
   // Open building explore view with deep link URL hash
   const handleExploreBuilding = (bldg) => {
     setSelectedBuilding(bldg);
@@ -224,58 +252,7 @@ export default function Buildings() {
     window.location.hash = '#buildings';
   };
 
-  // Active pool merging server search with local cached pool
-  const activeBuildingsPool = useMemo(() => {
-    if (searchTerm.trim().length >= 2 && serverBuildings.length > 0) {
-      const mergedMap = new Map();
-      serverBuildings.forEach(b => mergedMap.set(b.name.toLowerCase(), b));
-      buildings.forEach(b => {
-        if (!mergedMap.has(b.name.toLowerCase())) {
-          mergedMap.set(b.name.toLowerCase(), b);
-        }
-      });
-      return Array.from(mergedMap.values());
-    }
-    return buildings;
-  }, [buildings, serverBuildings, searchTerm]);
-
-  // Filter and Sort Buildings
-  const filteredBuildings = useMemo(() => {
-    return activeBuildingsPool
-      .filter(b => {
-        const matchesSearch = !searchTerm.trim() || 
-          b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.propertyType.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesCommunity = 
-          selectedCommunity === 'All' || 
-          b.area.toLowerCase() === selectedCommunity.toLowerCase();
-
-        return matchesSearch && matchesCommunity;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'most_owners') return b.ownersCount - a.ownersCount;
-        if (sortBy === 'most_units') return b.unitsCount - a.unitsCount;
-        if (sortBy === 'coverage') return b.contactCoverage - a.contactCoverage;
-        if (sortBy === 'name') return a.name.localeCompare(b.name);
-        return 0;
-      });
-  }, [activeBuildingsPool, searchTerm, selectedCommunity, sortBy]);
-
-  // Distinct Communities list for filter
-  const communitiesList = useMemo(() => {
-    const set = new Set();
-    buildings.forEach(b => {
-      if (b.area && b.area !== 'DUBAI' && b.area !== 'NULL' && b.area.length > 2) {
-        set.add(b.area);
-      }
-    });
-    return ['All', ...Array.from(set).sort()];
-  }, [buildings]);
-
-  // Pagination calculation
-  const totalPages = Math.ceil(filteredBuildings.length / itemsPerPage) || 1;
+  // Pagination custom jump
   const handleCustomPageSubmit = () => {
     const pageNum = parseInt(customPageInput, 10);
     if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
@@ -284,19 +261,27 @@ export default function Buildings() {
     }
   };
 
-  const currentBuildings = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredBuildings.slice(start, start + itemsPerPage);
-  }, [filteredBuildings, currentPage, itemsPerPage]);
+  // Generate numbered pagination items
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('...');
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('...');
+      if (!pages.includes(totalPages)) pages.push(totalPages);
+    }
+    return pages;
+  };
 
-  // Dynamic header KPI stats based on filtered view
-  const currentViewStats = useMemo(() => {
-    const totalOwners = filteredBuildings.reduce((acc, b) => acc + b.ownersCount, 0);
-    const totalUnits = filteredBuildings.reduce((acc, b) => acc + b.unitsCount, 0);
-    const totalContacts = filteredBuildings.reduce((acc, b) => acc + b.contactsCount, 0);
-    const coverage = totalOwners > 0 ? Math.round((totalContacts / totalOwners) * 100) : 0;
-    return { totalOwners, totalUnits, totalContacts, coverage };
-  }, [filteredBuildings]);
+  // Dynamic header stats based on active category
+  const activeStats = CATEGORY_TOTALS[activeTab] || CATEGORY_TOTALS.building;
 
   // If viewing an Owner 360 profile from Building 360
   if (selectedOwner) {
@@ -309,7 +294,7 @@ export default function Buildings() {
     );
   }
 
-  // If viewing a Building 360 profile (opens into the dedicated view)
+  // If viewing a Building 360 profile (opens into dedicated view)
   if (selectedBuilding) {
     return (
       <Building360Detail 
@@ -337,27 +322,11 @@ export default function Buildings() {
         {/* Aggregate Stats Badges */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
-            {activeTab === 'community' ? (
-              <Compass className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <Building2 className="w-4 h-4 text-blue-400" />
-            )}
-            <div>
-              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">
-                {activeTab === 'community' ? 'Communities' : activeTab === 'single_unit' ? 'Plots' : 'Buildings'}
-              </div>
-              <div className="text-sm font-bold text-white leading-tight font-sans mt-0.5">
-                {filteredBuildings.length.toLocaleString()}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
             <Layers className="w-4 h-4 text-emerald-400" />
             <div>
               <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Units</div>
               <div className="text-sm font-bold text-white leading-tight font-sans mt-0.5">
-                {currentViewStats.totalUnits.toLocaleString()}
+                {activeStats.totalUnits.toLocaleString()}
               </div>
             </div>
           </div>
@@ -367,7 +336,7 @@ export default function Buildings() {
             <div>
               <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Owners</div>
               <div className="text-sm font-bold text-white leading-tight font-sans mt-0.5">
-                {currentViewStats.totalOwners.toLocaleString()}
+                {activeStats.totalOwners.toLocaleString()}
               </div>
             </div>
           </div>
@@ -377,7 +346,7 @@ export default function Buildings() {
       {/* ── Entity Category Filter Tabs ───────────────────────────── */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 flex-shrink-0">
         <button
-          onClick={() => setActiveTab('building')}
+          onClick={() => handleTabChange('building')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
             activeTab === 'building'
               ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/30 font-bold'
@@ -389,7 +358,7 @@ export default function Buildings() {
         </button>
 
         <button
-          onClick={() => setActiveTab('community')}
+          onClick={() => handleTabChange('community')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
             activeTab === 'community'
               ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/30 font-bold'
@@ -401,7 +370,7 @@ export default function Buildings() {
         </button>
 
         <button
-          onClick={() => setActiveTab('single_unit')}
+          onClick={() => handleTabChange('single_unit')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
             activeTab === 'single_unit'
               ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/30 font-bold'
@@ -422,15 +391,16 @@ export default function Buildings() {
             type="text"
             placeholder={activeTab === 'community' ? "Search community or district..." : "Search tower, building name, or area..."}
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-transparent text-[14px] text-white placeholder-slate-400 focus:outline-none"
           />
           {searchTerm && (
             <button 
-              onClick={() => setSearchTerm('')}
+              onClick={() => {
+                setSearchTerm('');
+                setDebouncedSearch('');
+                setCurrentPage(1);
+              }}
               className="text-slate-400 hover:text-white p-1 ml-1"
             >
               <X className="w-3.5 h-3.5" />
@@ -461,7 +431,10 @@ export default function Buildings() {
           <div className="relative w-full md:w-44">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full bg-[#06111e] border border-[#1a2c42] text-white text-[13px] rounded-xl px-3.5 py-2.5 appearance-none focus:outline-none focus:border-blue-500/60 cursor-pointer font-medium"
             >
               <option value="most_owners" className="bg-[#0c1829]">Most Owners</option>
@@ -474,9 +447,9 @@ export default function Buildings() {
 
           {/* Refresh Button */}
           <button 
-            onClick={() => fetchBuildingsData(activeTab)}
+            onClick={() => fetchBuildingsData()}
             title="Refresh buildings data"
-            className="p-2.5 bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] rounded-xl text-slate-400 hover:text-white transition-all flex-shrink-0"
+            className="p-2.5 bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] rounded-xl text-slate-400 hover:text-white transition-all flex-shrink-0 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
           </button>
@@ -490,23 +463,28 @@ export default function Buildings() {
             <RefreshCw className="w-8 h-8 animate-spin text-blue-400 mb-3" />
             <p className="text-[15px] font-medium">Loading {activeTab === 'community' ? 'communities' : 'buildings'}...</p>
           </div>
-        ) : filteredBuildings.length === 0 ? (
+        ) : buildings.length === 0 ? (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center text-white/50 max-w-lg mx-auto mt-12">
             <Building2 className="w-12 h-12 text-white/20 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-white mb-1">No Records Found</h3>
-            <p className="text-sm text-white/50 mb-4">No records matched your search "{searchTerm}".</p>
+            <p className="text-sm text-white/50 mb-4">No records matched your search filters.</p>
             <button 
-              onClick={() => { setSearchTerm(''); setSelectedCommunity('All'); }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-semibold text-white transition-all"
+              onClick={() => { 
+                setSearchTerm(''); 
+                setDebouncedSearch('');
+                setSelectedCommunity('All'); 
+                setCurrentPage(1);
+              }}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-semibold text-white transition-all cursor-pointer"
             >
               Reset Filters
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentBuildings.map((b, i) => (
+            {buildings.map((b, i) => (
               <div 
-                key={`${b.name}-${i}`} 
+                key={`${b.name}-${b.entityType}-${i}`} 
                 className="bg-[#0c1829] rounded-2xl border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 hover:shadow-2xl transition-all p-6 flex flex-col justify-between text-left group"
               >
                 {/* Upper Section */}
@@ -529,13 +507,13 @@ export default function Buildings() {
                   </div>
 
                   {/* Community Tag */}
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-sky-400 font-mono mb-1.5">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-sky-400 font-mono mb-1.5 truncate">
                     {b.area}
                   </div>
 
                   {/* Building / Community Title */}
                   <h3 
-                    className="text-2xl font-bold font-sans text-white tracking-tight leading-snug mb-1 group-hover:text-blue-300 transition-colors"
+                    className="text-2xl font-bold font-sans text-white tracking-tight leading-snug mb-1 group-hover:text-blue-300 transition-colors line-clamp-2"
                     title={b.name}
                   >
                     {b.name}
@@ -591,34 +569,47 @@ export default function Buildings() {
           </div>
         )}
 
-        {/* ── Pagination Bar ─────────────────────────────────────────── */}
+        {/* ── Numbered Pagination Bar ─────────────────────────────────────────── */}
         {!loading && totalPages > 1 && (
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0c1829] border border-[#233549] rounded-2xl px-5 py-3.5 shadow-xl shadow-black/40">
+          <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 bg-[#0c1829] border border-[#233549] rounded-2xl px-5 py-3.5 shadow-xl shadow-black/40">
             <div className="text-xs text-slate-400">
-              Showing <span className="text-white font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-white font-medium">{Math.min(currentPage * itemsPerPage, filteredBuildings.length)}</span> of <span className="text-white font-medium">{filteredBuildings.length.toLocaleString()}</span> records
+              Showing <span className="text-white font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-white font-medium">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of <span className="text-white font-medium">{totalCount.toLocaleString()}</span> {activeTab === 'community' ? 'communities' : activeTab === 'single_unit' ? 'plots' : 'buildings'}
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Previous Button */}
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-semibold"
+                className="px-2.5 py-1.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-semibold cursor-pointer"
               >
-                <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                <ChevronLeft className="w-3.5 h-3.5" /> Prev
               </button>
 
-              <button
-                onClick={() => customPageInputRef.current?.focus()}
-                title="Click to jump to custom page"
-                className="px-2.5 py-1 text-slate-400 hover:text-white font-mono text-xs transition-colors cursor-pointer"
-              >
-                Page <span className="text-white font-bold">{currentPage}</span> of {totalPages}
-              </button>
+              {/* Numbered Page Buttons */}
+              {getPageNumbers().map((p, idx) => (
+                p === '...' ? (
+                  <span key={`dots-${idx}`} className="px-2 py-1 text-slate-500 font-mono text-xs">...</span>
+                ) : (
+                  <button
+                    key={`page-${p}`}
+                    onClick={() => setCurrentPage(p)}
+                    className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+                      currentPage === p
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold border border-blue-500'
+                        : 'bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              ))}
 
+              {/* Next Button */}
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="px-3 py-1.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-semibold"
+                className="px-2.5 py-1.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-semibold cursor-pointer"
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />
               </button>
