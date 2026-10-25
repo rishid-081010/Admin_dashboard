@@ -47,11 +47,11 @@ gen_headers = {
 gen_url = 'https://developers.hostinger.com/api/hosting/v1/files/upload-urls'
 
 # Deploy to both subdomains to ensure zero drift
-target_domains = ['admin.asquared.ae', 'asquared.ae', 'dashboard.asquared.ae']
+target_domains = ['dashboard.asquared.ae', 'admin.asquared.ae', 'asquared.ae']
 
 dist_dir = 'client/dist'
 if not os.path.exists(dist_dir):
-    print(f"Error: {dist_dir} does not exist. Did you run npm run build[OK]")
+    print(f"Error: {dist_dir} does not exist. Did you run npm run build?")
     sys.exit(1)
 
 root_dir = 'root_files'
@@ -113,13 +113,13 @@ def deploy_to_domain(domain):
     # Priority sorting: index.html & index-*.js first
     def priority_key(item):
         _, remote_path = item
-        if 'index.html' in remote_path:
-            return 0
         if 'assets/' in remote_path:
-            return 1
+            return 0
+        if 'index.html' in remote_path:
+            return 3
         if remote_path.endswith('.php') or remote_path.endswith('.htaccess'):
-            return 2
-        return 3
+            return 1
+        return 2
 
     uploads_list.sort(key=priority_key)
     total_files = len(uploads_list)
@@ -131,7 +131,7 @@ def deploy_to_domain(domain):
         with open(local_path, 'rb') as f:
             file_bytes = f.read()
 
-        target_url = f"{upload_base_url}/{remote_rel_path}[OK]override=true"
+        target_url = f"{upload_base_url}/{remote_rel_path}?override=true"
         post_headers = {
             'X-Auth': auth_key,
             'X-Auth-Rest': rest_auth_key,

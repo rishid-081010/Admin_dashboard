@@ -130,8 +130,54 @@ $sbResponse = curl_exec($chSb);
 $sbCode = curl_getinfo($chSb, CURLINFO_HTTP_CODE);
 curl_close($chSb);
 
+// 4. Directly invoke Supabase apply_provider_event RPC to immediately release concurrency slots and finalize call
+$msgType = $data['message']['type'] ?? $data['type'] ?? '';
+$rpcCode = null;
+if (!empty($callId) && ($msgType === 'end-of-call-report' || !empty($endedReason))) {
+    $rpcPayload = [
+        'p_provider_call_id' => $callId,
+        'p_ended_reason' => $endedReason,
+        'p_duration_seconds' => intval($dur),
+        'p_transcript' => $transcript,
+        'p_summary' => $summary,
+        'p_recording_url' => $call['recordingUrl'] ?? ($call['stereoRecordingUrl'] ?? null)
+    ];
+    $chRpc = curl_init();
+    curl_setopt_array($chRpc, [
+        CURLOPT_URL => 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/rpc/apply_provider_event',
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($rpcPayload),
+        CURLOPT_HTTPHEADER => [
+            'apikey: ' . $supabaseKey,
+            'Authorization: Bearer ' . $supabaseKey,
+            'Content-Type: application/json'
+        ],
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_RETURNTRANSFER => true
+    ]);
+    $rpcResp = curl_exec($chRpc);
+    $rpcCode = curl_getinfo($chRpc, CURLINFO_HTTP_CODE);
+    curl_close($chRpc);
+
+    // Also send instant refill ping to n8n to claim the freed slot within milliseconds
+    $chRefill = curl_init();
+    curl_setopt_array($chRefill, [
+        CURLOPT_URL => 'https://n8n.asquared.ae/webhook/v2-call-scheduler-refill',
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode(['refill' => true, 'callId' => $callId]),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
+        CURLOPT_TIMEOUT => 2,
+        CURLOPT_RETURNTRANSFER => true
+    ]);
+    curl_exec($chRefill);
+    curl_close($chRefill);
+}
+
 echo json_encode([
     'status' => 'ok',
     'call_id' => $callId,
-    'supabase_code' => $sbCode
+    'supabase_code' => $sbCode,
+    'rpc_code' => $rpcCode
 ]);
