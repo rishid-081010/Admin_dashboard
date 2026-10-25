@@ -187,7 +187,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   const itemsPerPage = 50;
   const [customPageInput, setCustomPageInput] = useState('');
   const customPageInputRef = useRef(null);
-  const [totalCount, setTotalCount] = useState(2220643);
+  const [totalCount, setTotalCount] = useState(785828);
+  const fetchIdRef = useRef(0);
   const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
   const isSearching = searchTerm.trim().length > 1;
 
@@ -271,12 +272,13 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
   // ─── Query Execution ─────────────────────────────────────────────────────
   const fetchOwners = async () => {
+    const currentFetchId = ++fetchIdRef.current;
     setLoading(true);
     try {
       const offset = (currentPage - 1) * itemsPerPage;
       const isSearching = searchTerm.trim().length > 1;
 
-      let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/canonical_owners?select=canonical_owner_id,full_name,primary_building,primary_area,phone_normalized,phone_raw,nationality,emirates_id,total_units,total_portfolio_valuation,ownership_type,match_criteria,match_confidence,bitrix_id,assigned_agent,assigned_agent_id,bitrix_status,sample_owner_id&limit=${itemsPerPage}&offset=${offset}`;
+      let url = `https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/canonical_owners?select=canonical_owner_id,full_name,primary_building,primary_area,phone_normalized,phone_raw,nationality,emirates_id,total_units,total_portfolio_valuation,ownership_type,match_criteria,match_confidence,bitrix_id,assigned_agent,assigned_agent_id,bitrix_status,sample_owner_id,primary_property_type,bedrooms,source_file,registration_date&limit=${itemsPerPage}&offset=${offset}`;
 
       // 1. Search Query
       if (isSearching) {
@@ -289,10 +291,23 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             url += `&phone_normalized=eq.${encodeURIComponent(pExact)}`;
           } else if (parsed.intent === 'bitrix') {
             url += `&bitrix_id=eq.${encodeURIComponent(queryTerm)}`;
+          } else if (parsed.intent === 'eid' || (parsed.digits && parsed.digits.startsWith('784'))) {
+            // EID Search: query indexed emirates_id column
+            const eidClauses = [
+              `emirates_id.ilike.*${encodeURIComponent(parsed.digits)}*`
+            ];
+            if (parsed.eidVariants && parsed.eidVariants.length > 0) {
+              parsed.eidVariants.forEach(v => {
+                const cleanV = String(v).replace(/[,():]/g, ' ').trim();
+                if (cleanV) eidClauses.push(`emirates_id.ilike.*${encodeURIComponent(cleanV)}*`);
+              });
+            }
+            url += `&or=(${Array.from(new Set(eidClauses)).join(',')})`;
           } else {
+            const cleanQ = queryTerm.replace(/[,():]/g, ' ').replace(/\s+/g, ' ').trim();
             const orClauses = [
-              `canonical_owner_id.ilike.*${encodeURIComponent(queryTerm)}*`,
-              `sample_owner_id.ilike.*${encodeURIComponent(queryTerm)}*`
+              `canonical_owner_id.ilike.*${encodeURIComponent(cleanQ)}*`,
+              `sample_owner_id.ilike.*${encodeURIComponent(cleanQ)}*`
             ];
             if (parsed.digits && parsed.digits.length >= 7) {
               const pExact = queryTerm.startsWith('+') ? queryTerm : `+${parsed.digits}`;
@@ -301,15 +316,30 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             url += `&or=(${orClauses.join(',')})`;
           }
         } else {
-          const enc = encodeURIComponent(queryTerm);
+          // General search: clean commas, colons, and parentheses that crash PostgREST or=(...)
+          const cleanQ = queryTerm.replace(/[,():]/g, ' ').replace(/\s+/g, ' ').trim();
+          const enc = encodeURIComponent(cleanQ);
           url += `&or=(full_name.ilike.*${enc}*,primary_building.ilike.*${enc}*,assigned_agent.ilike.*${enc}*,canonical_owner_id.ilike.*${enc}*)`;
         }
       }
 
       // 2. Area
       if (areaFilter !== 'Any') {
-        const areaParam = areaFilter.replace(/\s*\(JLT\)|\s*\(JVC\)/g, '');
-        url += `&primary_area=ilike.*${encodeURIComponent(areaParam)}*`;
+        const areaLower = areaFilter.toLowerCase();
+        if (areaLower.includes('downtown')) {
+          url += `&or=(primary_area.ilike.*Downtown*,primary_area.ilike.*Burj Khalifa*)`;
+        } else if (areaLower.includes('marina')) {
+          url += `&or=(primary_area.ilike.*Dubai Marina*,primary_area.ilike.*Marsa Dubai*)`;
+        } else if (areaLower.includes('jlt') || areaLower.includes('jumeirah lake')) {
+          url += `&primary_area=ilike.*Jumeirah Lake*`;
+        } else if (areaLower.includes('jvc') || areaLower.includes('jumeirah village')) {
+          url += `&primary_area=ilike.*Jumeirah Village Circle*`;
+        } else if (areaLower.includes('creek')) {
+          url += `&primary_area=ilike.*Creek*`;
+        } else {
+          const areaParam = areaFilter.replace(/\s*\(JLT\)|\s*\(JVC\)/g, '').trim();
+          url += `&primary_area=ilike.*${encodeURIComponent(areaParam)}*`;
+        }
       }
 
       // 3. Building
@@ -317,12 +347,39 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         url += `&primary_building=ilike.*${encodeURIComponent(buildingFilter)}*`;
       }
 
-      // 4. Ownership Classification
+      // 4. Property Subtype
+      if (propertyTypeFilter !== 'Any') {
+        url += `&primary_property_type=ilike.*${encodeURIComponent(propertyTypeFilter)}*`;
+      }
+
+      // 5. Bedrooms
+      if (bedroomsFilter !== 'Any') {
+        if (bedroomsFilter === '5') {
+          url += '&bedrooms=gte.5';
+        } else {
+          url += `&bedrooms=eq.${encodeURIComponent(bedroomsFilter)}`;
+        }
+      }
+
+      // 6. Source File (Data from)
+      if (sourceFileFilter !== 'Any') {
+        url += `&source_file=eq.${encodeURIComponent(sourceFileFilter)}`;
+      }
+
+      // 7. Date Range
+      if (dateFrom) {
+        url += `&registration_date=gte.${encodeURIComponent(dateFrom)}`;
+      }
+      if (dateTo) {
+        url += `&registration_date=lte.${encodeURIComponent(dateTo)}`;
+      }
+
+      // 8. Ownership Classification
       if (classificationFilter !== 'Any') {
         url += `&ownership_type=eq.${encodeURIComponent(classificationFilter)}`;
       }
 
-      // 5. Portfolio Size
+      // 9. Portfolio Size
       if (portfolioSizeFilter === 'Single Unit') {
         url += '&total_units=eq.1';
       } else if (portfolioSizeFilter === 'Multi-Unit (2+)') {
@@ -331,7 +388,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         url += '&total_units=gte.5';
       }
 
-      // 6. Agent
+      // 10. Agent
       if (agentFilter !== 'Any') {
         if (agentFilter === 'Unassigned') {
           url += '&assigned_agent=is.null';
@@ -340,14 +397,14 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         }
       }
 
-      // 7. Phone
+      // 11. Phone
       if (phoneFilter === 'Yes') {
         url += '&phone_normalized=not.is.null';
       } else if (phoneFilter === 'No') {
         url += '&phone_normalized=is.null';
       }
 
-      // 10. Sort Order (Always active)
+      // 12. Sort Order (Always active)
       if (sortBy === 'Name A–Z') {
         url += `&order=full_name.asc`;
       } else if (sortBy === 'Name Z–A') {
@@ -374,16 +431,27 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         } 
       });
 
-      // Parse live exact count from Content-Range header (e.g. "0-49/2220643")
+      // Discard stale out-of-order response if another request has been initiated
+      if (currentFetchId !== fetchIdRef.current) {
+        return;
+      }
+
+      // Parse live exact count from Content-Range header (e.g. "0-49/785828")
       const contentRange = response.headers['content-range'] || response.headers['Content-Range'];
-      if (contentRange) {
+      if (Array.isArray(response.data) && response.data.length === 0 && currentPage === 1) {
+        setTotalCount(0);
+      } else if (contentRange) {
         const parts = String(contentRange).split('/');
         if (parts.length > 1) {
           const parsedCount = parseInt(parts[1], 10);
           if (!isNaN(parsedCount)) {
             setTotalCount(parsedCount);
+          } else if (Array.isArray(response.data)) {
+            setTotalCount(response.data.length);
           }
         }
+      } else if (Array.isArray(response.data)) {
+        setTotalCount(response.data.length);
       }
       
       if (Array.isArray(response.data)) {
@@ -432,7 +500,11 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             units: row.total_units || 1,
             total_units: row.total_units || 1,
             unit_number: cleanUnit || null,
-            property_type: row.total_units > 1 ? `${row.total_units} Properties Portfolio` : 'Individual Asset',
+            property_type: row.total_units > 1 ? `${row.total_units} Properties Portfolio` : (row.primary_property_type || 'Individual Asset'),
+            primary_property_type: row.primary_property_type || null,
+            bedrooms: row.bedrooms !== null && row.bedrooms !== undefined ? row.bedrooms : null,
+            source_file: row.source_file || null,
+            registration_date: row.registration_date || null,
             property_category: 'Residential',
             nationality: row.nationality || null,
             emirates_id: row.emirates_id || null,
@@ -442,7 +514,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             ownership_type: row.ownership_type || 'OWNER',
             match_criteria: row.match_criteria || 'SINGLE_DEED',
             match_confidence: row.match_confidence || 'STANDARD',
-            source: 'Verified',
+            source: row.source_file ? row.source_file.replace('.xlsx', '') : 'Verified',
             bitrix_id: row.bitrix_id ? String(row.bitrix_id) : null,
             bitrix_status: row.bitrix_status || null,
             assigned_agent: row.assigned_agent || null,
@@ -755,70 +827,70 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             {areaFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
                 Area: {areaFilter}
-                <button onClick={() => setAreaFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                <button onClick={() => { setAreaFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {buildingFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 font-medium">
                 Building: {buildingFilter}
-                <button onClick={() => setBuildingFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                <button onClick={() => { setBuildingFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {propertyTypeFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-200 font-medium">
                 Type: {propertyTypeFilter}
-                <button onClick={() => setPropertyTypeFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                <button onClick={() => { setPropertyTypeFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {bedroomsFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-medium">
-                Bedrooms: {bedroomsFilter === '0' ? 'Studio' : bedroomsFilter}
-                <button onClick={() => setBedroomsFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                Bedrooms: {bedroomsFilter === '0' ? 'Studio' : bedroomsFilter === '5' ? '5+ Beds' : `${bedroomsFilter} Beds`}
+                <button onClick={() => { setBedroomsFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {sourceFileFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 font-medium">
                 Source: {sourceFileFilter}
-                <button onClick={() => setSourceFileFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                <button onClick={() => { setSourceFileFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {(dateFrom || dateTo) && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-200 font-medium">
                 Date: {dateFrom || 'Start'} → {dateTo || 'End'}
-                <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="hover:text-white"><X className="w-3 h-3" /></button>
+                <button onClick={() => { setDateFrom(''); setDateTo(''); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {agentFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
                 Agent: {agentFilter}
-                <button onClick={() => setAgentFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                <button onClick={() => { setAgentFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {phoneFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 font-medium">
                 Phone: {phoneFilter}
-                <button onClick={() => setPhoneFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                <button onClick={() => { setPhoneFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {classificationFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-200 font-medium">
-                Type: {classificationFilter}
-                <button onClick={() => setClassificationFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                Classification: {classificationFilter}
+                <button onClick={() => { setClassificationFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {portfolioSizeFilter !== 'Any' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 font-medium">
                 Portfolio: {portfolioSizeFilter}
-                <button onClick={() => setPortfolioSizeFilter('Any')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                <button onClick={() => { setPortfolioSizeFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
@@ -907,25 +979,15 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   </div>
                 </div>
 
-                {/* Data from */}
-                <div>
-                  <label className="text-xs font-semibold text-white/70 block mb-1.5">
-                    Data from
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={sourceFileFilter}
-                      onChange={(e) => { setSourceFileFilter(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm font-medium text-white outline-none cursor-pointer transition-all appearance-none truncate"
-                    >
-                      <option value="Any" className="bg-slate-900 text-white">Any</option>
-                      {allSources.map(s => (
-                        <option key={s} value={s} className="bg-slate-900 text-white truncate">{s}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
-                  </div>
-                </div>
+                {/* Data from (Source file) */}
+                <SearchableCombobox
+                  label="Data from (Source file)"
+                  value={sourceFileFilter}
+                  onChange={(val) => { setSourceFileFilter(val); setCurrentPage(1); }}
+                  options={allSources}
+                  placeholder="Search source (e.g. jvc.xlsx)..."
+                  allLabel="Any"
+                />
 
                 {/* Date Range */}
                 <div>
@@ -1077,7 +1139,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   <th className="w-[18%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Phone &amp; Email</th>
                   <th className="w-[22%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Property &amp; Portfolio</th>
                   <th className="w-[13%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Assigned Agent</th>
-                  <th className="w-[11%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Bitrix ID / Status</th>
+                  <th className="w-[11%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">CRM Lead &amp; Status</th>
                   <th className="w-[8%] px-5 py-2.5 font-semibold text-right bg-[#071322] align-middle">Classification</th>
                 </tr>
               </thead>
@@ -1182,6 +1244,12 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                                 Single Deed
                               </span>
                             )}
+                            {owner.primary_property_type && (
+                              <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/20 text-[10px] font-medium shrink-0">
+                                {owner.primary_property_type}
+                                {owner.bedrooms !== null && owner.bedrooms !== undefined ? (owner.bedrooms === 0 ? ' · Studio' : ` · ${owner.bedrooms}B`) : ''}
+                              </span>
+                            )}
                             <span className="flex items-center gap-1 truncate text-slate-300">
                               <MapPin className="w-3 h-3 text-white/40 shrink-0" />
                               {owner.area}
@@ -1270,6 +1338,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             <span>
               {isSearching ? (
                 `Found ${owners.length} matching owner record${owners.length === 1 ? '' : 's'}`
+              ) : owners.length === 0 ? (
+                'Showing 0 owner records'
               ) : (
                 `Showing ${((currentPage - 1) * itemsPerPage) + 1} to ${((currentPage - 1) * itemsPerPage) + owners.length} of ${totalCount.toLocaleString()} owner records (Page ${currentPage.toLocaleString()} of ${totalPages.toLocaleString()})`
               )}
@@ -1498,6 +1568,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             <span>
               {isSearching ? (
                 `Found ${owners.length} matching owner record${owners.length === 1 ? '' : 's'}`
+              ) : owners.length === 0 ? (
+                'Showing 0 owner records'
               ) : (
                 `Showing ${((currentPage - 1) * itemsPerPage) + 1} to ${((currentPage - 1) * itemsPerPage) + owners.length} of ${totalCount.toLocaleString()} owners (Page ${currentPage.toLocaleString()} of ${totalPages.toLocaleString()})`
               )}
