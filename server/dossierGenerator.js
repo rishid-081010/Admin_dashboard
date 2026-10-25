@@ -188,9 +188,9 @@ export function fillListingFormRentalTemplate(page, {
 
   // 6. Signatures
   drawText(ownerName, 255, 214, 15, true);
-  const brokerLabel = commercialSpecs?.broker_name || 'A SQUARED REAL ESTATE';
+  const agentName = commercialSpecs?.broker_agent_name || commercialSpecs?.agent_name || commercialSpecs?.assigned_agent || commercialSpecs?.assigned_agent_name || listing?.assigned_agent || listing?.assigned_agent_name || listing?.agent_name || listing?.broker_agent_name || 'Melanie Simsiman';
   // Starts after "Agent: " at X=725 to avoid colliding with printed word "Agent"
-  drawText(brokerLabel, 725, 214, 15, true);
+  drawText(agentName, 725, 214, 15, true);
 }
 
 /**

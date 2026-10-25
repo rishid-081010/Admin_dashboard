@@ -280,8 +280,8 @@ export function fillListingFormRentalTemplate(page, {
 
   // 6. Signatures: dashY = 218
   drawField({ text: ownerName, startX: 235, endX: 540, dashY: 218, fontSize: 14, isBold: true });
-  const brokerLabel = commercialSpecs?.broker_name || 'A SQUARED REAL ESTATE';
-  drawField({ text: brokerLabel, startX: 715, endX: 960, dashY: 218, fontSize: 14, isBold: true });
+  const agentName = commercialSpecs?.broker_agent_name || commercialSpecs?.agent_name || commercialSpecs?.assigned_agent || commercialSpecs?.assigned_agent_name || listing?.assigned_agent || listing?.assigned_agent_name || listing?.agent_name || listing?.broker_agent_name || 'Melanie Simsiman';
+  drawField({ text: agentName, startX: 715, endX: 960, dashY: 218, fontSize: 14, isBold: true });
 }
 
 /**
