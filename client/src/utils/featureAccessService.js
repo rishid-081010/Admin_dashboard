@@ -343,7 +343,11 @@ export const featureAccessService = {
       return Boolean(roleConfig[featureKey]);
     }
 
-    // Default to true if not explicitly restricted
+    // Fall back to factory default for this role if key known, otherwise true
+    if (DEFAULT_FEATURE_ACCESS[role] && featureKey in DEFAULT_FEATURE_ACCESS[role]) {
+      return Boolean(DEFAULT_FEATURE_ACCESS[role][featureKey]);
+    }
+
     return true;
   },
 
@@ -352,17 +356,30 @@ export const featureAccessService = {
     const role = normalizeRole(userRole);
     if (role === 'superadmin') return true;
 
-    const cleanTab = (tabName || '').toLowerCase();
+    // Strip hash, query params, and leading/trailing slashes
+    const raw = (tabName || '').toLowerCase().replace(/^#+/, '').replace(/^\/+/, '').split('?')[0].split('/')[0].trim();
 
-    // Map sub-tabs/aliases to their parent feature key
-    if (cleanTab === 'new' || cleanTab === 'detail' || cleanTab.startsWith('detail')) {
+    // Map sub-tabs & aliases to parent feature key
+    if (raw === 'new' || raw === 'detail' || raw === 'new-listing' || raw === 'listing-detail' || raw === 'dashboard') {
       return this.isFeatureAllowed(role, 'listing');
     }
-    if (cleanTab === 'sources' || cleanTab === 'datalibrary') {
+    if (raw === 'sources' || raw === 'datalibrary' || raw === 'datacleaning') {
       return this.isFeatureAllowed(role, 'leads');
     }
+    if (raw === 'myactivity') {
+      return this.isFeatureAllowed(role, 'activity');
+    }
+    if (raw === 'voiceagent') {
+      return this.isFeatureAllowed(role, 'voice');
+    }
+    if (raw === 'ai-agent') {
+      return this.isFeatureAllowed(role, 'agent');
+    }
+    if (raw === 'role') {
+      return this.isFeatureAllowed(role, 'roles');
+    }
 
-    return this.isFeatureAllowed(role, cleanTab);
+    return this.isFeatureAllowed(role, raw);
   },
 
   // Check if at least one feature in a section is visible (if not, whole section header is hidden)

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, LogOut, User } from 'lucide-react';
+import { ExternalLink, LogOut } from 'lucide-react';
 import { featureAccessService, FEATURE_ACCESS_EVENT } from '../utils/featureAccessService';
 
 export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout }) {
-  const isListingActive = activeTab === 'listing' || activeTab === 'dashboard' || activeTab === 'new' || activeTab === 'detail';
+  const isListingActive = activeTab === 'listing' || activeTab === 'dashboard' || activeTab === 'new' || activeTab === 'detail' || activeTab.startsWith('detail');
   const isLeadsActive = activeTab === 'leads' || activeTab === 'sources';
 
   // Reactive state synced with feature access changes

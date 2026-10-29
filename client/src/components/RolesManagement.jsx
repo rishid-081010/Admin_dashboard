@@ -674,13 +674,23 @@ export default function RolesManagement({ currentUser }) {
           {/* Sticky Bottom Save Changes Action Bar */}
           <div className="sticky bottom-2 z-20 bg-[#0c1829]/95 backdrop-blur-xl border border-[#233549] rounded-2xl p-4 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${hasUnsavedChanges ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              <div className={`w-3 h-3 rounded-full ${
+                accessSuccessMsg ? 'bg-emerald-400' :
+                hasUnsavedChanges ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'
+              }`} />
               <div className="text-xs">
-                <span className="text-white font-semibold">
-                  {hasUnsavedChanges 
-                    ? `Unsaved changes pending for ${selectedRoleConfig.toUpperCase()}`
-                    : `Active permissions in sync with Supabase for ${selectedRoleConfig.toUpperCase()}`}
-                </span>
+                {accessSuccessMsg ? (
+                  <span className="text-emerald-300 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{accessSuccessMsg}</span>
+                  </span>
+                ) : (
+                  <span className="text-white font-semibold">
+                    {hasUnsavedChanges 
+                      ? `Unsaved changes pending for ${selectedRoleConfig.toUpperCase()}`
+                      : `Active permissions in sync with Supabase for ${selectedRoleConfig.toUpperCase()}`}
+                  </span>
+                )}
                 <span className="text-slate-400 block text-[11px]">
                   Changes are applied immediately across all active agent dashboard sessions upon saving.
                 </span>

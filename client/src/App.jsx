@@ -225,6 +225,14 @@ export default function App() {
       if (!featureAccessService.isTabAllowed(userRole, activeTab)) {
         const allowedTab = featureAccessService.getFirstAccessibleTab(userRole);
         setActiveTab(allowedTab, false);
+        if (typeof window !== 'undefined') {
+          const isDashboardBase = window.location.pathname.startsWith('/public/dashboard')
+            ? '/public/dashboard/'
+            : window.location.pathname.startsWith('/dashboard')
+            ? '/dashboard/'
+            : '/';
+          window.history.replaceState({ tab: allowedTab }, '', `${isDashboardBase}#${allowedTab}`);
+        }
       }
     };
     window.addEventListener(FEATURE_ACCESS_EVENT, handleFeatureUpdate);
@@ -235,6 +243,8 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'F6' || e.code === 'F6' || e.key === 'k' || e.key === 'K')) {
+        const userRole = currentUser?.role || 'admin';
+        if (!featureAccessService.isFeatureAllowed(userRole, 'search')) return;
         e.preventDefault();
         setIsOmniSearchModalOpen(prev => !prev);
       } else if (e.key === 'Escape' && isOmniSearchModalOpen) {
@@ -243,7 +253,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOmniSearchModalOpen]);
+  }, [isOmniSearchModalOpen, currentUser]);
 
   const handleListingCreated = (newListing) => {
     try {
@@ -378,7 +388,7 @@ export default function App() {
       </div>
 
       {/* Global Omni Search Modal (Summoned via Ctrl + F6 or Cmd + F6 or Top Bar) */}
-      {isOmniSearchModalOpen && (
+      {isOmniSearchModalOpen && isAllowed('search') && (
         <div 
           className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
           onClick={() => setIsOmniSearchModalOpen(false)}
