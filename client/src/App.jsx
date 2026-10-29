@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import OverviewDashboard from './components/OverviewDashboard';
 import Login from './components/Login';
 import { authService } from './utils/authService';
+import { featureAccessService, FEATURE_ACCESS_EVENT } from './utils/featureAccessService';
 
 // Lazy-loaded routes for sub-400kB initial bundle and instant page startup
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -198,6 +199,38 @@ export default function App() {
     }
   }, []);
 
+  // Silent stealth guard: If current user attempts to access a restricted tab, seamlessly redirect to accessible tab
+  useEffect(() => {
+    if (!currentUser) return;
+    const userRole = currentUser.role || 'admin';
+    if (!featureAccessService.isTabAllowed(userRole, activeTab)) {
+      const allowedTab = featureAccessService.getFirstAccessibleTab(userRole);
+      setActiveTab(allowedTab, false);
+      if (typeof window !== 'undefined') {
+        const isDashboardBase = window.location.pathname.startsWith('/public/dashboard')
+          ? '/public/dashboard/'
+          : window.location.pathname.startsWith('/dashboard')
+          ? '/dashboard/'
+          : '/';
+        window.history.replaceState({ tab: allowedTab }, '', `${isDashboardBase}#${allowedTab}`);
+      }
+    }
+  }, [activeTab, currentUser]);
+
+  // Live listener: If SuperAdmin saves new permissions while user is on a disabled tab, silently redirect
+  useEffect(() => {
+    const handleFeatureUpdate = () => {
+      if (!currentUser) return;
+      const userRole = currentUser.role || 'admin';
+      if (!featureAccessService.isTabAllowed(userRole, activeTab)) {
+        const allowedTab = featureAccessService.getFirstAccessibleTab(userRole);
+        setActiveTab(allowedTab, false);
+      }
+    };
+    window.addEventListener(FEATURE_ACCESS_EVENT, handleFeatureUpdate);
+    return () => window.removeEventListener(FEATURE_ACCESS_EVENT, handleFeatureUpdate);
+  }, [activeTab, currentUser]);
+
   // Global Keyboard Shortcut: Ctrl + F6 or Cmd + F6 (and Ctrl + K / Cmd + K)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -233,6 +266,9 @@ export default function App() {
     return <Login onLoginSuccess={(user) => setCurrentUser(user)} />;
   }
 
+  const userRole = currentUser?.role || 'admin';
+  const isAllowed = (tab) => featureAccessService.isTabAllowed(userRole, tab);
+
   return (
     <div 
       className="h-screen w-screen text-white p-2 sm:p-2.5 flex gap-2 sm:gap-2.5 box-border font-sans antialiased overflow-hidden selection:bg-blue-500/30 selection:text-white"
@@ -258,11 +294,15 @@ export default function App() {
           <TabErrorBoundary key={activeTab} onReset={() => setActiveTab('overview')}>
             <Suspense fallback={<TabLoadingSkeleton />}>
               {/* Tab Views */}
-              {activeTab === 'overview' && (
-                <OverviewDashboard onNavigate={(tab) => setActiveTab(tab)} />
+              {activeTab === 'overview' && isAllowed('overview') && (
+                <OverviewDashboard onNavigate={(tab) => {
+                  if (isAllowed(tab)) {
+                    setActiveTab(tab);
+                  }
+                }} />
               )}
 
-              {activeTab === 'owners' && (
+              {activeTab === 'owners' && isAllowed('owners') && (
                 <OwnerDirectory 
                   globalAgentId="6"
                   globalAgentName="Melanie Simsiman" 
@@ -270,41 +310,41 @@ export default function App() {
                 />
               )}
 
-              {activeTab === 'buildings' && <Buildings />}
+              {activeTab === 'buildings' && isAllowed('buildings') && <Buildings />}
 
-              {activeTab === 'search' && <OmniSearch />}
+              {activeTab === 'search' && isAllowed('search') && <OmniSearch />}
 
-              {activeTab === 'workflows' && <WorkflowsDirectory />}
+              {activeTab === 'workflows' && isAllowed('workflows') && <WorkflowsDirectory />}
 
-              {activeTab === 'sources' && (
+              {activeTab === 'sources' && isAllowed('leads') && (
                 <LeadIngestionStudio initialOpenLibrary={true} />
               )}
 
-              {activeTab === 'activity' && <MyActivity currentUser={currentUser} />}
+              {activeTab === 'activity' && isAllowed('activity') && <MyActivity currentUser={currentUser} />}
 
-              {activeTab === 'voice' && <VoiceAgent />}
+              {activeTab === 'voice' && isAllowed('voice') && <VoiceAgent />}
 
-              {activeTab === 'agent' && <AIAgent setActiveTab={setActiveTab} />}
+              {activeTab === 'agent' && isAllowed('agent') && <AIAgent setActiveTab={setActiveTab} />}
 
-              {activeTab === 'leads' && (
+              {activeTab === 'leads' && isAllowed('leads') && (
                 <LeadIngestionStudio initialOpenLibrary={initialRoute?.autoOpenLibrary} />
               )}
 
-              {activeTab === 'listing' && (
+              {activeTab === 'listing' && isAllowed('listing') && (
                 <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Dashboard
                   onNewListingClick={() => setActiveTab('new')}
                   onSelectListing={handleSelectListing}
                 /></div>
               )}
 
-              {activeTab === 'new' && (
+              {activeTab === 'new' && isAllowed('listing') && (
                 <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><NewListing 
                   onListingCreated={handleListingCreated} 
                   onBack={() => setActiveTab('listing')}
                 /></div>
               )}
 
-              {(activeTab === 'detail' || activeTab.startsWith('detail')) && (
+              {(activeTab === 'detail' || activeTab.startsWith('detail')) && isAllowed('listing') && (
                 <div className="h-full overflow-y-auto pr-2 custom-scrollbar">{selectedListingId ? (
                   <ListingDetail
                     listingId={selectedListingId}
@@ -321,11 +361,11 @@ export default function App() {
                 )}</div>
               )}
 
-              {activeTab === 'roles' && (
+              {activeTab === 'roles' && isAllowed('roles') && (
                 <RolesManagement currentUser={currentUser} />
               )}
 
-              {activeTab === 'settings' && (
+              {activeTab === 'settings' && isAllowed('settings') && (
                 <AccountSettings 
                   currentUser={currentUser} 
                   onLogout={handleLogout}
