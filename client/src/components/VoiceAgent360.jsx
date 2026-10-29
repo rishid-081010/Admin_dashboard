@@ -151,35 +151,16 @@ export default function VoiceAgent360({
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // Calculate local stats from current batch
+  // Use exact full-scope metrics from server-side database aggregates (not page-restricted)
+  const metrics = data?.metrics || {};
   const currentCalls = data?.calls || [];
-  const totalCallsCount = data?.totalCalls || 0;
+  const totalCallsCount = Number(metrics.total_calls ?? data?.totalCalls ?? currentCalls.length);
+  const allTimeTotal = Number(data?.agent?.allTimeTotal || totalCallsCount);
 
-  let qualifiedInBatch = 0;
-  let answeredInBatch = 0;
-  let voicemailsInBatch = 0;
-  let busyInBatch = 0;
-  let totalDurBatch = 0;
-  let durSamples = 0;
-  let totalCostBatch = 0;
-
-  for (const c of currentCalls) {
-    if (isQualifiedLead(c)) qualifiedInBatch++;
-    if (isCallAnswered(c)) answeredInBatch++;
-    if (c.status === 'voicemail') voicemailsInBatch++;
-    if (c.status === 'customer-busy') busyInBatch++;
-    const dur = Number(c.duration_seconds) || 0;
-    if (dur > 0) {
-      totalDurBatch += dur;
-      durSamples++;
-    }
-    totalCostBatch += Number(c.cost_usd) || 0;
-  }
-
-  const batchCount = currentCalls.length || 1;
-  const answerRate = ((answeredInBatch / batchCount) * 100).toFixed(1) + '%';
-  const qualRate = ((qualifiedInBatch / batchCount) * 100).toFixed(1) + '%';
-  const avgDuration = durSamples > 0 ? formatDuration(totalDurBatch / durSamples) : '24s';
+  const answerRate = metrics.answer_rate !== undefined ? `${metrics.answer_rate}%` : '0.0%';
+  const qualifiedLeads = Number(metrics.qualified_leads || 0).toLocaleString();
+  const qualRate = metrics.qualification_rate !== undefined ? `${metrics.qualification_rate}%` : '0.0%';
+  const avgDuration = metrics.avg_duration_seconds !== undefined ? formatDuration(metrics.avg_duration_seconds) : '0s';
 
   // Format transcript into lines with estimated audio timeline offsets
   const parseTranscript = (raw, totalDurSec = 0) => {
@@ -201,7 +182,7 @@ export default function VoiceAgent360({
         id: idx,
         isAI, 
         isUser, 
-        speaker: isAI ? `${agent?.name || 'Voice Bot'} (AI)` : (isUser ? 'Property Owner' : 'Dialogue'), 
+        speaker: isAI ? `${agent?.name || 'Voice Bot'} (AI)` : (isUser ? (activeCallModal?.customer_name || 'Contact') : 'Dialogue'), 
         text,
         startSec
       };
@@ -209,10 +190,10 @@ export default function VoiceAgent360({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar pr-1 -mr-1 text-slate-100 animate-fade-in">
+    <div className="w-full flex flex-col h-full overflow-y-auto custom-scrollbar pr-1 -mr-1 text-slate-100 animate-fade-in select-text">
       
       {/* ─── Breadcrumb & Top Bar ────────────────────────────────────────── */}
-      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08] mb-6">
+      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08] mb-6 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -236,16 +217,16 @@ export default function VoiceAgent360({
       </div>
 
       {/* ─── Profile Header Widget ───────────────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 mb-6 shadow-xl shadow-black/40 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-        <div className="flex items-center gap-4">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 mb-6 shadow-xl shadow-black/40 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shrink-0 min-h-fit">
+        <div className="flex items-center gap-4 min-w-0">
           {/* Avatar with Glow */}
-          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${agent.avatarBg} border ${agent.borderColor} flex items-center justify-center text-white text-2xl font-bold shadow-inner relative flex-shrink-0`}>
+          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${agent.avatarBg} border ${agent.borderColor} flex items-center justify-center text-white text-2xl font-bold shadow-inner relative shrink-0`}>
             <Mic className={`w-8 h-8 ${agent.textColor}`} />
             <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-slate-900 animate-pulse"></span>
           </div>
 
           {/* Details */}
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className={`text-[10px] font-mono tracking-widest uppercase font-bold px-2 py-0.5 rounded-md border ${agent.badgeClass}`}>
                 {agent.line}
@@ -275,10 +256,10 @@ export default function VoiceAgent360({
         </div>
 
         {/* Quick Stats Pill */}
-        <div className="flex items-center gap-4 bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3">
+        <div className="flex items-center gap-4 bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 shrink-0">
           <div className="text-right">
             <div className="text-[10px] font-mono uppercase text-slate-400">Total Dialed</div>
-            <div className="text-xl font-bold text-white font-mono">{agent.allTimeTotal.toLocaleString()} calls</div>
+            <div className="text-xl font-bold text-white font-mono">{allTimeTotal.toLocaleString()} calls</div>
           </div>
           <div className="h-8 w-[1px] bg-[#1b2b3d]"></div>
           <div className="text-right">
@@ -289,7 +270,7 @@ export default function VoiceAgent360({
       </div>
 
       {/* ─── 4 Hero KPI Cards ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 shrink-0">
         
         {/* Card 1: Total Calls in Filter */}
         <div className="p-5 rounded-2xl bg-[#0c1829] border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 flex flex-col justify-between transition-all">
@@ -325,8 +306,9 @@ export default function VoiceAgent360({
           </div>
           <div>
             <div className="text-3xl font-bold text-white tracking-tight font-mono">
-              {qualRate}
+              {qualifiedLeads}
             </div>
+            <div className="text-[11px] text-slate-400 font-mono mt-0.5">{qualRate} conversion</div>
           </div>
         </div>
 
@@ -345,7 +327,7 @@ export default function VoiceAgent360({
       </div>
 
       {/* ─── Search, Filter & Live Call Log Feed ─────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 relative flex flex-col flex-1 min-h-[420px]">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 relative flex flex-col shrink-0 min-h-[420px] mb-6">
         
         {/* Feed Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-[#233549]">
@@ -457,7 +439,7 @@ export default function VoiceAgent360({
 
                       {/* Customer Name */}
                       <td className="py-2.5 px-3 font-medium text-white whitespace-nowrap">
-                        {c.customer_name || 'Property Owner'}
+                        {c.customer_name || c.customer_phone || 'Unregistered Contact'}
                       </td>
 
                       {/* Phone */}
@@ -574,7 +556,7 @@ export default function VoiceAgent360({
                   ID: {activeCallModal.id}
                 </div>
                 <h2 className="text-xl font-bold text-white">
-                  Call with {activeCallModal.customer_name || 'Property Owner'}
+                  Call with {activeCallModal.customer_name || activeCallModal.customer_phone || 'Contact'}
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
                   <span>Phone: <strong className="text-white font-mono">{activeCallModal.customer_phone || '—'}</strong></span>

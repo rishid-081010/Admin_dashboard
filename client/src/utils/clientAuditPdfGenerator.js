@@ -3,12 +3,14 @@ import autoTable from 'jspdf-autotable';
 import axios from 'axios';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54';
+// Secure publishable anon key adhering to RLS policies
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
 const AGENTS_MAP = {
   '682cf6ae-23fd-44f3-a4a3-756998cd62c1': { name: 'Sarah', line: 'Line 1 (Primary AI)', target: 'Residential Villa & Apartment Qualification' },
   '91732d4e-3b60-4950-8aa6-4060c0803119': { name: 'James', line: 'Line 2 (High-Volume)', target: 'Prime Developer Towers & Repeat Investors' },
-  'f99e8e9a-48b1-411f-806e-6cb7d1dde58b': { name: 'Aisha', line: 'Line 3 (Prime UAE)', target: 'Prime Areas (Palm, Downtown, Al Furjan)' }
+  'f99e8e9a-48b1-411f-806e-6cb7d1dde58b': { name: 'Aisha', line: 'Line 3 (Prime UAE)', target: 'Prime Areas (Palm, Downtown, Al Furjan)' },
+  '2816c620-9705-450e-9683-5652dc1194a6': { name: 'Maya', line: 'Line 4 (High-Performance)', target: 'High-Performance Owner Acquisition & Rental Dialer' }
 };
 
 /**
@@ -65,11 +67,11 @@ export async function generateAndDownloadAuditPdf(dateStr, category = 'all') {
   const cleanDate = dateStr.replace(/-/g, '');
   const pdfFileName = `AS_PROPERTIES_DAILY_CALL_AUDIT_${cleanDate}.pdf`;
 
-  // Fetch live calls for dateStr from Supabase
-  const startIso = `${dateStr}T00:00:00.000Z`;
-  const endD = new Date(dateStr + 'T00:00:00.000Z');
+  // Fetch live calls for dateStr from Supabase aligned to Dubai GST (+04:00)
+  const startIso = `${dateStr}T00:00:00+04:00`;
+  const endD = new Date(dateStr + 'T00:00:00Z');
   endD.setUTCDate(endD.getUTCDate() + 1);
-  const endIso = endD.toISOString().split('T')[0] + 'T00:00:00.000Z';
+  const endIso = endD.toISOString().split('T')[0] + 'T00:00:00+04:00';
 
   const qUrl = `${SUPABASE_BASE_URL}/vapi_call_logs?created_at=gte.${encodeURIComponent(startIso)}&created_at=lt.${encodeURIComponent(endIso)}&order=created_at.desc&limit=1000`;
   const res = await axios.get(qUrl, {

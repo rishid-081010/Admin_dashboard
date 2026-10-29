@@ -78,15 +78,16 @@ export default function VoiceAuditDownload({
     }
   }, [selectedDate]);
 
-  // Live query for recent day call counts using exact range counts
+  // Live query for recent day call counts using exact server-side aggregates
   React.useEffect(() => {
     let isMounted = true;
     async function loadRecentStats() {
       try {
+        const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
         const headers = {
-          apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54',
-          Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54',
-          Prefer: 'count=exact'
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json'
         };
 
         const updated = await Promise.all(recentDays.map(async (dayItem) => {
@@ -96,30 +97,29 @@ export default function VoiceAuditDownload({
             nextDObj.setUTCDate(nextDObj.getUTCDate() + 1);
             const nextD = nextDObj.toISOString().split('T')[0];
 
-            // 1. Total calls for day
-            const resTot = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${d}T00:00:00.000Z&created_at=lt.${nextD}T00:00:00.000Z&select=id&limit=1`, { headers });
-            const crTot = resTot.headers.get('content-range') || '';
-            const mTot = crTot.match(/\/(\d+)/);
-            const totalCalls = mTot ? parseInt(mTot[1], 10) : dayItem.allCalls;
+            const startGst = `${d}T00:00:00+04:00`;
+            const endGst = `${nextD}T00:00:00+04:00`;
 
-            // 2. Drops for day
-            const resDrops = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${d}T00:00:00.000Z&created_at=lt.${nextD}T00:00:00.000Z&status=not.in.(customer-ended-call,assistant-ended-call)&select=id&limit=1`, { headers });
-            const crDrops = resDrops.headers.get('content-range') || '';
-            const mDrops = crDrops.match(/\/(\d+)/);
-            const drops = mDrops ? parseInt(mDrops[1], 10) : dayItem.drops;
+            const rpcRes = await fetch('https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/rpc/get_voice_metrics_v2', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                p_start_time: startGst,
+                p_end_time: endGst,
+                p_assistant_id: null
+              })
+            });
 
-            // 3. Substantive leads for day (>=15s)
-            const resLeads = await fetch(`https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1/vapi_call_logs?created_at=gte.${d}T00:00:00.000Z&created_at=lt.${nextD}T00:00:00.000Z&duration_seconds=gte.15&select=id&limit=1`, { headers });
-            const crLeads = resLeads.headers.get('content-range') || '';
-            const mLeads = crLeads.match(/\/(\d+)/);
-            const leads = mLeads ? parseInt(mLeads[1], 10) : dayItem.leads;
-
-            return {
-              ...dayItem,
-              allCalls: totalCalls,
-              leads,
-              drops
-            };
+            if (rpcRes.ok) {
+              const metrics = await rpcRes.json();
+              return {
+                ...dayItem,
+                allCalls: Number(metrics.total_calls) || 0,
+                leads: Number(metrics.qualified_leads) || 0,
+                drops: Number(metrics.dropped_calls) || 0
+              };
+            }
+            return dayItem;
           } catch (e) {
             return dayItem;
           }

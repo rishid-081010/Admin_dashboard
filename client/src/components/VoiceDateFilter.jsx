@@ -189,7 +189,7 @@ export default function VoiceDateFilter({
   // Format active scope label for footer
   const formatScopeLabel = () => {
     if (timeFilter === 'All Time') {
-      return 'All Time (88,729 Historical Calls)';
+      return activeLabel || 'All Time (Complete Historical Database)';
     }
     if (timeFilter === 'Custom') {
       return activeLabel || `Custom (${customStartDate || ''} to ${customEndDate || ''})`;
@@ -543,7 +543,7 @@ export default function VoiceDateFilter({
             Complete Historical Database
           </h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed mb-4">
-            Displaying all 88,729 calls placed across Sarah, Maya, James, and Aisha in the Supabase telephony cluster.
+            Displaying all verified calls placed across Sarah, Maya, James, and Aisha in the Supabase telephony cluster.
           </p>
           <div className="inline-flex items-center gap-2 text-xs text-emerald-400/90 font-medium">
             <Check className="w-4 h-4 text-emerald-400" />

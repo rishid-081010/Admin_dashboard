@@ -12,9 +12,3 @@ direct_upload.py
 put_index.py
 run_deploy.py
 server/
-
-cleaned_sources_output/
-download_cache/
-.agents/
-TEST_INFRA.md
-TEST_READY.md

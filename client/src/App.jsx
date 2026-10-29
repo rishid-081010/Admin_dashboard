@@ -65,7 +65,7 @@ function getRouteInfo() {
   const target = (hashPath || path.split('/').pop() || '').toLowerCase();
   
   if (target === 'myactivity' || target === 'activity') return { tab: 'activity', id: listingId };
-  if (target === 'datalibrary' || target === 'sources') return { tab: 'sources', id: listingId };
+  if (target === 'datalibrary' || target === 'sources') return { tab: 'leads', id: listingId, autoOpenLibrary: true };
   if (target === 'datacleaning' || target === 'leads') return { tab: 'leads', id: listingId };
   if (target === 'voiceagent' || target === 'voice') return { tab: 'voice', id: listingId };
   if (target === 'agent' || target === 'ai-agent') return { tab: 'agent', id: listingId };
@@ -276,7 +276,9 @@ export default function App() {
 
               {activeTab === 'workflows' && <WorkflowsDirectory />}
 
-              {activeTab === 'sources' && <SourcesDirectory />}
+              {activeTab === 'sources' && (
+                <LeadIngestionStudio initialOpenLibrary={true} />
+              )}
 
               {activeTab === 'activity' && <MyActivity currentUser={currentUser} />}
 
@@ -285,7 +287,7 @@ export default function App() {
               {activeTab === 'agent' && <AIAgent setActiveTab={setActiveTab} />}
 
               {activeTab === 'leads' && (
-                <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><LeadIngestionStudio /></div>
+                <LeadIngestionStudio initialOpenLibrary={initialRoute?.autoOpenLibrary} />
               )}
 
               {activeTab === 'listing' && (

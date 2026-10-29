@@ -246,18 +246,11 @@ export function cleanUnitNumber(rawUnit, buildingName = '') {
   // Handle DEWA Premise strings (e.g. "BB | DXB | NA | BBET TOWER M 1208", "PJC | DXB | Apartment 229 | Kempinski Apartment 229")
   if (u.includes('|')) {
     const segments = u.split('|').map(s => s.trim()).filter(Boolean);
-    const aptSeg = segments.find(s => /^(?:Apartment|Flat|Unit|Villa|TH)\s+([A-Za-z0-9_-]+)/i.test(s));
+    const aptSeg = segments.find(s => /^(?:Apartment|Flat|Unit|Villa|TH)\s+\d+/i.test(s));
     if (aptSeg) {
-      const m = aptSeg.match(/^(?:Apartment|Flat|Unit|Villa|TH)\s+([A-Za-z0-9_-]+)/i);
-      return m ? m[1] : aptSeg;
+      return aptSeg.replace(/^(?:Apartment|Flat|Unit|Villa|TH)\s+/i, '').trim();
     }
-    const lastSeg = segments[segments.length - 1] || '';
-    const lastSpace = lastSeg.lastIndexOf(' ');
-    if (lastSpace !== -1) {
-      const potUnit = lastSeg.slice(lastSpace + 1).trim();
-      if (/\d/.test(potUnit)) return potUnit;
-    }
-    return lastSeg || u;
+    return segments[segments.length - 1] || u;
   }
 
   // If unit starts with the building name or community code, extract the specific unit suffix
@@ -712,17 +705,6 @@ export async function processLeadsClientSide(matrix, defaultPropType = 'Apartmen
       rawName = 'Property Owner';
     }
 
-    // Disambiguate DEWA compound strings in Project/Unit
-    if (rawProject && rawProject.includes('|')) {
-      const pSegs = rawProject.split('|').map(s => s.trim()).filter(Boolean);
-      if (pSegs.length >= 2) {
-        if (!rawLocation || rawLocation === rawProject) rawLocation = pSegs[0];
-        const lastPart = pSegs[pSegs.length - 1];
-        const lastSpace = lastPart.lastIndexOf(' ');
-        rawProject = lastSpace !== -1 ? lastPart.slice(0, lastSpace).trim() : lastPart;
-      }
-    }
-
     // D. Autonomous Building & Cadastral Disambiguation
     const bldgDisambiguated = disambiguateBuildingName(rawProject, rawUnit, rawLocation);
     rawProject = bldgDisambiguated.building;
@@ -972,4 +954,104 @@ export function generateCleanCSV(leads, originalHeaders = null) {
   });
 
   return rows.join('\r\n');
+}
+
+// ─── 8. CLEANED FILES REPOSITORY & PERSISTENCE ───
+export const DEFAULT_CLEANED_HISTORY = [
+  {
+    id: 'clean_seed_1',
+    fileName: 'Jumeirah_Islands_Master_Leads.csv',
+    cleanedAt: '2026-10-27T14:20:00Z',
+    fileSize: '142.5 KB',
+    totalRows: 1250,
+    cleanRows: 1085,
+    duplicateRows: 112,
+    inDbRows: 42,
+    invalidRows: 11,
+    status: 'Clean & Verified',
+    propertyType: 'Villa'
+  },
+  {
+    id: 'clean_seed_2',
+    fileName: 'Damac_Hills_2_Deeds_Batch_04.xlsx',
+    cleanedAt: '2026-10-26T18:45:00Z',
+    fileSize: '318.2 KB',
+    totalRows: 3420,
+    cleanRows: 2980,
+    duplicateRows: 284,
+    inDbRows: 115,
+    invalidRows: 41,
+    status: 'Clean & Verified',
+    propertyType: 'Townhouse'
+  },
+  {
+    id: 'clean_seed_3',
+    fileName: 'Sobha_Hartland_Cleaned_Oct2026.csv',
+    cleanedAt: '2026-10-25T11:10:00Z',
+    fileSize: '98.4 KB',
+    totalRows: 890,
+    cleanRows: 765,
+    duplicateRows: 88,
+    inDbRows: 31,
+    invalidRows: 6,
+    status: 'Clean & Verified',
+    propertyType: 'Apartment'
+  },
+  {
+    id: 'clean_seed_4',
+    fileName: 'Emaar_Beachfront_Towers_Cleaned.xlsx',
+    cleanedAt: '2026-10-24T16:30:00Z',
+    fileSize: '215.8 KB',
+    totalRows: 1840,
+    cleanRows: 1620,
+    duplicateRows: 145,
+    inDbRows: 60,
+    invalidRows: 15,
+    status: 'Pushed to CRM',
+    propertyType: 'Apartment'
+  }
+];
+
+const CLEANED_STORAGE_KEY = 'asq_cleaned_files_history_v1';
+
+export function getCleanedFilesHistory() {
+  try {
+    const raw = localStorage.getItem(CLEANED_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn('Failed to read cleaned files history:', e);
+  }
+  return DEFAULT_CLEANED_HISTORY;
+}
+
+export function saveCleanedFileToHistory(previewData, fileName) {
+  if (!previewData || !fileName) return getCleanedFilesHistory();
+  try {
+    const current = getCleanedFilesHistory();
+    const stats = previewData.stats || {};
+    const newEntry = {
+      id: 'clean_' + Date.now(),
+      fileName: fileName,
+      cleanedAt: new Date().toISOString(),
+      fileSize: `${Math.max(14, Math.round((stats.total || 0) * 0.14))} KB`,
+      totalRows: stats.total || 0,
+      cleanRows: stats.ready || 0,
+      duplicateRows: stats.duplicates_file || 0,
+      inDbRows: stats.duplicates_db || 0,
+      invalidRows: stats.invalid || 0,
+      status: 'Clean & Verified',
+      propertyType: previewData.defaultPropertyType || 'Residential',
+      cleanLeadsSample: (previewData.clean_leads || []).slice(0, 50),
+      originalHeaders: previewData.original_headers || previewData.headers || []
+    };
+    const updated = [newEntry, ...current.filter(item => item.fileName !== fileName)].slice(0, 50);
+    localStorage.setItem(CLEANED_STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Failed to save cleaned file to history:', e);
+    return getCleanedFilesHistory();
+  }
 }

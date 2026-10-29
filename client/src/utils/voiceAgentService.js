@@ -4,7 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_PROJECT_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2MDUzOSwiZXhwIjoyMDkzNjM2NTM5fQ.X8Lpgzpm1Xgb0v9qML9W6Xm3hDKCwFVeniJs39F5z54';
+// Secure publishable key adhering to RLS policies (replaces exposed service_role key)
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
 export const AGENTS_CONFIG = {
   '682cf6ae-23fd-44f3-a4a3-756998cd62c1': {
@@ -21,7 +22,6 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Spearheads high-priority residential villa & luxury apartment owner qualification.',
-    allTimeTotal: 29746,
   },
   '91732d4e-3b60-4950-8aa6-4060c0803119': {
     id: '91732d4e-3b60-4950-8aa6-4060c0803119',
@@ -37,7 +37,6 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Executes high-velocity campaigns across prime developer towers & repeat investors.',
-    allTimeTotal: 41792,
   },
   'f99e8e9a-48b1-411f-806e-6cb7d1dde58b': {
     id: 'f99e8e9a-48b1-411f-806e-6cb7d1dde58b',
@@ -53,7 +52,6 @@ export const AGENTS_CONFIG = {
     voiceModel: 'Yoshita PVC v1',
     engine: 'Claude Haiku 4.5',
     description: 'Specializes in prime areas (Palm Jumeirah, Downtown, Jumeirah Islands) and owner valuation queries.',
-    allTimeTotal: 16952,
   },
   '2816c620-9705-450e-9683-5652dc1194a6': {
     id: '2816c620-9705-450e-9683-5652dc1194a6',
@@ -69,7 +67,6 @@ export const AGENTS_CONFIG = {
     voiceModel: 'ElevenLabs Flash v2',
     engine: 'Claude Haiku 4.5',
     description: 'High-performance acquisition dialer running parallel owner qualification campaigns.',
-    allTimeTotal: 236,
   }
 };
 
@@ -198,21 +195,21 @@ export function formatCurrency(amount) {
   return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// Build ISO Date Range from filter parameters
+// Build ISO Date Range from filter parameters with accurate Dubai GST (+04:00) alignment
 export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedMonth, selectedWeek, customStartDate, customEndDate }) {
   if (timeFilter === 'All Time') {
-    return { start: null, end: null, label: 'All Time (88,729 Historical Calls)' };
+    return { start: null, end: null, label: 'All Time (Complete Historical Database)' };
   }
 
   if (timeFilter === 'Custom') {
     const startStr = customStartDate || selectedDate;
     const endStr = customEndDate || selectedDate || startStr;
-    const start = startStr ? `${startStr}T00:00:00.000Z` : null;
+    const start = startStr ? `${startStr}T00:00:00+04:00` : null;
     let end = null;
     if (endStr) {
-      const d = new Date(endStr);
+      const d = new Date(endStr + 'T00:00:00Z');
       d.setUTCDate(d.getUTCDate() + 1);
-      end = d.toISOString().split('T')[0] + 'T00:00:00.000Z';
+      end = d.toISOString().split('T')[0] + 'T00:00:00+04:00';
     }
     const fmt = (s) => {
       try {
@@ -233,15 +230,15 @@ export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedM
   if (timeFilter === 'Daily') {
     const todayDubai = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
     const dStr = selectedDate || todayDubai; // dynamically default to present day's live activity
-    const start = `${dStr}T00:00:00.000Z`;
-    // Next day
-    const d = new Date(dStr);
+    const start = `${dStr}T00:00:00+04:00`;
+    // Next day in Dubai GST
+    const d = new Date(dStr + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate() + 1);
-    const end = d.toISOString().split('T')[0] + 'T00:00:00.000Z';
+    const end = d.toISOString().split('T')[0] + 'T00:00:00+04:00';
     return { 
       start, 
       end, 
-      label: new Date(dStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) 
+      label: new Date(dStr + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) 
     };
   }
 
@@ -256,10 +253,9 @@ export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedM
     const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
     if (endDay > daysInMonth) endDay = daysInMonth;
 
-    const start = `${year}-${mStr}-${String(startDay).padStart(2, '0')}T00:00:00.000Z`;
-    // For end date, we use next day at 00:00
+    const start = `${year}-${mStr}-${String(startDay).padStart(2, '0')}T00:00:00+04:00`;
     const endDateObj = new Date(Date.UTC(year, month - 1, endDay + 1));
-    const end = endDateObj.toISOString().split('T')[0] + 'T00:00:00.000Z';
+    const end = endDateObj.toISOString().split('T')[0] + 'T00:00:00+04:00';
     const monthName = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', { month: 'short' });
 
     return {
@@ -273,14 +269,14 @@ export function getDateRange({ timeFilter, selectedDate, selectedYear, selectedM
     const year = Number(selectedYear) || 2026;
     const month = Number(selectedMonth) || 10;
     const mStr = String(month).padStart(2, '0');
-    const start = `${year}-${mStr}-01T00:00:00.000Z`;
+    const start = `${year}-${mStr}-01T00:00:00+04:00`;
     let nextYear = year;
     let nextMonth = month + 1;
     if (nextMonth > 12) {
       nextMonth = 1;
       nextYear++;
     }
-    const end = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`;
+    const end = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00+04:00`;
     const monthName = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     return {
       start,
@@ -321,7 +317,7 @@ export async function triggerBackgroundVapiSync(dateStr) {
   } catch (err) {}
 }
 
-// Fetch overview metrics from Supabase
+// Fetch exact overview metrics from Supabase via high-performance RPCs (zero synthetic extrapolation)
 export async function fetchVoiceOverview(filterParams) {
   const { start, end, label } = getDateRange(filterParams);
 
@@ -331,146 +327,168 @@ export async function fetchVoiceOverview(filterParams) {
     triggerBackgroundVapiSync(currentDubaiDate);
   }
 
-  // Build query - selective projection strips heavy URLs and PII to accelerate overview metric load
-  let url = `${SUPABASE_BASE_URL}/vapi_call_logs?select=id,status,duration_seconds,cost_usd,voice_call_status,assistantId,created_at,summary,note`;
-  if (start) url += `&created_at=gte.${encodeURIComponent(start)}`;
-  if (end) url += `&created_at=lt.${encodeURIComponent(end)}`;
-  url += `&order=created_at.desc.nullslast&limit=1500`;
-
-  const headers = {
+  const rpcHeaders = {
     'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Range-Unit': 'items',
-    'Prefer': 'count=exact'
+    'Content-Type': 'application/json'
   };
 
-  const response = await fetch(url, { headers });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch call logs: ${response.statusText}`);
-  }
+  try {
+    // Execute server-side aggregate RPCs in parallel
+    const [metricsRes, agentsRes, hourlyRes, recentCallsRes] = await Promise.all([
+      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/get_voice_metrics_v2`, {
+        method: 'POST',
+        headers: rpcHeaders,
+        body: JSON.stringify({
+          p_start_time: start || null,
+          p_end_time: end || null,
+          p_assistant_id: null
+        })
+      }),
+      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/get_voice_agent_summary_v2`, {
+        method: 'POST',
+        headers: rpcHeaders,
+        body: JSON.stringify({
+          p_start_time: start || null,
+          p_end_time: end || null
+        })
+      }),
+      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/get_voice_hourly_breakdown_v2`, {
+        method: 'POST',
+        headers: rpcHeaders,
+        body: JSON.stringify({
+          p_start_time: start || null,
+          p_end_time: end || null,
+          p_assistant_id: null
+        })
+      }),
+      // Fetch recent 50 calls for live stream table
+      (() => {
+        let q = `${SUPABASE_BASE_URL}/vapi_call_logs?select=id,status,duration_seconds,cost_usd,voice_call_status,assistantId,created_at,summary,note,customer_phone,customer_name,recording_url`;
+        if (start) q += `&created_at=gte.${encodeURIComponent(start)}`;
+        if (end) q += `&created_at=lt.${encodeURIComponent(end)}`;
+        q += `&order=created_at.desc.nullslast&limit=50`;
+        return fetch(q, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
+      })()
+    ]);
 
-  let calls = await response.json();
-  const contentRange = response.headers.get('Content-Range') || '';
-  const match = contentRange.match(/\/(\d+)/);
-  const totalCallsCount = match ? parseInt(match[1], 10) : calls.length;
+    const metrics = metricsRes.ok ? await metricsRes.json() : {};
+    const rawSummaries = agentsRes.ok ? await agentsRes.json() : [];
+    const hourlyBreakdown = hourlyRes.ok ? await hourlyRes.json() : [];
+    const sampleCalls = recentCallsRes.ok ? await recentCallsRes.json() : [];
 
-  // If there are more calls than the first page (PostgREST limit is 1000), fetch next page
-  if (totalCallsCount > calls.length && calls.length >= 1000) {
-    try {
-      const page2Url = `${url}&offset=${calls.length}`;
-      const res2 = await fetch(page2Url, { headers });
-      if (res2.ok) {
-        const batch2 = await res2.json();
-        if (Array.isArray(batch2)) calls = calls.concat(batch2);
-      }
-    } catch (e) {
-      console.warn('Could not fetch subsequent page of call logs:', e);
-    }
-  }
+    const agentSummaryMap = {};
+    (rawSummaries || []).forEach(s => {
+      if (s.assistant_id) agentSummaryMap[s.assistant_id] = s;
+    });
 
-  // Aggregate metrics
-  let dropsCount = 0;
-  let qualifiedCount = 0;
-  let answeredCount = 0;
-  let totalDurationSec = 0;
-  let durationSamples = 0;
-  let totalCostUsd = 0;
+    // Format all configured agents data with live exact counts
+    const agentsList = AGENT_IDS.map(id => {
+      const conf = AGENTS_CONFIG[id];
+      const st = agentSummaryMap[id] || {
+        total_calls: 0,
+        answered_calls: 0,
+        dropped_calls: 0,
+        qualified_leads: 0,
+        total_cost: 0,
+        total_duration_seconds: 0,
+        avg_duration_seconds: 0,
+        is_active_24h: false,
+        last_call_at: null
+      };
 
-  // Agent breakdowns — dynamically initialize from AGENTS_CONFIG
-  const agentStats = {};
-  for (const id of AGENT_IDS) {
-    agentStats[id] = { calls: 0, drops: 0, qualified: 0, answered: 0, dur: 0, durCount: 0, cost: 0 };
-  }
+      const agentCalls = Number(st.total_calls) || 0;
+      const agentQualified = Number(st.qualified_leads) || 0;
+      const cvr = agentCalls > 0 ? ((agentQualified / agentCalls) * 100).toFixed(1) + '%' : '0.0%';
+      const agentCost = Number(st.total_cost) || 0;
+      const costPerLead = agentQualified > 0 ? `$${(agentCost / agentQualified).toFixed(2)}` : (agentCalls > 0 ? `$${(agentCost / agentCalls).toFixed(2)}` : '$0.00');
 
-  for (const c of calls) {
-    const isQual = isQualifiedLead(c);
-    const isDrop = isCallDropOrVoicemail(c);
-    const isAns = isCallAnswered(c);
-    const dur = Number(c.duration_seconds) || 0;
-    const cost = Number(c.cost_usd) || 0;
+      return {
+        ...conf,
+        calls: agentCalls.toLocaleString(),
+        rawCalls: agentCalls,
+        drops: (Number(st.dropped_calls) || 0).toLocaleString(),
+        qualified: agentQualified,
+        cvr,
+        cost: costPerLead,
+        totalCost: `$${agentCost.toFixed(2)}`,
+        avgDuration: formatDuration(st.avg_duration_seconds),
+        status: st.is_active_24h ? 'Active' : 'Idle',
+        isActive24h: Boolean(st.is_active_24h),
+        lastCallAt: st.last_call_at
+      };
+    });
 
-    if (isDrop) dropsCount++;
-    if (isQual) qualifiedCount++;
-    if (isAns) answeredCount++;
-    if (dur > 0) {
-      totalDurationSec += dur;
-      durationSamples++;
-    }
-    totalCostUsd += cost;
-
-    const astId = c.assistantId;
-    if (astId && agentStats[astId]) {
-      agentStats[astId].calls++;
-      if (isDrop) agentStats[astId].drops++;
-      if (isQual) agentStats[astId].qualified++;
-      if (isAns) agentStats[astId].answered++;
-      if (dur > 0) {
-        agentStats[astId].dur += dur;
-        agentStats[astId].durCount++;
-      }
-      agentStats[astId].cost += cost;
-    }
-  }
-
-  // Scale if total count exceeds sample size
-  const sampleRatio = calls.length > 0 ? (totalCallsCount / calls.length) : 1;
-  const scaledDrops = Math.round(dropsCount * sampleRatio);
-  const scaledQualified = Math.round(qualifiedCount * sampleRatio);
-  const scaledAnswered = Math.round(answeredCount * sampleRatio);
-  const scaledCost = totalCostUsd * sampleRatio;
-  const avgDuration = durationSamples > 0 ? Math.round(totalDurationSec / durationSamples) : 0;
-
-  // Format all configured agents data
-  const agentsList = AGENT_IDS.map(id => {
-    const conf = AGENTS_CONFIG[id];
-    const st = agentStats[id];
-    const agentCalls = filterParams.timeFilter === 'All Time' 
-      ? conf.allTimeTotal 
-      : Math.round(st.calls * sampleRatio);
-
-    const agentQualified = Math.round(st.qualified * sampleRatio);
-    const cvr = agentCalls > 0 ? ((agentQualified / agentCalls) * 100).toFixed(1) + '%' : '0.0%';
-    const agentAvgDur = st.durCount > 0 ? Math.round(st.dur / st.durCount) : 0;
-    const agentCost = st.cost * sampleRatio;
-    const costPerLead = agentQualified > 0 ? `$${(agentCost / agentQualified).toFixed(2)}` : (agentCalls > 0 ? `$${(agentCost / agentCalls).toFixed(2)}` : '$0.00');
+    const totalCalls = Number(metrics.total_calls) || 0;
+    const answeredCalls = Number(metrics.answered_calls) || 0;
+    const drops = Number(metrics.dropped_calls) || 0;
+    const qualifiedLeads = Number(metrics.qualified_leads) || 0;
+    const totalCost = Number(metrics.total_cost) || 0;
+    const avgDuration = Number(metrics.avg_duration_seconds) || 0;
 
     return {
-      ...conf,
-      calls: agentCalls.toLocaleString(),
-      rawCalls: agentCalls,
-      drops: Math.round(st.drops * sampleRatio),
-      qualified: agentQualified,
-      cvr,
-      cost: costPerLead,
-      totalCost: `$${agentCost.toFixed(2)}`,
-      avgDuration: formatDuration(agentAvgDur),
-      status: 'Active'
+      label,
+      totalCalls: totalCalls.toLocaleString(),
+      rawTotalCalls: totalCalls,
+      answeredCalls: answeredCalls.toLocaleString(),
+      rawAnsweredCalls: answeredCalls,
+      drops: drops.toLocaleString(),
+      rawDrops: drops,
+      qualifiedLeads: qualifiedLeads.toLocaleString(),
+      rawQualifiedLeads: qualifiedLeads,
+      avgDuration: formatDuration(avgDuration),
+      rawAvgDuration: avgDuration,
+      answerRate: `${metrics.answer_rate || 0}%`,
+      dropRate: `${metrics.drop_rate || 0}%`,
+      qualificationRate: `${metrics.qualification_rate || 0}%`,
+      totalCost: formatCurrency(totalCost),
+      agents: agentsList,
+      hourlyBreakdown,
+      sampleCalls
     };
-  });
-
-  return {
-    label,
-    totalCalls: totalCallsCount.toLocaleString(),
-    rawTotalCalls: totalCallsCount,
-    answeredCalls: scaledAnswered.toLocaleString(),
-    rawAnsweredCalls: scaledAnswered,
-    drops: scaledDrops.toLocaleString(),
-    rawDrops: scaledDrops,
-    qualifiedLeads: scaledQualified.toLocaleString(),
-    rawQualifiedLeads: scaledQualified,
-    avgDuration: formatDuration(avgDuration),
-    rawAvgDuration: avgDuration,
-    totalCost: formatCurrency(scaledCost),
-    agents: agentsList,
-    sampleCalls: calls.slice(0, 100) // First 100 calls for recent call inspector
-  };
+  } catch (err) {
+    console.error('Error fetching voice overview via RPC:', err);
+    throw err;
+  }
 }
 
-// Fetch detailed 360 data for a specific agent
+// Fetch detailed 360 data for a specific agent with full-scope hero KPIs
 export async function fetchVoiceAgent360(assistantId, filterParams, page = 1, pageSize = 30, search = '', statusFilter = 'ALL') {
   const conf = AGENTS_CONFIG[assistantId] || AGENTS_CONFIG['682cf6ae-23fd-44f3-a4a3-756998cd62c1'];
   const { start, end, label } = getDateRange(filterParams);
 
+  const rpcHeaders = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json'
+  };
+
+  // 1. Fetch exact aggregate metrics for this assistant across the full filtered scope & all-time
+  const [scopeMetricsRes, allTimeMetricsRes] = await Promise.all([
+    fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/get_voice_metrics_v2`, {
+      method: 'POST',
+      headers: rpcHeaders,
+      body: JSON.stringify({
+        p_start_time: start || null,
+        p_end_time: end || null,
+        p_assistant_id: assistantId
+      })
+    }),
+    fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/get_voice_metrics_v2`, {
+      method: 'POST',
+      headers: rpcHeaders,
+      body: JSON.stringify({
+        p_start_time: null,
+        p_end_time: null,
+        p_assistant_id: assistantId
+      })
+    })
+  ]);
+
+  const scopeMetrics = scopeMetricsRes.ok ? await scopeMetricsRes.json() : {};
+  const allTimeMetrics = allTimeMetricsRes.ok ? await allTimeMetricsRes.json() : {};
+
+  // 2. Fetch paginated call logs for this assistant
   let queryUrl = `${SUPABASE_BASE_URL}/vapi_call_logs?assistantId=eq.${assistantId}&select=*`;
   if (start) queryUrl += `&created_at=gte.${encodeURIComponent(start)}`;
   if (end) queryUrl += `&created_at=lt.${encodeURIComponent(end)}`;
@@ -506,16 +524,20 @@ export async function fetchVoiceAgent360(assistantId, filterParams, page = 1, pa
   const calls = await response.json();
   const contentRange = response.headers.get('Content-Range') || '';
   const match = contentRange.match(/\/(\d+)/);
-  const totalCalls = match ? parseInt(match[1], 10) : calls.length;
+  const totalFilteredCalls = match ? parseInt(match[1], 10) : Number(scopeMetrics.total_calls || calls.length);
 
   return {
-    agent: conf,
+    agent: {
+      ...conf,
+      allTimeTotal: Number(allTimeMetrics.total_calls) || 0
+    },
     label,
     calls,
-    totalCalls,
+    totalCalls: totalFilteredCalls,
+    metrics: scopeMetrics,
     page,
     pageSize,
-    totalPages: Math.ceil(totalCalls / pageSize) || 1
+    totalPages: Math.ceil(totalFilteredCalls / pageSize) || 1
   };
 }
 
@@ -920,24 +942,20 @@ export async function markLeadAsCompleted(callId, phone) {
     console.warn('LocalStorage write failed:', err);
   }
 
-  // 2. Persist to Supabase database so it updates globally across all devices & users
+  // 2. Persist to Supabase database via secure RPC
   try {
-    const res = await fetch(`${SUPABASE_BASE_URL}/vapi_call_logs?id=eq.${callId}`, {
-      method: 'PATCH',
+    const res = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/mark_lead_completed`, {
+      method: 'POST',
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        voice_call_status: 'Action Completed - Broker Handled',
-        updated_at: new Date().toISOString()
-      })
+      body: JSON.stringify({ p_call_id: callId })
     });
     return res.ok;
   } catch (err) {
-    console.warn('Supabase update failed:', err);
+    console.warn('Supabase mark_lead_completed failed:', err);
     return false;
   }
 }

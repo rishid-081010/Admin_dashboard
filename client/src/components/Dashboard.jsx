@@ -369,7 +369,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
           <p className="text-slate-400 text-xs max-w-sm mx-auto mb-5">
             {searchQuery || statusFilter !== 'All Status' || typeFilter !== 'All Types'
               ? 'No listings match your filter criteria.'
-              : 'Create your first property listing with automated DLD Title Deed OCR and AI photo enhancement.'}
+              : 'Create your first property listing with automated DLD Title Deed AI extraction and photo enhancement.'}
           </p>
           <button
             onClick={onNewListingClick}

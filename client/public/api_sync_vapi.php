@@ -26,15 +26,20 @@ $vapiKeys = [
     '1fe2c0bd-014d-4251-a32e-229e7a475609'
 ];
 
-// Target date: Default to today in Dubai Time
-$tz = new DateTimeZone('Asia/Dubai');
-$nowDubai = new DateTime('now', $tz);
+// Target date: Default to today in Dubai Time (GST, UTC+4)
+$tzDubai = new DateTimeZone('Asia/Dubai');
+$nowDubai = new DateTime('now', $tzDubai);
 $targetDateStr = $_GET['date'] ?? $nowDubai->format('Y-m-d');
 
-$startIso = $targetDateStr . 'T00:00:00.000Z';
-$endDateObj = new DateTime($targetDateStr . ' 00:00:00', new DateTimeZone('UTC'));
-$endDateObj->modify('+1 day');
-$endIso = $endDateObj->format('Y-m-d') . 'T00:00:00.000Z';
+// Exact 00:00 to 23:59:59 Dubai GST converted to UTC for VAPI API
+$startGst = new DateTime($targetDateStr . ' 00:00:00', $tzDubai);
+$startGst->setTimezone(new DateTimeZone('UTC'));
+$startIso = $startGst->format('Y-m-d\TH:i:s.000\Z');
+
+$endGst = new DateTime($targetDateStr . ' 00:00:00', $tzDubai);
+$endGst->modify('+1 day');
+$endGst->setTimezone(new DateTimeZone('UTC'));
+$endIso = $endGst->format('Y-m-d\TH:i:s.000\Z');
 
 function fetchAllCallsForDate($token, $startIso, $endIso) {
     $calls = [];

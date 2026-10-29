@@ -118,19 +118,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
             <span>Data Cleaning</span>
           </button>
 
-          {/* 8. Data Library */}
-          <button 
-            onClick={() => setActiveTab('sources')} 
-            className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-              activeTab === 'sources' 
-                ? 'bg-[#183153] text-white border border-white/[0.15] shadow-sm' 
-                : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.04]'
-            }`}
-          >
-            <span>Data Library</span>
-          </button>
-
-          {/* 9. Listing Studio */}
+          {/* 8. Listing Studio */}
           <button 
             onClick={() => setActiveTab('listing')} 
             className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${

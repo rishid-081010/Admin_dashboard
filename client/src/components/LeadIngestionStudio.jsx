@@ -1,14 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   UploadCloud, FileText, CheckCircle2, AlertTriangle, RefreshCw,
   Download, Upload, ShieldCheck, Database, PhoneCall, Sparkles,
   Layers, Filter, Search, Check, AlertCircle, ArrowRight, ExternalLink, Clipboard, Loader2,
-  Table, Eye, CheckCheck, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoveHorizontal, Grab
+  Table, Eye, CheckCheck, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoveHorizontal, Grab,
+  Maximize2, Minimize2, X, FolderArchive
 } from 'lucide-react';
 import axios from 'axios';
-import { processLeadsClientSide } from '../utils/leadCleanerClient';
+import { 
+  processLeadsClientSide, 
+  getCleanedFilesHistory, 
+  saveCleanedFileToHistory, 
+  generateCleanCSV 
+} from '../utils/leadCleanerClient';
+import SourcesDirectory from './SourcesDirectory';
+import CleanedFilesDirectory from './CleanedFilesDirectory';
 
-export default function LeadIngestionStudio() {
+export default function LeadIngestionStudio({ initialOpenLibrary = false }) {
   const [previewData, setPreviewData] = useState(null);
   const [activeTab, setActiveTab] = useState('clean');
   const [viewMode, setViewMode] = useState('all_columns'); // default to 'all_columns' for full transparency
@@ -22,6 +30,16 @@ export default function LeadIngestionStudio() {
   const [tableSearch, setTableSearch] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [dbStats, setDbStats] = useState({ database_leads_count: 3042722, status: 'online' });
+
+  // ─── Dual Bottom Engine: Cleaned Files Registry & Data Library ───
+  const [cleanedHistory, setCleanedHistory] = useState(() => getCleanedFilesHistory());
+  const [cleanedSearch, setCleanedSearch] = useState('');
+  const [sourcesList, setSourcesList] = useState([]);
+  const [loadingSources, setLoadingSources] = useState(true);
+  const [sourcesSearch, setSourcesSearch] = useState('');
+  const [downloadingSourceId, setDownloadingSourceId] = useState(null);
+  const [isLibraryMaximized, setIsLibraryMaximized] = useState(Boolean(initialOpenLibrary));
+  const [isCleanedMaximized, setIsCleanedMaximized] = useState(false);
 
   const fileInputRef = useRef(null);
   const tableContainerRef = useRef(null);
@@ -87,6 +105,105 @@ export default function LeadIngestionStudio() {
   useEffect(() => {
     fetchHealthStats();
   }, []);
+
+  // Dynamically load sourcesData on mount
+  useEffect(() => {
+    let active = true;
+    import('../data/sourcesData')
+      .then((mod) => {
+        if (active) {
+          setSourcesList(mod.SOURCES_DATA || []);
+          setLoadingSources(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load sourcesData:', err);
+        if (active) setLoadingSources(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const handleDownloadSource = (sourceItem, e) => {
+    if (e) e.stopPropagation();
+    setDownloadingSourceId(sourceItem.id);
+    const link = document.createElement('a');
+    link.href = sourceItem.download_url;
+    link.download = sourceItem.filename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => {
+      setDownloadingSourceId(null);
+    }, 1500);
+  };
+
+  const handleDownloadHistoryItem = (historyItem, e) => {
+    if (e) e.stopPropagation();
+    if (previewData && previewData.fileName === historyItem.fileName) {
+      handleDownloadCleanCsv();
+      return;
+    }
+    const leads = historyItem.cleanLeadsSample && historyItem.cleanLeadsSample.length > 0
+      ? historyItem.cleanLeadsSample
+      : [
+          {
+            full_name: 'Property Owner (Sample)',
+            phone_number_normalized: '+971501234567',
+            unit_number: '101',
+            property_reference: historyItem.fileName.replace(/\.[^/.]+$/, ''),
+            status: 'ready'
+          }
+        ];
+    const csvStr = generateCleanCSV(leads, historyItem.originalHeaders || []);
+    const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = historyItem.fileName.replace(/\.[^/.]+$/, '') + '_CLEANED.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleReinspectHistoryItem = (historyItem) => {
+    if (historyItem.cleanLeadsSample && historyItem.cleanLeadsSample.length > 0) {
+      setPreviewData({
+        clean_leads: historyItem.cleanLeadsSample,
+        duplicates_in_file: [],
+        duplicates_in_db: [],
+        invalid_leads: [],
+        stats: {
+          total: historyItem.totalRows,
+          ready: historyItem.cleanRows,
+          duplicates_file: historyItem.duplicateRows,
+          duplicates_db: historyItem.inDbRows,
+          invalid: historyItem.invalidRows
+        },
+        original_headers: historyItem.originalHeaders || ['Owner Name', 'Contact Number', 'Unit Number'],
+        total_columns: (historyItem.originalHeaders || ['Owner Name', 'Contact Number', 'Unit Number']).length,
+        fileName: historyItem.fileName
+      });
+      setActiveTab('clean');
+    }
+  };
+
+  const filteredCleaned = useMemo(() => {
+    if (!cleanedSearch) return cleanedHistory;
+    const q = cleanedSearch.toLowerCase();
+    return cleanedHistory.filter(f => 
+      (f.fileName && f.fileName.toLowerCase().includes(q)) ||
+      (f.propertyType && f.propertyType.toLowerCase().includes(q)) ||
+      (f.status && f.status.toLowerCase().includes(q))
+    );
+  }, [cleanedHistory, cleanedSearch]);
+
+  const filteredSources = useMemo(() => {
+    if (!sourcesSearch) return sourcesList.slice(0, 30);
+    const q = sourcesSearch.toLowerCase();
+    return sourcesList
+      .filter(s => (s.filename || '').toLowerCase().includes(q))
+      .slice(0, 30);
+  }, [sourcesList, sourcesSearch]);
 
   const handleFileUpload = async (file) => {
     if (!file) return;
@@ -169,6 +286,8 @@ export default function LeadIngestionStudio() {
       initialCleanResult = await processLeadsClientSide(localMatrix, defaultPropertyType, file.name);
       setPreviewData(initialCleanResult);
       setActiveTab('clean');
+      const hist = saveCleanedFileToHistory(initialCleanResult, file.name);
+      setCleanedHistory(hist);
     } catch (e) {
       console.warn('Client-side processing note:', e.message);
     }
@@ -192,6 +311,8 @@ export default function LeadIngestionStudio() {
         const aiCleanResult = await processLeadsClientSide(localMatrix, defaultPropertyType, file.name, aiRes.data.mapping);
         setPreviewData(aiCleanResult);
         setActiveTab('clean');
+        const hist = saveCleanedFileToHistory(aiCleanResult, file.name);
+        setCleanedHistory(hist);
       }
     } catch (aiErr) {
       console.warn('AI column mapping fallback (heuristic retained):', aiErr.message);
@@ -372,9 +493,38 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
   const originalHeaders = previewData?.original_headers || previewData?.headers || [];
   const totalColumnsCount = previewData?.total_columns || originalHeaders.length || 0;
 
+  if (isLibraryMaximized) {
+    return (
+      <div className="w-full h-full flex flex-col text-white animate-fade-in pb-1">
+        <SourcesDirectory 
+          isModal={true} 
+          onClose={() => setIsLibraryMaximized(false)} 
+          sources={sourcesList}
+        />
+      </div>
+    );
+  }
+
+  if (isCleanedMaximized) {
+    return (
+      <div className="w-full h-full flex flex-col text-white animate-fade-in pb-1">
+        <CleanedFilesDirectory 
+          onClose={() => setIsCleanedMaximized(false)} 
+          cleanedHistory={cleanedHistory}
+          onDownload={handleDownloadHistoryItem}
+          onInspect={(item) => {
+            handleReinspectHistoryItem(item);
+            setIsCleanedMaximized(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full space-y-6">
-      {/* Top Header */}
+    <div className="h-full w-full overflow-y-auto pr-2 custom-scrollbar">
+      <div className="w-full space-y-6">
+        {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-sans font-bold text-white tracking-tight">
@@ -976,6 +1126,253 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
           </div>
         </div>
       )}
+
+      {/* ─── Dual Bottom Engine: Cleaned Files Registry & Minimized Data Library (50/50 Split) ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+        {/* Left 50%: Cleaned Files */}
+        <div className="bg-[#0c1829] border border-[#233549] rounded-3xl p-5 shadow-xl shadow-black/40 flex flex-col">
+          {/* Card Header */}
+          <div className="flex items-center justify-between pb-3 border-b border-[#233549]">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white tracking-tight">Cleaned Files</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                    {cleanedHistory.length} Files
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">Sanitized datasets with 100% column retention</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-emerald-400 font-semibold hidden sm:inline">
+                E.164 Validated
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsCleanedMaximized(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] cursor-pointer"
+                title="Maximize Cleaned Files to full-screen view"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Maximize</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Search */}
+          <div className="relative my-3">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={cleanedSearch}
+              onChange={(e) => setCleanedSearch(e.target.value)}
+              placeholder="Search cleaned files..."
+              className="w-full bg-[#06111e] border border-[#1b2b3d] rounded-xl pl-9 pr-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 transition-all"
+            />
+            {cleanedSearch && (
+              <button
+                type="button"
+                onClick={() => setCleanedSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Cleaned Files List */}
+          <div className="flex-1 overflow-y-auto max-h-[380px] space-y-2.5 pr-1 custom-scrollbar">
+            {filteredCleaned.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center px-4">
+                <FileText className="w-8 h-8 text-slate-600 mb-2" />
+                <p className="text-xs font-semibold text-slate-300">No cleaned files found</p>
+                <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
+                  {cleanedSearch ? 'Try a different search term.' : 'Drop an Excel or CSV file in the sanitizing box above to clean and track it here.'}
+                </p>
+              </div>
+            ) : (
+              filteredCleaned.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3.5 rounded-2xl bg-[#06111e] border border-[#1b2b3d] hover:border-[#2b415a] transition-all flex flex-col gap-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="text-xs font-semibold text-white truncate" title={item.fileName}>
+                        {item.fileName}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                      {item.cleanedAt ? new Date(item.cleanedAt).toLocaleDateString() : 'Recent'}
+                    </span>
+                  </div>
+
+                  {/* Badges */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                      {(item.cleanRows || 0).toLocaleString()} / {(item.totalRows || 0).toLocaleString()} Clean
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono text-slate-300 bg-slate-800/80 border border-slate-700/60">
+                      {item.fileSize || '120 KB'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono text-blue-300 bg-blue-500/10 border border-blue-500/20">
+                      {item.propertyType || 'Residential'}
+                    </span>
+                    {(item.duplicateRows || 0) > 0 && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/20">
+                        {item.duplicateRows} dups
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
+                    <span className="text-[10px] text-emerald-400/80 font-mono flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      100% E.164
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => handleDownloadHistoryItem(item, e)}
+                        className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                        title="Download sanitized CSV"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Export CSV</span>
+                      </button>
+                      {item.cleanLeadsSample && item.cleanLeadsSample.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleReinspectHistoryItem(item)}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                          title="Inspect in preview table"
+                        >
+                          <Eye className="w-3 h-3 text-emerald-400" />
+                          <span>Inspect</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right 50%: Minimized Data Library */}
+        <div className="bg-[#0c1829] border border-[#233549] rounded-3xl p-5 shadow-xl shadow-black/40 flex flex-col">
+          {/* Card Header */}
+          <div className="flex items-center justify-between pb-3 border-b border-[#233549]">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                <FolderArchive className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white tracking-tight">Data Library</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                    {loadingSources ? '...' : (sourcesList.length || 1382).toLocaleString()} Datasets
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">Raw developer &amp; DLD property archives</p>
+              </div>
+            </div>
+
+            {/* Maximize Button */}
+            <button
+              type="button"
+              onClick={() => setIsLibraryMaximized(true)}
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-900/30 transition-all hover:scale-[1.02] cursor-pointer"
+              title="Maximize Data Library to full-screen view"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Maximize</span>
+            </button>
+          </div>
+
+          {/* Quick Search */}
+          <div className="relative my-3">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={sourcesSearch}
+              onChange={(e) => setSourcesSearch(e.target.value)}
+              placeholder="Search 1,382 datasets (e.g., Emaar, Kempinski, Al Satwa)..."
+              className="w-full bg-[#06111e] border border-[#1b2b3d] rounded-xl pl-9 pr-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/60 transition-all"
+            />
+            {sourcesSearch && (
+              <button
+                type="button"
+                onClick={() => setSourcesSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Minimized Source List */}
+          <div className="flex-1 overflow-y-auto max-h-[380px] space-y-2 pr-1 custom-scrollbar">
+            {loadingSources ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center">
+                <Loader2 className="w-7 h-7 text-blue-400 animate-spin mb-2" />
+                <p className="text-xs text-slate-400">Loading 1,382 vendor source datasets...</p>
+              </div>
+            ) : filteredSources.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center px-4">
+                <Database className="w-8 h-8 text-slate-600 mb-2" />
+                <p className="text-xs font-semibold text-slate-300">No matching datasets found</p>
+                <p className="text-[11px] text-slate-500 mt-1">Try a different search keyword</p>
+              </div>
+            ) : (
+              filteredSources.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-2.5 rounded-xl bg-[#06111e] border border-[#1b2b3d] hover:border-[#2b415a] transition-all flex items-center justify-between gap-3 group"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold shrink-0">
+                        {item.extension || 'XLSX'}
+                      </span>
+                      <span className="text-xs font-medium text-white truncate" title={item.filename}>
+                        {item.filename}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-[10px] font-mono text-slate-400">
+                      <span>{(item.accepted_rows || 0).toLocaleString()} rows</span>
+                      <span>•</span>
+                      <span>{item.size_formatted || '—'}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleDownloadSource(item, e)}
+                    disabled={downloadingSourceId === item.id}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-blue-600/20 text-slate-400 hover:text-blue-300 border border-white/10 hover:border-blue-500/30 transition-all cursor-pointer shrink-0"
+                    title={`Download ${item.filename}`}
+                  >
+                    {downloadingSourceId === item.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
   );
 }

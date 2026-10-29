@@ -92,9 +92,9 @@ export default function VoiceAgent() {
   const durationStr = overviewData?.avgDuration || (loading ? '—' : '0s');
 
   return (
-    <div className="w-full flex flex-col h-full animate-fade-in text-white/80 overflow-y-auto custom-scrollbar pr-1 -mr-1">
+    <div className="w-full flex flex-col h-full animate-fade-in text-white/80 overflow-y-auto custom-scrollbar pr-1 -mr-1 select-text">
       {/* ─── Header Bar ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4 shrink-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">
             Voice Agent Centre
@@ -119,7 +119,7 @@ export default function VoiceAgent() {
       </div>
 
       {/* ─── Filter & Audit Download Controls (Side-by-Side) ───────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch shrink-0">
         <VoiceDateFilter
           timeFilter={timeFilter}
           setTimeFilter={setTimeFilter}
@@ -146,7 +146,7 @@ export default function VoiceAgent() {
       </div>
 
       {/* ─── 4 Hero KPI Cards ──────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 shrink-0">
         {/* Card 1: Calls Placed */}
         <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
           <PhoneOutgoing className="w-6 h-6 text-blue-400 mb-3" />
@@ -185,7 +185,7 @@ export default function VoiceAgent() {
       </div>
 
       {/* ─── Voice Agents Section ───────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col p-6 mb-6">
+      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col p-6 mb-6 shrink-0">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-bold text-white text-base">
             Voice Agents
@@ -204,7 +204,7 @@ export default function VoiceAgent() {
               <div>
                 {/* Agent Header */}
                 <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${agent.avatarBg} border ${agent.borderColor} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${agent.avatarBg} border ${agent.borderColor} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
                     <Mic className={`w-7 h-7 ${agent.textColor}`} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -212,9 +212,16 @@ export default function VoiceAgent() {
                       <h4 className="text-white font-bold text-base leading-tight truncate group-hover:text-blue-300 transition-colors">
                         {agent.name}
                       </h4>
-                      <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                        Active
-                      </span>
+                      {agent.isActive24h ? (
+                        <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold bg-slate-500/10 border border-slate-500/20 px-2 py-0.5 rounded-full">
+                          Idle
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5 truncate">{agent.role}</div>
                     <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-1.5">
@@ -252,7 +259,7 @@ export default function VoiceAgent() {
 
       {/* ─── Recent Sample Calls Stream ────────────────────────────── */}
       {overviewData?.sampleCalls && overviewData.sampleCalls.length > 0 && (
-        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 p-5">
+        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 p-5 mb-6 shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-white text-sm">Recent Outbound Calls Stream</h3>
@@ -288,7 +295,7 @@ export default function VoiceAgent() {
                         {call.created_at ? new Date(call.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
                       </td>
                       <td className="py-2 px-3 font-medium text-white whitespace-nowrap">
-                        {call.customer_name || 'Property Owner'}
+                        {call.customer_name || call.customer_phone || 'Unregistered Contact'}
                       </td>
                       <td className="py-2 px-3 font-mono text-white/70 whitespace-nowrap">
                         {call.customer_phone || '—'}
