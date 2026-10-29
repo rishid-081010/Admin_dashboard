@@ -1,0 +1,52 @@
+{
+  "restore_point_id": "RESTORE-POINT-20261029-AI-LISTING-STUDIO",
+  "created_at": "2026-10-29T17:04:07.030Z",
+  "created_timestamp": 1793293447030,
+  "title": "Fully Verified Working Restore Point (AI Listing Studio + Flush Data Cleaning)",
+  "status": "VERIFIED_OPERATIONAL",
+  "build_verification": {
+    "client_build": "npm --prefix client run build (Passed, Vite v5.4.21, Exit Code 0)",
+    "endpoints_tested": [
+      {
+        "url": "https://dashboard.asquared.ae/parse-documents.php",
+        "status": 200,
+        "engine": "GPT-4o Vision & Multimodal Parser"
+      },
+      {
+        "url": "https://admin.asquared.ae/dashboard/parse-documents.php",
+        "status": 200,
+        "engine": "GPT-4o Vision & Multimodal Parser"
+      }
+    ]
+  },
+  "local_archive": {
+    "filename": "restore_point_20261029_working_ai_listing_studio.zip",
+    "path": "C:\\Users\\moham\\.gemini\\antigravity\\scratch\\Admin_dashboard_cloned\\restore_point_20261029_working_ai_listing_studio.zip",
+    "size_mb": "24.26",
+    "total_bytes": 25433382,
+    "total_files": 419,
+    "sha256_checksum": "dd6fa01135cf28b97647bc3508942896cba4b29226cc7450d102ec9ae128a785"
+  },
+  "github_backup": {
+    "repository": "rishid-081010/Admin_dashboard",
+    "commit_sha": "df41da171c015a741305d33af4b85df56b41f1dc",
+    "backup_branch": "backup-working-ai-listing-studio-20261029",
+    "release_tag": "restore-point-ai-listing-studio-20261029",
+    "github_web_url": "https://github.com/rishid-081010/Admin_dashboard/tree/backup-working-ai-listing-studio-20261029"
+  },
+  "key_features_restored_in_this_point": [
+    "Listing Studio AI Document Intelligence (GPT-4o Multimodal Vision for Title Deeds & Emirates IDs)",
+    "Accurate Buyer Name Extraction on Oqood certificates (Page 2 extraction)",
+    "Deterministic DLD Cadastral zone to commercial luxury area mapping",
+    "Area mathematical reconciliation (Sq.M to Sq.Ft at 10.76391 precision)",
+    "Token-based automated KYC compliance verification",
+    "Data Cleaning & Data Library 50/50 flush maximized dual view",
+    "Single Top-Right Maximize action button for Cleaned Files & Data Library",
+    "Hostinger live deployment scripts with automated TUS token refresh"
+  ],
+  "revert_instructions": {
+    "quick_command_local": "node scripts/restore_from_20261029.js",
+    "manual_zip_restore": "Extract restore_point_20261029_working_ai_listing_studio.zip into the repository directory, then run: npm --prefix client run build",
+    "manual_github_restore": "git fetch origin && git checkout backup-working-ai-listing-studio-20261029 -- . && npm --prefix client run build"
+  }
+}
