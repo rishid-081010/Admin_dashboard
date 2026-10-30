@@ -4,7 +4,7 @@ import {
   Check, AlertCircle, Loader2, Lock, User, Edit2, X, Sliders, LayoutDashboard, 
   Users, Building2, Search, ExternalLink, GitBranch, Sparkles, Home, PhoneCall, 
   Bot, Clock, Settings, RotateCcw, Save, CheckCircle2, CheckSquare, Square,
-  Download, LogOut, Radio, Zap, AlertTriangle, RefreshCw, BarChart3, Database,
+  Download, LogOut, Radio, AlertTriangle, RefreshCw,
   FileSpreadsheet
 } from 'lucide-react';
 import { authService } from '../utils/authService';
@@ -18,7 +18,6 @@ import {
   DEFAULT_EXPORT_ACCESS,
   EXPORT_ACCESS_EVENT
 } from '../utils/featureAccessService';
-import { spendingRadarService } from '../utils/spendingRadarService';
 
 const ROLE_CONFIG = {
   superadmin: {
@@ -73,7 +72,7 @@ export default function RolesManagement({ currentUser }) {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  // Tab mode: 'accounts' (User Accounts) vs 'access' (Feature Visibility & Access Matrix) vs 'radar' (Live Spending Radar)
+  // Tab mode: 'accounts' (User Accounts) vs 'access' (Feature Visibility & Guardrails)
   const [activeTabMode, setActiveTabMode] = useState('accounts');
 
   // Role currently being edited in the Feature Access matrix ('agent' or 'admin')
@@ -109,13 +108,6 @@ export default function RolesManagement({ currentUser }) {
   const [revokingUserId, setRevokingUserId] = useState(null);
   const [revokingAll, setRevokingAll] = useState(false);
 
-  // Live Spending Radar State
-  const [radarData, setRadarData] = useState(null);
-  const [radarLoading, setRadarLoading] = useState(false);
-  const [radarSaving, setRadarSaving] = useState(false);
-  const [vapiCapInput, setVapiCapInput] = useState('30.00');
-  const [openaiCapInput, setOpenaiCapInput] = useState('15.00');
-
   const myRole = normalizeRole(currentUser?.role || 'admin');
   const isSuperAdmin = myRole === 'superadmin';
   const isAdmin = myRole === 'admin';
@@ -138,19 +130,6 @@ export default function RolesManagement({ currentUser }) {
       setError(res.error || 'Failed to fetch users from Supabase.');
     }
     setLoading(false);
-  };
-
-  const loadRadarTelemetry = async () => {
-    setRadarLoading(true);
-    const res = await spendingRadarService.fetchRadarTelemetry();
-    if (res.success) {
-      setRadarData(res);
-      if (res.limits) {
-        setVapiCapInput(String(res.limits.vapi_daily_budget_usd ?? 30.00));
-        setOpenaiCapInput(String(res.limits.openai_daily_budget_usd ?? 15.00));
-      }
-    }
-    setRadarLoading(false);
   };
 
   useEffect(() => {
@@ -443,26 +422,6 @@ export default function RolesManagement({ currentUser }) {
     setHasUnsavedChanges(false);
   };
 
-  // ─── SUPERADMIN EXECUTIVE ACTION 4: LIVE SPENDING RADAR & BUDGET LIMITS ──
-  const handleSaveSpendingLimits = async (e) => {
-    e.preventDefault();
-    setRadarSaving(true);
-    const newLimits = {
-      ...(radarData?.limits || {}),
-      vapi_daily_budget_usd: parseFloat(vapiCapInput) || 30.00,
-      openai_daily_budget_usd: parseFloat(openaiCapInput) || 15.00,
-    };
-    const res = await spendingRadarService.saveSpendingLimits(newLimits, currentUser?.name || 'SuperAdmin');
-    if (res.success) {
-      setRadarData(prev => ({ ...prev, limits: res.limits }));
-      setSuccessMsg('Live spending budget caps saved & synced to Supabase.');
-      setTimeout(() => setSuccessMsg(null), 4000);
-    } else {
-      setError(res.error || 'Failed to save spending caps.');
-    }
-    setRadarSaving(false);
-  };
-
   // Stats for the currently selected role
   const totalFeatureCount = ALL_FEATURE_KEYS.length;
   const visibleFeatureCount = ALL_FEATURE_KEYS.filter(k => Boolean(activeRolePerms[k])).length;
@@ -514,7 +473,7 @@ export default function RolesManagement({ currentUser }) {
         </div>
       </div>
 
-      {/* SuperAdmin Main View Switcher: User Accounts vs Feature Access Matrix vs Live Spending Radar */}
+      {/* SuperAdmin Main View Switcher: User Accounts vs Feature Visibility & Guardrails */}
       {isSuperAdmin && (
         <div className="flex flex-wrap items-center gap-2 mb-6 p-1.5 rounded-2xl bg-[#0c1829] border border-[#233549] w-fit shadow-md">
           <button
@@ -538,21 +497,6 @@ export default function RolesManagement({ currentUser }) {
           >
             <Sliders className="w-4 h-4 text-purple-200" />
             <span>Feature Visibility &amp; Guardrails</span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveTabMode('radar');
-              loadRadarTelemetry();
-            }}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
-              activeTabMode === 'radar'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-            }`}
-          >
-            <Zap className="w-4 h-4 text-amber-400" />
-            <span>Live Spending &amp; API Radar</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
           </button>
         </div>
       )}
@@ -1261,319 +1205,6 @@ export default function RolesManagement({ currentUser }) {
                 </table>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ════════════════════════════════════════════════════════════════════════
-          VIEW 3: LIVE SPENDING & API RADAR (SUPERADMIN EXCLUSIVE)
-         ════════════════════════════════════════════════════════════════════════ */}
-      {activeTabMode === 'radar' && isSuperAdmin && (
-        <div className="flex flex-col gap-6 animate-fade-in pb-10">
-          {/* Top Bar with Live Refresh */}
-          <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-amber-400" />
-                <h2 className="text-base font-bold text-white font-sans tracking-tight">
-                  LIVE SPENDING &amp; INFRASTRUCTURE RADAR
-                </h2>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
-                  DIRECT TELEMETRY
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">
-                Real-time expenditure tracking across Vapi Voice AI, OpenAI Multimodal Models, and Supabase Cloud.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-slate-400 font-mono">
-                {radarData?.fetchedAt ? `Synced: ${new Date(radarData.fetchedAt).toLocaleTimeString()}` : 'Connecting...'}
-              </span>
-              <button
-                type="button"
-                onClick={loadRadarTelemetry}
-                disabled={radarLoading}
-                className="px-3.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${radarLoading ? 'animate-spin' : ''}`} />
-                <span>Refresh Radar</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 3 Telemetry Services Columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* 1. Vapi AI Telephony Radar */}
-            <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-300 flex items-center justify-center">
-                      <PhoneCall className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                        Vapi Telephony
-                      </h4>
-                      <div className="text-[10px] text-slate-400">Outbound Voice Calls</div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
-                    HEALTHY
-                  </span>
-                </div>
-
-                <div className="space-y-3 mb-5">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Total Calls Dispatched:</span>
-                    <span className="text-white font-mono font-bold">
-                      {radarData?.vapi?.totalCalls?.toLocaleString() || '112,068'} calls
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Total Connected Minutes:</span>
-                    <span className="text-white font-mono font-bold">
-                      {radarData?.vapi?.totalMinutes?.toLocaleString() || '9,939'} mins (~165 hrs)
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Total Incurred Voice Spend:</span>
-                    <span className="text-emerald-400 font-mono font-bold">
-                      ${radarData?.vapi?.totalCostUsd?.toFixed(2) || '1,432.80'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Today's Estimated Spend:</span>
-                    <span className="text-amber-300 font-mono font-bold">
-                      ${radarData?.vapi?.todayCostUsd?.toFixed(2) || '8.45'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Daily Cap Progress Bar */}
-                <div className="bg-[#051833] rounded-xl p-3 border border-white/10">
-                  <div className="flex justify-between text-[11px] mb-1.5">
-                    <span className="text-slate-400">Daily Telephony Budget</span>
-                    <span className="text-white font-mono font-semibold">
-                      ${radarData?.vapi?.todayCostUsd?.toFixed(2) || '8.45'} / ${radarData?.limits?.vapi_daily_budget_usd || '30.00'}
-                    </span>
-                  </div>
-                  {(() => {
-                    const spent = Number(radarData?.vapi?.todayCostUsd || 8.45);
-                    const cap = Number(radarData?.limits?.vapi_daily_budget_usd || 30.00);
-                    const pct = Math.min(100, Math.round((spent / (cap || 1)) * 100));
-                    const barColor = pct > 90 ? 'bg-rose-500' : pct > 70 ? 'bg-amber-400' : 'bg-emerald-400';
-                    return (
-                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                        <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-
-            {/* 2. OpenAI Multimodal & OCR Engine */}
-            <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                        OpenAI &amp; OCR Engine
-                      </h4>
-                      <div className="text-[10px] text-slate-400">GPT-4o Vision &amp; Enhancer</div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
-                    ONLINE
-                  </span>
-                </div>
-
-                <div className="space-y-3 mb-5">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Title Deed OCR Scans:</span>
-                    <span className="text-white font-mono font-bold">
-                      {radarData?.openai?.totalDeedOcrScans || '22'} deeds scanned
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Property Photos Enhanced:</span>
-                    <span className="text-white font-mono font-bold">
-                      {radarData?.openai?.totalImagesEnhanced || '331'} photos
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Total Incurred Vision Spend:</span>
-                    <span className="text-purple-300 font-mono font-bold">
-                      ${radarData?.openai?.estimatedTotalSpendUsd?.toFixed(2) || '12.85'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Today's Estimated Spend:</span>
-                    <span className="text-amber-300 font-mono font-bold">
-                      ${radarData?.openai?.todayEstimatedSpendUsd?.toFixed(2) || '0.95'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Daily Cap Progress Bar */}
-                <div className="bg-[#051833] rounded-xl p-3 border border-white/10">
-                  <div className="flex justify-between text-[11px] mb-1.5">
-                    <span className="text-slate-400">Daily Vision/OCR Budget</span>
-                    <span className="text-white font-mono font-semibold">
-                      ${radarData?.openai?.todayEstimatedSpendUsd?.toFixed(2) || '0.95'} / ${radarData?.limits?.openai_daily_budget_usd || '15.00'}
-                    </span>
-                  </div>
-                  {(() => {
-                    const spent = Number(radarData?.openai?.todayEstimatedSpendUsd || 0.95);
-                    const cap = Number(radarData?.limits?.openai_daily_budget_usd || 15.00);
-                    const pct = Math.min(100, Math.round((spent / (cap || 1)) * 100));
-                    const barColor = pct > 90 ? 'bg-rose-500' : pct > 70 ? 'bg-amber-400' : 'bg-purple-400';
-                    return (
-                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                        <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Supabase Cloud Database & Storage Scale */}
-            <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center">
-                      <Database className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                        Supabase Cloud
-                      </h4>
-                      <div className="text-[10px] text-slate-400">Database &amp; S3 Storage</div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
-                    PRO TIER
-                  </span>
-                </div>
-
-                <div className="space-y-3 mb-5">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Dubai Owners Records:</span>
-                    <span className="text-white font-mono font-bold">
-                      3,042,722 rows
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Buildings 360 Records:</span>
-                    <span className="text-white font-mono font-bold">
-                      69,719 rows
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Call Logs &amp; Transcripts:</span>
-                    <span className="text-white font-mono font-bold">
-                      112,068 rows
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400">Direct S3 File Storage:</span>
-                    <span className="text-emerald-400 font-mono font-bold">
-                      428.5 MB / 5,000 MB
-                    </span>
-                  </div>
-                </div>
-
-                {/* Storage Meter */}
-                <div className="bg-[#051833] rounded-xl p-3 border border-white/10">
-                  <div className="flex justify-between text-[11px] mb-1.5">
-                    <span className="text-slate-400">Storage Consumption</span>
-                    <span className="text-white font-mono font-semibold">
-                      8.5% allocated
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                    <div className="h-full bg-emerald-400 transition-all" style={{ width: '8.5%' }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Budget Caps & Quotas Configuration Form */}
-          <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono mb-1">
-              Automated Daily Budget Guardrails
-            </h3>
-            <p className="text-xs text-slate-400 mb-5">
-              Set automated daily expenditure ceilings in USD. If spending reaches the limit, outbound triggers are gracefully capped.
-            </p>
-
-            <form onSubmit={handleSaveSpendingLimits} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-              <div>
-                <label className="block text-slate-300 font-semibold text-xs mb-1.5">
-                  Vapi Daily Telephony Cap (USD)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-slate-400 font-mono text-xs">$</span>
-                  <input
-                    type="number"
-                    step="1"
-                    min="5"
-                    max="500"
-                    value={vapiCapInput}
-                    onChange={(e) => setVapiCapInput(e.target.value)}
-                    className="w-full bg-[#051833] border border-white/10 rounded-xl pl-7 pr-3 py-2 text-white font-mono font-bold text-xs focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold text-xs mb-1.5">
-                  OpenAI Daily Vision/OCR Cap (USD)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-slate-400 font-mono text-xs">$</span>
-                  <input
-                    type="number"
-                    step="1"
-                    min="5"
-                    max="500"
-                    value={openaiCapInput}
-                    onChange={(e) => setOpenaiCapInput(e.target.value)}
-                    className="w-full bg-[#051833] border border-white/10 rounded-xl pl-7 pr-3 py-2 text-white font-mono font-bold text-xs focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={radarSaving}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {radarSaving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Saving Limits...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      <span>Save Budget Guardrails</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
