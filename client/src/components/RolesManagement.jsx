@@ -5,7 +5,7 @@ import {
   Users, Building2, Search, ExternalLink, GitBranch, Sparkles, Home, PhoneCall, 
   Bot, Clock, Settings, RotateCcw, Save, CheckCircle2, CheckSquare, Square,
   Download, LogOut, Radio, Zap, AlertTriangle, RefreshCw, BarChart3, Database,
-  FileSpreadsheet, Power
+  FileSpreadsheet
 } from 'lucide-react';
 import { authService } from '../utils/authService';
 import { 
@@ -443,34 +443,7 @@ export default function RolesManagement({ currentUser }) {
     setHasUnsavedChanges(false);
   };
 
-  // ─── SUPERADMIN EXECUTIVE ACTION 4: LIVE SPENDING RADAR & KILL SWITCH ──
-  const handleToggleKillSwitch = async () => {
-    if (!radarData?.limits) return;
-    const nextState = !radarData.limits.kill_switch_active;
-    const confirmMsg = nextState 
-      ? 'EMERGENCY ACTION: Are you sure you want to CUT OFF all outbound telephony? This halts active Vapi calls immediately.'
-      : 'Restore outbound telephony calling services?';
-    if (!window.confirm(confirmMsg)) return;
-
-    setRadarSaving(true);
-    const res = await spendingRadarService.toggleKillSwitch(nextState, currentUser?.name || 'SuperAdmin');
-    if (res.success) {
-      setRadarData(prev => ({
-        ...prev,
-        limits: res.limits,
-        vapi: {
-          ...(prev?.vapi || {}),
-          status: res.limits.kill_switch_active ? 'PAUSED' : 'ACTIVE'
-        }
-      }));
-      setSuccessMsg(nextState ? 'EMERGENCY TELEPHONY KILL SWITCH ACTIVATED: Outbound voice calls paused.' : 'Outbound telephony services restored.');
-      setTimeout(() => setSuccessMsg(null), 4000);
-    } else {
-      setError(res.error || 'Failed to toggle kill switch.');
-    }
-    setRadarSaving(false);
-  };
-
+  // ─── SUPERADMIN EXECUTIVE ACTION 4: LIVE SPENDING RADAR & BUDGET LIMITS ──
   const handleSaveSpendingLimits = async (e) => {
     e.preventDefault();
     setRadarSaving(true);
@@ -1330,64 +1303,6 @@ export default function RolesManagement({ currentUser }) {
             </div>
           </div>
 
-          {/* Emergency Telephony Kill Switch Banner Card */}
-          <div className={`p-5 rounded-2xl border transition-all shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 ${
-            radarData?.limits?.kill_switch_active
-              ? 'bg-gradient-to-r from-rose-950/80 via-rose-900/60 to-red-950/80 border-rose-500/60 shadow-rose-950/50'
-              : 'bg-gradient-to-r from-emerald-950/30 via-slate-900/70 to-blue-950/30 border-emerald-500/30'
-          }`}>
-            <div className="flex items-start sm:items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-                radarData?.limits?.kill_switch_active
-                  ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse'
-                  : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-              }`}>
-                <Power className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-                    Emergency Telephony Kill Switch
-                  </h3>
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                    radarData?.limits?.kill_switch_active
-                      ? 'bg-rose-500/20 text-rose-200 border-rose-500/50'
-                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                  }`}>
-                    {radarData?.limits?.kill_switch_active ? 'HALTED & LOCKED' : 'ONLINE & ACTIVE'}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 mt-1 max-w-2xl">
-                  {radarData?.limits?.kill_switch_active
-                    ? 'All outbound AI telephone calls and automated voice agents are currently suspended to protect budget.'
-                    : '1-click master kill switch to immediately freeze all outbound AI telephony dispatchers and prevent bill runaways.'}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleToggleKillSwitch}
-              disabled={radarSaving}
-              className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-xl flex items-center justify-center gap-2 shrink-0 cursor-pointer ${
-                radarData?.limits?.kill_switch_active
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                  : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-600/30'
-              }`}
-            >
-              {radarSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Power className="w-4 h-4" />
-              )}
-              <span>
-                {radarData?.limits?.kill_switch_active
-                  ? 'RESTORE TELEPHONY SERVICES'
-                  : 'EMERGENCY TELEPHONY KILL SWITCH'}
-              </span>
-            </button>
-          </div>
-
           {/* 3 Telemetry Services Columns */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* 1. Vapi AI Telephony Radar */}
@@ -1405,12 +1320,8 @@ export default function RolesManagement({ currentUser }) {
                       <div className="text-[10px] text-slate-400">Outbound Voice Calls</div>
                     </div>
                   </div>
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                    radarData?.limits?.kill_switch_active 
-                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' 
-                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                  }`}>
-                    {radarData?.limits?.kill_switch_active ? 'PAUSED' : 'HEALTHY'}
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    HEALTHY
                   </span>
                 </div>
 

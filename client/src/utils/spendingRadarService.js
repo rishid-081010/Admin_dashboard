@@ -15,9 +15,8 @@ export const spendingRadarService = {
     };
 
     try {
-      // 1. Fetch Spending Limits & Kill Switch
+      // 1. Fetch Spending Limits
       let limits = {
-        kill_switch_active: false,
         vapi_daily_budget_usd: 30.00,
         openai_daily_budget_usd: 15.00,
         updated_by: 'SuperAdmin'
@@ -42,7 +41,7 @@ export const spendingRadarService = {
         totalCostUsd: 1432.80,
         todayCalls: 2123,
         todayCostUsd: 8.45,
-        status: limits.kill_switch_active ? 'PAUSED' : 'ACTIVE'
+        status: 'ACTIVE'
       };
 
       try {
@@ -159,12 +158,5 @@ export const spendingRadarService = {
       console.error('saveSpendingLimits error:', e);
       return { success: false, error: e.message };
     }
-  },
-
-  // 1-Click Toggle for Emergency Telephony Kill Switch
-  async toggleKillSwitch(currentStatus, updatedBy = 'SuperAdmin') {
-    const nextStatus = !currentStatus;
-    const updateRes = await this.saveSpendingLimits({ kill_switch_active: nextStatus }, updatedBy);
-    return updateRes;
   }
 };
