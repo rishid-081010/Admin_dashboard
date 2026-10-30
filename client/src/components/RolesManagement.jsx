@@ -431,7 +431,7 @@ export default function RolesManagement({ currentUser }) {
   const adminUserCount = users.filter(u => normalizeRole(u.role) === 'admin').length;
 
   return (
-    <div className="w-full flex flex-col h-full animate-fade-in text-white/90 overflow-y-auto custom-scrollbar pr-1 -mr-1">
+    <div className="w-full flex flex-col h-full min-h-0 animate-fade-in text-white/90 overflow-y-auto custom-scrollbar pr-1 -mr-1">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
         <div>
@@ -936,9 +936,9 @@ export default function RolesManagement({ currentUser }) {
           VIEW 2: USER ACCOUNTS & CREDENTIALS MANAGEMENT (STANDARD)
          ════════════════════════════════════════════════════════════════════════ */}
       {activeTabMode === 'accounts' && (
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col gap-6 animate-fade-in pb-12">
           {/* Permissions Rule Banner */}
-          <div className="mb-5 p-4 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-md flex items-start gap-3 text-xs leading-relaxed">
+          <div className="p-4 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-md flex items-start gap-3 text-xs leading-relaxed">
             <Shield className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-white block mb-0.5">Role Permission Hierarchy &amp; Session Management</span>
@@ -952,21 +952,21 @@ export default function RolesManagement({ currentUser }) {
 
           {/* Notifications */}
           {successMsg && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-fade-in">
+            <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-fade-in">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{successMsg}</span>
             </div>
           )}
 
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fade-in">
+            <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fade-in">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Roles Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {Object.entries(ROLE_CONFIG).map(([key, config]) => {
               const Icon = config.icon;
               const count = users.filter(u => normalizeRole(u.role) === key).length;
@@ -992,7 +992,7 @@ export default function RolesManagement({ currentUser }) {
           </div>
 
           {/* Accounts & Roles Table */}
-          <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl flex flex-col shadow-xl overflow-hidden mb-6">
+          <div className="bg-[#0c1829] border border-[#233549] rounded-2xl flex flex-col shadow-xl overflow-hidden">
             <div className="p-4 border-b border-[#233549] bg-black/20 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
                 <span>Configured Accounts in Supabase</span>
@@ -1024,7 +1024,7 @@ export default function RolesManagement({ currentUser }) {
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto custom-scrollbar">
+            <div className="overflow-x-auto custom-scrollbar">
               {loading ? (
                 <div className="flex items-center justify-center p-12 text-slate-400 gap-2 text-xs">
                   <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
