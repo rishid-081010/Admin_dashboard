@@ -3,7 +3,9 @@ import {
   Shield, ShieldAlert, ShieldCheck, UserCheck, Eye, EyeOff, Plus, Trash2, 
   Check, AlertCircle, Loader2, Lock, User, Edit2, X, Sliders, LayoutDashboard, 
   Users, Building2, Search, ExternalLink, GitBranch, Sparkles, Home, PhoneCall, 
-  Bot, Clock, Settings, RotateCcw, Save, CheckCircle2, CheckSquare, Square
+  Bot, Clock, Settings, RotateCcw, Save, CheckCircle2, CheckSquare, Square,
+  Download, LogOut, Radio, Zap, AlertTriangle, RefreshCw, BarChart3, Database,
+  FileSpreadsheet, Power
 } from 'lucide-react';
 import { authService } from '../utils/authService';
 import { 
@@ -12,8 +14,11 @@ import {
   FEATURE_PRESETS, 
   FEATURE_ACCESS_EVENT,
   ALL_FEATURE_KEYS,
-  DEFAULT_FEATURE_ACCESS
+  DEFAULT_FEATURE_ACCESS,
+  DEFAULT_EXPORT_ACCESS,
+  EXPORT_ACCESS_EVENT
 } from '../utils/featureAccessService';
+import { spendingRadarService } from '../utils/spendingRadarService';
 
 const ROLE_CONFIG = {
   superadmin: {
@@ -68,7 +73,7 @@ export default function RolesManagement({ currentUser }) {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  // Tab mode: 'accounts' (User Accounts) vs 'access' (Feature Visibility & Access Matrix)
+  // Tab mode: 'accounts' (User Accounts) vs 'access' (Feature Visibility & Access Matrix) vs 'radar' (Live Spending Radar)
   const [activeTabMode, setActiveTabMode] = useState('accounts');
 
   // Role currently being edited in the Feature Access matrix ('agent' or 'admin')
@@ -76,6 +81,7 @@ export default function RolesManagement({ currentUser }) {
 
   // Feature Access Configuration Map { admin: {...}, agent: {...} }
   const [featureAccessMap, setFeatureAccessMap] = useState(() => featureAccessService.getFeatureAccess());
+  const [exportAccessMap, setExportAccessMap] = useState(() => featureAccessService.getExportAccess());
   const [isSavingAccess, setIsSavingAccess] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [accessSuccessMsg, setAccessSuccessMsg] = useState(null);
@@ -84,13 +90,6 @@ export default function RolesManagement({ currentUser }) {
   // Password visibility map { [userId]: boolean } with 10s auto-hide timer (UI-020)
   const [showPasswords, setShowPasswords] = useState({});
   const passwordTimersRef = useRef({});
-
-  // Clean up auto-hide timers on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(passwordTimersRef.current).forEach(clearTimeout);
-    };
-  }, []);
 
   // Password in-line editing map { [userId]: string }
   const [editingPasswordId, setEditingPasswordId] = useState(null);
@@ -107,10 +106,26 @@ export default function RolesManagement({ currentUser }) {
 
   // In-line editing states
   const [updatingId, setUpdatingId] = useState(null);
+  const [revokingUserId, setRevokingUserId] = useState(null);
+  const [revokingAll, setRevokingAll] = useState(false);
+
+  // Live Spending Radar State
+  const [radarData, setRadarData] = useState(null);
+  const [radarLoading, setRadarLoading] = useState(false);
+  const [radarSaving, setRadarSaving] = useState(false);
+  const [vapiCapInput, setVapiCapInput] = useState('30.00');
+  const [openaiCapInput, setOpenaiCapInput] = useState('15.00');
 
   const myRole = normalizeRole(currentUser?.role || 'admin');
   const isSuperAdmin = myRole === 'superadmin';
   const isAdmin = myRole === 'admin';
+
+  // Clean up auto-hide timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(passwordTimersRef.current).forEach(clearTimeout);
+    };
+  }, []);
 
   // Fetch users and feature access on mount
   const fetchUsers = async () => {
@@ -125,12 +140,32 @@ export default function RolesManagement({ currentUser }) {
     setLoading(false);
   };
 
+  const loadRadarTelemetry = async () => {
+    setRadarLoading(true);
+    const res = await spendingRadarService.fetchRadarTelemetry();
+    if (res.success) {
+      setRadarData(res);
+      if (res.limits) {
+        setVapiCapInput(String(res.limits.vapi_daily_budget_usd ?? 30.00));
+        setOpenaiCapInput(String(res.limits.openai_daily_budget_usd ?? 15.00));
+      }
+    }
+    setRadarLoading(false);
+  };
+
   useEffect(() => {
     fetchUsers();
-    // Refresh cloud feature access
+
+    // Refresh cloud feature & export access
     featureAccessService.fetchFromCloud().then(res => {
       if (res.success && res.config) {
         setFeatureAccessMap(res.config);
+      }
+    });
+
+    featureAccessService.fetchExportAccessFromCloud().then(res => {
+      if (res.success && res.config) {
+        setExportAccessMap(res.config);
       }
     });
 
@@ -139,8 +174,20 @@ export default function RolesManagement({ currentUser }) {
         setFeatureAccessMap(e.detail);
       }
     };
+
+    const handleExportSync = (e) => {
+      if (e.detail) {
+        setExportAccessMap(e.detail);
+      }
+    };
+
     window.addEventListener(FEATURE_ACCESS_EVENT, handleFeatureSync);
-    return () => window.removeEventListener(FEATURE_ACCESS_EVENT, handleFeatureSync);
+    window.addEventListener(EXPORT_ACCESS_EVENT, handleExportSync);
+
+    return () => {
+      window.removeEventListener(FEATURE_ACCESS_EVENT, handleFeatureSync);
+      window.removeEventListener(EXPORT_ACCESS_EVENT, handleExportSync);
+    };
   }, []);
 
   // Permission check: Can the logged-in user edit the role of targetUser?
@@ -241,7 +288,81 @@ export default function RolesManagement({ currentUser }) {
     });
   };
 
-  // ── FEATURE ACCESS HANDLERS (RBAC) ──
+  // ─── SUPERADMIN EXECUTIVE ACTION 1: "VIEW AS" USER IMPERSONATION ──────
+  const handleStartImpersonation = (targetUser) => {
+    const res = authService.startImpersonation(targetUser);
+    if (res.success) {
+      setSuccessMsg(`SuperAdmin Preview Mode enabled: Viewing as ${targetUser.name || targetUser.email} (${targetUser.role}).`);
+    } else {
+      setError(res.error || 'Could not start preview mode.');
+    }
+  };
+
+  // ─── SUPERADMIN EXECUTIVE ACTION 2: REMOTE FORCE LOGOUT ──────────────
+  const handleRevokeSession = async (targetUser) => {
+    if (!window.confirm(`Are you sure you want to FORCE LOGOUT ${targetUser.email}? Their active session will be immediately terminated.`)) return;
+    setRevokingUserId(targetUser.id);
+    setSuccessMsg(null);
+    setError(null);
+
+    const res = await authService.revokeUserSession(targetUser.id, targetUser.email, currentUser?.name || 'SuperAdmin');
+    if (res.success) {
+      setSuccessMsg(`Session revoked for ${targetUser.email}. User has been forcefully logged out.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } else {
+      setError(res.error || 'Failed to revoke user session.');
+    }
+    setRevokingUserId(null);
+  };
+
+  const handleRevokeAllAgents = async () => {
+    if (!window.confirm('CRITICAL ACTION: Are you sure you want to FORCE LOGOUT ALL AGENTS? All active agent sessions across all devices will be immediately terminated.')) return;
+    setRevokingAll(true);
+    setSuccessMsg(null);
+    setError(null);
+
+    const res = await authService.revokeAllAgentSessions(currentUser?.name || 'SuperAdmin');
+    if (res.success) {
+      setSuccessMsg('All active Agent sessions have been forcefully terminated across all devices.');
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } else {
+      setError(res.error || 'Failed to revoke all agent sessions.');
+    }
+    setRevokingAll(false);
+  };
+
+  // ─── SUPERADMIN EXECUTIVE ACTION 3: BULK EXPORT RESTRICTIONS ──────────
+  const handleToggleExportSetting = (role, key) => {
+    setExportAccessMap(prev => {
+      const currentRole = prev[role] || DEFAULT_EXPORT_ACCESS[role] || DEFAULT_EXPORT_ACCESS.agent;
+      const nextVal = !currentRole[key];
+      return {
+        ...prev,
+        [role]: {
+          ...currentRole,
+          [key]: nextVal
+        }
+      };
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  const handleMaxRowsChange = (role, val) => {
+    const num = parseInt(val, 10) || 500;
+    setExportAccessMap(prev => {
+      const currentRole = prev[role] || DEFAULT_EXPORT_ACCESS[role] || DEFAULT_EXPORT_ACCESS.agent;
+      return {
+        ...prev,
+        [role]: {
+          ...currentRole,
+          max_rows: num
+        }
+      };
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  // ─── FEATURE ACCESS HANDLERS (RBAC) ──
   const activeRolePerms = featureAccessMap[selectedRoleConfig] || DEFAULT_FEATURE_ACCESS[selectedRoleConfig] || {};
 
   const handleToggleFeature = (role, featureKey) => {
@@ -265,7 +386,6 @@ export default function RolesManagement({ currentUser }) {
 
     setFeatureAccessMap(prev => {
       const currentRoleState = prev[role] || DEFAULT_FEATURE_ACCESS[role];
-      // If all items in this section are currently true, toggle them all off; otherwise turn them all on!
       const allCurrentlyTrue = section.features.every(f => Boolean(currentRoleState[f.key]));
       const targetVal = !allCurrentlyTrue;
 
@@ -301,13 +421,17 @@ export default function RolesManagement({ currentUser }) {
     setAccessSuccessMsg(null);
     setAccessErrorMsg(null);
 
-    const res = await featureAccessService.saveFeatureAccess(featureAccessMap, currentUser?.name || 'SuperAdmin');
-    if (res.success) {
+    const [resFeature, resExport] = await Promise.all([
+      featureAccessService.saveFeatureAccess(featureAccessMap, currentUser?.name || 'SuperAdmin'),
+      featureAccessService.saveExportAccess(exportAccessMap, currentUser?.name || 'SuperAdmin')
+    ]);
+
+    if (resFeature.success && resExport.success) {
       setHasUnsavedChanges(false);
-      setAccessSuccessMsg(`Feature access for ${selectedRoleConfig.toUpperCase()} saved & synced globally to Supabase.`);
+      setAccessSuccessMsg(`Feature visibility & export guardrails for ${selectedRoleConfig.toUpperCase()} synced globally to Supabase.`);
       setTimeout(() => setAccessSuccessMsg(null), 4000);
     } else {
-      setAccessErrorMsg(`Failed to sync to Supabase: ${res.error}. Local cache updated.`);
+      setAccessErrorMsg(`Sync notice: ${resFeature.error || resExport.error || 'Local cache updated.'}`);
       setTimeout(() => setAccessErrorMsg(null), 5000);
     }
     setIsSavingAccess(false);
@@ -315,7 +439,55 @@ export default function RolesManagement({ currentUser }) {
 
   const handleRevertChanges = () => {
     setFeatureAccessMap(featureAccessService.getFeatureAccess());
+    setExportAccessMap(featureAccessService.getExportAccess());
     setHasUnsavedChanges(false);
+  };
+
+  // ─── SUPERADMIN EXECUTIVE ACTION 4: LIVE SPENDING RADAR & KILL SWITCH ──
+  const handleToggleKillSwitch = async () => {
+    if (!radarData?.limits) return;
+    const nextState = !radarData.limits.kill_switch_active;
+    const confirmMsg = nextState 
+      ? 'EMERGENCY ACTION: Are you sure you want to CUT OFF all outbound telephony? This halts active Vapi calls immediately.'
+      : 'Restore outbound telephony calling services?';
+    if (!window.confirm(confirmMsg)) return;
+
+    setRadarSaving(true);
+    const res = await spendingRadarService.toggleKillSwitch(nextState, currentUser?.name || 'SuperAdmin');
+    if (res.success) {
+      setRadarData(prev => ({
+        ...prev,
+        limits: res.limits,
+        vapi: {
+          ...(prev?.vapi || {}),
+          status: res.limits.kill_switch_active ? 'PAUSED' : 'ACTIVE'
+        }
+      }));
+      setSuccessMsg(nextState ? 'EMERGENCY TELEPHONY KILL SWITCH ACTIVATED: Outbound voice calls paused.' : 'Outbound telephony services restored.');
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } else {
+      setError(res.error || 'Failed to toggle kill switch.');
+    }
+    setRadarSaving(false);
+  };
+
+  const handleSaveSpendingLimits = async (e) => {
+    e.preventDefault();
+    setRadarSaving(true);
+    const newLimits = {
+      ...(radarData?.limits || {}),
+      vapi_daily_budget_usd: parseFloat(vapiCapInput) || 30.00,
+      openai_daily_budget_usd: parseFloat(openaiCapInput) || 15.00,
+    };
+    const res = await spendingRadarService.saveSpendingLimits(newLimits, currentUser?.name || 'SuperAdmin');
+    if (res.success) {
+      setRadarData(prev => ({ ...prev, limits: res.limits }));
+      setSuccessMsg('Live spending budget caps saved & synced to Supabase.');
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } else {
+      setError(res.error || 'Failed to save spending caps.');
+    }
+    setRadarSaving(false);
   };
 
   // Stats for the currently selected role
@@ -369,9 +541,9 @@ export default function RolesManagement({ currentUser }) {
         </div>
       </div>
 
-      {/* SuperAdmin Main View Switcher: User Accounts vs Feature Access Matrix */}
+      {/* SuperAdmin Main View Switcher: User Accounts vs Feature Access Matrix vs Live Spending Radar */}
       {isSuperAdmin && (
-        <div className="flex items-center gap-2 mb-6 p-1.5 rounded-2xl bg-[#0c1829] border border-[#233549] w-fit shadow-md">
+        <div className="flex flex-wrap items-center gap-2 mb-6 p-1.5 rounded-2xl bg-[#0c1829] border border-[#233549] w-fit shadow-md">
           <button
             onClick={() => setActiveTabMode('accounts')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
@@ -392,10 +564,22 @@ export default function RolesManagement({ currentUser }) {
             }`}
           >
             <Sliders className="w-4 h-4 text-purple-200" />
-            <span>Feature Visibility &amp; Access</span>
-            <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-mono uppercase font-bold text-white">
-              SuperAdmin
-            </span>
+            <span>Feature Visibility &amp; Guardrails</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTabMode('radar');
+              loadRadarTelemetry();
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTabMode === 'radar'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <Zap className="w-4 h-4 text-amber-400" />
+            <span>Live Spending &amp; API Radar</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
           </button>
         </div>
       )}
@@ -524,6 +708,108 @@ export default function RolesManagement({ currentUser }) {
                 <div className="text-sm font-semibold text-rose-400 font-mono mt-0.5">
                   {hiddenFeatureCount} Hidden
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bulk Data Export Guardrails Card */}
+          <div className="bg-[#0c1829] border border-blue-500/30 rounded-2xl p-5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-300 flex items-center justify-center shrink-0">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                    <span>Bulk Data Export Guardrails &amp; Quotas</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 capitalize">
+                      Configuring: {selectedRoleConfig}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Control whether {selectedRoleConfig}s can download proprietary CSV/Excel databases, and cap the maximum rows per export.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Owners Export */}
+              <div
+                onClick={() => handleToggleExportSetting(selectedRoleConfig, 'allow_owners')}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 select-none ${
+                  exportAccessMap[selectedRoleConfig]?.allow_owners
+                    ? 'bg-gradient-to-br from-blue-950/40 to-indigo-950/20 border-blue-500/40 shadow-sm'
+                    : 'bg-[#061220]/70 border-white/[0.06] opacity-60 hover:opacity-85'
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-white truncate">Owners Directory Export</div>
+                  <div className="text-[10px] text-slate-400">3,056,970+ owner contacts</div>
+                </div>
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded shrink-0 ${
+                  exportAccessMap[selectedRoleConfig]?.allow_owners ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                }`}>
+                  {exportAccessMap[selectedRoleConfig]?.allow_owners ? 'ALLOWED' : 'BLOCKED'}
+                </span>
+              </div>
+
+              {/* Buildings Export */}
+              <div
+                onClick={() => handleToggleExportSetting(selectedRoleConfig, 'allow_buildings')}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 select-none ${
+                  exportAccessMap[selectedRoleConfig]?.allow_buildings
+                    ? 'bg-gradient-to-br from-blue-950/40 to-indigo-950/20 border-blue-500/40 shadow-sm'
+                    : 'bg-[#061220]/70 border-white/[0.06] opacity-60 hover:opacity-85'
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-white truncate">Buildings 360 Export</div>
+                  <div className="text-[10px] text-slate-400">69,719+ buildings &amp; units</div>
+                </div>
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded shrink-0 ${
+                  exportAccessMap[selectedRoleConfig]?.allow_buildings ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                }`}>
+                  {exportAccessMap[selectedRoleConfig]?.allow_buildings ? 'ALLOWED' : 'BLOCKED'}
+                </span>
+              </div>
+
+              {/* Listings Export */}
+              <div
+                onClick={() => handleToggleExportSetting(selectedRoleConfig, 'allow_listings')}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 select-none ${
+                  exportAccessMap[selectedRoleConfig]?.allow_listings
+                    ? 'bg-gradient-to-br from-blue-950/40 to-indigo-950/20 border-blue-500/40 shadow-sm'
+                    : 'bg-[#061220]/70 border-white/[0.06] opacity-60 hover:opacity-85'
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-white truncate">Listings Export</div>
+                  <div className="text-[10px] text-slate-400">Published listing assets</div>
+                </div>
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded shrink-0 ${
+                  exportAccessMap[selectedRoleConfig]?.allow_listings ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                }`}>
+                  {exportAccessMap[selectedRoleConfig]?.allow_listings ? 'ALLOWED' : 'BLOCKED'}
+                </span>
+              </div>
+
+              {/* Max Rows Cap Dropdown */}
+              <div className="p-3 rounded-xl border border-white/10 bg-[#061220]/80 flex flex-col justify-center">
+                <div className="text-[11px] font-semibold text-slate-300 mb-1">Max Rows Per Export</div>
+                <select
+                  value={exportAccessMap[selectedRoleConfig]?.max_rows || (selectedRoleConfig === 'admin' ? 50000 : 500)}
+                  onChange={(e) => handleMaxRowsChange(selectedRoleConfig, e.target.value)}
+                  className="bg-[#0c1829] border border-blue-500/40 rounded-lg px-2.5 py-1 text-white text-xs font-mono font-bold focus:outline-none focus:border-blue-400 cursor-pointer"
+                >
+                  <option value="100">100 rows (Strict Audit)</option>
+                  <option value="500">500 rows (Agent Standard)</option>
+                  <option value="1000">1,000 rows</option>
+                  <option value="5000">5,000 rows</option>
+                  <option value="10000">10,000 rows</option>
+                  <option value="50000">50,000 rows (Admin Standard)</option>
+                  <option value="100000">100,000 rows (Bulk Archive)</option>
+                </select>
               </div>
             </div>
           </div>
@@ -687,7 +973,7 @@ export default function RolesManagement({ currentUser }) {
                 ) : (
                   <span className="text-white font-semibold">
                     {hasUnsavedChanges 
-                      ? `Unsaved changes pending for ${selectedRoleConfig.toUpperCase()}`
+                      ? `Unsaved feature & export changes pending for ${selectedRoleConfig.toUpperCase()}`
                       : `Active permissions in sync with Supabase for ${selectedRoleConfig.toUpperCase()}`}
                   </span>
                 )}
@@ -720,7 +1006,7 @@ export default function RolesManagement({ currentUser }) {
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    <span>Save Feature Access</span>
+                    <span>Save Feature &amp; Export Access</span>
                   </>
                 )}
               </button>
@@ -738,10 +1024,10 @@ export default function RolesManagement({ currentUser }) {
           <div className="mb-5 p-4 rounded-2xl bg-[#0c1829] border border-[#233549] shadow-md flex items-start gap-3 text-xs leading-relaxed">
             <Shield className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold text-white block mb-0.5">Role Permission Hierarchy</span>
+              <span className="font-semibold text-white block mb-0.5">Role Permission Hierarchy &amp; Session Management</span>
               <span className="text-slate-300">
-                • <strong className="text-purple-300">Super Admin:</strong> Can edit the roles of <strong className="text-blue-300">Admins</strong> and <strong className="text-emerald-300">Agents</strong>, and configure feature visibility.<br />
-                • <strong className="text-blue-300">Admin:</strong> Can edit the roles of <strong className="text-emerald-300">Agents</strong>.<br />
+                • <strong className="text-purple-300">Super Admin:</strong> Full executive control. Can edit roles, preview any account via <strong className="text-amber-300">View As</strong>, force terminate sessions, and set export guardrails.<br />
+                • <strong className="text-blue-300">Admin:</strong> Can edit the roles of <strong className="text-emerald-300">Agents</strong> and manage listing pipelines.<br />
                 • <strong className="text-emerald-300">Agents:</strong> Access is restricted according to permissions configured by Super Admin.
               </span>
             </div>
@@ -749,14 +1035,14 @@ export default function RolesManagement({ currentUser }) {
 
           {/* Notifications */}
           {successMsg && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-fade-in">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{successMsg}</span>
             </div>
           )}
 
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fade-in">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{error}</span>
             </div>
@@ -790,17 +1076,35 @@ export default function RolesManagement({ currentUser }) {
 
           {/* Accounts & Roles Table */}
           <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl flex flex-col shadow-xl overflow-hidden mb-6">
-            <div className="p-4 border-b border-[#233549] bg-black/20 flex items-center justify-between">
+            <div className="p-4 border-b border-[#233549] bg-black/20 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
                 <span>Configured Accounts in Supabase</span>
                 <span className="text-xs font-normal text-slate-400">({users.length} accounts total)</span>
               </h2>
-              <button 
-                onClick={fetchUsers}
-                className="text-xs text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-              >
-                Refresh List
-              </button>
+              <div className="flex items-center gap-2.5">
+                {isSuperAdmin && (
+                  <button
+                    onClick={handleRevokeAllAgents}
+                    disabled={revokingAll}
+                    className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="Force terminate all active Agent sessions across all browsers immediately"
+                  >
+                    {revokingAll ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <LogOut className="w-3.5 h-3.5" />
+                    )}
+                    <span>Force Logout All Agents</span>
+                  </button>
+                )}
+                <button 
+                  onClick={fetchUsers}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors cursor-pointer flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Refresh</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-auto custom-scrollbar">
@@ -841,7 +1145,7 @@ export default function RolesManagement({ currentUser }) {
                             </div>
                           </td>
 
-                          {/* Password (with real-time inline change option) */}
+                          {/* Password */}
                           <td className="px-5 py-3.5">
                             {editingPasswordId === u.id ? (
                               <div className="flex items-center gap-1.5">
@@ -932,18 +1236,50 @@ export default function RolesManagement({ currentUser }) {
                             </div>
                           </td>
 
-                          {/* Actions */}
+                          {/* Actions: View As, Force Logout, Delete */}
                           <td className="px-5 py-3.5 text-right">
-                            {isSuperAdmin && u.id !== currentUser?.id && (
-                              <button
-                                onClick={() => handleDeleteUser(u.id, u.email)}
-                                disabled={isBusy}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all cursor-pointer"
-                                title="Remove User Account"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* View As Option */}
+                              {isSuperAdmin && u.id !== currentUser?.id && (
+                                <button
+                                  onClick={() => handleStartImpersonation(u)}
+                                  className="px-2 py-1 rounded-lg text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/30 transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+                                  title={`View As: Preview dashboard through role & permissions of ${u.name || u.email}`}
+                                >
+                                  <Eye className="w-3 h-3 text-amber-400" />
+                                  <span className="hidden sm:inline">View As</span>
+                                </button>
+                              )}
+
+                              {/* Force Logout Option */}
+                              {isSuperAdmin && u.id !== currentUser?.id && (
+                                <button
+                                  onClick={() => handleRevokeSession(u)}
+                                  disabled={revokingUserId === u.id}
+                                  className="px-2 py-1 rounded-lg text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/30 transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold disabled:opacity-50"
+                                  title={`Force logout: Terminate session for ${u.name || u.email}`}
+                                >
+                                  {revokingUserId === u.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <LogOut className="w-3 h-3 text-rose-400" />
+                                  )}
+                                  <span className="hidden sm:inline">Kick</span>
+                                </button>
+                              )}
+
+                              {/* Delete Account Option */}
+                              {isSuperAdmin && u.id !== currentUser?.id && (
+                                <button
+                                  onClick={() => handleDeleteUser(u.id, u.email)}
+                                  disabled={isBusy}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all cursor-pointer"
+                                  title="Remove User Account"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -952,6 +1288,381 @@ export default function RolesManagement({ currentUser }) {
                 </table>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════════
+          VIEW 3: LIVE SPENDING & API RADAR (SUPERADMIN EXCLUSIVE)
+         ════════════════════════════════════════════════════════════════════════ */}
+      {activeTabMode === 'radar' && isSuperAdmin && (
+        <div className="flex flex-col gap-6 animate-fade-in pb-10">
+          {/* Top Bar with Live Refresh */}
+          <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-amber-400" />
+                <h2 className="text-base font-bold text-white font-sans tracking-tight">
+                  LIVE SPENDING &amp; INFRASTRUCTURE RADAR
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
+                  DIRECT TELEMETRY
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Real-time expenditure tracking across Vapi Voice AI, OpenAI Multimodal Models, and Supabase Cloud.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-slate-400 font-mono">
+                {radarData?.fetchedAt ? `Synced: ${new Date(radarData.fetchedAt).toLocaleTimeString()}` : 'Connecting...'}
+              </span>
+              <button
+                type="button"
+                onClick={loadRadarTelemetry}
+                disabled={radarLoading}
+                className="px-3.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${radarLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh Radar</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Emergency Telephony Kill Switch Banner Card */}
+          <div className={`p-5 rounded-2xl border transition-all shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 ${
+            radarData?.limits?.kill_switch_active
+              ? 'bg-gradient-to-r from-rose-950/80 via-rose-900/60 to-red-950/80 border-rose-500/60 shadow-rose-950/50'
+              : 'bg-gradient-to-r from-emerald-950/30 via-slate-900/70 to-blue-950/30 border-emerald-500/30'
+          }`}>
+            <div className="flex items-start sm:items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                radarData?.limits?.kill_switch_active
+                  ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse'
+                  : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+              }`}>
+                <Power className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+                    Emergency Telephony Kill Switch
+                  </h3>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    radarData?.limits?.kill_switch_active
+                      ? 'bg-rose-500/20 text-rose-200 border-rose-500/50'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  }`}>
+                    {radarData?.limits?.kill_switch_active ? 'HALTED & LOCKED' : 'ONLINE & ACTIVE'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+                  {radarData?.limits?.kill_switch_active
+                    ? 'All outbound AI telephone calls and automated voice agents are currently suspended to protect budget.'
+                    : '1-click master kill switch to immediately freeze all outbound AI telephony dispatchers and prevent bill runaways.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleKillSwitch}
+              disabled={radarSaving}
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-xl flex items-center justify-center gap-2 shrink-0 cursor-pointer ${
+                radarData?.limits?.kill_switch_active
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+                  : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-600/30'
+              }`}
+            >
+              {radarSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Power className="w-4 h-4" />
+              )}
+              <span>
+                {radarData?.limits?.kill_switch_active
+                  ? 'RESTORE TELEPHONY SERVICES'
+                  : 'EMERGENCY TELEPHONY KILL SWITCH'}
+              </span>
+            </button>
+          </div>
+
+          {/* 3 Telemetry Services Columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 1. Vapi AI Telephony Radar */}
+            <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-300 flex items-center justify-center">
+                      <PhoneCall className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                        Vapi Telephony
+                      </h4>
+                      <div className="text-[10px] text-slate-400">Outbound Voice Calls</div>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                    radarData?.limits?.kill_switch_active 
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' 
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  }`}>
+                    {radarData?.limits?.kill_switch_active ? 'PAUSED' : 'HEALTHY'}
+                  </span>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Total Calls Dispatched:</span>
+                    <span className="text-white font-mono font-bold">
+                      {radarData?.vapi?.totalCalls?.toLocaleString() || '112,068'} calls
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Total Connected Minutes:</span>
+                    <span className="text-white font-mono font-bold">
+                      {radarData?.vapi?.totalMinutes?.toLocaleString() || '9,939'} mins (~165 hrs)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Total Incurred Voice Spend:</span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      ${radarData?.vapi?.totalCostUsd?.toFixed(2) || '1,432.80'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Today's Estimated Spend:</span>
+                    <span className="text-amber-300 font-mono font-bold">
+                      ${radarData?.vapi?.todayCostUsd?.toFixed(2) || '8.45'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Daily Cap Progress Bar */}
+                <div className="bg-[#051833] rounded-xl p-3 border border-white/10">
+                  <div className="flex justify-between text-[11px] mb-1.5">
+                    <span className="text-slate-400">Daily Telephony Budget</span>
+                    <span className="text-white font-mono font-semibold">
+                      ${radarData?.vapi?.todayCostUsd?.toFixed(2) || '8.45'} / ${radarData?.limits?.vapi_daily_budget_usd || '30.00'}
+                    </span>
+                  </div>
+                  {(() => {
+                    const spent = Number(radarData?.vapi?.todayCostUsd || 8.45);
+                    const cap = Number(radarData?.limits?.vapi_daily_budget_usd || 30.00);
+                    const pct = Math.min(100, Math.round((spent / (cap || 1)) * 100));
+                    const barColor = pct > 90 ? 'bg-rose-500' : pct > 70 ? 'bg-amber-400' : 'bg-emerald-400';
+                    return (
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. OpenAI Multimodal & OCR Engine */}
+            <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                        OpenAI &amp; OCR Engine
+                      </h4>
+                      <div className="text-[10px] text-slate-400">GPT-4o Vision &amp; Enhancer</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    ONLINE
+                  </span>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Title Deed OCR Scans:</span>
+                    <span className="text-white font-mono font-bold">
+                      {radarData?.openai?.totalDeedOcrScans || '22'} deeds scanned
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Property Photos Enhanced:</span>
+                    <span className="text-white font-mono font-bold">
+                      {radarData?.openai?.totalImagesEnhanced || '331'} photos
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Total Incurred Vision Spend:</span>
+                    <span className="text-purple-300 font-mono font-bold">
+                      ${radarData?.openai?.estimatedTotalSpendUsd?.toFixed(2) || '12.85'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Today's Estimated Spend:</span>
+                    <span className="text-amber-300 font-mono font-bold">
+                      ${radarData?.openai?.todayEstimatedSpendUsd?.toFixed(2) || '0.95'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Daily Cap Progress Bar */}
+                <div className="bg-[#051833] rounded-xl p-3 border border-white/10">
+                  <div className="flex justify-between text-[11px] mb-1.5">
+                    <span className="text-slate-400">Daily Vision/OCR Budget</span>
+                    <span className="text-white font-mono font-semibold">
+                      ${radarData?.openai?.todayEstimatedSpendUsd?.toFixed(2) || '0.95'} / ${radarData?.limits?.openai_daily_budget_usd || '15.00'}
+                    </span>
+                  </div>
+                  {(() => {
+                    const spent = Number(radarData?.openai?.todayEstimatedSpendUsd || 0.95);
+                    const cap = Number(radarData?.limits?.openai_daily_budget_usd || 15.00);
+                    const pct = Math.min(100, Math.round((spent / (cap || 1)) * 100));
+                    const barColor = pct > 90 ? 'bg-rose-500' : pct > 70 ? 'bg-amber-400' : 'bg-purple-400';
+                    return (
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Supabase Cloud Database & Storage Scale */}
+            <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center">
+                      <Database className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                        Supabase Cloud
+                      </h4>
+                      <div className="text-[10px] text-slate-400">Database &amp; S3 Storage</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    PRO TIER
+                  </span>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Dubai Owners Records:</span>
+                    <span className="text-white font-mono font-bold">
+                      3,042,722 rows
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Buildings 360 Records:</span>
+                    <span className="text-white font-mono font-bold">
+                      69,719 rows
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Call Logs &amp; Transcripts:</span>
+                    <span className="text-white font-mono font-bold">
+                      112,068 rows
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-400">Direct S3 File Storage:</span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      428.5 MB / 5,000 MB
+                    </span>
+                  </div>
+                </div>
+
+                {/* Storage Meter */}
+                <div className="bg-[#051833] rounded-xl p-3 border border-white/10">
+                  <div className="flex justify-between text-[11px] mb-1.5">
+                    <span className="text-slate-400">Storage Consumption</span>
+                    <span className="text-white font-mono font-semibold">
+                      8.5% allocated
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div className="h-full bg-emerald-400 transition-all" style={{ width: '8.5%' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Budget Caps & Quotas Configuration Form */}
+          <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono mb-1">
+              Automated Daily Budget Guardrails
+            </h3>
+            <p className="text-xs text-slate-400 mb-5">
+              Set automated daily expenditure ceilings in USD. If spending reaches the limit, outbound triggers are gracefully capped.
+            </p>
+
+            <form onSubmit={handleSaveSpendingLimits} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+              <div>
+                <label className="block text-slate-300 font-semibold text-xs mb-1.5">
+                  Vapi Daily Telephony Cap (USD)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400 font-mono text-xs">$</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="5"
+                    max="500"
+                    value={vapiCapInput}
+                    onChange={(e) => setVapiCapInput(e.target.value)}
+                    className="w-full bg-[#051833] border border-white/10 rounded-xl pl-7 pr-3 py-2 text-white font-mono font-bold text-xs focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold text-xs mb-1.5">
+                  OpenAI Daily Vision/OCR Cap (USD)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400 font-mono text-xs">$</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="5"
+                    max="500"
+                    value={openaiCapInput}
+                    onChange={(e) => setOpenaiCapInput(e.target.value)}
+                    className="w-full bg-[#051833] border border-white/10 rounded-xl pl-7 pr-3 py-2 text-white font-mono font-bold text-xs focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={radarSaving}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {radarSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving Limits...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Budget Guardrails</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

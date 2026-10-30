@@ -3,13 +3,15 @@ import {
   Search, SlidersHorizontal, ChevronDown, List, LayoutGrid,
   X, Building2, Phone, Mail, MapPin, ExternalLink, Share2, 
   MoreHorizontal, UserCheck, RefreshCw, ChevronLeft, ChevronRight,
-  MessageSquare
+  MessageSquare, Download
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
 import SearchableCombobox from './SearchableCombobox';
 import ownerFiltersMetadata from '../data/ownerFiltersMetadata.json';
 import { parseIdQuery } from '../utils/idParser';
+import { featureAccessService } from '../utils/featureAccessService';
+import { authService } from '../utils/authService';
 
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
@@ -198,6 +200,41 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       setCurrentPage(pageNum);
       setCustomPageInput('');
     }
+  };
+
+  // ─── Export Guardrails Enforcement (Anti-Theft) ──────────────────────────
+  const activeUser = authService.getCurrentUser();
+  const activeRole = activeUser?.role || 'admin';
+  const canExportOwners = featureAccessService.canExport(activeRole, 'owners');
+  const maxExportRows = featureAccessService.getMaxExportRows(activeRole, 'owners');
+
+  const handleExportOwnersCsv = () => {
+    if (!canExportOwners) return;
+    if (!owners || owners.length === 0) {
+      alert('No owner records available in the current view to export.');
+      return;
+    }
+
+    const exportList = owners.slice(0, maxExportRows);
+    const headers = ['Lead ID', 'Owner Name', 'Phone Number', 'Building', 'Area', 'Units Count', 'Valuation AED'];
+    const rows = exportList.map(o => [
+      `"${o.lead_id || o.id || ''}"`,
+      `"${(o.name || 'Owner').replace(/"/g, '""')}"`,
+      `"${o.phone || ''}"`,
+      `"${(o.building || '').replace(/"/g, '""')}"`,
+      `"${(o.area || '').replace(/"/g, '""')}"`,
+      o.units || 1,
+      o.total_valuation || o.price || ''
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `ASQUARED_Owners_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // ─── Modal / Action State ────────────────────────────────────────────────
@@ -815,6 +852,20 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                 <LayoutGrid className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Export CSV Button (Guarded by SuperAdmin Export Permissions) */}
+            {canExportOwners && (
+              <button
+                type="button"
+                onClick={handleExportOwnersCsv}
+                disabled={loading || owners.length === 0}
+                className="flex items-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-sm bg-[#06111e] hover:bg-[#091728] text-slate-300 hover:text-white border-[#1a2c42] disabled:opacity-40"
+                title={`Export current owners to CSV (Max ${maxExportRows} rows)`}
+              >
+                <Download className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+            )}
 
           </div>
         </div>

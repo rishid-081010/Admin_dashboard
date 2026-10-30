@@ -11,7 +11,16 @@ export default function Login({ onLoginSuccess }) {
   });
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(() => {
+    try {
+      const notice = sessionStorage.getItem('asq_revocation_notice');
+      if (notice) {
+        sessionStorage.removeItem('asq_revocation_notice');
+        return notice;
+      }
+    } catch (e) {}
+    return null;
+  });
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();

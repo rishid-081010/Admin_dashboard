@@ -6,7 +6,9 @@ const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
 export const FEATURE_STORAGE_KEY = 'asq_dashboard_feature_access';
+export const EXPORT_STORAGE_KEY = 'asq_dashboard_export_access';
 export const FEATURE_ACCESS_EVENT = 'asq-feature-access-updated';
+export const EXPORT_ACCESS_EVENT = 'asq-export-access-updated';
 
 export function normalizeRole(role) {
   const r = (role || '').toLowerCase().replace(/[\s_-]+/g, '');
@@ -168,6 +170,22 @@ export const DEFAULT_FEATURE_ACCESS = {
     activity: true,
     roles: false,
     settings: true
+  }
+};
+
+// Factory Default Export Guardrails
+export const DEFAULT_EXPORT_ACCESS = {
+  admin: {
+    allow_owners: true,
+    allow_buildings: true,
+    allow_listings: true,
+    max_rows: 50000
+  },
+  agent: {
+    allow_owners: false,
+    allow_buildings: false,
+    allow_listings: true,
+    max_rows: 500
   }
 };
 
@@ -407,5 +425,118 @@ export const featureAccessService = {
       }
     }
     return 'overview';
+  },
+
+  // ─── EXPORT GUARDRAILS (Anti-Data Theft) ──────────────────────────────────
+  getExportAccess() {
+    try {
+      const stored = localStorage.getItem(EXPORT_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.admin || parsed.agent)) {
+          return {
+            admin: { ...DEFAULT_EXPORT_ACCESS.admin, ...(parsed.admin || {}) },
+            agent: { ...DEFAULT_EXPORT_ACCESS.agent, ...(parsed.agent || {}) }
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse local export access cache, using defaults', e);
+    }
+    return DEFAULT_EXPORT_ACCESS;
+  },
+
+  async fetchExportAccessFromCloud() {
+    try {
+      const url = `${SUPABASE_BASE_URL}/asq_dashboard_state?key=eq.dashboard_export_access&select=key,value,updated_at&limit=1`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows && rows.length > 0 && rows[0].value) {
+          const cloudConfig = rows[0].value;
+          const merged = {
+            admin: { ...DEFAULT_EXPORT_ACCESS.admin, ...(cloudConfig.admin || {}) },
+            agent: { ...DEFAULT_EXPORT_ACCESS.agent, ...(cloudConfig.agent || {}) }
+          };
+          localStorage.setItem(EXPORT_STORAGE_KEY, JSON.stringify(merged));
+          window.dispatchEvent(new CustomEvent(EXPORT_ACCESS_EVENT, { detail: merged }));
+          return { success: true, config: merged, updatedAt: rows[0].updated_at };
+        }
+      }
+    } catch (err) {
+      console.warn('Export access cloud fetch failed, continuing with cache/default:', err);
+    }
+    return { success: false, config: this.getExportAccess() };
+  },
+
+  async saveExportAccess(newExportConfig, updatedBy = 'SuperAdmin') {
+    const sanitized = {
+      admin: { ...DEFAULT_EXPORT_ACCESS.admin, ...(newExportConfig.admin || {}) },
+      agent: { ...DEFAULT_EXPORT_ACCESS.agent, ...(newExportConfig.agent || {}) }
+    };
+
+    localStorage.setItem(EXPORT_STORAGE_KEY, JSON.stringify(sanitized));
+    window.dispatchEvent(new CustomEvent(EXPORT_ACCESS_EVENT, { detail: sanitized }));
+
+    try {
+      const nowIso = new Date().toISOString();
+      const payload = {
+        key: 'dashboard_export_access',
+        value: sanitized,
+        updated_at: nowIso
+      };
+
+      const url = `${SUPABASE_BASE_URL}/asq_dashboard_state`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Cloud persistence error ${res.status}: ${errorText}`);
+      }
+
+      return { success: true, config: sanitized, updatedAt: nowIso };
+    } catch (err) {
+      console.error('Error saving export access to Supabase:', err);
+      return { success: false, error: err.message, config: sanitized };
+    }
+  },
+
+  canExport(userRole, resourceType) {
+    const role = normalizeRole(userRole);
+    // SuperAdmin always possesses unrestricted export capability
+    if (role === 'superadmin') return true;
+
+    const accessMap = this.getExportAccess();
+    const roleConfig = accessMap[role] || DEFAULT_EXPORT_ACCESS[role] || DEFAULT_EXPORT_ACCESS.agent;
+
+    const key = `allow_${resourceType}`;
+    if (key in roleConfig) {
+      return Boolean(roleConfig[key]);
+    }
+    return true;
+  },
+
+  getMaxExportRows(userRole, resourceType) {
+    const role = normalizeRole(userRole);
+    if (role === 'superadmin') return 1000000;
+
+    const accessMap = this.getExportAccess();
+    const roleConfig = accessMap[role] || DEFAULT_EXPORT_ACCESS[role] || DEFAULT_EXPORT_ACCESS.agent;
+
+    return Number(roleConfig.max_rows) || 500;
   }
 };

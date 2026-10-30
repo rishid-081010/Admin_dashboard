@@ -1,11 +1,11 @@
 // Production Build: v2.1.3-rental-form-agent-name-20261025-172000
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import axios from 'axios';
-import { Search, Clock, Database, ShieldCheck, Sparkles, User, Loader2 } from 'lucide-react';
+import { Search, Clock, Database, ShieldCheck, Sparkles, User, Loader2, Eye, AlertTriangle } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import OverviewDashboard from './components/OverviewDashboard';
 import Login from './components/Login';
-import { authService } from './utils/authService';
+import { authService, IMPERSONATION_EVENT, REVOCATION_NOTICE_KEY } from './utils/authService';
 import { featureAccessService, FEATURE_ACCESS_EVENT } from './utils/featureAccessService';
 
 // Lazy-loaded routes for sub-400kB initial bundle and instant page startup
@@ -127,6 +127,7 @@ class TabErrorBoundary extends React.Component {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  const [impersonationState, setImpersonationState] = useState(() => authService.isImpersonating());
   const initialRoute = getRouteInfo();
   const [activeTab, setActiveTabState] = useState(() => initialRoute.tab);
   const [selectedListingId, setSelectedListingId] = useState(() => {
@@ -143,6 +144,45 @@ export default function App() {
     authService.logout();
     setCurrentUser(null);
   };
+
+  const handleExitImpersonation = () => {
+    const res = authService.stopImpersonation();
+    if (res.success) {
+      setCurrentUser(res.user);
+      setImpersonationState(false);
+      setActiveTab('roles');
+    }
+  };
+
+  // Listen for View As Impersonation events
+  useEffect(() => {
+    const handleImp = () => {
+      const user = authService.getCurrentUser();
+      setCurrentUser(user);
+      setImpersonationState(authService.isImpersonating());
+    };
+    window.addEventListener(IMPERSONATION_EVENT, handleImp);
+    return () => window.removeEventListener(IMPERSONATION_EVENT, handleImp);
+  }, []);
+
+  // Periodic and focus-triggered session revocation check
+  useEffect(() => {
+    if (!currentUser) return;
+    const checkRevocation = async () => {
+      const res = await authService.checkSessionRevocation(currentUser);
+      if (res && res.isRevoked) {
+        setCurrentUser(null);
+      }
+    };
+    checkRevocation();
+    const interval = setInterval(checkRevocation, 15000);
+    const onFocus = () => checkRevocation();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [currentUser]);
 
   const setActiveTab = (newTab, pushState = true) => {
     setActiveTabState(newTab);
@@ -280,13 +320,33 @@ export default function App() {
   const isAllowed = (tab) => featureAccessService.isTabAllowed(userRole, tab);
 
   return (
-    <div 
-      className="h-screen w-screen text-white p-2 sm:p-2.5 flex gap-2 sm:gap-2.5 box-border font-sans antialiased overflow-hidden selection:bg-blue-500/30 selection:text-white"
-      style={{
-        backgroundColor: '#001428',
-        backgroundImage: `radial-gradient(circle at 10% 30%, rgba(0, 162, 255, 0.12), transparent 45%), radial-gradient(circle at 90% 20%, rgba(0, 102, 255, 0.08), transparent 50%), radial-gradient(circle at 50% 90%, rgba(15, 23, 42, 0.6), transparent 60%)`
-      }}
-    >
+    <div className="h-screen w-screen flex flex-col overflow-hidden">
+      {/* View As SuperAdmin Impersonation Banner */}
+      {impersonationState && (
+        <div className="w-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-black px-4 py-1.5 text-xs font-bold flex items-center justify-between shadow-xl z-50 shrink-0 select-none animate-fade-in">
+          <div className="flex items-center gap-2 min-w-0">
+            <Eye className="w-4 h-4 text-black animate-pulse shrink-0" />
+            <span className="truncate">
+              <strong>SuperAdmin Preview Mode:</strong> Viewing dashboard through the role and permissions of <strong>{currentUser?.name || currentUser?.email}</strong> (<span className="capitalize">{currentUser?.role || 'agent'}</span>)
+            </span>
+          </div>
+          <button
+            onClick={handleExitImpersonation}
+            className="bg-black hover:bg-neutral-900 text-amber-300 hover:text-white px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer shrink-0 ml-2"
+          >
+            <span>Exit Preview Mode</span>
+          </button>
+        </div>
+      )}
+
+      {/* Main Dashboard Layout */}
+      <div 
+        className="flex-1 min-h-0 w-full text-white p-2 sm:p-2.5 flex gap-2 sm:gap-2.5 box-border font-sans antialiased overflow-hidden selection:bg-blue-500/30 selection:text-white"
+        style={{
+          backgroundColor: '#001428',
+          backgroundImage: `radial-gradient(circle at 10% 30%, rgba(0, 162, 255, 0.12), transparent 45%), radial-gradient(circle at 90% 20%, rgba(0, 102, 255, 0.08), transparent 50%), radial-gradient(circle at 50% 90%, rgba(15, 23, 42, 0.6), transparent 60%)`
+        }}
+      >
       {/* Sleek Left Sidebar */}
       <Sidebar 
         activeTab={activeTab} 
@@ -385,6 +445,7 @@ export default function App() {
             </Suspense>
           </TabErrorBoundary>
         </main>
+      </div>
       </div>
 
       {/* Global Omni Search Modal (Summoned via Ctrl + F6 or Cmd + F6 or Top Bar) */}

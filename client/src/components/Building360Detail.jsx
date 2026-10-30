@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
+import { featureAccessService } from '../utils/featureAccessService';
+import { authService } from '../utils/authService';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
@@ -336,9 +338,15 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
   };
 
   const handleExportCsv = () => {
-    if (!owners.length) return;
+    const activeUser = authService.getCurrentUser();
+    const canExport = featureAccessService.canExport(activeUser?.role, 'buildings');
+    if (!canExport || !owners.length) return;
+
+    const maxRows = featureAccessService.getMaxExportRows(activeUser?.role, 'buildings');
+    const exportOwners = owners.slice(0, maxRows);
+
     const headers = ['Unit Number', 'Floor', 'Owner Name', 'Lead ID', 'Phone Number', 'Property Type', 'Size SQM', 'Size SQFT', 'Area', 'CRM Status'];
-    const rows = owners.map(o => [
+    const rows = exportOwners.map(o => [
       `"${String(o.unit || '').replace(/"/g, '""')}"`,
       `"${String(o.floor || '').replace(/"/g, '""')}"`,
       `"${String(o.name || '').replace(/"/g, '""')}"`,
@@ -416,14 +424,16 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
             <span>{copiedTowerName ? 'Copied' : 'Copy Name'}</span>
           </button>
 
-          <button 
-            onClick={handleExportCsv}
-            disabled={owners.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
+          {featureAccessService.canExport(authService.getCurrentUser()?.role, 'buildings') && (
+            <button 
+              onClick={handleExportCsv}
+              disabled={owners.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
+          )}
         </div>
       </div>
 
