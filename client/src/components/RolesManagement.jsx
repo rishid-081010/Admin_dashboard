@@ -1,15 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, Shield, ShieldAlert, Plus, Check, AlertCircle, RefreshCw, Eye, EyeOff, 
-  Trash2, Edit2, Play, Lock, Sliders, ChevronDown, Download, Globe, CheckSquare, 
-  Square, ShieldCheck, Sparkles, Building2, Search, ExternalLink, GitBranch, 
-  Home, PhoneCall, Bot, Clock, Settings, X, Loader2
+  Trash2, Edit2, Play, Lock, ChevronDown, X, Loader2
 } from 'lucide-react';
 import { authService } from '../utils/authService';
-import { 
-  rbacService, NAVIGATION_SECTIONS, ALL_FEATURE_KEYS, DEFAULT_FEATURE_ACCESS, 
-  DEFAULT_EXPORT_ACCESS, PRESETS, FEATURE_ACCESS_EVENT, EXPORT_ACCESS_EVENT 
-} from '../utils/rbacService';
+import { ALL_FEATURE_KEYS } from '../utils/rbacService';
 import { roleService } from '../utils/roleService';
 
 const SYSTEM_ROLES_META = {
@@ -17,7 +12,7 @@ const SYSTEM_ROLES_META = {
     label: 'Super Admin',
     badgeClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
     icon: ShieldAlert,
-    description: 'Full executive control. Can configure RBAC feature visibility and manage all accounts.'
+    description: 'Full executive control. Can manage roles and user accounts.'
   },
   admin: {
     label: 'Admin',
@@ -29,7 +24,7 @@ const SYSTEM_ROLES_META = {
     label: 'Agent',
     badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
     icon: Users,
-    description: 'Real estate advisor / agent. Restricted to features permitted by Super Admin.'
+    description: 'Real estate advisor / agent.'
   }
 };
 
@@ -40,25 +35,6 @@ function normalizeRole(role) {
   return 'agent';
 }
 
-function SectionFeatureIcon({ name, className = 'w-4 h-4' }) {
-  switch (name) {
-    case 'LayoutDashboard': return <Building2 className={className} />;
-    case 'Users': return <Users className={className} />;
-    case 'Building2': return <Building2 className={className} />;
-    case 'Search': return <Search className={className} />;
-    case 'ExternalLink': return <ExternalLink className={className} />;
-    case 'GitBranch': return <GitBranch className={className} />;
-    case 'Sparkles': return <Sparkles className={className} />;
-    case 'Home': return <Home className={className} />;
-    case 'PhoneCall': return <PhoneCall className={className} />;
-    case 'Bot': return <Bot className={className} />;
-    case 'Clock': return <Clock className={className} />;
-    case 'ShieldAlert': return <ShieldAlert className={className} />;
-    case 'Settings': return <Settings className={className} />;
-    default: return <Sparkles className={className} />;
-  }
-}
-
 export default function RolesManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
   const [rolesList, setRolesList] = useState([]);
@@ -66,22 +42,10 @@ export default function RolesManagement({ currentUser }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  // Top Tabs: 'accounts' | 'access'
-  const [activeTopTab, setActiveTopTab] = useState('accounts');
-
   // Filter in User Accounts: 'all' or role key
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('all');
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const roleDropdownRef = useRef(null);
-
-  // Feature Access Tab State
-  const [targetRbacRole, setTargetRbacRole] = useState('agent');
-  const [featureConfig, setFeatureConfig] = useState(() => rbacService.getFeatureAccess());
-  const [exportConfig, setExportConfig] = useState(() => rbacService.getExportAccess());
-  const [savingAccess, setSavingAccess] = useState(false);
-  const [isAccessDirty, setIsAccessDirty] = useState(false);
-  const [accessSuccess, setAccessSuccess] = useState(null);
-  const [accessError, setAccessError] = useState(null);
 
   // Accounts Tab: Modals & Editing
   const [showPasswordMap, setShowPasswordMap] = useState({});
@@ -153,21 +117,6 @@ export default function RolesManagement({ currentUser }) {
 
   useEffect(() => {
     loadData();
-    rbacService.fetchFromCloud().then(res => {
-      if (res.success && res.config) setFeatureConfig(res.config);
-    });
-    rbacService.fetchExportAccessFromCloud().then(res => {
-      if (res.success && res.config) setExportConfig(res.config);
-    });
-
-    const handleFeatureEvt = (e) => { if (e.detail) setFeatureConfig(e.detail); };
-    const handleExportEvt = (e) => { if (e.detail) setExportConfig(e.detail); };
-    window.addEventListener(FEATURE_ACCESS_EVENT, handleFeatureEvt);
-    window.addEventListener(EXPORT_ACCESS_EVENT, handleExportEvt);
-    return () => {
-      window.removeEventListener(FEATURE_ACCESS_EVENT, handleFeatureEvt);
-      window.removeEventListener(EXPORT_ACCESS_EVENT, handleExportEvt);
-    };
   }, []);
 
   // Role counts
@@ -411,91 +360,6 @@ export default function RolesManagement({ currentUser }) {
     }
   };
 
-  // Feature Access Tab Handlers
-  const currentFeatures = featureConfig[targetRbacRole] || DEFAULT_FEATURE_ACCESS[targetRbacRole] || {};
-  const currentExports = exportConfig[targetRbacRole] || DEFAULT_EXPORT_ACCESS[targetRbacRole] || DEFAULT_EXPORT_ACCESS.agent;
-
-  const handleToggleFeature = (roleKey, featKey) => {
-    setFeatureConfig(prev => {
-      const current = prev[roleKey] || DEFAULT_FEATURE_ACCESS[roleKey];
-      const toggled = !current[featKey];
-      return { ...prev, [roleKey]: { ...current, [featKey]: toggled } };
-    });
-    setIsAccessDirty(true);
-  };
-
-  const handleToggleSectionAll = (roleKey, sectionId) => {
-    const section = NAVIGATION_SECTIONS.find(s => s.id === sectionId);
-    if (!section) return;
-    setFeatureConfig(prev => {
-      const current = prev[roleKey] || DEFAULT_FEATURE_ACCESS[roleKey];
-      const allActive = section.features.every(f => !!current[f.key]);
-      const nextState = !allActive;
-      const updates = {};
-      section.features.forEach(f => { updates[f.key] = nextState; });
-      return { ...prev, [roleKey]: { ...current, ...updates } };
-    });
-    setIsAccessDirty(true);
-  };
-
-  const handleToggleExport = (roleKey, type) => {
-    setExportConfig(prev => {
-      const current = prev[roleKey] || DEFAULT_EXPORT_ACCESS[roleKey] || DEFAULT_EXPORT_ACCESS.agent;
-      const toggled = !current[type];
-      return { ...prev, [roleKey]: { ...current, [type]: toggled } };
-    });
-    setIsAccessDirty(true);
-  };
-
-  const handleChangeMaxRows = (roleKey, val) => {
-    const num = parseInt(val, 10) || 500;
-    setExportConfig(prev => {
-      const current = prev[roleKey] || DEFAULT_EXPORT_ACCESS[roleKey] || DEFAULT_EXPORT_ACCESS.agent;
-      return { ...prev, [roleKey]: { ...current, max_rows: num } };
-    });
-    setIsAccessDirty(true);
-  };
-
-  const handleApplyPreset = (roleKey, presetId) => {
-    const preset = PRESETS[presetId];
-    if (preset) {
-      setFeatureConfig(prev => ({
-        ...prev,
-        [roleKey]: { ...preset.config }
-      }));
-      setIsAccessDirty(true);
-    }
-  };
-
-  const handleSaveFeatureAccess = async () => {
-    setSavingAccess(true);
-    setAccessSuccess(null);
-    setAccessError(null);
-    const [resFeat, resExp] = await Promise.all([
-      rbacService.saveFeatureAccess(featureConfig, currentUser?.name || 'SuperAdmin'),
-      rbacService.saveExportAccess(exportConfig, currentUser?.name || 'SuperAdmin')
-    ]);
-
-    if (resFeat.success && resExp.success) {
-      setIsAccessDirty(false);
-      setAccessSuccess(`Permissions and export limits for ${targetRbacRole.toUpperCase()} updated successfully.`);
-      setTimeout(() => setAccessSuccess(null), 4000);
-    } else {
-      setAccessError(`Sync notice: ${resFeat.error || resExp.error || 'Local cache updated.'}`);
-      setTimeout(() => setAccessError(null), 5000);
-    }
-    setSavingAccess(false);
-  };
-
-  const handleRevertAccess = () => {
-    setFeatureConfig(rbacService.getFeatureAccess());
-    setExportConfig(rbacService.getExportAccess());
-    setIsAccessDirty(false);
-  };
-
-  const totalVisibleFeats = ALL_FEATURE_KEYS.filter(k => !!currentFeatures[k]).length;
-  const totalHiddenFeats = ALL_FEATURE_KEYS.length - totalVisibleFeats;
-
   // Selected filter display text
   const getFilterDisplayText = () => {
     if (selectedRoleFilter === 'all') return `All Roles (${users.length} total staff)`;
@@ -526,7 +390,7 @@ export default function RolesManagement({ currentUser }) {
             </span>
           </div>
 
-          {(isSuperAdmin || isAdmin) && activeTopTab === 'accounts' && (
+          {(isSuperAdmin || isAdmin) && (
             <div className="flex items-center gap-2">
               <button
                 onClick={openCreateRoleModal}
@@ -548,43 +412,8 @@ export default function RolesManagement({ currentUser }) {
         </div>
       </div>
 
-      {/* Top Navigation Tabs */}
-      {isSuperAdmin && (
-        <div className="flex items-center gap-1.5 p-1 bg-[#06111e]/55 backdrop-blur-md border border-white/10 rounded-xl mb-6 w-fit shadow-inner">
-          <button
-            type="button"
-            onClick={() => setActiveTopTab('accounts')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer focus:outline-none ${
-              activeTopTab === 'accounts'
-                ? 'bg-blue-600/25 text-blue-200 border border-blue-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
-            }`}
-          >
-            <Users className="w-4 h-4 text-blue-400" />
-            <span>User Accounts ({users.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTopTab('access')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer focus:outline-none ${
-              activeTopTab === 'access'
-                ? 'bg-purple-600/25 text-purple-200 border border-purple-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
-            }`}
-          >
-            <Sliders className="w-4 h-4 text-purple-300" />
-            <span>Feature Access &amp; Permissions</span>
-          </button>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* TAB 1: USER ACCOUNTS & CUSTOM ROLE DROPDOWN                                */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {activeTopTab === 'accounts' && (
-        <div className="flex flex-col gap-6 animate-fade-in pb-12">
-          {success && (
+      <div className="flex flex-col gap-6 animate-fade-in pb-12">
+        {success && (
             <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-fade-in">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{success}</span>
@@ -928,298 +757,6 @@ export default function RolesManagement({ currentUser }) {
             </div>
           </div>
         </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* TAB 2: FEATURE ACCESS & PERMISSIONS (RESTORED FRIEND'S EXACT RBAC UI)      */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {activeTopTab === 'access' && isSuperAdmin && (
-        <div className="flex flex-col gap-6 animate-fade-in pb-10">
-          {accessSuccess && (
-            <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 shadow-lg">
-              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{accessSuccess}</span>
-            </div>
-          )}
-
-          {accessError && (
-            <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 shadow-lg">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>{accessError}</span>
-            </div>
-          )}
-
-          {/* Role Target Selector + Presets */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-[#081322]/60 border border-white/10 backdrop-blur-md">
-            <div className="flex items-center gap-2 p-1 bg-black/40 rounded-xl border border-white/10">
-              <button
-                type="button"
-                onClick={() => setTargetRbacRole('agent')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  targetRbacRole === 'agent'
-                    ? 'bg-white/10 text-white border border-white/15 shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Agent Permissions ({agentCount})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTargetRbacRole('admin')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  targetRbacRole === 'admin'
-                    ? 'bg-white/10 text-white border border-white/15 shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                <span>Admin Permissions ({adminCount})</span>
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-medium text-slate-400 mr-1">Presets:</span>
-              <button
-                type="button"
-                onClick={() => handleApplyPreset(targetRbacRole, 'portfolio_only')}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
-                title="Only Portfolio tabs visible; Operations and Roles completely hidden"
-              >
-                Portfolio Only
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApplyPreset(targetRbacRole, 'standard_agent')}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
-                title="Recommended Agent layout: Portfolio + Listing Studio + AI Agent"
-              >
-                Standard Agent
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApplyPreset(targetRbacRole, 'full_access')}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
-              >
-                Full Access
-              </button>
-
-              {isAccessDirty && (
-                <button
-                  type="button"
-                  onClick={handleRevertAccess}
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1 ml-2 transition-all cursor-pointer"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Revert</span>
-                </button>
-              )}
-            </div>
-
-            <div className="text-xs text-slate-400 tabular-nums">
-              <span className="text-emerald-400 font-bold">{totalVisibleFeats}</span> / {ALL_FEATURE_KEYS.length} Visible
-              {' · '}
-              <span className="text-slate-400">{totalHiddenFeats} Hidden</span>
-            </div>
-          </div>
-
-          {/* Export Permissions & Limits Card */}
-          <div className="ds-card p-5 flex flex-col gap-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-white/10">
-              <Download className="w-4 h-4 text-[#b7a990]" />
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-sans">
-                Export Permissions &amp; Limits
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div 
-                onClick={() => handleToggleExport(targetRbacRole, 'allow_owners')}
-                className="p-3.5 rounded-xl bg-black/30 border border-white/10 flex items-center justify-between cursor-pointer hover:border-white/20 transition-all"
-              >
-                <span className="text-xs text-slate-300 font-medium">Owners Directory</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  currentExports.allow_owners ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                }`}>
-                  {currentExports.allow_owners ? 'Allowed' : 'Blocked'}
-                </span>
-              </div>
-
-              <div 
-                onClick={() => handleToggleExport(targetRbacRole, 'allow_buildings')}
-                className="p-3.5 rounded-xl bg-black/30 border border-white/10 flex items-center justify-between cursor-pointer hover:border-white/20 transition-all"
-              >
-                <span className="text-xs text-slate-300 font-medium">Buildings 360</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  currentExports.allow_buildings ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                }`}>
-                  {currentExports.allow_buildings ? 'Allowed' : 'Blocked'}
-                </span>
-              </div>
-
-              <div 
-                onClick={() => handleToggleExport(targetRbacRole, 'allow_listings')}
-                className="p-3.5 rounded-xl bg-black/30 border border-white/10 flex items-center justify-between cursor-pointer hover:border-white/20 transition-all"
-              >
-                <span className="text-xs text-slate-300 font-medium">Listings Export</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  currentExports.allow_listings ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                }`}>
-                  {currentExports.allow_listings ? 'Allowed' : 'Blocked'}
-                </span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-black/30 border border-white/10 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 font-medium mb-1">Max Rows Per Export</span>
-                <select
-                  value={currentExports.max_rows || 500}
-                  onChange={(e) => handleChangeMaxRows(targetRbacRole, e.target.value)}
-                  className="bg-[#051833] border border-white/15 rounded-lg px-2.5 py-1 text-white text-xs focus:outline-none focus:border-blue-400 cursor-pointer font-sans tabular-nums"
-                >
-                  <option value="100">100 rows</option>
-                  <option value="250">250 rows</option>
-                  <option value="500">500 rows</option>
-                  <option value="1000">1,000 rows</option>
-                  <option value="2500">2,500 rows</option>
-                  <option value="5000">5,000 rows</option>
-                  <option value="10000">10,000 rows</option>
-                  <option value="50000">50,000 rows</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-xs text-slate-400 px-1 flex items-center gap-2">
-            <ShieldAlert className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span>Restricted features are completely hidden from the Agent sidebar.</span>
-          </div>
-
-          {/* Section Toggles */}
-          {NAVIGATION_SECTIONS.map((section) => {
-            const sectionVisibleCount = section.features.filter(f => !!currentFeatures[f.key]).length;
-            const allActive = sectionVisibleCount === section.features.length;
-
-            return (
-              <div key={section.id} className="ds-card p-5 flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider font-sans">
-                        {section.title} Section
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-slate-300 tabular-nums">
-                        {sectionVisibleCount} of {section.features.length} visible
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">{section.description}</p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleSectionAll(targetRbacRole, section.id)}
-                    className="text-xs text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 self-start sm:self-auto"
-                  >
-                    {allActive ? (
-                      <>
-                        <Square className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Hide Entire {section.title}</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckSquare className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Show All in {section.title}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {section.features.map((feat) => {
-                    const isEnabled = !!currentFeatures[feat.key];
-
-                    return (
-                      <div
-                        key={feat.key}
-                        onClick={() => handleToggleFeature(targetRbacRole, feat.key)}
-                        className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                          isEnabled
-                            ? 'bg-[#061426]/75 border-blue-500/30 shadow-sm'
-                            : 'bg-black/25 border-white/[0.06] opacity-65 hover:opacity-100'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3 min-w-0">
-                          <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${
-                            isEnabled ? 'bg-blue-500/20 text-blue-300' : 'bg-white/5 text-slate-400'
-                          }`}>
-                            <SectionFeatureIcon name={feat.iconName} className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <h4 className="text-xs font-semibold text-white truncate">{feat.label}</h4>
-                              {feat.isExternal && (
-                                <span className="text-[10px] text-slate-400 font-mono bg-white/5 px-1 rounded">Link</span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">{feat.description}</p>
-                          </div>
-                        </div>
-
-                        {/* iOS-style toggle pill */}
-                        <div className={`w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${
-                          isEnabled ? 'bg-blue-600' : 'bg-slate-700'
-                        }`}>
-                          <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                            isEnabled ? 'translate-x-4' : 'translate-x-0'
-                          }`} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Sticky Save Footer */}
-          <div className="p-4 rounded-2xl bg-[#081322]/80 border border-white/15 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xl">
-            <div className="flex items-center gap-2 text-xs text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
-              <span>Active permissions in sync with Supabase for <strong className="uppercase text-white">{targetRbacRole}</strong></span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {isAccessDirty && (
-                <button
-                  type="button"
-                  onClick={handleRevertAccess}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={handleSaveFeatureAccess}
-                disabled={savingAccess}
-                className="ds-btn-primary px-5 py-2.5 text-xs cursor-pointer shadow-lg disabled:opacity-50"
-              >
-                {savingAccess ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Saving to Supabase...</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Save Feature &amp; Export Access</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ────────────────────────────────────────────────────────────────────────── */}
       {/* MODAL 1: ADD ACCOUNT                                                       */}
