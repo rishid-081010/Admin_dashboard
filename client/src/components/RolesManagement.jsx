@@ -687,21 +687,24 @@ export default function RolesManagement({ currentUser }) {
 
                           <td className="px-5 py-3.5">
                             {isSuperAdmin && !isCurrentUser ? (
-                              <select
-                                value={user.role || 'agent'}
-                                onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                                disabled={isActionBusy}
-                                className="bg-[#06111e] border border-white/15 rounded-xl px-2.5 py-1 text-white text-xs focus:outline-none focus:border-blue-400 cursor-pointer capitalize"
-                              >
-                                <option value="superadmin">Super Admin</option>
-                                <option value="admin">Admin</option>
-                                <option value="agent">Agent</option>
-                                {rolesList.filter(r => !r.is_system).map(cr => (
-                                  <option key={cr.id} value={cr.key || cr.name}>
-                                    {cr.name}
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="relative inline-flex items-center">
+                                <select
+                                  value={user.role || 'agent'}
+                                  onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                                  disabled={isActionBusy}
+                                  className="appearance-none bg-[#06111e] hover:bg-[#0a1a2e] border border-white/15 hover:border-white/30 rounded-xl pl-3 pr-8 py-1.5 text-white text-xs focus:outline-none focus:border-blue-400 cursor-pointer capitalize transition-colors min-w-[125px]"
+                                >
+                                  <option value="superadmin">Super Admin</option>
+                                  <option value="admin">Admin</option>
+                                  <option value="agent">Agent</option>
+                                  {rolesList.filter(r => !r.is_system).map(cr => (
+                                    <option key={cr.id} value={cr.key || cr.name}>
+                                      {cr.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+                              </div>
                             ) : (
                               <span className="capitalize font-medium text-slate-300">
                                 {user.role || 'agent'}
@@ -818,20 +821,23 @@ export default function RolesManagement({ currentUser }) {
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">Assigned Role</label>
-                <select
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value)}
-                  className="ds-input capitalize cursor-pointer"
-                >
-                  <option value="agent">Agent</option>
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Super Admin</option>
-                  {rolesList.filter(r => !r.is_system).map(cr => (
-                    <option key={cr.id} value={cr.key || cr.name}>
-                      {cr.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value)}
+                    className="ds-input capitalize cursor-pointer appearance-none pr-9"
+                  >
+                    <option value="agent">Agent</option>
+                    <option value="admin">Admin</option>
+                    <option value="superadmin">Super Admin</option>
+                    {rolesList.filter(r => !r.is_system).map(cr => (
+                      <option key={cr.id} value={cr.key || cr.name}>
+                        {cr.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
