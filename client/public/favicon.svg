@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <linearGradient id="asqBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#040810" />
+      <stop offset="100%" stop-color="#0c1829" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#asqBg)" />
+  <rect width="126" height="126" x="1" y="1" rx="27" fill="none" stroke="#233549" stroke-width="2" />
+  
+  <!-- Intertwined AS Monogram in Official Brand Bone (#e2e0cc) -->
+  <g fill="#e2e0cc" transform="translate(64, 64) scale(1.15)">
+    <!-- Serif A Stem & Apex -->
+    <path d="M-18,24 L-12,24 L-3,-18 L3,-18 L12,24 L18,24 L18,26 L10,26 L10,24 L6,6 L-6,6 L-10,24 L-10,26 L-18,26 Z M-4.5,2 L4.5,2 L0,-12 Z" />
+    <!-- Intertwined Serif S Curves -->
+    <path d="M-8,-16 C-2,-24 14,-22 14,-12 C14,-5 6,-2 0,2 C-7,6 -13,10 -13,18 C-13,27 2,30 9,25 L8,21 C3,25 -8,23 -8,17 C-8,12 -3,9 4,5 C12,0 18,-4 18,-13 C18,-24 3,-28 -7,-20 Z" opacity="0.95" />
+  </g>
+</svg>

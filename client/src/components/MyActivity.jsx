@@ -69,6 +69,9 @@ export default function MyActivity({ currentUser }) {
   const [timeline, setTimeline] = useState([]);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [savingReassign, setSavingReassign] = useState(false);
 
   // Initial load of agents
   useEffect(() => {
@@ -104,7 +107,7 @@ export default function MyActivity({ currentUser }) {
 
     try {
       const data = await activityService.getActivity(selectedAgentId, {
-        limit: 100,
+        limit: 200,
         sortBy
       });
       setItems(data.items || []);
@@ -125,6 +128,7 @@ export default function MyActivity({ currentUser }) {
   const handleOpenDetail = async (item) => {
     setSelectedItem(item);
     setAudioPlaying(false);
+    setNewNoteText('');
     setLoadingTimeline(true);
     try {
       const tl = await activityService.getItemTimeline(item.id);
@@ -134,6 +138,65 @@ export default function MyActivity({ currentUser }) {
       setTimeline([]);
     } finally {
       setLoadingTimeline(false);
+    }
+  };
+
+  // Add follow-up note to Bitrix timeline
+  const handleAddNote = async () => {
+    if (!selectedItem || !newNoteText.trim()) return;
+    setSavingNote(true);
+    try {
+      const author = selectedAgentId !== 'all' ? selectedAgentId : '144';
+      const res = await activityService.addNote(selectedItem.id, newNoteText.trim(), author);
+      if (res.success) {
+        const newEntry = {
+          id: res.comment_id || String(Date.now()),
+          created: new Date().toISOString(),
+          author_id: author,
+          raw_comment: newNoteText.trim(),
+          recording_url: '',
+          transcript_url: '',
+          call_note: newNoteText.trim(),
+          voice_status: '',
+          is_voice_call: false
+        };
+        setTimeline(prev => [newEntry, ...prev]);
+        setNewNoteText('');
+      }
+    } catch (err) {
+      console.error('Failed to add note:', err);
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  // Reassign lead to another agent in Bitrix
+  const handleReassignAgent = async (newAgentId) => {
+    if (!selectedItem || !newAgentId || String(newAgentId) === String(selectedItem.assigned_by_id)) return;
+    setSavingReassign(true);
+    try {
+      const res = await activityService.reassignAgent(selectedItem.id, newAgentId);
+      if (res.success) {
+        const targetAgent = agents.find(a => String(a.id) === String(newAgentId));
+        const agentName = targetAgent?.name || KNOWN_AGENTS[String(newAgentId)] || `Agent #${newAgentId}`;
+        const agentPhoto = targetAgent?.photo || null;
+        setItems(prev => prev.map(it => it.id === selectedItem.id ? {
+          ...it,
+          assigned_by_id: String(newAgentId),
+          assigned_by_name: agentName,
+          assigned_by_photo: agentPhoto
+        } : it));
+        setSelectedItem(prev => ({
+          ...prev,
+          assigned_by_id: String(newAgentId),
+          assigned_by_name: agentName,
+          assigned_by_photo: agentPhoto
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to reassign agent:', err);
+    } finally {
+      setSavingReassign(false);
     }
   };
 
@@ -884,7 +947,22 @@ export default function MyActivity({ currentUser }) {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Responsible Agent</span>
-                  <span className="font-bold text-blue-400 text-sm mt-0.5 block">{currentAgent.name}</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-bold text-blue-400 text-sm block">
+                      {selectedItem.assigned_by_name || currentAgent.name}
+                    </span>
+                    <select
+                      value={selectedItem.assigned_by_id || ''}
+                      onChange={e => handleReassignAgent(e.target.value)}
+                      disabled={savingReassign}
+                      className="bg-[#030912] border border-white/20 text-slate-300 text-[11px] rounded-lg px-2 py-0.5 focus:outline-none focus:border-blue-500 cursor-pointer"
+                      title="Reassign to another agent in Bitrix"
+                    >
+                      {agents.map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Contact Phone</span>
@@ -915,11 +993,20 @@ export default function MyActivity({ currentUser }) {
                   Update Pipeline Stage in Bitrix24
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  {kanbanColumns.map(c => {
-                    const isActive = selectedItem.stage_id === c.stageId || selectedItem.stage_key === c.key;
+                  {[
+                    { stageId: 'DT1100_44:ASQ_READY_CALL', title: 'Ready for Call' },
+                    { stageId: 'DT1100_44:CLIENT', title: 'No Answer' },
+                    { stageId: 'DT1100_44:UC_5B620Q', title: 'Contacted' },
+                    { stageId: 'DT1100_44:UC_HGMTGR', title: 'Has Property' },
+                    { stageId: 'DT1100_44:UC_4IMVM8', title: 'Interested to Sell/Rent' },
+                    { stageId: 'DT1100_44:SUCCESS', title: 'Won / Success' },
+                    { stageId: 'DT1100_44:UC_QE3TNO', title: 'Not Interested' },
+                    { stageId: 'DT1100_44:FAIL', title: 'Archived / Lost' }
+                  ].map(c => {
+                    const isActive = selectedItem.stage_id === c.stageId;
                     return (
                       <button
-                        key={c.key}
+                        key={c.stageId}
                         onClick={() => handleStageChange(selectedItem.id, c.stageId)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                           isActive 
@@ -931,6 +1018,32 @@ export default function MyActivity({ currentUser }) {
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Log Note / Follow-up directly to Bitrix24 */}
+              <div className="bg-[#050f1c] border border-white/10 rounded-xl p-4">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mb-2 flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Log Follow-up Note directly to Bitrix24 Timeline</span>
+                </span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter call notes, client feedback, or agreed callback time..."
+                    value={newNoteText}
+                    onChange={e => setNewNoteText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddNote(); }}
+                    className="flex-1 bg-[#030912] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    onClick={handleAddNote}
+                    disabled={savingNote || !newNoteText.trim()}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-md"
+                  >
+                    {savingNote ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>Post to Bitrix</span>
+                  </button>
                 </div>
               </div>
 
