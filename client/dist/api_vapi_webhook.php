@@ -1,7 +1,7 @@
 <?php
 // AS PROPERTIES DUBAI — LIVE VAPI WEBHOOK INGESTION ENDPOINT
 // Hosted on admin.asquared.ae with valid SSL
-// Ingests real-time call outcomes into Supabase & forwards to n8n
+// Ingests real-time call outcomes into Supabase & triggers cloud dialers
 
 header('Content-Type: application/json; charset=UTF-8');
 header('Access-Control-Allow-Origin: *');
@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $rawInput = file_get_contents('php://input');
+@file_put_contents(__DIR__ . '/vapi_webhook.log', date('Y-m-d H:i:s') . ' | ' . substr($rawInput, 0, 500) . "\n", FILE_APPEND);
 if (empty($rawInput)) {
     echo json_encode(['status' => 'empty_payload']);
     exit;
@@ -25,28 +26,7 @@ if (!$data) {
     exit;
 }
 
-// 1. Asynchronously forward copies to n8n V1 & V2 (bypassing expired SSL)
-$n8nEndpoints = [
-    'https://n8n.asquared.ae/webhook/owner-call-outcome',
-    'https://n8n.asquared.ae/webhook/v2-vapi-webhook'
-];
-foreach ($n8nEndpoints as $url) {
-    $chFwd = curl_init();
-    curl_setopt_array($chFwd, [
-        CURLOPT_URL => $url,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $rawInput,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false,
-        CURLOPT_TIMEOUT => 3,
-        CURLOPT_RETURNTRANSFER => true
-    ]);
-    curl_exec($chFwd);
-    curl_close($chFwd);
-}
-
-// 2. Extract call details
+// 1. Extract call details
 $call = $data['message']['call'] ?? $data['call'] ?? $data;
 $callId = $call['id'] ?? null;
 
@@ -173,11 +153,58 @@ if (!empty($callId) && ($msgType === 'end-of-call-report' || !empty($endedReason
     ]);
     curl_exec($chRefill);
     curl_close($chRefill);
+
+    // Also trigger instant refill via autonomous cloud dialer on Hostinger
+    $chCloudDialer = curl_init();
+    curl_setopt_array($chCloudDialer, [
+        CURLOPT_URL => 'https://admin.asquared.ae/dashboard/api_cloud_dialer.php',
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode(['trigger' => 'call_ended', 'callId' => $callId]),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_TIMEOUT => 3,
+        CURLOPT_RETURNTRANSFER => true
+    ]);
+    curl_exec($chCloudDialer);
+    curl_close($chCloudDialer);
 }
 
+// 5. Send immediate response to Vapi to prevent timeout
+ignore_user_abort(true);
+ob_start();
 echo json_encode([
     'status' => 'ok',
     'call_id' => $callId,
     'supabase_code' => $sbCode,
     'rpc_code' => $rpcCode
 ]);
+$size = ob_get_length();
+header("Content-Length: $size");
+header('Connection: close');
+ob_end_flush();
+ob_flush();
+flush();
+if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();
+}
+
+// 6. Forward copies to n8n in background
+$n8nEndpoints = [
+    'https://n8n.asquared.ae/webhook/owner-call-outcome',
+    'https://n8n.asquared.ae/webhook/v2-vapi-webhook'
+];
+foreach ($n8nEndpoints as $url) {
+    $chFwd = curl_init();
+    curl_setopt_array($chFwd, [
+        CURLOPT_URL => $url,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $rawInput,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
+        CURLOPT_TIMEOUT => 2,
+        CURLOPT_RETURNTRANSFER => true
+    ]);
+    curl_exec($chFwd);
+    curl_close($chFwd);
+}
+exit;
