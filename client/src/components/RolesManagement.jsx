@@ -599,14 +599,14 @@ export default function RolesManagement({ currentUser }) {
           )}
 
           {/* Controls Bar with Custom Rounded Non-AI Dropdown */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-3.5 sm:px-5 rounded-2xl bg-[#081322]/60 border border-white/10 backdrop-blur-md">
+          <div className="relative z-30 flex flex-wrap items-center justify-between gap-4 p-3.5 sm:px-5 rounded-2xl bg-[#081322]/60 border border-white/10 backdrop-blur-md">
             {/* Left: Non-AI Rounded Role Filter Dropdown */}
             <div className="flex items-center gap-3">
               <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
                 Filter Role:
               </span>
 
-              <div className="relative" ref={roleDropdownRef}>
+              <div className="relative z-40" ref={roleDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setIsRoleDropdownOpen(prev => !prev)}
@@ -738,14 +738,10 @@ export default function RolesManagement({ currentUser }) {
                 <button
                   onClick={handleForceLogoutAllAgents}
                   disabled={revokingAllAgents}
-                  className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-white border border-rose-500/25 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-white border border-rose-500/25 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   title="Force terminate all active Agent sessions across all browsers immediately"
                 >
-                  {revokingAllAgents ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Lock className="w-3.5 h-3.5 text-rose-400" />
-                  )}
+                  {revokingAllAgents && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>Force Logout All Agents</span>
                 </button>
               )}
@@ -762,7 +758,7 @@ export default function RolesManagement({ currentUser }) {
           </div>
 
           {/* Accounts Table */}
-          <div className="ds-card flex flex-col overflow-hidden">
+          <div className="ds-card relative z-10 flex flex-col overflow-hidden">
             <div className="px-5 py-3.5 border-b border-white/10 bg-black/20 flex items-center justify-between">
               <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-sans tabular-nums">
                 Configured Accounts ({filteredUsers.length} shown of {users.length})
