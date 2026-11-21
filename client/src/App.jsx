@@ -16,7 +16,6 @@ const Buildings = lazy(() => import('./components/Buildings'));
 const OmniSearch = lazy(() => import('./components/OmniSearch'));
 const WorkflowsDirectory = lazy(() => import('./components/WorkflowsDirectory'));
 const SourcesDirectory = lazy(() => import('./components/SourcesDirectory'));
-const MyActivity = lazy(() => import('./components/MyActivity'));
 const VoiceAgent = lazy(() => import('./components/VoiceAgent'));
 const AIAgent = lazy(() => import('./components/AIAgent'));
 const AccountSettings = lazy(() => import('./components/AccountSettings'));
@@ -43,7 +42,6 @@ function getInitialRoute() {
   const id = params.get('id') || params.get('listing_id');
   const raw = (hashTab || path.split('/').pop() || '').toLowerCase();
 
-  if (raw === 'myactivity' || raw === 'activity') return { tab: 'activity', id };
   if (raw === 'datalibrary' || raw === 'sources') return { tab: 'leads', id, autoOpenLibrary: true };
   if (raw === 'datacleaning' || raw === 'leads') return { tab: 'leads', id };
   if (raw === 'voiceagent' || raw === 'voice') return { tab: 'voice', id };
@@ -321,8 +319,6 @@ export default function App() {
                 {activeTab === 'workflows' && isAllowed('workflows') && <WorkflowsDirectory />}
 
                 {activeTab === 'sources' && isAllowed('leads') && <SourcesDirectory initialOpenLibrary={true} />}
-
-                {activeTab === 'activity' && isAllowed('activity') && <MyActivity currentUser={currentUser} />}
 
                 {activeTab === 'voice' && isAllowed('voice') && <VoiceAgent />}
 

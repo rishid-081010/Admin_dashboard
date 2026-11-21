@@ -25,7 +25,6 @@ export const AVAILABLE_SECTIONS = [
   { id: 'listing', label: 'Listing Studio', category: 'Operations', description: 'Rental & sale listing creation, AI copywriting & PDF dossiers' },
   { id: 'voice', label: 'Voice Agent Centre', category: 'Operations', description: 'AI telephony dialer, call audits, recordings & transcripts' },
   { id: 'agent', label: 'AI Agent', category: 'Operations', description: 'Autonomous real estate copilot & operational reasoning' },
-  { id: 'activity', label: 'My Activity', category: 'Operations', description: 'Telesales CRM FIFO lead queue, timeline notes & call intelligence' },
 
   // Admin
   { id: 'roles', label: 'Roles', category: 'Admin', description: 'RBAC role creation, section permissions & employee management' },
@@ -283,8 +282,8 @@ export const roleService = {
 
     // Default fallback
     if (normalized.includes('admin')) {
-      return ['overview', 'owners', 'buildings', 'search', 'transactions', 'workflows', 'leads', 'sources', 'listing', 'voice', 'agent', 'activity', 'settings'];
+      return ['overview', 'owners', 'buildings', 'search', 'transactions', 'workflows', 'leads', 'sources', 'listing', 'voice', 'agent', 'settings'];
     }
-    return ['overview', 'owners', 'buildings', 'search', 'transactions', 'listing', 'voice', 'activity', 'settings'];
+    return ['overview', 'owners', 'buildings', 'search', 'transactions', 'listing', 'voice', 'settings'];
   }
 };

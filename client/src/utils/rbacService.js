@@ -32,7 +32,6 @@ export const NAVIGATION_SECTIONS = [
       { key: 'listing', label: 'Listing Studio', description: 'Title Deed and Emirates ID document extraction and property creation.', iconName: 'Home', tab: 'listing', aliases: ['new', 'detail'] },
       { key: 'voice', label: 'Voice Agent Centre', description: 'AI outbound call campaigns, call analytics, and call recordings.', iconName: 'PhoneCall', tab: 'voice' },
       { key: 'agent', label: 'AI Agent Copilot', description: 'Interactive natural-language market intelligence assistant.', iconName: 'Bot', tab: 'agent' },
-      { key: 'activity', label: 'My Activity & Audits', description: 'Agent audit log, listing status history, and system changes.', iconName: 'Clock', tab: 'activity' },
     ]
   },
   {
