@@ -4,8 +4,8 @@ import {
   Trash2, Edit2, Play, Lock, ChevronDown, X, Loader2
 } from 'lucide-react';
 import { authService } from '../utils/authService';
-import { ALL_FEATURE_KEYS } from '../utils/rbacService';
-import { roleService } from '../utils/roleService';
+import { ALL_FEATURE_KEYS, NAVIGATION_SECTIONS } from '../utils/rbacService';
+import { roleService, ROLE_COLORS } from '../utils/roleService';
 
 const SYSTEM_ROLES_META = {
   superadmin: {
@@ -31,8 +31,9 @@ const SYSTEM_ROLES_META = {
 function normalizeRole(role) {
   const r = (role || '').toLowerCase().replace(/[\s_-]+/g, '');
   if (r.includes('super')) return 'superadmin';
-  if (r.includes('admin')) return 'admin';
-  return 'agent';
+  if (r === 'admin') return 'admin';
+  if (r === 'agent') return 'agent';
+  return (role || '').toLowerCase().trim();
 }
 
 export default function RolesManagement({ currentUser }) {
@@ -128,28 +129,68 @@ export default function RolesManagement({ currentUser }) {
   const adminCount = users.filter(u => normalizeRole(u.role) === 'admin').length;
   const agentCount = users.filter(u => normalizeRole(u.role) === 'agent').length;
 
-  const getCountForRole = (roleKey) => {
-    const norm = (roleKey || '').toLowerCase();
+  const defaultEditableRoles = [
+    { 
+      id: '4c454f87-7462-499c-8e9b-2f242f9263da', 
+      name: 'Admin', 
+      key: 'admin', 
+      color: 'blue', 
+      description: 'Operations and team manager. Full access to portfolio, workflows, listing studio, and team operations.',
+      sections: 'overview;owners;buildings;search;transactions;workflows;leads;sources;listing;voice;agent;activity;settings'
+    },
+    { 
+      id: '889c9fa9-5c8e-4eb9-8667-16bc18c28508', 
+      name: 'Agent', 
+      key: 'agent', 
+      color: 'emerald', 
+      description: 'Real estate advisor. Access to owner dossiers, buildings directory, search engine, listing studio, and personal activity queue.',
+      sections: 'overview;owners;buildings;search;transactions;listing;voice;activity;settings'
+    }
+  ];
+
+  const editableRolesList = (() => {
+    const list = rolesList.filter(r => {
+      const k = (r.key || '').toLowerCase();
+      const n = (r.name || '').toLowerCase();
+      return k !== 'superadmin' && n !== 'super admin';
+    });
+    return list.length > 0 ? list : defaultEditableRoles;
+  })();
+
+  const getCountForRole = (roleKeyOrName) => {
+    const norm = (roleKeyOrName || '').toLowerCase().trim();
     if (norm === 'all') return users.length;
     if (norm === 'superadmin' || norm === 'super admin') return superAdminCount;
     if (norm === 'admin') return adminCount;
     if (norm === 'agent') return agentCount;
-    return users.filter(u => (u.role || '').toLowerCase() === norm).length;
+    return users.filter(u => {
+      const r = (u.role || '').toLowerCase().trim();
+      return r === norm || normalizeRole(r) === norm;
+    }).length;
   };
 
   // Filtered users list
   const filteredUsers = users.filter(u => {
     if (selectedRoleFilter === 'all') return true;
-    const normFilter = selectedRoleFilter.toLowerCase();
-    const userRoleNorm = (u.role || '').toLowerCase();
+    const normFilter = selectedRoleFilter.toLowerCase().trim();
+    const userRoleNorm = (u.role || '').toLowerCase().trim();
     if (normFilter === 'superadmin' || normFilter === 'super admin') {
       return normalizeRole(u.role) === 'superadmin';
     }
     if (normFilter === 'admin') {
-      return normalizeRole(u.role) === 'admin';
+      return normalizeRole(u.role) === 'admin' || userRoleNorm === 'admin';
     }
     if (normFilter === 'agent') {
-      return normalizeRole(u.role) === 'agent';
+      return normalizeRole(u.role) === 'agent' || userRoleNorm === 'agent';
+    }
+    const matchedRole = rolesList.find(r => 
+      (r.key && r.key.toLowerCase() === normFilter) || 
+      (r.name && r.name.toLowerCase() === normFilter)
+    );
+    if (matchedRole) {
+      const targetKey = (matchedRole.key || '').toLowerCase();
+      const targetName = (matchedRole.name || '').toLowerCase();
+      return userRoleNorm === targetKey || userRoleNorm === targetName || normalizeRole(u.role) === targetKey;
     }
     return userRoleNorm === normFilter;
   });
@@ -296,7 +337,9 @@ export default function RolesManagement({ currentUser }) {
     setRoleNameInput(roleItem.name || '');
     setRoleDescInput(roleItem.description || '');
     setRoleColorInput(roleItem.color || 'blue');
-    const sections = (roleItem.sections || '').split(';').map(s => s.trim()).filter(Boolean);
+    const sections = (Array.isArray(roleItem.sections) ? roleItem.sections : (roleItem.sections || '').split(';'))
+      .map(s => s.trim())
+      .filter(Boolean);
     setRoleSectionsInput(sections);
     setRoleModalError(null);
     setShowRoleModal(true);
@@ -346,17 +389,26 @@ export default function RolesManagement({ currentUser }) {
   };
 
   const handleDeleteRole = async (roleItem) => {
-    if (roleItem.is_system) {
-      alert('Cannot delete built-in system role.');
+    if (roleItem.is_system && (roleItem.key === 'superadmin' || roleItem.name?.toLowerCase() === 'super admin')) {
+      alert('Cannot delete built-in Super Admin role.');
       return;
     }
-    if (!window.confirm(`Are you sure you want to delete role "${roleItem.name}"?`)) return;
+    if (roleItem.key === 'superadmin' || roleItem.name?.toLowerCase() === 'super admin') {
+      alert('Cannot delete built-in Super Admin role.');
+      return;
+    }
+    const count = getCountForRole(roleItem.key || roleItem.name);
+    const confirmMsg = count > 0 
+      ? `Are you sure you want to delete role "${roleItem.name}"? ${count} employee(s) currently have this role and will need a new role assigned.`
+      : `Are you sure you want to delete role "${roleItem.name}"?`;
+    if (!window.confirm(confirmMsg)) return;
+
     const res = await roleService.deleteRole(roleItem.id);
     if (res.success) {
       if (selectedRoleFilter.toLowerCase() === roleItem.name.toLowerCase() || selectedRoleFilter === roleItem.key) {
         setSelectedRoleFilter('all');
       }
-      setSuccess(`Role "${roleItem.name}" deleted.`);
+      setSuccess(`Role "${roleItem.name}" deleted successfully.`);
       setTimeout(() => setSuccess(null), 3000);
       loadData();
     } else {
@@ -367,15 +419,19 @@ export default function RolesManagement({ currentUser }) {
   // Selected filter display text
   const getFilterDisplayText = () => {
     if (selectedRoleFilter === 'all') return `All Roles (${users.length} total staff)`;
-    if (selectedRoleFilter === 'superadmin') return `Super Admin (${superAdminCount} employees)`;
-    if (selectedRoleFilter === 'admin') return `Admin (${adminCount} employees)`;
-    if (selectedRoleFilter === 'agent') return `Agent (${agentCount} employees)`;
-    const found = rolesList.find(r => r.key === selectedRoleFilter || r.name.toLowerCase() === selectedRoleFilter.toLowerCase());
+    if (selectedRoleFilter === 'superadmin' || selectedRoleFilter === 'super admin') {
+      return `Super Admin (${superAdminCount} employees)`;
+    }
+    const found = rolesList.find(r => 
+      (r.key && r.key.toLowerCase() === selectedRoleFilter.toLowerCase()) || 
+      (r.name && r.name.toLowerCase() === selectedRoleFilter.toLowerCase())
+    );
     if (found) {
       const count = getCountForRole(found.key || found.name);
       return `${found.name} (${count} employees)`;
     }
-    return selectedRoleFilter;
+    const count = getCountForRole(selectedRoleFilter);
+    return `${selectedRoleFilter.charAt(0).toUpperCase() + selectedRoleFilter.slice(1)} (${count} employees)`;
   };
 
   return (
@@ -464,7 +520,7 @@ export default function RolesManagement({ currentUser }) {
 
                     <div className="h-[1px] bg-white/10 my-1" />
 
-                    {/* Built-in System Roles */}
+                    {/* Protected Root Role */}
                     <div
                       onClick={() => { setSelectedRoleFilter('superadmin'); setIsRoleDropdownOpen(false); }}
                       className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors ${
@@ -474,92 +530,75 @@ export default function RolesManagement({ currentUser }) {
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-purple-400" />
                         <span>Super Admin</span>
+                        <Lock className="w-3 h-3 text-slate-500 ml-0.5" title="Root Access (Protected)" />
                       </div>
                       <span className="text-[11px] text-slate-400 tabular-nums">({superAdminCount} employees)</span>
                     </div>
 
-                    <div
-                      onClick={() => { setSelectedRoleFilter('admin'); setIsRoleDropdownOpen(false); }}
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors ${
-                        selectedRoleFilter === 'admin' ? 'bg-[#183153] text-white font-semibold' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-400" />
-                        <span>Admin</span>
-                      </div>
-                      <span className="text-[11px] text-slate-400 tabular-nums">({adminCount} employees)</span>
+                    <div className="h-[1px] bg-white/10 my-1" />
+
+                    {/* Roles (Admin, Agent, and Custom Roles) - All Editable & Deletable */}
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#b7a990] flex items-center justify-between">
+                      <span>Roles</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Edit / Delete</span>
                     </div>
 
-                    <div
-                      onClick={() => { setSelectedRoleFilter('agent'); setIsRoleDropdownOpen(false); }}
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors ${
-                        selectedRoleFilter === 'agent' ? 'bg-[#183153] text-white font-semibold' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span>Agent</span>
-                      </div>
-                      <span className="text-[11px] text-slate-400 tabular-nums">({agentCount} employees)</span>
-                    </div>
+                    {editableRolesList.map(roleItem => {
+                      const count = getCountForRole(roleItem.key || roleItem.name);
+                      const isSelected = selectedRoleFilter.toLowerCase() === (roleItem.key || roleItem.name).toLowerCase();
+                      const dotColor = roleItem.color === 'emerald' ? 'bg-emerald-400' :
+                                       roleItem.color === 'purple' ? 'bg-purple-400' :
+                                       roleItem.color === 'amber' ? 'bg-amber-400' :
+                                       roleItem.color === 'rose' ? 'bg-rose-400' :
+                                       roleItem.color === 'cyan' ? 'bg-cyan-400' : 'bg-blue-400';
 
-                    {/* Custom Created Roles with Inline Edit and Delete */}
-                    {rolesList.filter(r => !r.is_system).length > 0 && (
-                      <>
-                        <div className="h-[1px] bg-white/10 my-1" />
-                        <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#b7a990]">
-                          Custom Roles
-                        </div>
-                        {rolesList.filter(r => !r.is_system).map(roleItem => {
-                          const count = getCountForRole(roleItem.key || roleItem.name);
-                          const isSelected = selectedRoleFilter.toLowerCase() === (roleItem.key || roleItem.name).toLowerCase();
-                          return (
-                            <div
-                              key={roleItem.id}
-                              className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition-colors group ${
-                                isSelected ? 'bg-[#183153] text-white font-semibold' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
-                              }`}
-                            >
-                              <div 
-                                onClick={() => { setSelectedRoleFilter(roleItem.key || roleItem.name); setIsRoleDropdownOpen(false); }}
-                                className="flex-1 min-w-0 cursor-pointer flex items-center justify-between mr-2"
-                              >
-                                <span className="truncate">{roleItem.name}</span>
-                                <span className="text-[11px] text-slate-400 tabular-nums shrink-0 ml-1">({count} employees)</span>
-                              </div>
-
-                              {/* Clean small inline Edit & Delete buttons */}
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsRoleDropdownOpen(false);
-                                    openEditRoleModal(roleItem);
-                                  }}
-                                  title="Edit Role"
-                                  className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteRole(roleItem);
-                                  }}
-                                  title="Delete Role"
-                                  className="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
+                      return (
+                        <div
+                          key={roleItem.id || roleItem.key || roleItem.name}
+                          className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition-colors group ${
+                            isSelected ? 'bg-[#183153] text-white font-semibold' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                          }`}
+                        >
+                          <div 
+                            onClick={() => { setSelectedRoleFilter(roleItem.key || roleItem.name); setIsRoleDropdownOpen(false); }}
+                            className="flex-1 min-w-0 cursor-pointer flex items-center justify-between mr-2"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                              <span className="truncate">{roleItem.name}</span>
                             </div>
-                          );
-                        })}
-                      </>
-                    )}
+                            <span className="text-[11px] text-slate-400 tabular-nums shrink-0 ml-1">({count} employees)</span>
+                          </div>
+
+                          {/* Inline Edit & Delete buttons */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsRoleDropdownOpen(false);
+                                openEditRoleModal(roleItem);
+                              }}
+                              title={`Edit ${roleItem.name}`}
+                              className="p-1 rounded-lg hover:bg-blue-500/20 text-slate-400 hover:text-blue-300 transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRole(roleItem);
+                              }}
+                              title={`Delete ${roleItem.name}`}
+                              className="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -699,10 +738,8 @@ export default function RolesManagement({ currentUser }) {
                                   className="appearance-none bg-[#06111e] hover:bg-[#0a1a2e] border border-white/15 hover:border-white/30 rounded-xl pl-3 pr-8 py-1.5 text-white text-xs focus:outline-none focus:border-blue-400 cursor-pointer capitalize transition-colors min-w-[125px]"
                                 >
                                   <option value="superadmin">Super Admin</option>
-                                  <option value="admin">Admin</option>
-                                  <option value="agent">Agent</option>
-                                  {rolesList.filter(r => !r.is_system).map(cr => (
-                                    <option key={cr.id} value={cr.key || cr.name}>
+                                  {editableRolesList.map(cr => (
+                                    <option key={cr.id || cr.key} value={cr.key || cr.name}>
                                       {cr.name}
                                     </option>
                                   ))}
@@ -831,11 +868,9 @@ export default function RolesManagement({ currentUser }) {
                     onChange={(e) => setNewRole(e.target.value)}
                     className="ds-input capitalize cursor-pointer appearance-none pr-9"
                   >
-                    <option value="agent">Agent</option>
-                    <option value="admin">Admin</option>
                     <option value="superadmin">Super Admin</option>
-                    {rolesList.filter(r => !r.is_system).map(cr => (
-                      <option key={cr.id} value={cr.key || cr.name}>
+                    {editableRolesList.map(cr => (
+                      <option key={cr.id || cr.key} value={cr.key || cr.name}>
                         {cr.name}
                       </option>
                     ))}
@@ -919,16 +954,50 @@ export default function RolesManagement({ currentUser }) {
               </div>
 
               <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                  Role Badge Color
+                </label>
+                <div className="flex items-center gap-2">
+                  {ROLE_COLORS.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setRoleColorInput(c.id)}
+                      className={`w-7 h-7 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+                        roleColorInput === c.id ? 'border-white scale-110 shadow-lg ring-2 ring-white/30' : 'border-white/20 hover:border-white/50 opacity-70 hover:opacity-100'
+                      }`}
+                      style={{
+                        backgroundColor: c.id === 'purple' ? '#a855f7' :
+                                         c.id === 'blue' ? '#3b82f6' :
+                                         c.id === 'emerald' ? '#10b981' :
+                                         c.id === 'amber' ? '#f59e0b' :
+                                         c.id === 'rose' ? '#f43f5e' :
+                                         c.id === 'cyan' ? '#06b6d4' : '#6366f1'
+                      }}
+                      title={c.label}
+                    >
+                      {roleColorInput === c.id && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-medium text-slate-300 mb-2">
                   Permitted Dashboard Sections
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 rounded-xl bg-black/30 border border-white/10 max-h-48 overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 rounded-xl bg-black/30 border border-white/10 max-h-56 overflow-y-auto custom-scrollbar">
                   {ALL_FEATURE_KEYS.map(key => {
                     const isChecked = roleSectionsInput.includes(key);
+                    const featureMeta = NAVIGATION_SECTIONS.flatMap(s => s.features).find(f => f.key === key);
+                    const label = featureMeta ? featureMeta.label : key;
+
                     return (
                       <label 
                         key={key} 
-                        className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none p-1 rounded hover:bg-white/5"
+                        className={`flex items-center gap-2.5 text-xs rounded-lg p-2 transition-colors cursor-pointer select-none border ${
+                          isChecked ? 'bg-white/[0.08] border-blue-500/30 text-white' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                        }`}
                       >
                         <input
                           type="checkbox"
@@ -940,9 +1009,9 @@ export default function RolesManagement({ currentUser }) {
                               setRoleSectionsInput(prev => [...prev, key]);
                             }
                           }}
-                          className="rounded border-white/20 bg-slate-900 text-blue-500 focus:ring-0 cursor-pointer"
+                          className="rounded border-white/20 bg-slate-900 text-blue-500 focus:ring-0 cursor-pointer w-3.5 h-3.5"
                         />
-                        <span className="capitalize">{key}</span>
+                        <span className="truncate">{label}</span>
                       </label>
                     );
                   })}

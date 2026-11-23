@@ -132,14 +132,15 @@ export const roleService = {
     }
   },
 
-  // Delete a role (cannot delete system roles)
+  // Delete a role (protects built-in Super Admin role)
   async deleteRole(id) {
     try {
-      // First verify role is not system
-      const checkRes = await fetch(`${SUPABASE_BASE_URL}/roles?id=eq.${id}&select=id,is_system,name`, { headers });
+      // First verify role is not superadmin
+      const checkRes = await fetch(`${SUPABASE_BASE_URL}/roles?id=eq.${id}&select=id,is_system,name,key`, { headers });
       const checkData = await checkRes.json();
-      if (checkData && checkData[0]?.is_system) {
-        return { success: false, error: 'Cannot delete a built-in system role.' };
+      const role = checkData && checkData[0];
+      if (role && (role.key === 'superadmin' || role.name?.toLowerCase() === 'super admin')) {
+        return { success: false, error: 'Cannot delete built-in Super Admin role.' };
       }
 
       const res = await fetch(`${SUPABASE_BASE_URL}/roles?id=eq.${id}`, {
