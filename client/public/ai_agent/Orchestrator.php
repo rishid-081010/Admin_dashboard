@@ -483,7 +483,7 @@ class Orchestrator {
         }
 
         if (empty($sections)) {
-            return "Execution completed successfully. Operations verified across the capability registry.";
+            return "No verified records were found matching your inquiry. Please try searching with specific tower names (e.g. *Princess Tower*, *Marina Gate*), communities (*Dubai Marina*, *Business Bay*), or ask me to retrieve the latest call audio recording or daily audit report.";
         }
 
         return implode("\n\n---\n\n", $sections);
@@ -509,6 +509,50 @@ class Orchestrator {
                 'execution_id' => $executionId,
                 'error' => 'No user message provided',
                 'message' => 'Please provide a message or inquiry.'
+            ];
+        }
+
+        // =========================================================================
+        // STAGE 0: CONVERSATIONAL & GREETING FAST ROUTER
+        // Handles informal hellos, greetings, capabilities questions instantly (<50ms)
+        // without running slow 3.3M row database scans or multi-step LLM chains
+        // =========================================================================
+        $cleanQ = strtolower(trim($latestUserMsg));
+        $cleanQAlpha = preg_replace('/[^a-z0-9\s]/', '', $cleanQ);
+        $conversationalPhrases = [
+            'hi', 'hello', 'hey', 'wsp', 'hi wsp', 'hey wsp', 'whats up', 'what up', "what's up",
+            'how are you', 'how r u', 'hows it going', 'who are you', 'who r u', 'what can you do',
+            'help', 'good morning', 'good afternoon', 'good evening', 'yo', 'sup', 'test', 'ping',
+            'start', 'info'
+        ];
+        $isPureGreeting = in_array($cleanQAlpha, $conversationalPhrases, true) ||
+            preg_match('/^(hi|hello|hey|yo|sup)(\s+(wsp|there|bot|agent|team|bro|man|all|everyone))?[\s\.\?!]*$/i', $cleanQ) ||
+            preg_match('/^(what\s+can\s+you\s+do|who\s+are\s+you|help\s*me|how\s+does\s+this\s+work)[\s\.\?!]*$/i', $cleanQ);
+
+        if ($isPureGreeting) {
+            $greetingReply = "Hey! What's up? I'm **Antigravity OS**, your AI operations assistant for A-Squared Real Estate in Dubai.\n\n"
+                . "I have direct access to our live databases and telephony systems. Here is what I can do for you right now:\n\n"
+                . "- **Verified Property Owners**: Search 3M+ owner dossiers by tower, community (Marina, Business Bay, Downtown), or unit number.\n"
+                . "- **Building Intelligence**: Retrieve total units, contact coverage percentages, and tower profiles.\n"
+                . "- **AI Telephony & Call Intelligence**: Listen to call audio recordings (`.wav`), read client transcripts, and view daily audit reports.\n"
+                . "- **Export Datasets**: Download custom CSV/Excel owner and listing extracts.\n"
+                . "- **Listing Studio**: Review rental and sale listings, generate AI marketing copy, and check draft status.\n\n"
+                . "What would you like to explore today? Just ask me naturally (e.g. *\"Show me buildings in Dubai Marina\"* or *\"Download today's call audit PDF\"*).";
+
+            $pipelineEvents[] = [
+                'step' => 'planning',
+                'status' => 'completed',
+                'title' => 'Conversational Query',
+                'detail' => 'Handled directly by Antigravity OS conversational router.'
+            ];
+
+            return [
+                'success' => true,
+                'execution_id' => $executionId,
+                'message' => $greetingReply,
+                'pipeline_events' => $pipelineEvents,
+                'tool_calls' => [],
+                'ui_directives' => []
             ];
         }
 

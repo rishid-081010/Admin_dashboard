@@ -509,25 +509,39 @@ class ExecutionEngine {
                 $cleanQ = rawurlencode($rawQ);
                 $digits = preg_replace('/[^\d]/', '', $rawQ);
 
-                $oUrl = $supabaseUrl . "/owners_data?select=owner_id,lead_id,full_name,building_name,unit_number,master_area,phone_normalized&limit=5";
-                $orP = ["full_name.ilike.*{$cleanQ}*", "building_name.ilike.*{$cleanQ}*", "phone_normalized.ilike.*{$cleanQ}*"];
-                if (!empty($digits)) {
-                    $orP[] = "lead_id.ilike.*{$digits}*";
-                    $orP[] = "owner_id.ilike.*{$digits}*";
-                    $orP[] = "bitrix_id.eq.{$digits}";
-                }
-                $oUrl .= "&or=(" . implode(',', $orP) . ")";
-                $oRes = $this->makeCurl($oUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
-
+                // Buildings & listings search (fast, indexed)
                 $bUrl = $supabaseUrl . "/canonical_buildings?or=(canonical_name.ilike.*{$cleanQ}*,building_name.ilike.*{$cleanQ}*)&select=canonical_name,building_name,master_area,total_units,contact_coverage&limit=5";
                 $bRes = $this->makeCurl($bUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
 
                 $lUrl = $supabaseUrl . "/real_estate_listings?name=ilike.*{$cleanQ}*&select=id,name,reference,property_type,status&limit=5";
                 $lRes = $this->makeCurl($lUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
 
+                // Only search 3.3M owners_data if digits present (phone/ID) or specific search >= 4 chars
+                $ownersData = [];
+                if (!empty($digits) || strlen($rawQ) >= 4) {
+                    $oUrl = $supabaseUrl . "/owners_data?select=owner_id,lead_id,full_name,building_name,unit_number,master_area,phone_normalized&limit=5";
+                    $orP = [];
+                    if (!empty($digits)) {
+                        $orP[] = "phone_normalized.ilike.*{$digits}*";
+                        $orP[] = "lead_id.ilike.*{$digits}*";
+                        $orP[] = "owner_id.ilike.*{$digits}*";
+                    }
+                    if (strlen($rawQ) >= 4) {
+                        $orP[] = "full_name.ilike.*{$cleanQ}*";
+                        $orP[] = "building_name.ilike.*{$cleanQ}*";
+                    }
+                    if (!empty($orP)) {
+                        $oUrl .= "&or=(" . implode(',', $orP) . ")";
+                        $oRes = $this->makeCurl($oUrl, 'GET', ["apikey: {$supabaseKey}", "Authorization: Bearer {$supabaseKey}"]);
+                        if (is_array($oRes['data'])) {
+                            $ownersData = $oRes['data'];
+                        }
+                    }
+                }
+
                 return [
                     'query' => $rawQ,
-                    'owners' => $oRes['data'] ?? [],
+                    'owners' => $ownersData,
                     'buildings' => $bRes['data'] ?? [],
                     'listings' => $lRes['data'] ?? []
                 ];
