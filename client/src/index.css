@@ -3,93 +3,86 @@
 @tailwind utilities;
 
 :root {
+  /* A SQUARED OFFICIAL BRAND PALETTE TOKENS */
   --asq-navy-950: #040810;
   --asq-navy-900: #070e1c;
   --asq-navy-850: #0c1829;
   --asq-navy-800: #122238;
   --asq-navy-700: #183153;
+
   --asq-neutral-white: #ffffff;
   --asq-neutral-bone: #e2e0cc;
   --asq-neutral-khaki: #b7a990;
   --asq-neutral-khaki-dark: #84815e;
   --asq-neutral-soft-grey: #d2d4c9;
   --asq-neutral-black: #070700;
+
+  /* SEMANTIC SURFACES */
   --asq-surface-canvas: var(--asq-navy-950);
   --asq-surface-sidebar: var(--asq-navy-900);
   --asq-surface-card: var(--asq-navy-850);
   --asq-surface-inset: #06111e;
   --asq-surface-elevated: var(--asq-navy-800);
+
+  /* BORDERS */
   --asq-border-subtle: #16253b;
   --asq-border-card: #1f334d;
   --asq-border-hover: #2b415a;
   --asq-border-focus: var(--asq-neutral-khaki);
-  --asq-font-editorial: 'Cormorant Garamond', 'Denton', Georgia, serif;
-  --asq-font-ui: 'Inter Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --asq-font-mono: 'Inter Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* TYPOGRAPHY */
+  --asq-font-editorial: "Cormorant Garamond", "Denton", Georgia, serif;
+  --asq-font-ui: "Inter Display", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --asq-font-mono: "Inter Display", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @layer base {
   body {
-    background-color: #040810;
-    color: #e2e0cc;
+    background-color: var(--asq-navy-950);
+    color: #e2e8f0;
     font-family: var(--asq-font-ui);
     min-height: 100vh;
   }
-}
 
-.font-editorial,
-.font-serif {
-  font-family: var(--asq-font-editorial);
-}
+  .font-editorial,
+  .font-serif {
+    font-family: var(--asq-font-editorial);
+  }
 
-.font-sans {
-  font-family: var(--asq-font-ui);
-}
+  .font-sans {
+    font-family: var(--asq-font-ui);
+  }
 
-/* Luxury Editorial Design System Components */
-.ds-page-title {
-  font-family: var(--asq-font-editorial);
-  font-size: 1.625rem;
-  line-height: 2.125rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  color: #fff;
-}
-
-@media (min-width: 640px) {
-  .ds-page-title {
-    font-size: 2rem;
-    line-height: 2.375rem;
+  .font-mono {
+    font-family: var(--asq-font-mono);
   }
 }
 
-.ds-kicker {
-  font-family: var(--asq-font-ui);
-  font-size: 0.625rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #94a3b8;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   A SQUARED OFFICIAL DESIGN SYSTEM PRIMITIVES
+   Unified Design Tokens & Utility Classes for Whole-Dashboard Consistency
+   ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Level 1: Primary Surfaces & Frosted Glass Cards */
 .ds-card {
   background: rgba(12, 24, 41, 0.52);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 1px 0 rgba(255, 255, 255, 0.20);
   position: relative;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .ds-card-interactive:hover {
   border-color: rgba(183, 169, 144, 0.45);
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8), inset 0 1px 1px 0 rgba(255, 255, 255, 0.35);
 }
 
+/* Level 2: Sub-Containers & Inset Cards */
 .ds-subcard {
-  background: rgba(6, 17, 30, 0.5);
+  background: rgba(6, 17, 30, 0.50);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -102,6 +95,7 @@
   background: rgba(6, 17, 30, 0.65);
 }
 
+/* Interactive Controls: Buttons */
 .ds-btn-primary {
   display: inline-flex;
   align-items: center;
@@ -110,7 +104,7 @@
   padding: 0.5rem 1rem;
   border-radius: 0.75rem;
   background-color: #2563eb;
-  color: #fff;
+  color: #ffffff;
   font-size: 0.75rem;
   font-weight: 700;
   box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.3), 0 2px 4px -2px rgba(30, 58, 138, 0.3);
@@ -152,7 +146,7 @@
 
 .ds-btn-secondary:hover:not(:disabled) {
   background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  color: #ffffff;
 }
 
 .ds-btn-danger {
@@ -177,16 +171,16 @@
   color: #fecdd3;
 }
 
+/* Form Inputs */
 .ds-input {
   width: 100%;
   background-color: rgba(4, 8, 16, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border-radius: 0.75rem;
   padding: 0.5rem 0.875rem;
   font-size: 0.75rem;
-  color: #fff;
+  color: #ffffff;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -200,13 +194,13 @@
   box-shadow: 0 0 0 2px rgba(183, 169, 144, 0.25);
 }
 
+/* Filter / Segmented Control */
 .ds-filter-bar {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
   background-color: rgba(6, 17, 30, 0.45);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0.75rem;
   padding: 0.25rem;
@@ -226,7 +220,7 @@
 }
 
 .ds-filter-pill:hover {
-  color: #fff;
+  color: #ffffff;
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -241,10 +235,10 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
+/* Unified Tables */
 .ds-table-header {
   background-color: rgba(6, 17, 30, 0.65);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
@@ -275,16 +269,13 @@
   color: #e2e0cc;
 }
 
+/* Modals */
 .ds-modal-overlay {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
   z-index: 50;
   background-color: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -300,19 +291,45 @@
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 1.25rem;
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.85), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.85), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Glass Compatibility Tokens */
+/* Typography Tokens */
+.ds-page-title {
+  font-family: var(--asq-font-editorial);
+  font-size: 1.625rem;
+  line-height: 2.125rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #ffffff;
+}
+
+@media (min-width: 640px) {
+  .ds-page-title {
+    font-size: 2rem;
+    line-height: 2.375rem;
+  }
+}
+
+.ds-kicker {
+  font-family: var(--asq-font-ui);
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+/* Legacy Compat Aliases */
 .glass-panel {
   background: rgba(12, 24, 41, 0.52);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 1px 0 rgba(255, 255, 255, 0.20);
 }
 
 .glass-card {
@@ -321,7 +338,7 @@
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 1px 0 rgba(255, 255, 255, 0.20);
   position: relative;
   overflow: hidden;
   transition: all 0.2s ease;
@@ -386,24 +403,6 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #183153;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(4, 8, 16, 0.4);
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #122238;
-  border-radius: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #183153;
 }
 

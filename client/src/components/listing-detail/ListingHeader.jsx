@@ -41,11 +41,11 @@ export default function ListingHeader({
         </button>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl sm:text-3xl font-sans font-bold text-white tracking-tight">
+          <h1 className="ds-page-title">
             {listing?.name || 'Listing Detail'}
           </h1>
           {listing?.reference && (
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-white/[0.06] text-white/80 border border-white/[0.08]">
+            <span className="px-2.5 py-1 rounded-md text-[11px] font-sans tabular-nums font-bold bg-white/[0.06] text-white/80 border border-white/[0.08]">
               #{listing.reference}
             </span>
           )}
@@ -80,7 +80,7 @@ export default function ListingHeader({
             id="download-packages-btn"
             name="download_packages_btn"
             onClick={() => setDownloadDropdownOpen((prev) => !prev)}
-            className="px-4 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white shadow-xl shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            className="ds-btn-primary px-4 py-2.5 rounded-xl font-bold text-xs"
           >
             <Download className="w-4 h-4 text-white" />
             <span>Download Packages</span>
@@ -89,7 +89,7 @@ export default function ListingHeader({
 
           {/* Dropdown Menu */}
           {downloadDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-[#001f3f]/95 backdrop-blur-xl border border-blue-500/30 shadow-2xl shadow-black/80 z-50 p-2 divide-y divide-white/[0.06] animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl ds-card shadow-2xl shadow-black/80 z-50 p-2 divide-y divide-white/[0.06] animate-in fade-in zoom-in-95 duration-150">
               {/* Option 1: Government & NOC Files (ZIP) */}
               <button
                 type="button"
@@ -107,7 +107,7 @@ export default function ListingHeader({
                     <span className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
                       1. Government & NOC Files
                     </span>
-                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span className="text-[10px] font-sans tabular-nums font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                       ZIP
                     </span>
                   </div>
@@ -137,7 +137,7 @@ export default function ListingHeader({
                     <span className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
                       2. Enhanced Listing Images
                     </span>
-                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                    <span className="text-[10px] font-sans tabular-nums font-semibold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
                       {completedCount} Photos
                     </span>
                   </div>
@@ -163,9 +163,6 @@ export default function ListingHeader({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-blue-300 group-hover:text-blue-200 transition-colors">
                       3. Complete Combined Package
-                    </span>
-                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                      All-in-One
                     </span>
                   </div>
                   <p className="text-[11px] text-white/60 mt-0.5 leading-snug">

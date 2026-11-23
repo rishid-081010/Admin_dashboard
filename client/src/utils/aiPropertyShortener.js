@@ -31,8 +31,8 @@ export async function shortenPropertyNameWithAI(rawName) {
     '/api_ai_shorten_name.php',
     './api_ai_shorten_name.php',
     '/dashboard/api_ai_shorten_name.php',
-    'https://admin.asquared.ae/dashboard/api_ai_shorten_name.php',
-    'https://admin.asquared.ae/api_ai_shorten_name.php',
+    'https://dashboard.asquared.ae/dashboard/api_ai_shorten_name.php',
+    'https://dashboard.asquared.ae/api_ai_shorten_name.php',
   ];
 
   for (const url of phpEndpoints) {

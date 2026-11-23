@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Sparkles, ChevronLeft, ChevronRight, RefreshCw, Sliders } from 'lucide-react';
+import { X, Sparkles, ChevronLeft, ChevronRight, RefreshCw, Sliders, Download } from 'lucide-react';
 import BeforeAfterSlider from '../BeforeAfterSlider';
 
 export default function ComparisonModal({
@@ -15,6 +15,7 @@ export default function ComparisonModal({
   onOpenRefine,
   onSingleEnhance,
   isRetrying = false,
+  onDownloadSingle,
 }) {
   // Keyboard navigation: Escape, ArrowLeft, ArrowRight
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function ComparisonModal({
       return {
         leftUrl: raw,
         rightUrl: targetRight,
-        leftLabel: 'Raw Authentic',
+        leftLabel: 'Original',
         rightLabel: refined ? '✨ Custom Refined' : '✨ AI Enhanced',
         isDifferent: !!raw && !!targetRight && raw !== targetRight,
       };
@@ -66,7 +67,7 @@ export default function ComparisonModal({
     return {
       leftUrl: raw,
       rightUrl: auto || raw,
-      leftLabel: 'Raw Authentic',
+      leftLabel: 'Original',
       rightLabel: '🤖 Auto Enhanced',
       isDifferent: !!raw && !!auto && raw !== auto,
     };
@@ -87,7 +88,7 @@ export default function ComparisonModal({
             <span className="text-sm font-sans font-bold text-white truncate max-w-[200px] sm:max-w-xs">
               {roomTitle}
             </span>
-            <span className="text-xs text-white/50 font-mono hidden md:inline truncate max-w-[240px]">
+            <span className="text-xs text-white/50 font-sans tabular-nums hidden md:inline truncate max-w-[240px]">
               {image.original_filename || ''}
             </span>
           </div>
@@ -103,7 +104,7 @@ export default function ComparisonModal({
                   : 'text-white/60 hover:text-white'
               }`}
             >
-              📸 Raw vs ✨ Refined
+              📸 Original vs ✨ Refined
             </button>
             <button
               type="button"
@@ -125,12 +126,26 @@ export default function ComparisonModal({
                   : 'text-white/60 hover:text-white'
               }`}
             >
-              📸 Raw vs 🤖 Auto
+              📸 Original vs 🤖 Auto
             </button>
           </div>
 
           {/* Action Bar */}
           <div className="flex items-center gap-2">
+            {onDownloadSingle && (comp.rightUrl || comp.leftUrl) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const targetUrl = comp.rightUrl || comp.leftUrl;
+                  const filename = `${String(currentIndex + 1).padStart(2, '0')}_${(image.room_type || 'property_photo').replace(/\s+/g, '_')}.png`;
+                  onDownloadSingle(targetUrl, filename);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-semibold flex items-center gap-1.5 border border-white/[0.1] transition-colors cursor-pointer"
+                title="Download photo as PNG"
+              >
+                <Download className="w-3.5 h-3.5 text-white/80" /> <span className="hidden sm:inline">Download</span> PNG
+              </button>
+            )}
             {onOpenRefine && (
               <button
                 type="button"
@@ -146,7 +161,7 @@ export default function ComparisonModal({
             <button
               type="button"
               onClick={onPrev}
-              className="p-2 rounded-xl glass-pill hover:bg-white/[0.1] text-bone-100 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              className="w-8 h-8 rounded-xl glass-pill hover:bg-white/[0.1] text-bone-100 text-xs font-semibold inline-flex items-center justify-center cursor-pointer"
               title="Previous image (Left arrow)"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -154,7 +169,7 @@ export default function ComparisonModal({
             <button
               type="button"
               onClick={onNext}
-              className="p-2 rounded-xl glass-pill hover:bg-white/[0.1] text-bone-100 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              className="w-8 h-8 rounded-xl glass-pill hover:bg-white/[0.1] text-bone-100 text-xs font-semibold inline-flex items-center justify-center cursor-pointer"
               title="Next image (Right arrow)"
             >
               <ChevronRight className="w-4 h-4" />
@@ -162,7 +177,7 @@ export default function ComparisonModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl glass-pill hover:bg-red-600/80 text-bone-100 hover:text-white transition-colors ml-1 cursor-pointer"
+              className="w-8 h-8 rounded-xl glass-pill hover:bg-red-600/80 text-bone-100 hover:text-white transition-colors ml-1 inline-flex items-center justify-center cursor-pointer"
               title="Close (Esc)"
             >
               <X className="w-4 h-4" />
@@ -179,7 +194,7 @@ export default function ComparisonModal({
                   <Sparkles className="w-10 h-10 text-blue-400 mb-3" />
                   <h3 className="text-white font-bold text-base mb-1.5 font-sans">No Custom Refinement Yet</h3>
                   <p className="text-white/60 text-xs mb-5 leading-relaxed font-sans">
-                    This photo has been enhanced by the neural baseline engine. You can use the AI Refine studio to fine-tune architectural lighting, staging, or materials.
+                    This photo has been automatically enhanced. You can use the AI Refine studio to fine-tune architectural lighting, staging, or materials.
                   </p>
                   <div className="flex items-center gap-2">
                     <button
@@ -187,7 +202,7 @@ export default function ComparisonModal({
                       onClick={() => setSliderMode('orig-vs-refined')}
                       className="px-3.5 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-semibold cursor-pointer"
                     >
-                      View Raw vs Enhanced
+                      View Original vs Enhanced
                     </button>
                     {onOpenRefine && (
                       <button
@@ -206,9 +221,9 @@ export default function ComparisonModal({
               ) : (
                 <>
                   <RefreshCw className="w-10 h-10 text-blue-400 animate-spin mb-4" />
-                  <h3 className="text-white font-bold text-base mb-1.5 font-sans">Photographic Enhancement In Progress</h3>
+                  <h3 className="text-white font-bold text-base mb-1.5 font-sans">Photo Enhancement In Progress</h3>
                   <p className="text-white/60 text-xs mb-5 leading-relaxed font-sans">
-                    This photo is currently being processed by the OpenAI Neural Engine. Once finished, the interactive Before/After comparison slider will immediately become available.
+                    This photo is currently being enhanced. Once finished, the interactive Before/After comparison slider will immediately become available.
                   </p>
                   {onSingleEnhance && (
                     <button
@@ -238,10 +253,10 @@ export default function ComparisonModal({
         <div className="flex-shrink-0 p-3 bg-black/50 border-t border-white/[0.08] flex items-center justify-between text-xs text-white/60">
           <span className="text-[11px] flex items-center gap-2">
             <Sliders className="w-3.5 h-3.5 text-blue-400" />
-            Drag horizontal handle to compare • Switch modes in top bar • Preserves natural architecture & geometry
+            Drag horizontal handle to compare • Switch modes in top bar • Preserves natural architecture &amp; geometry
           </span>
-          <span className="font-mono text-[11px] text-blue-400 font-semibold hidden sm:inline">
-            A Squared Neural Studio
+          <span className="font-sans tabular-nums text-[11px] text-blue-400 font-semibold hidden sm:inline">
+            A Squared Image Studio
           </span>
         </div>
       </div>

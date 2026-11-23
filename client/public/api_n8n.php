@@ -1,10 +1,22 @@
 <?php
 // Hostinger Server-Side Live n8n Proxy & Telemetry Aggregator
-// Directly queries https://n8n.asquared.ae/rest/workflows and executions
-// Bypasses expired SSL certificate and caches auth session to avoid rate limits
+// Queries https://n8n.asquared.ae/rest/workflows and executions
+// Caches auth session & telemetry to avoid rate limits and handles offline fallbacks gracefully
 
 header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: *');
+
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+$allowedOrigins = [
+    'https://admin.asquared.ae',
+    'https://dashboard.asquared.ae',
+    'http://localhost:5173',
+    'http://localhost:3000'
+];
+if (in_array($origin, $allowedOrigins)) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    header("Access-Control-Allow-Origin: https://admin.asquared.ae");
+}
 header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
@@ -13,20 +25,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+date_default_timezone_set('Asia/Dubai');
+
 $n8nUrl = 'https://n8n.asquared.ae';
-$email = 'akarshrarora@gmail.com';
-$password = 'Asquared@1234';
+$email = getenv('N8N_USER') ?: (isset($_SERVER['N8N_USER']) ? $_SERVER['N8N_USER'] : 'akarshrarora@gmail.com');
+$password = getenv('N8N_PASSWORD') ?: (isset($_SERVER['N8N_PASSWORD']) ? $_SERVER['N8N_PASSWORD'] : 'Asquared@1234');
 
 $cacheDir = sys_get_temp_dir();
 $cookieFile = $cacheDir . '/n8n_session_asquared.txt';
 $cacheDataFile = $cacheDir . '/n8n_telemetry_cache.json';
 
-// Return 60-second cached telemetry if available
+// Return 60-second cached telemetry if available and valid
 if (file_exists($cacheDataFile) && (time() - filemtime($cacheDataFile) < 60) && !isset($_GET['refresh'])) {
     $cachedContent = file_get_contents($cacheDataFile);
     if ($cachedContent) {
-        echo $cachedContent;
-        exit;
+        $decoded = json_decode($cachedContent, true);
+        if (!empty($decoded['workflows'])) {
+            echo $cachedContent;
+            exit;
+        }
     }
 }
 
@@ -44,7 +61,8 @@ function getN8nCookie($n8nUrl, $email, $password, $cookieFile) {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
     curl_setopt($ch, CURLOPT_HEADER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Content-Type: application/json'
@@ -83,7 +101,8 @@ function makeN8nGet($url, $cookie) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Cookie: ' . $cookie,
         'Accept: application/json'
@@ -107,35 +126,82 @@ if (!$cookie) {
     $cookie = getN8nCookie($n8nUrl, $email, $password, $cookieFile);
 }
 
-if (!$cookie) {
-    http_response_code(500);
+// 1. Fetch Workflows
+$workflowsRes = $cookie ? makeN8nGet($n8nUrl . '/rest/workflows', $cookie) : false;
+$workflows = isset($workflowsRes['data']) ? $workflowsRes['data'] : [];
+
+// If upstream n8n fails or returns empty workflows, serve cached valid telemetry if available
+if (empty($workflows)) {
+    if (file_exists($cacheDataFile)) {
+        $cachedContent = file_get_contents($cacheDataFile);
+        if ($cachedContent) {
+            $cachedObj = json_decode($cachedContent, true);
+            if (!empty($cachedObj['workflows'])) {
+                $cachedObj['isStale'] = true;
+                $cachedObj['upstreamError'] = 'Upstream n8n server unreachable';
+                echo json_encode($cachedObj, JSON_PRETTY_PRINT);
+                exit;
+            }
+        }
+    }
+
+    // Try to read local public fallback
+    $localStatic = __DIR__ . '/n8n_telemetry.json';
+    if (file_exists($localStatic)) {
+        $staticContent = file_get_contents($localStatic);
+        if ($staticContent) {
+            $staticObj = json_decode($staticContent, true);
+            if (!empty($staticObj['workflows'])) {
+                $staticObj['isStale'] = true;
+                $staticObj['upstreamError'] = 'Upstream n8n server unreachable; showing static snapshot';
+                echo json_encode($staticObj, JSON_PRETTY_PRINT);
+                exit;
+            }
+        }
+    }
+
+    // Otherwise return error response
+    http_response_code(502);
     echo json_encode([
         'success' => false,
-        'error' => 'Unable to authenticate with n8n instance'
+        'error' => 'Unable to reach upstream n8n instance at https://n8n.asquared.ae',
+        'isStale' => true,
+        'workflows' => []
     ]);
     exit;
 }
-
-// 1. Fetch Workflows
-$workflowsRes = makeN8nGet($n8nUrl . '/rest/workflows', $cookie);
-$workflows = isset($workflowsRes['data']) ? $workflowsRes['data'] : [];
 
 // 2. Fetch Executions
 $executionsRes = makeN8nGet($n8nUrl . '/rest/executions?limit=250', $cookie);
 $executions = isset($executionsRes['data']['results']) ? $executionsRes['data']['results'] : [];
 
-// Aggregate executions for today (UTC / GST)
-$today = gmdate('Y-m-d');
+// Aggregate executions for today (Dubai GST)
+$todayDubai = date('Y-m-d');
 $statsByWorkflow = [];
 $totalExecutionsToday = 0;
 $totalErrorsToday = 0;
 $totalSuccessToday = 0;
+$allDurations = [];
 
 foreach ($executions as $ex) {
     $wid = isset($ex['workflowId']) ? $ex['workflowId'] : 'unknown';
-    $createdAt = isset($ex['createdAt']) ? $ex['createdAt'] : '';
+    $startedAt = isset($ex['startedAt']) ? $ex['startedAt'] : (isset($ex['createdAt']) ? $ex['createdAt'] : '');
+    $stoppedAt = isset($ex['stoppedAt']) ? $ex['stoppedAt'] : null;
     $status = isset($ex['status']) ? strtolower($ex['status']) : 'unknown';
-    $isToday = (strpos($createdAt, $today) === 0);
+
+    // Compute execution date in Dubai GST
+    $exDateDubai = !empty($startedAt) ? (new DateTime($startedAt))->setTimezone(new DateTimeZone('Asia/Dubai'))->format('Y-m-d') : '';
+    $isToday = ($exDateDubai === $todayDubai);
+
+    $durationSec = null;
+    if (!empty($startedAt) && !empty($stoppedAt)) {
+        $t1 = strtotime($startedAt);
+        $t2 = strtotime($stoppedAt);
+        if ($t2 >= $t1) {
+            $durationSec = round($t2 - $t1, 2);
+            $allDurations[] = $durationSec;
+        }
+    }
 
     if (!isset($statsByWorkflow[$wid])) {
         $statsByWorkflow[$wid] = [
@@ -145,7 +211,7 @@ foreach ($executions as $ex) {
             'runningToday' => 0,
             'durations' => [],
             'latestStatus' => $status,
-            'lastExecutedAt' => isset($ex['startedAt']) ? $ex['startedAt'] : $createdAt,
+            'lastExecutedAt' => $startedAt,
             'recentLogs' => []
         ];
     }
@@ -164,12 +230,18 @@ foreach ($executions as $ex) {
         }
     }
 
+    if ($durationSec !== null) {
+        $statsByWorkflow[$wid]['durations'][] = $durationSec;
+    }
+
     if (count($statsByWorkflow[$wid]['recentLogs']) < 5) {
         $statsByWorkflow[$wid]['recentLogs'][] = [
             'id' => isset($ex['id']) ? $ex['id'] : '',
             'status' => $status,
             'mode' => isset($ex['mode']) ? $ex['mode'] : 'trigger',
-            'startedAt' => isset($ex['startedAt']) ? $ex['startedAt'] : $createdAt
+            'startedAt' => $startedAt,
+            'stoppedAt' => $stoppedAt,
+            'durationSec' => $durationSec
         ];
     }
 }
@@ -190,6 +262,7 @@ foreach ($workflows as $w) {
         'successToday' => 0,
         'errorToday' => 0,
         'runningToday' => 0,
+        'durations' => [],
         'latestStatus' => 'idle',
         'lastExecutedAt' => null,
         'recentLogs' => []
@@ -206,7 +279,7 @@ foreach ($workflows as $w) {
         $healthStatus = 'healthy';
         $healthyCount++;
     } elseif ($isActive) {
-        $healthStatus = 'healthy'; // active and awaiting trigger
+        $healthStatus = 'healthy';
         $healthyCount++;
     } else {
         $healthStatus = 'paused';
@@ -244,9 +317,14 @@ usort($formattedWorkflows, function($a, $b) {
     return strcmp($a['name'], $b['name']);
 });
 
+$meanRuntimeSec = (!empty($allDurations)) 
+    ? round(array_sum($allDurations) / count($allDurations), 2)
+    : null;
+
 $result = [
     'success' => true,
     'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
+    'isStale' => false,
     'summary' => [
         'totalWorkflows' => count($workflows),
         'activeWorkflows' => $activeCount,
@@ -254,7 +332,8 @@ $result = [
         'errorWorkflows' => $errorCount,
         'totalExecutionsToday' => $totalExecutionsToday,
         'totalSuccessToday' => $totalSuccessToday,
-        'totalErrorsToday' => $totalErrorsToday
+        'totalErrorsToday' => $totalErrorsToday,
+        'avgRuntimeSec' => $meanRuntimeSec
     ],
     'workflows' => $formattedWorkflows
 ];

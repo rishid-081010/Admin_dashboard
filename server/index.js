@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import archiver from 'archiver';
+import sharp from 'sharp';
 import { fileURLToPath } from 'url';
 import { supabase } from './supabase.js';
 import { startBatchProcessing } from './batchProcessor.js';
@@ -1734,14 +1735,18 @@ app.get('/api/listings/:id/download-zip', async (req, res) => {
 
       if (!fs.existsSync(genAbsPath)) continue;
 
-      // Auto-formatted room name (e.g. 01_Living_Room.jpg)
+      // Auto-formatted room name in lossless PNG format
       const orderPrefix = String(idx + 1).padStart(2, '0');
       const roomType = meta.roomTypes?.[img.id] || img.room_type || 'Property_Photo';
       const cleanRoom = roomType.replace(/[^a-zA-Z0-9_]/g, '_');
-      const ext = path.extname(genAbsPath) || '.jpg';
-      const filename = `${orderPrefix}_${cleanRoom}${ext}`;
+      const filename = `${orderPrefix}_${cleanRoom}.png`;
 
-      archive.file(genAbsPath, { name: filename });
+      try {
+        const pngBuf = await sharp(genAbsPath).png({ compressionLevel: 6 }).toBuffer();
+        archive.append(pngBuf, { name: filename });
+      } catch (sharpErr) {
+        archive.file(genAbsPath, { name: filename });
+      }
     }
 
     await archive.finalize();
@@ -2068,18 +2073,23 @@ KYC Verification Status: ${meta.kycResult?.status || 'VERIFIED_MATCH'}
       });
     }
 
-    completedImages.forEach((img, idx) => {
+    for (let idx = 0; idx < completedImages.length; idx++) {
+      const img = completedImages[idx];
       const genRelPath = img.generated_image_location;
       const genAbsPath = path.join(__dirname, genRelPath.replace(/^\//, ''));
       if (fs.existsSync(genAbsPath)) {
         const orderPrefix = String(idx + 1).padStart(2, '0');
         const roomType = meta.roomTypes?.[img.id] || img.room_type || 'Property_Photo';
         const cleanRoom = roomType.replace(/[^a-zA-Z0-9_]/g, '_');
-        const ext = path.extname(genAbsPath) || '.jpg';
-        const filename = `${orderPrefix}_${cleanRoom}${ext}`;
-        archive.file(genAbsPath, { name: `02_Enhanced_Property_Photos/${filename}` });
+        const filename = `${orderPrefix}_${cleanRoom}.png`;
+        try {
+          const pngBuf = await sharp(genAbsPath).png({ compressionLevel: 6 }).toBuffer();
+          archive.append(pngBuf, { name: `02_Enhanced_Property_Photos/${filename}` });
+        } catch (sharpErr) {
+          archive.file(genAbsPath, { name: `02_Enhanced_Property_Photos/${filename}` });
+        }
       }
-    });
+    }
 
     await archive.finalize();
   } catch (err) {

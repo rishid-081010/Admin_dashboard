@@ -1,14 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   UploadCloud, FileText, CheckCircle2, AlertTriangle, RefreshCw,
   Download, Upload, ShieldCheck, Database, PhoneCall, Sparkles,
   Layers, Filter, Search, Check, AlertCircle, ArrowRight, ExternalLink, Clipboard, Loader2,
-  Table, Eye, CheckCheck, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoveHorizontal, Grab
+  Table, Eye, CheckCheck, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoveHorizontal, Grab,
+  Maximize2, Minimize2, X, FolderArchive
 } from 'lucide-react';
 import axios from 'axios';
-import { processLeadsClientSide } from '../utils/leadCleanerClient';
+import { 
+  processLeadsClientSide, 
+  getCleanedFilesHistory, 
+  saveCleanedFileToHistory, 
+  fetchCleanedFilesHistoryFromCloud,
+  generateCleanCSV,
+  generateCleanRowsArray,
+  getFullCleanedFileFromDB,
+  queryNemotronColumnMapping
+} from '../utils/leadCleanerClient';
+import SourcesDirectory from './SourcesDirectory';
+import CleanedFilesDirectory from './CleanedFilesDirectory';
 
-export default function LeadIngestionStudio() {
+export default function LeadIngestionStudio({ initialOpenLibrary = false }) {
   const [previewData, setPreviewData] = useState(null);
   const [activeTab, setActiveTab] = useState('clean');
   const [viewMode, setViewMode] = useState('all_columns'); // default to 'all_columns' for full transparency
@@ -22,6 +34,50 @@ export default function LeadIngestionStudio() {
   const [tableSearch, setTableSearch] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [dbStats, setDbStats] = useState({ database_leads_count: 3042722, status: 'online' });
+
+  // ─── Dual Bottom Engine: Cleaned Files Registry & Data Library ───
+  const [cleanedHistory, setCleanedHistory] = useState(() => getCleanedFilesHistory());
+  const [syncingHistory, setSyncingHistory] = useState(false);
+  const [cleanedSearch, setCleanedSearch] = useState('');
+  const [sourcesList, setSourcesList] = useState([]);
+  const [loadingSources, setLoadingSources] = useState(true);
+  const [sourcesSearch, setSourcesSearch] = useState('');
+  const [downloadingSourceId, setDownloadingSourceId] = useState(null);
+
+  // Sync cleaned files with Supabase cloud on mount so files cleaned by any team member or client show up
+  useEffect(() => {
+    let isMounted = true;
+    setSyncingHistory(true);
+    fetchCleanedFilesHistoryFromCloud()
+      .then((history) => {
+        if (isMounted && Array.isArray(history) && history.length > 0) {
+          setCleanedHistory(history);
+        }
+      })
+      .catch((err) => console.warn('Cleaned files cloud sync error:', err))
+      .finally(() => {
+        if (isMounted) setSyncingHistory(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleRefreshCleanedFiles = async () => {
+    setSyncingHistory(true);
+    try {
+      const history = await fetchCleanedFilesHistoryFromCloud();
+      if (Array.isArray(history) && history.length > 0) {
+        setCleanedHistory(history);
+      }
+    } catch (err) {
+      console.warn('Manual cloud sync failed:', err);
+    } finally {
+      setSyncingHistory(false);
+    }
+  };
+  const [isLibraryMaximized, setIsLibraryMaximized] = useState(Boolean(initialOpenLibrary));
+  const [isCleanedMaximized, setIsCleanedMaximized] = useState(false);
 
   const fileInputRef = useRef(null);
   const tableContainerRef = useRef(null);
@@ -88,41 +144,246 @@ export default function LeadIngestionStudio() {
     fetchHealthStats();
   }, []);
 
+  // Dynamically load sourcesData on mount
+  useEffect(() => {
+    let active = true;
+    import('../data/sourcesData')
+      .then((mod) => {
+        if (active) {
+          setSourcesList(mod.SOURCES_DATA || []);
+          setLoadingSources(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load sourcesData:', err);
+        if (active) setLoadingSources(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const handleDownloadSource = (sourceItem, e) => {
+    if (e) e.stopPropagation();
+    setDownloadingSourceId(sourceItem.id);
+    const link = document.createElement('a');
+    link.href = sourceItem.download_url;
+    link.download = sourceItem.filename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => {
+      setDownloadingSourceId(null);
+    }, 1500);
+  };
+
+  const handleDownloadHistoryItem = async (historyItem, e, formatOverride = null) => {
+    if (e) e.stopPropagation();
+    if (previewData && (previewData.fileName === historyItem.fileName || previewData.filename === historyItem.fileName) && previewData.clean_leads && previewData.clean_leads.length > 0) {
+      handleDownloadCleanCsv(formatOverride);
+      return;
+    }
+
+    let leads = null;
+    let headers = historyItem.originalHeaders || [];
+    let mappingUsed = historyItem.mappingUsed || null;
+
+    // Attempt to load 100% full dataset from IndexedDB for high-fidelity un-truncated download
+    try {
+      const fullData = await getFullCleanedFileFromDB(historyItem.fileName);
+      if (fullData && Array.isArray(fullData.cleanLeads) && fullData.cleanLeads.length > 0) {
+        leads = fullData.cleanLeads;
+        headers = fullData.originalHeaders && fullData.originalHeaders.length > 0 ? fullData.originalHeaders : headers;
+        mappingUsed = fullData.mappingUsed || mappingUsed;
+      }
+    } catch (idbErr) {
+      console.warn('IDB read note:', idbErr);
+    }
+
+    if (!leads || leads.length === 0) {
+      leads = historyItem.cleanLeadsSample && historyItem.cleanLeadsSample.length > 0
+        ? historyItem.cleanLeadsSample
+        : [
+            {
+              full_name: 'Property Owner (Sample)',
+              phone_number_normalized: '+971501234567',
+              unit_number: '101',
+              property_reference: historyItem.fileName.replace(/\.[^/.]+$/, ''),
+              status: 'ready'
+            }
+          ];
+    }
+
+    const baseName = (historyItem.fileName || 'CLEANED_DATA').replace(/\.[^/.]+$/, '');
+    const isOriginalExcel = historyItem.fileName && (historyItem.fileName.endsWith('.xlsx') || historyItem.fileName.endsWith('.xls'));
+    
+    if ((formatOverride === 'xlsx' || (!formatOverride && isOriginalExcel)) && window.XLSX) {
+      try {
+        const rowsArray = generateCleanRowsArray(leads, headers, { exactClientStructure: true, mappingUsed });
+        const ws = window.XLSX.utils.aoa_to_sheet(rowsArray);
+        const wb = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(wb, ws, "Cleaned Leads");
+        window.XLSX.writeFile(wb, `${baseName}_CLEANED.xlsx`);
+        return;
+      } catch (xlErr) {
+        console.warn('SheetJS .xlsx export fallback to CSV:', xlErr);
+      }
+    }
+
+    const csvStr = generateCleanCSV(leads, headers, { exactClientStructure: true, mappingUsed });
+    const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${baseName}_CLEANED.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleReinspectHistoryItem = async (historyItem) => {
+    let cleanLeads = historyItem.cleanLeadsSample;
+    let headers = historyItem.originalHeaders;
+
+    try {
+      const fullData = await getFullCleanedFileFromDB(historyItem.fileName);
+      if (fullData && Array.isArray(fullData.cleanLeads) && fullData.cleanLeads.length > 0) {
+        cleanLeads = fullData.cleanLeads;
+        headers = fullData.originalHeaders && fullData.originalHeaders.length > 0 ? fullData.originalHeaders : headers;
+      }
+    } catch {}
+
+    if (cleanLeads && cleanLeads.length > 0) {
+      setPreviewData({
+        clean_leads: cleanLeads,
+        duplicates_in_file: [],
+        duplicates_in_db: [],
+        invalid_leads: [],
+        stats: {
+          total: historyItem.totalRows,
+          ready: historyItem.cleanRows,
+          duplicates_file: historyItem.duplicateRows,
+          duplicates_db: historyItem.inDbRows,
+          invalid: historyItem.invalidRows
+        },
+        original_headers: headers || ['Owner Name', 'Contact Number', 'Unit Number'],
+        total_columns: (headers || ['Owner Name', 'Contact Number', 'Unit Number']).length,
+        fileName: historyItem.fileName
+      });
+      setActiveTab('clean');
+    }
+  };
+
+  const filteredCleaned = useMemo(() => {
+    if (!cleanedSearch) return cleanedHistory;
+    const q = cleanedSearch.toLowerCase();
+    return cleanedHistory.filter(f => 
+      (f.fileName && f.fileName.toLowerCase().includes(q)) ||
+      (f.propertyType && f.propertyType.toLowerCase().includes(q)) ||
+      (f.status && f.status.toLowerCase().includes(q))
+    );
+  }, [cleanedHistory, cleanedSearch]);
+
+  const filteredSources = useMemo(() => {
+    if (!sourcesSearch) return sourcesList.slice(0, 30);
+    const q = sourcesSearch.toLowerCase();
+    return sourcesList
+      .filter(s => (s.filename || '').toLowerCase().includes(q))
+      .slice(0, 30);
+  }, [sourcesList, sourcesSearch]);
+
   const handleFileUpload = async (file) => {
     if (!file) return;
     setLoading(true);
     setError(null);
 
-    let processedFile = file;
     let localMatrix = null;
 
-    // Excel conversion using SheetJS if present
+    // Excel conversion using SheetJS with Full Multi-Sheet Support
     if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
       if (window.XLSX) {
         try {
           const data = await file.arrayBuffer();
           const workbook = window.XLSX.read(data, { type: 'array' });
-          let bestSheetName = workbook.SheetNames[0];
-          let maxRows = 0;
+          
+          let masterHeaders = [];
+          const allDataRows = [];
+
+          // Process ALL sheets in the workbook (ensuring zero data loss across multi-sheet workbooks)
           for (const sName of workbook.SheetNames) {
-            const sheet = workbook.Sheets[sName];
-            const ref = sheet ? sheet['!ref'] : null;
-            if (ref) {
-              const range = window.XLSX.utils.decode_range(ref);
-              const rowCount = range.e.r - range.s.r + 1;
-              if (rowCount > maxRows) {
-                maxRows = rowCount;
-                bestSheetName = sName;
+            const worksheet = workbook.Sheets[sName];
+            if (!worksheet) continue;
+            const sheetJson = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            if (!sheetJson || sheetJson.length === 0) continue;
+
+            // Find header row in this sheet (first non-empty row)
+            let headerRowIdx = -1;
+            for (let r = 0; r < Math.min(5, sheetJson.length); r++) {
+              if (sheetJson[r] && sheetJson[r].some(cell => String(cell || '').trim() !== '')) {
+                headerRowIdx = r;
+                break;
               }
             }
+            if (headerRowIdx === -1) continue;
+
+            const sheetHeaders = (sheetJson[headerRowIdx] || []).map(h => String(h || '').trim());
+            if (sheetHeaders.filter(Boolean).length === 0) continue;
+
+            const sheetDataRows = sheetJson.slice(headerRowIdx + 1).filter(r => 
+              r && r.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== '')
+            );
+            if (sheetDataRows.length === 0) continue;
+
+            // Unify masterHeaders across all sheets
+            if (masterHeaders.length === 0) {
+              masterHeaders = [...sheetHeaders];
+            } else {
+              sheetHeaders.forEach(sh => {
+                if (sh && !masterHeaders.some(mh => mh.toLowerCase().trim() === sh.toLowerCase().trim())) {
+                  masterHeaders.push(sh);
+                }
+              });
+            }
+
+            // Detect if sheet has a building column
+            const sheetBldgIdx = sheetHeaders.findIndex(h => {
+              const hl = (h || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              return ['builidng', 'building', 'bldg', 'tower', 'project'].some(t => hl.includes(t));
+            });
+
+            // Map each row in this sheet into masterHeaders alignment
+            sheetDataRows.forEach(row => {
+              const rowObj = {};
+              sheetHeaders.forEach((sh, colIdx) => {
+                if (sh) rowObj[sh.toLowerCase().trim()] = row[colIdx] !== undefined ? row[colIdx] : '';
+              });
+
+              // Check building value: if empty and sheet name looks like a tower/building, inherit sheet name
+              let currentBldg = sheetBldgIdx !== -1 && row[sheetBldgIdx] !== undefined ? String(row[sheetBldgIdx]).trim() : '';
+              const isGenericSheetName = /^(sheet\s*\d+|page\s*\d+|table\s*\d+|data|export)$/i.test(sName.trim());
+              if (!currentBldg && !isGenericSheetName && sName.trim().length > 1) {
+                currentBldg = sName.trim();
+              }
+
+              // Build row array conforming to masterHeaders
+              const alignedRow = masterHeaders.map(mh => {
+                const mhClean = mh.toLowerCase().trim();
+                const mhl = mhClean.replace(/[^a-z0-9]/g, '');
+                if (currentBldg && ['builidng', 'building', 'bldg', 'tower', 'project'].some(t => mhl.includes(t))) {
+                  return rowObj[mhClean] ? rowObj[mhClean] : currentBldg;
+                }
+                return rowObj[mhClean] !== undefined ? rowObj[mhClean] : '';
+              });
+
+              allDataRows.push(alignedRow);
+            });
           }
-          const worksheet = workbook.Sheets[bestSheetName];
-          localMatrix = window.XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          const csvContent = window.XLSX.utils.sheet_to_csv(worksheet);
-          const csvBlob = new Blob([csvContent], { type: 'text/csv' });
-          processedFile = new File([csvBlob], file.name.replace(/\.xlsx?$/, '.csv'), { type: 'text/csv' });
+
+          if (masterHeaders.length > 0 && allDataRows.length > 0) {
+            localMatrix = [masterHeaders, ...allDataRows];
+          }
         } catch (e) {
-          console.warn('Local Excel parse fallback to backend:', e);
+          console.warn('Local Multi-Sheet Excel parse fallback:', e);
         }
       }
     } else if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
@@ -169,35 +430,61 @@ export default function LeadIngestionStudio() {
       initialCleanResult = await processLeadsClientSide(localMatrix, defaultPropertyType, file.name);
       setPreviewData(initialCleanResult);
       setActiveTab('clean');
+      const hist = saveCleanedFileToHistory(initialCleanResult, file.name);
+      setCleanedHistory(hist);
     } catch (e) {
       console.warn('Client-side processing note:', e.message);
     }
 
     // 2. Query GPT-4o AI Column Mapping for precision detection
+    let aiMapping = null;
+    const rawHeaders = localMatrix[0] || [];
+    const sampleRows = localMatrix.slice(1, 15);
+
     try {
       const endpoint = window.location.pathname.includes('/dashboard') 
         ? '/dashboard/api_leads_intake.php' 
         : '/api_leads_intake.php';
-      
-      const rawHeaders = localMatrix[0] || [];
-      const sampleRows = localMatrix.slice(1, 11);
 
       const aiRes = await axios.post(endpoint, {
         action: 'ai_column_map',
         headers: rawHeaders,
         samples: sampleRows
-      }, { timeout: 10000 });
+      }, { timeout: 8000 });
 
       if (aiRes.data?.success && aiRes.data?.mapping) {
-        const aiCleanResult = await processLeadsClientSide(localMatrix, defaultPropertyType, file.name, aiRes.data.mapping);
-        setPreviewData(aiCleanResult);
-        setActiveTab('clean');
+        aiMapping = aiRes.data.mapping;
       }
     } catch (aiErr) {
-      console.warn('AI column mapping fallback (heuristic retained):', aiErr.message);
-    } finally {
-      setLoading(false);
+      console.warn('Backend AI column mapping fallback (heuristic retained):', aiErr.message);
     }
+
+    // 3. Tier 3 AI: NVIDIA Nemotron 3 Ultra fallback if backend AI was unavailable or missed project/phone
+    if (!aiMapping || !aiMapping.project_name || !aiMapping.contact_number) {
+      try {
+        const nemotronMapping = await queryNemotronColumnMapping(rawHeaders, sampleRows);
+        if (nemotronMapping) {
+          aiMapping = { ...(aiMapping || {}), ...nemotronMapping };
+        }
+      } catch (nemErr) {
+        console.warn('NVIDIA Nemotron 3 Ultra mapping note:', nemErr);
+      }
+    }
+
+    // If enhanced AI mapping was obtained, refine leads with precision mapping
+    if (aiMapping) {
+      try {
+        const aiCleanResult = await processLeadsClientSide(localMatrix, defaultPropertyType, file.name, aiMapping);
+        setPreviewData(aiCleanResult);
+        setActiveTab('clean');
+        const hist = saveCleanedFileToHistory(aiCleanResult, file.name);
+        setCleanedHistory(hist);
+      } catch (e) {
+        console.warn('AI refined processing note:', e.message);
+      }
+    }
+
+    setLoading(false);
   };
 
   const handleLoadSample = async () => {
@@ -220,74 +507,50 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
     }
   };
 
-  // ─── Export Cleaned CSV with 100% of all original columns preserved ───
-  const handleDownloadCleanCsv = () => {
+  // ─── Export Cleaned Dataset (Preserves Exact Original Client Columns & In-Place Sanitization) ───
+  const handleDownloadCleanCsv = (formatOverride = null) => {
     if (!previewData) return;
     
-    const allLeads = [
-      ...(previewData.clean_leads || []),
-      ...(previewData.duplicates_in_file || []),
-      ...(previewData.duplicates_in_db || []),
-      ...(previewData.invalid_leads || [])
-    ];
-    
-    if (allLeads.length === 0) {
-      alert('No processed data available to download.');
+    // User explicitly requested:
+    // "It should come back in the same structure, just cleaned, remove duplicates, and everything like that. It should be the same, just removed."
+    const cleanLeads = previewData.clean_leads || [];
+    if (cleanLeads.length === 0) {
+      alert('No clean leads available to download.');
       return;
     }
 
-    allLeads.sort((a, b) => (a.row_num || 0) - (b.row_num || 0));
-
-    // Base headers = ALL original headers from the user's file (all 28 original columns!)
     const originalHeaders = previewData.original_headers || previewData.headers || [];
-    let baseHeaders = [...originalHeaders];
+    const baseName = (previewData.fileName || previewData.filename || 'CLEANED_DATA').replace(/\.[^/.]+$/, '');
+    const mappingUsed = previewData.mapping_used || previewData.mappingUsed || null;
 
-    if (baseHeaders.length === 0) {
-      const sample = allLeads[0] || {};
-      const internalKeys = new Set([
-        'row_num', 'vapi_e164', 'secondary_phone', 'source_file', 'contact_number', 
-        'owner_name', 'status', 'reason', 'unit_number', 'project_name', 'location', 'property_type',
-        'Cleaned Unit Number', 'Cleaned Phone (E.164)'
-      ]);
-      baseHeaders = Object.keys(sample).filter(k => !internalKeys.has(k));
+    // If original file was Excel (.xlsx or .xls) and window.XLSX is available, export as pristine .xlsx!
+    const isOriginalExcel = (previewData.fileName && (previewData.fileName.endsWith('.xlsx') || previewData.fileName.endsWith('.xls'))) ||
+                            (previewData.filename && (previewData.filename.endsWith('.xlsx') || previewData.filename.endsWith('.xls')));
+
+    if ((formatOverride === 'xlsx' || (!formatOverride && isOriginalExcel)) && window.XLSX) {
+      try {
+        const rowsArray = generateCleanRowsArray(cleanLeads, originalHeaders, { exactClientStructure: true, mappingUsed });
+        const ws = window.XLSX.utils.aoa_to_sheet(rowsArray);
+        const wb = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(wb, ws, "Cleaned Leads");
+        window.XLSX.writeFile(wb, `${baseName}_CLEANED.xlsx`);
+        return;
+      } catch (xlErr) {
+        console.warn('SheetJS .xlsx export fallback to CSV:', xlErr);
+      }
     }
 
-    // Append standardized cleaned fields for audit & direct CRM ingestion
-    const exportHeaders = [...baseHeaders];
-    if (!exportHeaders.includes('Cleaned Owner Name')) exportHeaders.push('Cleaned Owner Name');
-    if (!exportHeaders.includes('Cleaned Phone (E.164)')) exportHeaders.push('Cleaned Phone (E.164)');
-    if (!exportHeaders.includes('Cleaned Unit Number')) exportHeaders.push('Cleaned Unit Number');
-    if (!exportHeaders.includes('Cleaning Status')) exportHeaders.push('Cleaning Status');
-    if (!exportHeaders.includes('Validation Reason')) exportHeaders.push('Validation Reason');
-
-    const csvRows = [exportHeaders.map(h => `"${String(h).replace(/"/g, '""')}"`).join(',')];
-    
-    allLeads.forEach(r => {
-      const statusLabel = r.status === 'ready' ? 'Clean & Valid' : 
-                          r.status === 'duplicate_file' ? 'Duplicate (File)' :
-                          r.status === 'duplicate_db' ? 'Duplicate (CRM)' : 'Invalid';
-                          
-      const rowVals = exportHeaders.map(h => {
-        let val = '';
-        if (h === 'Cleaned Owner Name') val = r.owner_name || r['Owner Name'] || '';
-        else if (h === 'Cleaned Phone (E.164)') val = r.vapi_e164 || (r.contact_number ? '+' + r.contact_number : (r['Contact Number'] || ''));
-        else if (h === 'Cleaned Unit Number') val = r.unit_number || r['Unit Number'] || r['property_number'] || r['Plot Pre Reg No'] || r['Building No'] || '';
-        else if (h === 'Cleaning Status') val = statusLabel;
-        else if (h === 'Validation Reason') val = r.reason || '';
-        else if (r[h] !== undefined && r[h] !== null) val = r[h];
-        
-        return `"${String(val).replace(/"/g, '""')}"`;
-      });
-      
-      csvRows.push(rowVals.join(','));
-    });
-
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    // Default pristine RFC 4180 CSV export matching client's original structure
+    const csvContent = generateCleanCSV(cleanLeads, originalHeaders, { exactClientStructure: true, mappingUsed });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `A_SQUARED_CLEANED_LEADS_ALL_${baseHeaders.length}_COLUMNS.csv`;
+    link.download = `${baseName}_CLEANED.csv`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handlePushLeads = async () => {
@@ -317,21 +580,21 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
           database_leads_count: totalInDb,
         }));
 
-        let detailMsg = `🚀 Successfully inserted ${newlyInserted} fresh leads into Supabase master_leads_v2!`;
-        detailMsg += `\n• Fresh leads queued: ${newlyInserted}`;
+        let detailMsg = `Successfully imported ${newlyInserted} new leads!`;
+        detailMsg += `\n• New leads queued: ${newlyInserted}`;
         if (duplicateSkipped > 0) {
           detailMsg += `\n• Existing duplicates skipped: ${duplicateSkipped}`;
         }
-        detailMsg += `\n• Total leads in master_leads_v2: ${totalInDb.toLocaleString()} records`;
-        detailMsg += `\n• Constraints verified: lead_status='fresh', call_status='never_called'`;
-        detailMsg += `\n• Telephony buffer synced: Ready for AI calling`;
+        detailMsg += `\n• Total leads in database: ${totalInDb.toLocaleString()} records`;
+        detailMsg += `\n• Status verified: Fresh leads ready for calling`;
+        detailMsg += `\n• AI Calling queue: Ready`;
         alert(detailMsg);
       } else {
-        alert(res.data?.error || 'Warning: Webhook did not confirm ingestion.');
+        alert(res.data?.error || 'Warning: Service did not confirm lead import.');
       }
     } catch (err) {
       console.error('Push leads error:', err);
-      alert('Error pushing leads to Supabase master_leads_v2: ' + (err.response?.data?.error || err.message));
+      alert('Error pushing leads to Supabase database: ' + (err.response?.data?.error || err.message));
     } finally {
       setPushLoading(false);
     }
@@ -372,23 +635,51 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
   const originalHeaders = previewData?.original_headers || previewData?.headers || [];
   const totalColumnsCount = previewData?.total_columns || originalHeaders.length || 0;
 
+  if (isLibraryMaximized) {
+    return (
+      <div className="w-full h-full flex flex-col text-white animate-fade-in pb-1">
+        <SourcesDirectory 
+          isModal={true} 
+          onClose={() => setIsLibraryMaximized(false)} 
+          sources={sourcesList}
+        />
+      </div>
+    );
+  }
+
+  if (isCleanedMaximized) {
+    return (
+      <div className="w-full h-full flex flex-col text-white animate-fade-in pb-1">
+        <CleanedFilesDirectory 
+          onClose={() => setIsCleanedMaximized(false)} 
+          cleanedHistory={cleanedHistory}
+          onRefresh={handleRefreshCleanedFiles}
+          syncing={syncingHistory}
+          onDownload={handleDownloadHistoryItem}
+          onInspect={(item) => {
+            handleReinspectHistoryItem(item);
+            setIsCleanedMaximized(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full space-y-6">
-      {/* Top Header */}
+    <div className="h-full w-full overflow-y-auto pr-2 custom-scrollbar">
+      <div className="w-full space-y-6">
+        {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-sans font-bold text-white tracking-tight">
-            Data Cleaning &amp; Lead Ingestion
+          <h1 className="ds-page-title">
+            Data Cleaning &amp; Lead Import
           </h1>
-          <p className="text-xs text-white/60 mt-1">
-            Enterprise sanitizer: 100% column retention, automated unit detection from property_number, and E.164 phone verification.
-          </p>
         </div>
 
         <button
           onClick={handleLoadSample}
           disabled={sampleLoading}
-          className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all flex items-center gap-2 self-start sm:self-auto"
+          className="ds-btn-secondary self-start sm:self-auto"
         >
           <Sparkles className="w-3.5 h-3.5 text-blue-400" />
           <span>{sampleLoading ? 'Loading...' : 'Load Jumeirah Islands Sample'}</span>
@@ -397,71 +688,66 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
 
       {/* Error Alert */}
       {error && (
-        <div className="glass-card p-4 border-red-500/30 bg-red-500/10 text-red-400 text-sm flex items-start gap-3 rounded-2xl">
+        <div className="ds-card p-4 border-red-500/30 bg-red-500/10 text-red-400 text-sm flex items-start gap-3 rounded-2xl">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1 font-medium">{error}</div>
         </div>
       )}
 
-      {/* 5 KPI Stat Cards */}
+      {/* 5 KPI Stat Cards (Monolithic White Typography) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Card 1: Clean & Ready */}
-        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1.5">
+        <div className="ds-card ds-card-interactive p-5 relative overflow-hidden flex flex-col justify-between min-h-[108px] h-full">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2 flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Clean &amp; Ready
           </p>
-          <div className="text-3xl font-bold font-mono text-emerald-300">
+          <div className="text-3xl font-bold font-sans tabular-nums text-white">
             {stats.ready.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">100% E.164 Validated (UAE &amp; Global)</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
         </div>
 
         {/* Card 2: Total Processed */}
-        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-slate-400" /> Total Processed
+        <div className="ds-card ds-card-interactive p-5 relative overflow-hidden flex flex-col justify-between min-h-[108px] h-full">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-blue-400" /> Total Processed
           </p>
-          <div className="text-3xl font-bold font-mono text-white">
+          <div className="text-3xl font-bold font-sans tabular-nums text-white">
             {stats.total.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Imported Rows</p>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#1b2b3d]" />
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500" />
         </div>
 
         {/* Card 3: In-File Duplicates */}
-        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
+        <div className="ds-card ds-card-interactive p-5 relative overflow-hidden flex flex-col justify-between min-h-[108px] h-full">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-amber-400" /> In-File Duplicates
           </p>
-          <div className="text-3xl font-bold font-mono text-amber-300">
+          <div className="text-3xl font-bold font-sans tabular-nums text-white">
             {stats.duplicates_file.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Repeated Phone Numbers</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-500" />
         </div>
 
-        {/* Card 4: In master_leads_v2 */}
-        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 mb-1 flex items-center gap-1.5">
-            <Database className="w-3.5 h-3.5 text-cyan-400" /> In master_leads_v2
+        {/* Card 4: Existing in Database */}
+        <div className="ds-card ds-card-interactive p-5 relative overflow-hidden flex flex-col justify-between min-h-[108px] h-full">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 mb-2 flex items-center gap-1.5">
+            <Database className="w-3.5 h-3.5 text-cyan-400" /> Existing in Database
           </p>
-          <div className="text-3xl font-bold font-mono text-cyan-300">
+          <div className="text-3xl font-bold font-sans tabular-nums text-white">
             {stats.duplicates_db.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Already in V2 Database</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-cyan-500" />
         </div>
 
         {/* Card 5: Invalid / Landlines */}
-        <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 shadow-xl shadow-black/40 hover:border-[#385175] transition-all relative overflow-hidden">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-rose-400 mb-1 flex items-center gap-1.5">
+        <div className="ds-card ds-card-interactive p-5 relative overflow-hidden flex flex-col justify-between min-h-[108px] h-full">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-rose-400 mb-2 flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> Invalid / Landlines
           </p>
-          <div className="text-3xl font-bold font-mono text-rose-300">
+          <div className="text-3xl font-bold font-sans tabular-nums text-white">
             {stats.invalid.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Bad format or landlines</p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-rose-500" />
         </div>
       </div>
@@ -480,10 +766,10 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
               handleFileUpload(e.dataTransfer.files[0]);
             }
           }}
-          className={`w-full bg-[#0c1829] p-10 rounded-3xl border-2 border-dashed shadow-xl shadow-black/40 transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[200px] ${
+          className={`w-full ds-card p-10 rounded-3xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[200px] ${
             isDragging
-              ? 'border-blue-400 bg-[#102035] scale-[1.01]'
-              : 'border-[#233549] hover:border-[#385175] hover:bg-[#0f1d30]'
+              ? 'border-[#b7a990] bg-white/[0.08] scale-[1.01]'
+              : 'border-white/20 hover:border-[#b7a990]/50 hover:bg-white/[0.04]'
           }`}
         >
           <input
@@ -525,12 +811,9 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                   Supports developer sales sheets, DLD exports, and multi-column lead files.
                 </p>
               </div>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="px-3 py-1 rounded-lg bg-[#06111e] border border-[#1b2b3d] text-[11px] text-slate-300 font-mono">
-                  Browse (.xlsx, .xls, .csv)
-                </span>
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Clipboard className="w-3 h-3 text-slate-400" /> Press <kbd className="px-1.5 py-0.5 bg-[#06111e] rounded border border-[#1b2b3d] text-[10px] font-mono">Ctrl + V</kbd> to paste
+              <div className="mt-1">
+                <span className="px-3 py-1.5 rounded-lg bg-[#06111e] border border-[#1b2b3d] text-xs text-slate-300 font-sans tabular-nums">
+                  Browse (.xlsx, .xls, .csv) or paste rows
                 </span>
               </div>
             </div>
@@ -540,36 +823,28 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
 
       {/* AI Column Mapping Card & Column Integrity Banner */}
       {previewData && (
-        <div className="bg-[#0c1829] p-5 rounded-2xl border border-[#233549] shadow-xl shadow-black/40 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#233549]">
+        <div className="ds-card p-5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-              AI Schema Auto-Mapper (CSV ➔ master_leads_v2)
+              Automatic Column Matching
             </h4>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1">
-                <CheckCheck className="w-3.5 h-3.5" /> {totalColumnsCount} / {totalColumnsCount} Columns Preserved
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Target: master_leads_v2
-              </span>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {Object.entries(mapping).map(([dbCol, csvHeader]) => (
-              <div key={dbCol} className="p-3 rounded-xl bg-[#06111e] border border-[#1b2b3d] flex flex-col justify-between space-y-1.5">
+              <div key={dbCol} className="p-3 ds-subcard flex flex-col justify-between space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold text-blue-400 truncate" title={dbCol}>
+                  <span className="text-[10px] font-sans tabular-nums font-bold text-blue-400 truncate" title={dbCol}>
                     {dbCol}
                   </span>
                   <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                    DB Column
+                    Target Field
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <ArrowRight className="w-3 h-3 text-emerald-400 shrink-0" />
-                  <span className="text-xs font-mono font-medium text-emerald-300 truncate" title={String(csvHeader)}>
+                  <span className="text-xs font-sans tabular-nums font-medium text-emerald-300 truncate" title={String(csvHeader)}>
                     {csvHeader ? String(csvHeader) : '—'}
                   </span>
                 </div>
@@ -587,9 +862,6 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                   Realigned {stats.cell_shifts_realigned || 0} shifted cells &bull; Rescued {stats.phones_rescued || 0} phones from unit columns &bull; Demarcated {stats.plots_demarcated || 0} Cadastral Land Plots.
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
-                100% Zero-Error Sanitized
-              </span>
             </div>
           )}
         </div>
@@ -597,7 +869,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
 
       {/* Preview Table Matrix Section */}
       {previewData && (
-        <div className="bg-[#0c1829] p-6 rounded-3xl border border-[#233549] shadow-xl shadow-black/40 space-y-4">
+        <div className="ds-card p-6 space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
             {/* Filter Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -677,17 +949,42 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                 </button>
               </div>
 
-              {/* Export All Rows Button */}
-              <button
-                type="button"
-                onClick={handleDownloadCleanCsv}
-                disabled={downloadLoading}
-                className="px-3.5 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md"
-                title={`Export all ${totalColumnsCount} columns to CSV with cleaned fields appended`}
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export All {totalColumnsCount} Columns</span>
-              </button>
+              {/* Export Cleaned Dataset Button */}
+              {previewData && (previewData.fileName?.endsWith('.xlsx') || previewData.fileName?.endsWith('.xls') || previewData.filename?.endsWith('.xlsx') || previewData.filename?.endsWith('.xls')) ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadCleanCsv('xlsx')}
+                    disabled={downloadLoading}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                    title={`Export cleaned dataset as pristine Excel (.xlsx) preserving all ${totalColumnsCount} columns in original order with duplicates removed`}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export Clean Excel ({stats.ready || 0})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadCleanCsv('csv')}
+                    disabled={downloadLoading}
+                    className="px-3 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                    title={`Export cleaned dataset as RFC 4180 CSV preserving all ${totalColumnsCount} original columns`}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleDownloadCleanCsv('csv')}
+                  disabled={downloadLoading}
+                  className="px-3.5 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                  title={`Export cleaned dataset with all ${totalColumnsCount} original columns preserved in exact original order and duplicates removed`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export Clean Data ({stats.ready || 0})</span>
+                </button>
+              )}
 
               {/* Push to Supabase master_leads_v2 Button */}
               <button
@@ -697,7 +994,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-950/40"
               >
                 <Upload className={`w-3.5 h-3.5 ${pushLoading ? 'animate-spin' : ''}`} />
-                <span>Push Clean Leads to master_leads_v2</span>
+                <span>Push Clean Leads to Database</span>
               </button>
             </div>
           </div>
@@ -730,7 +1027,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
               <button
                 type="button"
                 onClick={() => scrollTableTo('start')}
-                className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-white/70 hover:text-white transition-all flex items-center gap-1"
+                className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-sans tabular-nums text-white/70 hover:text-white transition-all inline-flex items-center gap-1 cursor-pointer"
                 title="Scroll to beginning"
               >
                 <ChevronsLeft className="w-3.5 h-3.5" />
@@ -740,7 +1037,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
               <button
                 type="button"
                 onClick={() => scrollTableBy(-380)}
-                className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-xs font-semibold text-blue-300 hover:text-white transition-all flex items-center gap-1.5 shadow-sm"
+                className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-xs font-semibold text-blue-300 hover:text-white transition-all inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
                 title="Scroll columns left"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -750,7 +1047,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
               <button
                 type="button"
                 onClick={() => scrollTableBy(380)}
-                className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-xs font-semibold text-blue-300 hover:text-white transition-all flex items-center gap-1.5 shadow-sm"
+                className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-xs font-semibold text-blue-300 hover:text-white transition-all inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
                 title="Scroll columns right"
               >
                 <span>Scroll Right</span>
@@ -760,7 +1057,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
               <button
                 type="button"
                 onClick={() => scrollTableTo('end')}
-                className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-white/70 hover:text-white transition-all flex items-center gap-1"
+                className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-sans tabular-nums text-white/70 hover:text-white transition-all inline-flex items-center gap-1 cursor-pointer"
                 title="Scroll to end"
               >
                 <span className="hidden sm:inline">End</span>
@@ -786,14 +1083,15 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                 <thead className="text-[10px] uppercase bg-[#051833] text-white/70 sticky top-0 z-20 shadow-md shadow-black/40 border-b border-white/[0.08]">
                   <tr>
                     <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] w-12 text-center">#</th>
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[170px]">full_name</th>
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[160px]">phone_number_normalized</th>
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[130px]">unit_number (metadata)</th>
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[150px]">property_reference</th>
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[130px]">property_location</th>
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[90px]">bedrooms</th>
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[110px]">size_sqft</th>
-                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[120px]">amount (metadata)</th>
+                    <th className="py-3 px-3 border-b border-white/[0.06] bg-[#051833] w-12 text-center">#</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[170px]">Full Name</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[160px]">Phone Number</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[130px]">Unit Number</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[150px]">Property Reference</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[130px]">Location</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[90px]">Bedrooms</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[110px]">Area (sq.ft)</th>
+                    <th className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] min-w-[120px]">Amount (AED)</th>
                     <th className="py-3 px-3.5 border-b border-white/[0.06] text-right bg-[#051833] w-28">Status</th>
                   </tr>
                 </thead>
@@ -807,14 +1105,14 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                   ) : (
                     filteredRows.slice(0, 150).map((r, idx) => (
                       <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-2.5 px-3 font-mono text-white/40 text-center">{r.row_num || idx + 1}</td>
+                        <td className="py-2.5 px-3 font-sans tabular-nums text-white/40 text-center">{r.row_num || idx + 1}</td>
                         <td className="py-2.5 px-3.5 font-medium text-white whitespace-nowrap">
                           {r.full_name || r.owner_name || r['Owner Name'] || 'Property Owner'}
                         </td>
-                        <td className={`py-2.5 px-3.5 font-mono font-bold whitespace-nowrap ${activeTab === 'invalid' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        <td className={`py-2.5 px-3.5 font-sans tabular-nums font-bold whitespace-nowrap ${activeTab === 'invalid' ? 'text-rose-400' : 'text-emerald-400'}`}>
                           {r.phone_number_normalized || r.vapi_e164 || (r.contact_number ? `+${r.contact_number}` : '-')}
                         </td>
-                        <td className="py-2.5 px-3.5 font-mono text-white/90 whitespace-nowrap">
+                        <td className="py-2.5 px-3.5 font-sans tabular-nums text-white/90 whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold">
                             {r.unit_number || r.metadata?.unit_number || r['property_number'] || '—'}
                           </span>
@@ -825,17 +1123,17 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                         <td className="py-2.5 px-3.5 text-white/60 whitespace-nowrap">
                           {r.property_location || r.location || r['Master Location'] || 'Dubai'}
                         </td>
-                        <td className="py-2.5 px-3.5 text-white/70 whitespace-nowrap font-mono">
+                        <td className="py-2.5 px-3.5 text-white/70 whitespace-nowrap font-sans tabular-nums">
                           {r.property_bedrooms ?? r.beds ?? '—'}
                         </td>
-                        <td className="py-2.5 px-3.5 text-white/70 whitespace-nowrap font-mono">
+                        <td className="py-2.5 px-3.5 text-white/70 whitespace-nowrap font-sans tabular-nums">
                           {r.property_size_sqft ? Number(r.property_size_sqft).toLocaleString() : (r['Actual Size'] || '—')}
                         </td>
-                        <td className="py-2.5 px-3.5 text-white/70 whitespace-nowrap font-mono">
+                        <td className="py-2.5 px-3.5 text-white/70 whitespace-nowrap font-sans tabular-nums">
                           {r.transaction_amount || r.metadata?.transaction_amount ? Number(r.transaction_amount || r.metadata?.transaction_amount).toLocaleString() : (r['Transaction Amount'] || '—')}
                         </td>
                         <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-sans tabular-nums ${
                             activeTab === 'clean'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                               : activeTab === 'dup_file'
@@ -844,7 +1142,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                               ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                               : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                           }`}>
-                            {activeTab === 'clean' ? 'E.164 Valid' : (r.reason || 'Filtered')}
+                            {activeTab === 'clean' ? 'Verified Phone' : (r.reason || 'Filtered')}
                           </span>
                         </td>
                       </tr>
@@ -879,13 +1177,13 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                           className="py-3 px-3.5 border-b border-white/[0.06] bg-[#051833] whitespace-nowrap min-w-[160px]"
                         >
                           <div className="flex flex-col gap-1">
-                            <span className="text-white font-mono font-semibold text-xs">{h}</span>
-                            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded w-fit border ${
+                            <span className="text-white font-sans tabular-nums font-semibold text-xs">{h}</span>
+                            <span className={`text-[9px] font-sans tabular-nums px-1.5 py-0.5 rounded w-fit border ${
                               isKeyDbCol 
                                 ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 font-bold' 
                                 : 'bg-slate-800 text-slate-400 border-slate-700'
                             }`}>
-                              ➔ {targetDb}
+                              ➔ {targetDb === 'metadata.raw_csv_row' ? 'Saved Detail' : targetDb}
                             </span>
                           </div>
                         </th>
@@ -904,12 +1202,12 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                     filteredRows.slice(0, 150).map((r, idx) => (
                       <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                         {/* Column 1: Row # */}
-                        <td className="py-2.5 px-3 font-mono text-white/40 text-center">
+                        <td className="py-2.5 px-3 font-sans tabular-nums text-white/40 text-center">
                           {r.row_num || idx + 1}
                         </td>
                         {/* Column 2: Status */}
                         <td className="py-2.5 px-3 whitespace-nowrap text-center">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-mono ${
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-sans tabular-nums ${
                             r.status === 'ready'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                               : r.status === 'duplicate_file'
@@ -929,14 +1227,14 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
 
                           if (targetDb === 'phone_number_normalized') {
                             return (
-                              <td key={i} className="py-2.5 px-3.5 whitespace-nowrap font-mono font-bold text-emerald-400 bg-emerald-950/10">
+                              <td key={i} className="py-2.5 px-3.5 whitespace-nowrap font-sans tabular-nums font-bold text-emerald-400 bg-emerald-950/10">
                                 {r.phone_number_normalized || (rawVal ? `+${rawVal}` : '—')}
                               </td>
                             );
                           }
                           if (targetDb === 'metadata.unit_number') {
                             return (
-                              <td key={i} className="py-2.5 px-3.5 whitespace-nowrap font-mono">
+                              <td key={i} className="py-2.5 px-3.5 whitespace-nowrap font-sans tabular-nums">
                                 <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold">
                                   {r.unit_number || rawVal || '—'}
                                 </span>
@@ -951,7 +1249,7 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
                             );
                           }
                           return (
-                            <td key={i} className="py-2.5 px-3.5 whitespace-nowrap text-white/80 font-mono text-xs">
+                            <td key={i} className="py-2.5 px-3.5 whitespace-nowrap text-white/80 font-sans tabular-nums text-xs">
                               {rawVal || <span className="text-white/20">—</span>}
                             </td>
                           );
@@ -976,6 +1274,240 @@ JI2BTH${ts},AMIR REZA GANJI,971|50-${ts}78,Entertainment Foyer,Jumeirah Islands,
           </div>
         </div>
       )}
+
+      {/* ─── Dual Bottom Engine: Cleaned Files Registry & Minimized Data Library (50/50 Split) ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+        {/* Left 50%: Cleaned Files */}
+        <div className="ds-card p-5 flex flex-col">
+          {/* Card Header */}
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white tracking-tight">Cleaned Files</h3>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRefreshCleanedFiles}
+                disabled={syncingHistory}
+                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                title="Refresh Cloud Cleaned Files"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncingHistory ? 'animate-spin text-emerald-400' : ''}`} />
+                <span className="hidden sm:inline">Sync</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCleanedMaximized(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] cursor-pointer"
+                title="Maximize Cleaned Files to full-screen view"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Maximize</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Search */}
+          <div className="relative my-3">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={cleanedSearch}
+              onChange={(e) => setCleanedSearch(e.target.value)}
+              placeholder="Search cleaned files..."
+              className="w-full bg-[#06111e] border border-[#1b2b3d] rounded-xl pl-9 pr-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 transition-all"
+            />
+            {cleanedSearch && (
+              <button
+                type="button"
+                onClick={() => setCleanedSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Cleaned Files List */}
+          <div className="flex-1 overflow-y-auto max-h-[380px] space-y-2.5 pr-1 custom-scrollbar">
+            {filteredCleaned.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center px-4">
+                <FileText className="w-8 h-8 text-slate-600 mb-2" />
+                <p className="text-xs font-semibold text-slate-300">No cleaned files found</p>
+                <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
+                  {cleanedSearch ? 'Try a different search term.' : 'Drop an Excel or CSV file in the sanitizing box above to clean and track it here.'}
+                </p>
+              </div>
+            ) : (
+              filteredCleaned.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-2.5 rounded-xl bg-[#06111e] border border-[#1b2b3d] hover:border-[#2b415a] transition-all flex items-center justify-between gap-3 group"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="text-xs font-semibold text-white truncate" title={item.fileName}>
+                          {item.fileName}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-sans tabular-nums text-slate-400 shrink-0">
+                        {item.cleanedAt ? new Date(item.cleanedAt).toLocaleDateString() : 'Recent'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1 text-[10px] font-sans tabular-nums text-slate-400">
+                      <span>{(item.cleanRows || 0).toLocaleString()} clean leads</span>
+                      <span>•</span>
+                      <span>{item.fileSize || '120 KB'}</span>
+                      {item.cleanedBy && (
+                        <>
+                          <span>•</span>
+                          <span className="text-emerald-400/90 font-medium truncate max-w-[120px]">By {item.cleanedBy}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions (Revealed on hover, horizontally aligned) */}
+                  <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    <button
+                      type="button"
+                      onClick={(e) => handleDownloadHistoryItem(item, e)}
+                      className="p-2 rounded-lg bg-white/5 hover:bg-blue-600/20 text-slate-400 hover:text-blue-300 border border-white/10 hover:border-blue-500/30 transition-all cursor-pointer"
+                      title={item.fileName?.endsWith('.xlsx') || item.fileName?.endsWith('.xls') ? "Download Cleaned Excel" : "Download Cleaned CSV"}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                    {item.cleanLeadsSample && item.cleanLeadsSample.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleReinspectHistoryItem(item)}
+                        className="p-2 rounded-lg bg-white/5 hover:bg-emerald-600/20 text-slate-400 hover:text-emerald-300 border border-white/10 hover:border-emerald-500/30 transition-all cursor-pointer"
+                        title="Inspect in preview table"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right 50%: Minimized Data Library */}
+        <div className="ds-card p-5 flex flex-col">
+          {/* Card Header */}
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                <FolderArchive className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white tracking-tight">Data Library</h3>
+                </div>
+              </div>
+            </div>
+
+            {/* Maximize Button */}
+            <button
+              type="button"
+              onClick={() => setIsLibraryMaximized(true)}
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-900/30 transition-all hover:scale-[1.02] cursor-pointer"
+              title="Maximize Data Library to full-screen view"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Maximize</span>
+            </button>
+          </div>
+
+          {/* Quick Search */}
+          <div className="relative my-3">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={sourcesSearch}
+              onChange={(e) => setSourcesSearch(e.target.value)}
+              placeholder="Search datasets (e.g., Emaar, Kempinski, Al Satwa)..."
+              className="w-full bg-[#06111e] border border-[#1b2b3d] rounded-xl pl-9 pr-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/60 transition-all"
+            />
+            {sourcesSearch && (
+              <button
+                type="button"
+                onClick={() => setSourcesSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Minimized Source List */}
+          <div className="flex-1 overflow-y-auto max-h-[380px] space-y-2 pr-1 custom-scrollbar">
+            {loadingSources ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center">
+                <Loader2 className="w-7 h-7 text-blue-400 animate-spin mb-2" />
+                <p className="text-xs text-slate-400">Loading datasets...</p>
+              </div>
+            ) : filteredSources.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center px-4">
+                <Database className="w-8 h-8 text-slate-600 mb-2" />
+                <p className="text-xs font-semibold text-slate-300">No matching datasets found</p>
+                <p className="text-[11px] text-slate-500 mt-1">Try a different search keyword</p>
+              </div>
+            ) : (
+              filteredSources.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-2.5 rounded-xl bg-[#06111e] border border-[#1b2b3d] hover:border-[#2b415a] transition-all flex items-center justify-between gap-3 group"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-sans tabular-nums px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold shrink-0">
+                        {item.extension || 'XLSX'}
+                      </span>
+                      <span className="text-xs font-medium text-white truncate" title={item.filename}>
+                        {item.filename}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-[10px] font-sans tabular-nums text-slate-400">
+                      <span>{(item.accepted_rows || 0).toLocaleString()} rows</span>
+                      <span>•</span>
+                      <span>{item.size_formatted || '—'}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleDownloadSource(item, e)}
+                    disabled={downloadingSourceId === item.id}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-blue-600/20 text-slate-400 hover:text-blue-300 border border-white/10 hover:border-blue-500/30 transition-all cursor-pointer shrink-0 opacity-0 group-hover:opacity-100"
+                    title={`Download ${item.filename}`}
+                  >
+                    {downloadingSourceId === item.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
   );
 }

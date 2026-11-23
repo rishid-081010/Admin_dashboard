@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import templatePdfAssetUrl from '../assets/templates/A_SQUARED_Listing_Form_Rental_Template.pdf';
 import { cleanBuildingNameOffline } from './aiPropertyShortener.js';
+import { dataUrlToUint8Array } from './signatureExtractor.js';
 
 /**
  * Format helper for currency
@@ -38,8 +39,8 @@ async function loadTemplateBytes() {
     `./templates/A_SQUARED_Listing_Form_Rental_Template.pdf`,
     `/templates/A_SQUARED_Listing_Form_Rental_Template.pdf`,
     `/dashboard/templates/A_SQUARED_Listing_Form_Rental_Template.pdf`,
-    `https://admin.asquared.ae/dashboard/templates/A_SQUARED_Listing_Form_Rental_Template.pdf`,
-    `https://admin.asquared.ae/templates/A_SQUARED_Listing_Form_Rental_Template.pdf`,
+    `https://dashboard.asquared.ae/dashboard/templates/A_SQUARED_Listing_Form_Rental_Template.pdf`,
+    `https://dashboard.asquared.ae/templates/A_SQUARED_Listing_Form_Rental_Template.pdf`,
   ].filter(Boolean);
 
   for (const url of candidates) {
@@ -64,13 +65,14 @@ async function loadTemplateBytes() {
  * Overlay dynamic fields on the official A-SQUARED 1:1 Listing Form (Rental) template
  * Dimensions: 1119.6 x 1582.8 points
  */
-export function fillListingFormRentalTemplate(page, {
+export async function fillListingFormRentalTemplate(page, {
   listing = {},
   titleDeedData = {},
   emiratesIdData = {},
   commercialSpecs = {},
   fontRegular,
   fontBold,
+  pdfDoc = null,
 }) {
   const textColor = rgb(0.00, 0.09, 0.22); // Deep rich A-Squared Navy (#001738)
 
@@ -282,6 +284,158 @@ export function fillListingFormRentalTemplate(page, {
   drawField({ text: ownerName, startX: 235, endX: 540, dashY: 218, fontSize: 14, isBold: true });
   const agentName = commercialSpecs?.broker_agent_name || commercialSpecs?.agent_name || commercialSpecs?.assigned_agent || commercialSpecs?.assigned_agent_name || listing?.assigned_agent || listing?.assigned_agent_name || listing?.agent_name || listing?.broker_agent_name || 'Melanie Simsiman';
   drawField({ text: agentName, startX: 715, endX: 960, dashY: 218, fontSize: 14, isBold: true });
+
+  // 6B. Embed Authentic Transparent Landlord Signature above Name
+  const landlordSignature = commercialSpecs?.landlord_signature_png
+    || commercialSpecs?.signature_png
+    || listing?.landlord_signature_png
+    || emiratesIdData?.signature_png
+    || null;
+
+  if (landlordSignature && pdfDoc) {
+    try {
+      const sigBytes = dataUrlToUint8Array(landlordSignature);
+      if (sigBytes && sigBytes.length > 50) {
+        const sigPng = await pdfDoc.embedPng(sigBytes);
+        // Constrain naturally within max width: 220, max height: 58
+        const dims = sigPng.scaleToFit(220, 58);
+        // Position directly above the pre-printed dashed line (dashY = 218)
+        page.drawImage(sigPng, {
+          x: 245,
+          y: 226,
+          width: dims.width,
+          height: dims.height,
+        });
+      }
+    } catch (sigErr) {
+      console.warn('Could not embed landlord signature in PDF:', sigErr);
+    }
+  }
+
+  // 6C. Embed Broker / Agent Signature if provided
+  const agentSignature = commercialSpecs?.agent_signature_png
+    || listing?.agent_signature_png
+    || null;
+
+  if (agentSignature && pdfDoc) {
+    try {
+      const agentBytes = dataUrlToUint8Array(agentSignature);
+      if (agentBytes && agentBytes.length > 50) {
+        const agentPng = await pdfDoc.embedPng(agentBytes);
+        const dims = agentPng.scaleToFit(200, 58);
+        page.drawImage(agentPng, {
+          x: 725,
+          y: 226,
+          width: dims.width,
+          height: dims.height,
+        });
+      }
+    } catch (agentErr) {
+      console.warn('Could not embed agent signature in PDF:', agentErr);
+    }
+  }
+
+  // 7. Inject True Fillable AcroForm Interactive Fields into the PDF
+  if (pdfDoc && typeof pdfDoc.getForm === 'function') {
+    try {
+      const form = pdfDoc.getForm();
+
+      const addAcroField = (name, text, x, y, width, height, fontSize = 12) => {
+        try {
+          const field = form.createTextField(name);
+          field.addToPage(page, {
+            x,
+            y,
+            width,
+            height,
+            borderWidth: 0,
+            textColor,
+          });
+          if (text !== undefined && text !== null && text !== '') {
+            field.setText(sanitizeWinAnsi(String(text)));
+          }
+          field.setFontSize(fontSize);
+        } catch (e) {
+          // ignore duplicate field names
+        }
+      };
+
+      const addAcroCheck = (name, checked, x, y, width = 14, height = 14) => {
+        try {
+          const field = form.createCheckBox(name);
+          field.addToPage(page, {
+            x,
+            y,
+            width,
+            height,
+            borderWidth: 0,
+          });
+          if (checked) field.check();
+          else field.uncheck();
+        } catch (e) {
+          // ignore duplicate checkboxes
+        }
+      };
+
+      // Interactive Text Inputs
+      addAcroField('agreement_form_date', dateStr, 880, 1458, 150, 22, 13);
+      addAcroField('owner_legal_name', ownerName, 145, 1142, 285, 22, 13);
+      addAcroField('owner_contact_phone', phone, 530, 1142, 210, 22, 13);
+      addAcroField('owner_nationality', nationality, 190, 1116, 240, 20, 12);
+      addAcroField('owner_email_address', email, 520, 1116, 245, 20, 12);
+
+      addAcroField('property_building_name', displayBuildingName, 220, 811, 285, 22, 13);
+      addAcroField('property_community', community, 625, 811, 405, 22, 13);
+      addAcroField('property_unit_number', unitNumber, 130, 777, 85, 22, 13);
+      addAcroField('property_bedrooms', bedrooms, 350, 777, 135, 22, 12);
+      addAcroField('property_bathrooms', bathrooms, 605, 777, 115, 22, 12);
+      addAcroField('property_parking_bays', parking, 820, 777, 110, 22, 12);
+      addAcroField('property_bua_sqft', buaSqft, 130, 742, 95, 22, 12);
+      addAcroField('property_plot_area', plotArea, 420, 742, 95, 22, 12);
+      addAcroField('payment_cheques_terms', cheques, 770, 742, 150, 22, 12);
+      addAcroField('annual_asking_rent_aed', askingPrice, 195, 708, 545, 22, 14);
+
+      if (untilDate) {
+        addAcroField('mandate_until_date', untilDate, 660, 496, 140, 20, 12);
+      }
+
+      addAcroField('landlord_signature_name', ownerName, 235, 216, 305, 22, 13);
+      addAcroField('broker_agent_signature_name', agentName, 715, 216, 245, 22, 13);
+
+      // Interactive Checkboxes
+      addAcroCheck('type_apartment', isApt, 83, 1013.8);
+      addAcroCheck('type_villa', isVilla, 229, 1013.8);
+      addAcroCheck('type_townhouse', isTownhouse, 318, 1013.8);
+      addAcroCheck('type_land', isLand, 469, 1013.8);
+      addAcroCheck('type_office', isOffice, 563, 1013.8);
+      addAcroCheck('type_warehouse', isWarehouse, 667, 1013.8);
+      addAcroCheck('type_shop', isShop, 818, 1013.8);
+      addAcroCheck('type_full_building', isBuilding, 83, 987.8);
+
+      addAcroCheck('occupancy_vacant', !isTenanted, 83, 882.8);
+      addAcroCheck('occupancy_tenanted', isTenanted, 482, 882.8);
+
+      addAcroCheck('category_residential', !isCommercial, 335, 882.8);
+      addAcroCheck('category_commercial', isCommercial, 773, 882.8);
+
+      addAcroCheck('furnishing_furnished', furnishing.includes('furnished') && !furnishing.includes('un'), 198, 882.8);
+      addAcroCheck('furnishing_unfurnished', furnishing.includes('unfurnished') || !furnishing.includes('furnished'), 617, 882.8);
+
+      addAcroCheck('mandate_exclusive', isExclusive, 83, 530.8);
+      addAcroCheck('mandate_non_exclusive', !isExclusive, 214, 530.8);
+
+      addAcroCheck('duration_1_month', duration.includes('1 month') || duration === '1m', 214, 498.8);
+      addAcroCheck('duration_2_month', duration.includes('2 month') || duration === '2m', 342, 498.8);
+      addAcroCheck('duration_3_month', !duration.includes('1 month') && !duration.includes('2 month') && !duration.includes('until'), 452, 498.8);
+      addAcroCheck('duration_until', duration.includes('until') || !!untilDate, 574, 498.8);
+
+      if (fontRegular) {
+        form.updateFieldAppearances(fontRegular);
+      }
+    } catch (formErr) {
+      console.warn('Could not inject AcroForm fields into PDF:', formErr);
+    }
+  }
 }
 
 /**
@@ -308,13 +462,14 @@ export async function generateClientRentalPdf({
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  fillListingFormRentalTemplate(page, {
+  await fillListingFormRentalTemplate(page, {
     listing,
     titleDeedData: titleDeedData || listing?.title_deed_data || {},
     emiratesIdData: emiratesIdData || listing?.emirates_id_data || {},
     commercialSpecs: commercialSpecs || listing?.commercial_specs || {},
     fontRegular,
     fontBold,
+    pdfDoc,
   });
 
   const pdfBytes = await pdfDoc.save();

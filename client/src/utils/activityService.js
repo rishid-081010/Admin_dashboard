@@ -5,22 +5,21 @@ const ENTITY_TYPE_ID = 1100; // Telesales - Owners data
 
 // Determine base URL for Hostinger PHP endpoints
 const getApiBaseUrl = () => {
-  if (typeof window === 'undefined') return 'https://dashboard.asquared.ae';
+  if (typeof window === 'undefined') return 'https://dashboard.asquared.ae/dashboard';
   const origin = window.location.origin;
-  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-    return 'https://dashboard.asquared.ae';
+  if (origin.includes('dashboard.asquared.ae')) {
+    return window.location.pathname.startsWith('/dashboard') 
+      ? `${origin}/dashboard` 
+      : `${origin}/dashboard`;
   }
-  return origin;
+  return 'https://dashboard.asquared.ae/dashboard';
 };
 
 export const KNOWN_AGENTS = {
-  '3': 'Help Desk',
   '6': 'Melanie Simsiman',
   '7': 'Akarsh Arora',
-  '9': 'Marketing',
   '11': 'Mridul Sethi',
   '12': 'nouman tayyab',
-  '17': 'Finance',
   '68': 'Angel',
   '75': 'Mayannk Agarwal',
   '82': 'Jayanta',
@@ -43,25 +42,19 @@ export const KNOWN_AGENTS = {
   '327': 'Mohamed Nifras',
   '328': 'Wasim Khan',
   '329': 'Anish Kumar',
-  '330': 'Faical Lamara',
-  '333': 'Fathimaah Misbaah Ameer',
-  '345': 'Nazish Nasir',
-  '356': 'Maya AI'
+  '330': 'Faical Lamara'
 };
 
 export const STAGE_CONFIG = {
-  'DT1100_44:NEW': { name: 'Import Data', key: 'import', color: '#a855f7', badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
   'DT1100_44:ASQ_READY_CALL': { name: 'Ready for Call', key: 'ready', color: '#39A8EF', badge: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
-  'DT1100_44:CLIENT': { name: 'No Answer', key: 'no_answer', color: '#06b6d4', badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
-  'DT1100_44:ASQ_DUPLICATE_REVIEW': { name: 'Duplicate Review', key: 'duplicate', color: '#eab308', badge: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
   'DT1100_44:UC_5B620Q': { name: 'Contacted', key: 'contacted', color: '#00c4fb', badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
   'DT1100_44:UC_HGMTGR': { name: 'Has Property', key: 'has_property', color: '#468ee5', badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-  'DT1100_44:UC_4IMVM8': { name: 'Interested to Sell/Rent', key: 'interested', color: '#10b981', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-  'DT1100_44:UC_R5D0DH': { name: 'No Property', key: 'no_property', color: '#f59e0b', badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  'DT1100_44:UC_QE3TNO': { name: 'Not Interested', key: 'not_interested', color: '#ef4444', badge: 'bg-red-500/10 text-red-400 border-red-500/20' },
-  'DT1100_44:SUCCESS': { name: 'Won / Success', key: 'success', color: '#059669', badge: 'bg-emerald-600/10 text-emerald-400 border-emerald-600/20' },
+  'DT1100_44:UC_4IMVM8': { name: 'Interested to Sell/Rent', key: 'interested', color: '#75d900', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  'DT1100_44:SUCCESS': { name: 'Won / Success', key: 'success', color: '#10b981', badge: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
   'DT1100_44:FAIL': { name: 'Failed / Archive', key: 'failed', color: '#f43f5e', badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-  'DT1100_44:UC_181HFA': { name: 'Reshuffle Pool', key: 'reshuffle', color: '#64748b', badge: 'bg-slate-500/10 text-slate-400 border-slate-500/20' }
+  'DT1100_44:CLIENT': { name: 'No Answer', key: 'no_answer', color: '#06b6d4', badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
+  'DT1100_44:UC_QE3TNO': { name: 'Not Interested', key: 'not_interested', color: '#ef4444', badge: 'bg-red-500/10 text-red-400 border-red-500/20' },
+  'DT1100_44:NEW': { name: 'Import Data', key: 'import', color: '#a855f7', badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20' }
 };
 
 export const activityService = {
@@ -329,35 +322,6 @@ export const activityService = {
       return { success: Boolean(direct.data?.result?.item) };
     } catch (err) {
       console.error('Failed to reassign agent:', err);
-      return { success: false, error: err.message };
-    }
-  },
-
-  // Add follow-up note or call summary to Bitrix24 timeline
-  async addNote(itemId, comment, authorId = null) {
-    try {
-      const url = `${getApiBaseUrl()}/api_activity.php?action=add_note`;
-      const res = await axios.post(url, {
-        item_id: itemId,
-        comment,
-        author_id: authorId
-      });
-      if (res.data?.success) return { success: true, comment_id: res.data.comment_id };
-    } catch (e) {
-      console.warn('api_activity.php add_note failed, falling back:', e);
-    }
-
-    try {
-      const fields = {
-        ENTITY_ID: Number(itemId),
-        ENTITY_TYPE: `DYNAMIC_${ENTITY_TYPE_ID}`,
-        COMMENT: comment
-      };
-      if (authorId) fields.AUTHOR_ID = Number(authorId);
-      const direct = await axios.post(`${BITRIX_REST_BASE}crm.timeline.comment.add.json`, { fields });
-      return { success: Boolean(direct.data?.result) };
-    } catch (err) {
-      console.error('Failed to add note:', err);
       return { success: false, error: err.message };
     }
   },

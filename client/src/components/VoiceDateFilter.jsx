@@ -189,7 +189,7 @@ export default function VoiceDateFilter({
   // Format active scope label for footer
   const formatScopeLabel = () => {
     if (timeFilter === 'All Time') {
-      return 'All Time (88,729 Historical Calls)';
+      return activeLabel || 'All Time (Complete Historical Database)';
     }
     if (timeFilter === 'Custom') {
       return activeLabel || `Custom (${customStartDate || ''} to ${customEndDate || ''})`;
@@ -232,10 +232,10 @@ export default function VoiceDateFilter({
     timeFilter === 'Custom' ? 'Custom' : 'All Time';
 
   return (
-    <div className="w-full h-full bg-[#0c1829] border border-[#233549] rounded-2xl p-5 sm:p-6 shadow-xl shadow-black/40 flex flex-col justify-between">
+    <div className="w-full h-full ds-card p-5 sm:p-6 flex flex-col justify-between">
       {/* ─── Mode Selector Pills (Day / Week / Month / Custom / All Time) ───── */}
       <div className="flex items-center justify-center mb-4 shrink-0">
-        <div className="bg-[#06111e] border border-[#1b2b3d] p-1 rounded-xl flex items-center gap-1 w-full max-w-md justify-between overflow-x-auto">
+        <div className="ds-filter-bar w-full max-w-md justify-between overflow-x-auto">
           {[
             { id: 'Day', label: 'Day' },
             { id: 'Week', label: 'Week' },
@@ -268,7 +268,7 @@ export default function VoiceDateFilter({
           <div className="flex items-center justify-between mb-3 px-1 shrink-0">
             <button
               onClick={handlePrevMonth}
-              className="p-2 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors"
+              className="w-9 h-9 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors inline-flex items-center justify-center cursor-pointer"
               title="Previous Month"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -280,7 +280,7 @@ export default function VoiceDateFilter({
 
             <button
               onClick={handleNextMonth}
-              className="p-2 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors"
+              className="w-9 h-9 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors inline-flex items-center justify-center cursor-pointer"
               title="Next Month"
             >
               <ChevronRight className="w-5 h-5" />
@@ -342,7 +342,7 @@ export default function VoiceDateFilter({
           <div className="flex items-center justify-between mb-3 px-1 shrink-0">
             <button
               onClick={handlePrevMonth}
-              className="p-2 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors"
+              className="w-9 h-9 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors inline-flex items-center justify-center cursor-pointer"
               title="Previous Month"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -359,7 +359,7 @@ export default function VoiceDateFilter({
 
             <button
               onClick={handleNextMonth}
-              className="p-2 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors"
+              className="w-9 h-9 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors inline-flex items-center justify-center cursor-pointer"
               title="Next Month"
             >
               <ChevronRight className="w-5 h-5" />
@@ -397,7 +397,7 @@ export default function VoiceDateFilter({
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    <span className={`text-xs sm:text-sm font-mono ${isSelected ? 'text-white/90 font-bold' : 'text-slate-400'}`}>
+                    <span className={`text-xs sm:text-sm font-sans tabular-nums ${isSelected ? 'text-white/90 font-bold' : 'text-slate-400'}`}>
                       {MONTH_SHORT[viewMonth]} {startDay} – {endDay}
                     </span>
                     {isSelected && <Check className="w-4 h-4 text-white" />}
@@ -416,7 +416,7 @@ export default function VoiceDateFilter({
           <div className="flex items-center justify-between mb-3 px-1 shrink-0">
             <button
               onClick={handlePrevYear}
-              className="p-2 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors"
+              className="w-9 h-9 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors inline-flex items-center justify-center cursor-pointer"
               title="Previous Year"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -433,7 +433,7 @@ export default function VoiceDateFilter({
 
             <button
               onClick={handleNextYear}
-              className="p-2 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors"
+              className="w-9 h-9 rounded-xl hover:bg-[#1b2b3d] text-slate-400 hover:text-white transition-colors inline-flex items-center justify-center cursor-pointer"
               title="Next Year"
             >
               <ChevronRight className="w-5 h-5" />
@@ -457,7 +457,7 @@ export default function VoiceDateFilter({
                   }`}
                 >
                   <div className="text-base font-bold tracking-wide">{mName}</div>
-                  <div className={`text-xs font-mono mt-1 ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                  <div className={`text-xs font-sans tabular-nums mt-1 ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
                     {String(idx + 1).padStart(2, '0')}
                   </div>
                 </button>
@@ -508,7 +508,7 @@ export default function VoiceDateFilter({
                   type="date"
                   value={customStartDate || ''}
                   onChange={(e) => setCustomStartDate && setCustomStartDate(e.target.value)}
-                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono transition-colors"
+                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none font-sans tabular-nums transition-colors"
                 />
               </div>
 
@@ -520,7 +520,7 @@ export default function VoiceDateFilter({
                   type="date"
                   value={customEndDate || ''}
                   onChange={(e) => setCustomEndDate && setCustomEndDate(e.target.value)}
-                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none font-mono transition-colors"
+                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none font-sans tabular-nums transition-colors"
                 />
               </div>
             </div>
@@ -528,7 +528,7 @@ export default function VoiceDateFilter({
 
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-2.5 text-xs text-emerald-300">
             <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Telemetry data dynamically aggregated across selected period</span>
+            <span>Data aggregated across selected period</span>
           </div>
         </div>
       )}
@@ -543,7 +543,7 @@ export default function VoiceDateFilter({
             Complete Historical Database
           </h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed mb-4">
-            Displaying all 88,729 calls placed across Sarah, Maya, James, and Aisha in the Supabase telephony cluster.
+            Displaying all verified calls placed across voice agents.
           </p>
           <div className="inline-flex items-center gap-2 text-xs text-emerald-400/90 font-medium">
             <Check className="w-4 h-4 text-emerald-400" />
@@ -560,7 +560,7 @@ export default function VoiceDateFilter({
             {formatScopeLabel()}
           </span>
           {loading && (
-            <span className="text-[11px] text-blue-400 font-mono animate-pulse ml-1 shrink-0">
+            <span className="text-[11px] text-blue-400 font-sans tabular-nums animate-pulse ml-1 shrink-0">
               • Loading...
             </span>
           )}

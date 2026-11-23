@@ -141,8 +141,8 @@ export default function Buildings() {
       name: displayName,
       canonical_name: row.canonical_name || displayName,
       primary_building_name: row.primary_building_name || rawBn,
-      area: (row.master_area && row.master_area !== 'null') ? row.master_area.toUpperCase() : 'DUBAI',
-      propertyType: row.property_category || (row.entity_type === 'community' ? 'Master Community' : 'Residential'),
+      area: (row.master_area && row.master_area !== 'null' && row.master_area.toUpperCase() !== 'DUBAI') ? row.master_area.toUpperCase() : '',
+      propertyType: row.property_category || (row.entity_type === 'community' ? 'Master Community' : ''),
       entityType: row.entity_type || 'building',
       ownersCount: owners,
       unitsCount: units > 0 ? units : owners,
@@ -311,30 +311,27 @@ export default function Buildings() {
       {/* ── Top Header Bar ─────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
-            BUILDINGS &amp; COMMUNITIES
+          <h1 className="ds-page-title">
+            Buildings &amp; Communities
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Verified Dubai property directory with canonical tower deduplication and real-time deed stats.
-          </p>
         </div>
 
         {/* Aggregate Stats Badges */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
-            <Layers className="w-4 h-4 text-emerald-400" />
+          <div className="ds-card px-3.5 py-2 flex items-center gap-2.5 shadow-xl">
+            <Layers className="w-4 h-4 text-[#b7a990]" />
             <div>
-              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Units</div>
+              <div className="text-[11px] text-[#94a3b8] uppercase font-sans tabular-nums font-medium leading-none">Units</div>
               <div className="text-sm font-bold text-white leading-tight font-sans mt-0.5">
                 {activeStats.totalUnits.toLocaleString()}
               </div>
             </div>
           </div>
 
-          <div className="bg-[#0c1829] border border-[#233549] rounded-xl px-3.5 py-2 flex items-center gap-2.5 shadow-xl shadow-black/40">
-            <Users className="w-4 h-4 text-sky-400" />
+          <div className="ds-card px-3.5 py-2 flex items-center gap-2.5 shadow-xl">
+            <Users className="w-4 h-4 text-[#e2e0cc]" />
             <div>
-              <div className="text-[11px] text-slate-400 uppercase font-mono font-medium leading-none">Owners</div>
+              <div className="text-[11px] text-[#94a3b8] uppercase font-sans tabular-nums font-medium leading-none">Owners</div>
               <div className="text-sm font-bold text-white leading-tight font-sans mt-0.5">
                 {activeStats.totalOwners.toLocaleString()}
               </div>
@@ -349,8 +346,8 @@ export default function Buildings() {
           onClick={() => handleTabChange('building')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
             activeTab === 'building'
-              ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/30 font-bold'
-              : 'bg-[#0c1829] text-slate-400 hover:text-white border-[#233549] hover:bg-[#122238]'
+              ? 'bg-[#183153] text-[#e2e0cc] border-[#b7a990] shadow-sm font-semibold'
+              : 'bg-[#0c1829] text-[#94a3b8] hover:text-white border-[#1b2b3d] hover:bg-[#122238]'
           }`}
         >
           <Building2 className="w-4 h-4" />
@@ -361,8 +358,8 @@ export default function Buildings() {
           onClick={() => handleTabChange('community')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
             activeTab === 'community'
-              ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/30 font-bold'
-              : 'bg-[#0c1829] text-slate-400 hover:text-white border-[#233549] hover:bg-[#122238]'
+              ? 'bg-[#183153] text-[#e2e0cc] border-[#b7a990] shadow-sm font-semibold'
+              : 'bg-[#0c1829] text-[#94a3b8] hover:text-white border-[#1b2b3d] hover:bg-[#122238]'
           }`}
         >
           <Compass className="w-4 h-4" />
@@ -373,8 +370,8 @@ export default function Buildings() {
           onClick={() => handleTabChange('single_unit')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
             activeTab === 'single_unit'
-              ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/30 font-bold'
-              : 'bg-[#0c1829] text-slate-400 hover:text-white border-[#233549] hover:bg-[#122238]'
+              ? 'bg-[#183153] text-[#e2e0cc] border-[#b7a990] shadow-sm font-semibold'
+              : 'bg-[#0c1829] text-[#94a3b8] hover:text-white border-[#1b2b3d] hover:bg-[#122238]'
           }`}
         >
           <MapPin className="w-4 h-4" />
@@ -383,9 +380,9 @@ export default function Buildings() {
       </div>
 
       {/* ── Search & Filter Controls ───────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 mb-6 shadow-xl shadow-black/40 flex-shrink-0 flex flex-col md:flex-row items-center gap-4">
+      <div className="ds-card p-4 mb-6 flex-shrink-0 flex flex-col md:flex-row items-center gap-4">
         {/* Search Input */}
-        <div className="flex-1 w-full flex items-center bg-[#06111e] border border-[#1a2c42] rounded-xl px-4 py-2.5 transition-all focus-within:border-blue-500/60 focus-within:ring-1 focus-within:ring-blue-500/30">
+        <div className="flex-1 w-full flex items-center bg-[#06111e]/55 backdrop-blur-md border border-white/15 rounded-xl px-4 py-2.5 transition-all focus-within:border-[#b7a990] focus-within:ring-1 focus-within:ring-[#b7a990]/30">
           <Search className="w-4 h-4 text-slate-400 mr-3 flex-shrink-0" />
           <input
             type="text"
@@ -442,14 +439,14 @@ export default function Buildings() {
               <option value="coverage" className="bg-[#0c1829]">Phone Coverage</option>
               <option value="name" className="bg-[#0c1829]">Name (A-Z)</option>
             </select>
-            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           {/* Refresh Button */}
           <button 
             onClick={() => fetchBuildingsData()}
             title="Refresh buildings data"
-            className="p-2.5 bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] rounded-xl text-slate-400 hover:text-white transition-all flex-shrink-0 cursor-pointer"
+            className="w-10 h-10 inline-flex items-center justify-center bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] rounded-xl text-slate-400 hover:text-white transition-all flex-shrink-0 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
           </button>
@@ -485,52 +482,49 @@ export default function Buildings() {
             {buildings.map((b, i) => (
               <div 
                 key={`${b.name}-${b.entityType}-${i}`} 
-                className="bg-[#0c1829] rounded-2xl border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 hover:shadow-2xl transition-all p-6 flex flex-col justify-between text-left group"
+                onClick={() => handleExploreBuilding(b)}
+                className="ds-card ds-card-interactive p-6 flex flex-col justify-between h-full text-left group cursor-pointer"
               >
                 {/* Upper Section */}
-                <div>
-                  {/* Top Navy Icon Box */}
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="w-12 h-12 rounded-xl bg-[#06111e] border border-[#1a2c42] flex items-center justify-center flex-shrink-0 shadow-sm">
+                <div className="flex flex-col">
+                  {/* Top Navy Icon Box + Sleek Action Arrow */}
+                  <div className="flex items-center justify-between mb-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-sm">
                       {activeTab === 'community' ? (
-                        <Compass className="w-5 h-5 text-emerald-400 stroke-[1.8]" />
+                        <Compass className="w-5 h-5 text-[#b7a990] stroke-[1.8]" />
                       ) : (
-                        <Building2 className="w-5 h-5 text-sky-400 stroke-[1.8]" />
+                        <Building2 className="w-5 h-5 text-[#e2e0cc] stroke-[1.8]" />
                       )}
                     </div>
-
-                    {b.sourceCount > 1 && (
-                      <span className="text-[10.5px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20" title={`Unified from ${b.sourceCount} deed naming variants`}>
-                        {b.sourceCount} Variants Unified
-                      </span>
-                    )}
+                    <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 group-hover:text-white group-hover:bg-white/10 transition-all duration-150">
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
                   </div>
 
-                  {/* Community Tag */}
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-sky-400 font-mono mb-1.5 truncate">
-                    {b.area}
+                  {/* Standardized Area Kicker Slot (Always 16px height, baseline locked) */}
+                  <div className="h-4 flex items-center mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#b7a990] font-sans tabular-nums truncate">
+                      {b.area || 'Dubai'}
+                    </span>
                   </div>
 
-                  {/* Building / Community Title */}
-                  <h3 
-                    className="text-2xl font-bold font-sans text-white tracking-tight leading-snug mb-1 group-hover:text-blue-300 transition-colors line-clamp-2"
-                    title={b.name}
-                  >
-                    {b.name}
-                  </h3>
-
-                  {/* Subtitle / Classification */}
-                  <div className="text-xs text-slate-400 font-normal pb-4 border-b border-[#1a2c42]">
-                    <span>{b.propertyType}</span>
+                  {/* Standardized 2-Line Title Slot (Always 58px height, 1-line or 2-line locked) */}
+                  <div className="h-[58px] flex items-start mb-3">
+                    <h3 
+                      className="text-2xl font-bold font-sans text-white tracking-tight leading-snug group-hover:text-[#e2e0cc] transition-colors line-clamp-2"
+                      title={b.name}
+                    >
+                      {b.name}
+                    </h3>
                   </div>
 
-                  {/* 2-Column Key Metrics */}
-                  <div className="grid grid-cols-2 gap-4 py-4">
+                  {/* 2-Column Key Metrics (Fixed baseline across all row cards) */}
+                  <div className="grid grid-cols-2 gap-4 py-3 border-t border-white/5">
                     <div>
                       <div className="text-2xl sm:text-3xl font-bold font-sans text-white leading-none">
                         {b.unitsCount.toLocaleString()}
                       </div>
-                      <div className="text-xs text-slate-400 font-medium mt-1">
+                      <div className="text-xs text-slate-300 font-medium mt-1">
                         Units
                       </div>
                     </div>
@@ -538,31 +532,20 @@ export default function Buildings() {
                       <div className="text-2xl sm:text-3xl font-bold font-sans text-white leading-none">
                         {b.ownersCount.toLocaleString()}
                       </div>
-                      <div className="text-xs text-slate-400 font-medium mt-1">
+                      <div className="text-xs text-slate-300 font-medium mt-1">
                         Owners
                       </div>
                     </div>
                   </div>
-
-                  {/* Contacts Available Row */}
-                  <div className="py-3 border-y border-[#1a2c42] flex items-center justify-between text-[13px]">
-                    <span className="text-slate-300 font-medium">Contacts available</span>
-                    <span className="font-bold text-white font-mono flex items-center gap-1.5">
-                      <span>{b.contactsCount.toLocaleString()} / {b.ownersCount.toLocaleString()}</span>
-                      <span className="text-emerald-400 text-xs font-semibold">({b.contactCoverage}%)</span>
-                    </span>
-                  </div>
                 </div>
 
-                {/* Bottom Action Button */}
-                <div className="mt-5">
-                  <button
-                    onClick={() => handleExploreBuilding(b)}
-                    className="bg-[#06111e] hover:bg-[#122238] border border-[#233549] hover:border-[#385175] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98] w-fit inline-flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>{activeTab === 'community' ? 'Explore community' : 'Explore building'}</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
+                {/* Contacts Available Row (Pinned to bottom baseline) */}
+                <div className="pt-3.5 border-t border-white/10 flex items-center justify-between text-[13px] mt-auto">
+                  <span className="text-slate-200 font-medium">Contacts available</span>
+                  <span className="font-bold text-white font-sans tabular-nums flex items-center gap-1.5">
+                    <span>{b.contactsCount.toLocaleString()} / {b.ownersCount.toLocaleString()}</span>
+                    <span className="text-emerald-400 text-xs font-semibold">({b.contactCoverage}%)</span>
+                  </span>
                 </div>
               </div>
             ))}
@@ -571,7 +554,7 @@ export default function Buildings() {
 
         {/* ── Numbered Pagination Bar ─────────────────────────────────────────── */}
         {!loading && totalPages > 1 && (
-          <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 bg-[#0c1829] border border-[#233549] rounded-2xl px-5 py-3.5 shadow-xl shadow-black/40">
+          <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 ds-card px-5 py-3.5">
             <div className="text-xs text-slate-400">
               Showing <span className="text-white font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-white font-medium">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of <span className="text-white font-medium">{totalCount.toLocaleString()}</span> {activeTab === 'community' ? 'communities' : activeTab === 'single_unit' ? 'plots' : 'buildings'}
             </div>
@@ -581,7 +564,7 @@ export default function Buildings() {
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="px-2.5 py-1.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                className="h-8 px-2.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1b2b3d] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" /> Prev
               </button>
@@ -589,15 +572,15 @@ export default function Buildings() {
               {/* Numbered Page Buttons */}
               {getPageNumbers().map((p, idx) => (
                 p === '...' ? (
-                  <span key={`dots-${idx}`} className="px-2 py-1 text-slate-500 font-mono text-xs">...</span>
+                  <span key={`dots-${idx}`} className="min-w-[24px] h-8 text-slate-500 font-sans tabular-nums text-xs inline-flex items-center justify-center">...</span>
                 ) : (
                   <button
                     key={`page-${p}`}
                     onClick={() => setCurrentPage(p)}
-                    className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+                    className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-sans tabular-nums font-semibold transition-all cursor-pointer inline-flex items-center justify-center ${
                       currentPage === p
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold border border-blue-500'
-                        : 'bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white'
+                        ? 'bg-[#183153] text-[#e2e0cc] shadow-sm font-bold border border-[#b7a990]'
+                        : 'bg-[#06111e] hover:bg-[#122238] border border-[#1b2b3d] text-slate-300 hover:text-white'
                     }`}
                   >
                     {p}
@@ -609,13 +592,13 @@ export default function Buildings() {
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="px-2.5 py-1.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                className="h-8 px-2.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1b2b3d] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />
               </button>
 
               {/* Custom Page Input Box */}
-              <div className="flex items-center gap-1.5 ml-2 pl-2.5 border-l border-[#233549]">
+              <div className="flex items-center gap-1.5 ml-2 pl-2.5 border-l border-[#1b2b3d]">
                 <span className="text-xs text-slate-400 whitespace-nowrap font-medium">Go to:</span>
                 <input
                   ref={customPageInputRef}
@@ -628,12 +611,12 @@ export default function Buildings() {
                     if (e.key === 'Enter') handleCustomPageSubmit();
                   }}
                   placeholder="Page #"
-                  className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-16 px-2 py-1 bg-[#06111e] border border-[#1b2b3d] focus:border-[#b7a990] rounded-md text-white text-xs text-center font-sans tabular-nums outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   onClick={handleCustomPageSubmit}
                   disabled={!customPageInput || isNaN(parseInt(customPageInput, 10))}
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm cursor-pointer"
+                  className="px-2.5 py-1 bg-[#183153] hover:bg-[#203a63] border border-[#b7a990]/50 text-white text-xs font-medium rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm cursor-pointer"
                 >
                   Go
                 </button>

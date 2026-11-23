@@ -70,13 +70,13 @@ export default function SearchableCombobox({
       <div 
         onClick={() => setIsOpen(!isOpen)}
         className={triggerClassName 
-          ? `${triggerClassName} ${isOpen ? '!border-blue-500 ring-2 ring-blue-500/20' : ''} flex items-center justify-between cursor-pointer transition-all select-none shadow-sm`
-          : `w-full bg-[#0b162c] hover:bg-[#0f1d3a] border ${
-              isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-white/15'
+          ? `${triggerClassName} ${isOpen ? '!border-[#b7a990] ring-1 ring-[#b7a990]/30' : ''} flex items-center justify-between cursor-pointer transition-all select-none shadow-sm`
+          : `w-full bg-[#0c1829] hover:bg-[#122238] border ${
+              isOpen ? 'border-[#b7a990] ring-1 ring-[#b7a990]/30' : 'border-[#1b2b3d]'
             } rounded-xl px-3.5 py-2.5 text-sm font-medium text-white flex items-center justify-between cursor-pointer transition-all select-none shadow-sm`
         }
       >
-        <span className={`truncate mr-2 ${isSelectedAny ? 'text-white' : 'text-blue-300 font-semibold'}`}>
+        <span className={`truncate mr-2 ${isSelectedAny ? 'text-white' : 'text-[#e2e0cc] font-semibold'}`}>
           {isSelectedAny ? allLabel : value}
         </span>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -93,17 +93,17 @@ export default function SearchableCombobox({
               <X className="w-3.5 h-3.5" />
             </button>
           )}
-          <ChevronDown className={`w-4 h-4 text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180 text-blue-400' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#b7a990]' : ''}`} />
         </div>
       </div>
 
       {/* Floating Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#040e21] border border-blue-500/30 rounded-xl shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col animate-fade-in max-h-72">
+        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#070e1c] border border-[#1b2b3d] rounded-xl shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col animate-fade-in max-h-72">
           
           {/* Search Box Header */}
-          <div className="p-2 border-b border-white/10 bg-[#08152e]/90 flex items-center gap-2 shrink-0">
-            <Search className="w-4 h-4 text-blue-400 shrink-0 ml-1" />
+          <div className="p-2 border-b border-[#1b2b3d] bg-[#0c1829] flex items-center gap-2 shrink-0">
+            <Search className="w-4 h-4 text-[#b7a990] shrink-0 ml-1" />
             <input
               ref={inputRef}
               type="text"
@@ -141,12 +141,12 @@ export default function SearchableCombobox({
                 onClick={() => handleSelect(allLabel)}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors text-left ${
                   isSelectedAny 
-                    ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40' 
+                    ? 'bg-[#183153] text-[#e2e0cc] border border-[#b7a990]/40' 
                     : 'text-white/70 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 <span>{allLabel.includes('All') ? allLabel : `${allLabel} (All)`}</span>
-                {isSelectedAny && <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                {isSelectedAny && <Check className="w-3.5 h-3.5 text-[#b7a990] shrink-0" />}
               </button>
             )}
 
@@ -161,12 +161,12 @@ export default function SearchableCombobox({
                     onClick={() => handleSelect(opt)}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left ${
                       isSelected 
-                        ? 'bg-blue-600/30 text-blue-300 font-semibold border border-blue-500/40' 
+                        ? 'bg-[#183153] text-[#e2e0cc] font-semibold border border-[#b7a990]/40' 
                         : 'text-white/80 hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     <span className="truncate mr-2">{opt}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                    {isSelected && <Check className="w-3.5 h-3.5 text-[#b7a990] shrink-0" />}
                   </button>
                 );
               })

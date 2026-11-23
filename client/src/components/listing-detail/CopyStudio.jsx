@@ -33,20 +33,14 @@ export default function CopyStudio({
       {/* Studio Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/[0.08]">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2">
             <span className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400">
               <Sparkles className="w-4 h-4" />
             </span>
             <h2 className="text-base font-sans font-bold text-white tracking-tight">
-              A Squared AI Copywriting Studio
+              A Squared Copywriting Studio
             </h2>
-            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
-              GPT-4o Luxury Real Estate Model
-            </span>
           </div>
-          <p className="text-xs text-white/60">
-            Generates authoritative editorial listings, WhatsApp broadcasts, and multilingual summaries calibrated for Dubai portals.
-          </p>
         </div>
 
         {/* Generate / Tone Toolbar */}
@@ -168,7 +162,7 @@ export default function CopyStudio({
                       SEO Portal Title (Bayut & Property Finder)
                     </span>
                     {/* Live Title Character Counter Badge */}
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border ${
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-sans tabular-nums font-bold flex items-center gap-1 border ${
                       isTitleCompliant
                         ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                         : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
@@ -208,7 +202,7 @@ export default function CopyStudio({
                     </span>
 
                     {/* Live Portal Description Character Counter Badge */}
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border ${
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-sans tabular-nums font-bold flex items-center gap-1 border ${
                       isDescOverLimit
                         ? 'bg-red-500/20 text-red-300 border-red-500/40 animate-pulse'
                         : isDescNearLimit
@@ -400,10 +394,10 @@ export default function CopyStudio({
         <div className="py-12 px-4 text-center rounded-2xl bg-white/[0.02] border border-dashed border-white/[0.08]">
           <FileText className="w-10 h-10 text-white/30 mx-auto mb-3" />
           <h3 className="text-sm font-bold text-white mb-1">
-            No AI Marketing Copy Generated Yet
+            No Marketing Copy Generated Yet
           </h3>
           <p className="text-xs text-white/50 max-w-md mx-auto mb-5 leading-relaxed">
-            Click the button below to generate high-converting editorial copy, SEO portal titles, and multilingual broadcasts using OpenAI GPT-4o.
+            Generate editorial copy, SEO portal titles, and multilingual summaries.
           </p>
           <button
             type="button"

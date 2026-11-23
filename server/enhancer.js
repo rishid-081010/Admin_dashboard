@@ -76,7 +76,7 @@ export async function processImagePhotographically(inputPath, customPrompt = '',
         .gamma(1.05)
         .clahe({ width: 64, height: 64, maxSlope: 3 })
         .sharpen({ sigma: 1.0, m1: 1.2, m2: 0.6, x1: 3, y2: 12, y3: 25 })
-        .jpeg({ quality: 96, chromaSubsampling: '4:4:4', mozjpeg: true })
+        .png({ compressionLevel: 6 })
         .toFile(outputPath);
 
       return outputPath;

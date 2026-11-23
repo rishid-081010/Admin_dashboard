@@ -196,19 +196,32 @@ export default function ListingDetail({ listingId, onBack }) {
   // Handle batch enhancement with concurrent queue
   const handleBatchEnhance = async (modelTier = 'flare') => {
     if (images.length === 0) return;
+
+    // Re-enhance prevention guard: Only process images that are not yet enhanced
+    const pendingImages = images.filter(img => 
+      img.status !== 'completed' || 
+      !img.generated_image_location || 
+      img.generated_image_location === img.original_image_location
+    );
+
+    if (pendingImages.length === 0) {
+      showToast('All photos are already enhanced! To re-process a specific photo, use its individual card button.', 'info');
+      return;
+    }
+
     setIsProcessingBatch(true);
     setBatchProgress({
       current: 0,
-      total: images.length,
+      total: pendingImages.length,
       pct: 0,
-      message: `Starting concurrent neural enhancement (${modelTier === 'sunburst' ? 'Sunburst Luxury' : 'Flare 2.5'})...`,
+      message: `Starting photo enhancement (${modelTier === 'sunburst' ? 'Sunburst Luxury' : 'Flare High-Speed'})...`,
       modelTier
     });
 
     try {
       const { completed, failed } = await enhanceListingBatch({
         listingId,
-        images,
+        images: pendingImages,
         modelTier,
         prompt: customPrompt,
         concurrency: 2,
@@ -470,7 +483,45 @@ export default function ListingDetail({ listingId, onBack }) {
     }
   };
 
-  // Download Packages ZIP
+  // Helper: Convert any image blob to a genuine lossless PNG blob
+  const convertToPngBlob = async (blob) => {
+    if (!blob || blob.type === 'image/png') return blob;
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        const objUrl = URL.createObjectURL(blob);
+        img.onload = () => {
+          try {
+            URL.revokeObjectURL(objUrl);
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob((pngBlob) => {
+              if (pngBlob) {
+                resolve(pngBlob);
+              } else {
+                resolve(blob);
+              }
+            }, 'image/png');
+          } catch (e) {
+            resolve(blob);
+          }
+        };
+        img.onerror = () => {
+          try { URL.revokeObjectURL(objUrl); } catch (e) {}
+          resolve(blob);
+        };
+        img.src = objUrl;
+      } catch (err) {
+        resolve(blob);
+      }
+    });
+  };
+
+  // Download Packages ZIP (Lossless PNG Photos)
   const handleDownloadZip = async (title, packageType) => {
     showToast(`Preparing ${title} ZIP package...`, 'info');
     try {
@@ -485,10 +536,11 @@ export default function ListingDetail({ listingId, onBack }) {
             try {
               const res = await fetch(withTimestamp(rawUrl));
               if (res.ok) {
-                const blob = await res.blob();
+                const rawBlob = await res.blob();
+                const pngBlob = await convertToPngBlob(rawBlob);
                 const cat = (img.room_type || 'Photo').replace(/\s+/g, '_');
                 const paddedIdx = String(idx + 1).padStart(2, '0');
-                photoFolder.file(`${paddedIdx}_${cat}.jpg`, blob);
+                photoFolder.file(`${paddedIdx}_${cat}.png`, pngBlob);
               }
             } catch (ignore) {}
           })
@@ -519,14 +571,17 @@ export default function ListingDetail({ listingId, onBack }) {
     }
   };
 
-  // Download Single Photo
+  // Download Single Photo (Ensured Lossless PNG)
   const handleDownloadSingle = async (url, filename) => {
     if (!url) return;
     try {
       const res = await fetch(withTimestamp(url));
       if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
-      saveAs(blob, filename);
+      const rawBlob = await res.blob();
+      const pngBlob = await convertToPngBlob(rawBlob);
+      const safeFilename = (filename || 'photo.png').replace(/\.(jpe?g|webp)$/i, '') + 
+        ((filename && filename.toLowerCase().endsWith('.png')) ? '' : '.png');
+      saveAs(pngBlob, safeFilename);
     } catch (err) {
       showToast('Failed to download photo.', 'error');
     }
@@ -559,7 +614,7 @@ export default function ListingDetail({ listingId, onBack }) {
   if (error || !listing) {
     return (
       <div className="max-w-7xl mx-auto py-16 px-4 text-center animate-fade-in">
-        <div className="bg-[#0c1829] border border-red-500/30 rounded-3xl p-8 text-center max-w-md mx-auto mb-5 shadow-2xl shadow-black/80">
+        <div className="ds-card border-red-500/30 p-8 text-center max-w-md mx-auto mb-5">
           <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3 border border-red-500/30">
             <AlertTriangle className="w-6 h-6" />
           </div>
@@ -599,16 +654,8 @@ export default function ListingDetail({ listingId, onBack }) {
             <div className="flex items-center gap-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
               <h3 className="text-sm font-bold text-white tracking-wide">
-                Neural Enhancement Queue: {batchProgress.current} / {batchProgress.total} Complete ({batchProgress.pct}%)
+                Photo Enhancement Progress: {batchProgress.current} / {batchProgress.total} Completed ({batchProgress.pct}%)
               </h3>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] font-mono text-cyan-300">
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-500/30">
-                Parallel Concurrency: 2 active
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/30 text-emerald-300">
-                A-Squared Branding Applied
-              </span>
             </div>
           </div>
 
@@ -707,6 +754,7 @@ export default function ListingDetail({ listingId, onBack }) {
           }}
           onSingleEnhance={handleSingleEnhance}
           isRetrying={isRetrying[comparisonModalImage?.id]}
+          onDownloadSingle={handleDownloadSingle}
         />
       )}
 

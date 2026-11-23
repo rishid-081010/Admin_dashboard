@@ -1,6 +1,6 @@
 <?php
 /**
- * A SQUARED REAL ESTATE - Multi-Channel AI Copywriting Engine (API Route)
+ * A SQUARED REAL ESTATE - Multi-Channel AI Copywriting Engine
  * Model: OpenAI GPT-4o (Frontier Luxury Real Estate Copywriting)
  * Formats: Signature A Squared Editorial, WhatsApp Broadcast, Instagram, VIP Investor Pitch, Arabic & Russian.
  */
@@ -19,11 +19,14 @@ ini_set('display_errors', 0);
 ini_set('max_execution_time', 120);
 set_time_limit(120);
 
-$secretsFile = __DIR__ . '/secrets.php';
-if (file_exists($secretsFile)) {
-    require_once $secretsFile;
+// OpenAI API Key
+if (file_exists(__DIR__ . '/api/secrets.php')) {
+    require_once __DIR__ . '/api/secrets.php';
+} elseif (file_exists(__DIR__ . '/secrets.php')) {
+    require_once __DIR__ . '/secrets.php';
+} elseif (file_exists(dirname(__DIR__) . '/api/secrets.php')) {
+    require_once dirname(__DIR__) . '/api/secrets.php';
 }
-
 $openAiKey = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : (getenv('OPENAI_API_KEY') ?: base64_decode('c2stcHJvai15V3ZJZ2c4WmEtbDg3c2hEQkc0czhrTUxLbW0zbjdHdXZNZ0dibGxyVl9JWmVnTnJyTHh1U0VpTnRWSGtmQmNkNVNYNnhtSjUzUFQzQmxia0ZKcmlXVkVzVmFyU2s0X3ZuY1lEZlhQMGQ2TUxXWEpmcVJxUXBlU0dfODczcW1ld0hEUkpENHdGazBXMEl6ZnAwVEFXMmZOQXJnMEE='));
 
 if (empty($openAiKey)) {
@@ -77,6 +80,14 @@ if (empty($community)) {
     }
 }
 
+// Clean community/building if it contains OCR artifacts like الهوية (Identity card header)
+if ($community === 'الهوية' || strpos($community, 'الهوية') !== false) {
+    $community = 'Dubai';
+}
+if ($building === 'الهوية' || strpos($building, 'الهوية') !== false) {
+    $building = 'Dubai Residence';
+}
+
 // Compute square meters from square feet if needed
 $size_sqm = '';
 if (!empty($size_sqft) && is_numeric(str_replace(',', '', $size_sqft))) {
@@ -94,85 +105,114 @@ if (is_numeric(str_replace(',', '', $price))) {
     $formattedPrice = number_format(floatval(str_replace(',', '', $price)));
 }
 
-$systemPrompt = "You are the Executive Real Estate Copywriter for A SQUARED REAL ESTATE in Dubai.
-Your mission is to generate clean, authoritative, and elegant property marketing copy that adheres STRICTLY to A SQUARED REAL ESTATE's signature standard.
+$displayFloor = !empty($floor) ? $floor : 'High Floor';
+$displayPrice = !empty($formattedPrice) ? ("AED " . $formattedPrice) : "Price on Application / Available upon Request";
+$displaySize = "";
+if (!empty($size_sqm)) {
+    $displaySize .= "$size_sqm Sq. M. / ";
+}
+if (!empty($size_sqft)) {
+    $displaySize .= "$size_sqft Sq. Ft.";
+} else {
+    $displaySize = "Generously proportioned floor plan (exact specifications upon request)";
+}
 
-SIGNATURE \"portal_description\" FORMAT:
-You MUST follow this exact 5-part structure and tone:
+$systemPrompt = <<<EOT
+You are the Principal Luxury Copywriter & Editorial Director for A SQUARED REAL ESTATE, Dubai's premier boutique real estate advisory.
+Your mission is to produce authoritative, evocative, and deeply detailed property descriptions that appeal to sophisticated high-net-worth buyers, discerning tenants, and international investors.
 
-A Squared Real Estate proudly presents this [spacious / stunning] [property type] for $rentOrSale in [Community / Building].
+CRITICAL MANDATORY LENGTH REQUIREMENT:
+- The 'portal_description' MUST CONTAIN A MINIMUM OF 750 WORDS (strictly between 750 and 1,000 words; absolutely never below 700 words).
+- Every section must be composed in rich, expansive, multi-sentence paragraphs describing materials (imported Italian marble, engineered timber, brushed nickel hardware), aesthetics, natural lighting, spatial flow, and lifestyle nuances in exquisite detail. Never rush or condense paragraphs.
+- If your draft is brief, expand upon the specific architectural finishes, bathroom fittings, acoustic insulation, neighborhood lifestyle, and travel times across Dubai until it comfortably exceeds 750 words.
 
-Offering approximately [Size in Sq. Ft.] sq. ft., this home features [Bedrooms] bedrooms and [Bathrooms] bathrooms, with a practical layout suited to comfortable everyday living.
+STRUCTURE & HIGH NARRATIVE VARIABILITY:
+Maintain a consistent, logical editorial structure across all listings, but ENSURE HIGH VARIABILITY in syntax, phrasing, opening sentences, and descriptive vocabulary. NEVER repeat the exact same cookie-cutter sentences from listing to listing (e.g. avoid repeating 'A Squared Real Estate proudly presents this stunning...' in every description).
 
-Property Highlights
-- [Bedrooms] bedrooms
-- [Bathrooms] bathrooms
-- Approx. [Size in Sq. Ft.] sq. ft.
-- Located in [Community, Sub-community / Building]
-- $priceBulletLabel: AED [Formatted Price]
+THE 9-PART EDITORIAL STRUCTURE FOR 'portal_description':
 
-Enjoy [property type] living in [Community], with convenient access to destinations across Dubai.
+1. Executive Presentation & Grand Welcome (approx. 100-120 words)
+   - Vary the introductory hook dynamically across generations (e.g., 'A Squared Real Estate is delighted to introduce...', 'Setting a distinguished benchmark for contemporary urban luxury, A Squared Real Estate unveils...', 'Exclusively brought to the market by A Squared Real Estate, this exceptional residence...', 'Positioned prominently within [Community], this remarkable property exemplifies...', 'A Squared Real Estate is pleased to present this meticulously curated home...').
+   - Establish the property type, tenure ($rentOrSale), floor level/setting, and unique lifestyle positioning. Frame the home within the context of Dubai's vibrant luxury landscape and prestige.
 
-Contact A Squared Real Estate to arrange a viewing or request further details.
+2. The Residence & Architectural Flow (2 substantial paragraphs, approx. 160-200 words)
+   - Paragraph 1: Detail the spatial layout, floor plan fluidity, orientation, and natural daylighting cascading through expansive floor-to-ceiling double-glazed glass apertures.
+   - Paragraph 2: Describe the architectural journey from the private entrance gallery into the sprawling open-plan living and dining salons. Discuss the harmonious interplay of proportions, high ceilings, acoustic tranquility, and seamless flow that makes everyday living effortlessly luxurious.
+   - DATA INTEGRITY: If size is missing or 'N/A', NEVER write 'N/A sq. ft.'! Instead, eloquently describe the home as boasting expansive, thoughtfully planned proportions designed for optimal spatial efficiency and gracious entertaining.
 
-REFERENCE STANDARD EXAMPLE:
-A Squared Real Estate proudly presents this spacious townhouse for rent in Jebel Ali Village.
+3. The Master Suite & Private Quarters (2 substantial paragraphs, approx. 150-180 words)
+   - Paragraph 1: Explore the primary bedroom suite: a private sanctuary designed for restful seclusion, complete with custom floor-to-ceiling built-in wardrobes or walk-in dressing quarters with soft interior illumination. Detail the en-suite spa bathroom featuring modern designer sanitary ware, frameless walk-in rain shower, deep soaking tub, and polished stone surfaces.
+   - Paragraph 2: Describe secondary bedrooms with equal elegance, highlighting their generous dimensions, acoustic separation, versatility as executive study suites or guest accommodation, and accompanying powder rooms.
 
-Offering approximately 2,561.81 sq. ft., this home features 3 bedrooms and 4 bathrooms, with a practical layout suited to comfortable everyday living.
+4. Culinary Craftsmanship & Entertaining Spaces (approx. 130-160 words)
+   - Highlight the kitchen design (open concept show kitchen or refined chef's preparation space, polished stone or quartz countertops, premium custom soft-close cabinetry, and seamless appliance integration).
+   - Describe the dining salon, lounge zones, and indoor-outdoor connectivity onto the private balcony or panoramic terrace where residents can dine al fresco while admiring the city skyline.
 
-Property Highlights
-- 3 bedrooms
-- 4 bathrooms
-- Approx. 2,561.81 sq. ft.
-- Located in Jebel Ali Village, Jebel Ali First
-- Annual rent: AED 220,000
+5. Curated Property Specifications & Highlights (Structured Bulleted Section)
+   Include the exact heading 'Property Specifications & Highlights' followed immediately by clean hyphen bullets (-):
+   - Property Type & Classification
+   - Bedrooms & Bathrooms: [X] Bedrooms | [Y] Bathrooms
+   - Built-Up Area: [Size in Sq. Ft. / Sq. M. or 'Generously Proportioned Layout']
+   - Prime Location: [Community / Building, Dubai]
+   - $priceBulletLabel: [AED Formatted Price or 'Price on Application / Available upon Request']
+   - Furnishing Status: [Furnished / Unfurnished]
+   - Parking Allocation: [Allocated Covered Parking]
+   - Floor & Orientation: [Floor level / View]
 
-Enjoy townhouse living in Jebel Ali Village, with convenient access to destinations across Dubai.
+6. World-Class Tower Amenities & Resort Facilities (approx. 140-170 words)
+   - Detail the building's infrastructure: temperature-controlled swimming pool with private cabanas and sun loungers, state-of-the-art fitness center and wellness studio with cardio and resistance machinery, 24/7 dedicated concierge and security surveillance, resident lounges, landscaped outdoor terraces, and high-speed elevators.
+   - Highlight the lifestyle standard created by pristine common areas and white-glove building management.
 
-Contact A Squared Real Estate to arrange a viewing or request further details.
+7. Community Setting & Strategic Dubai Connectivity (approx. 150-180 words)
+   - Paint an evocative portrait of the surrounding neighborhood, streetscapes, and everyday conveniences.
+   - Detail strategic connectivity to Dubai's primary economic and leisure arteries (Sheikh Zayed Road, Al Khail Road, Downtown Dubai, Dubai Marina, DIFC, DXB International Airport) with indicative drive times.
+   - Highlight proximity to elite international schools, championship golf clubs, retail promenades, fine dining, and beach clubs.
+   - DATA INTEGRITY: If community or building contains Arabic or OCR text (e.g. 'الهوية'), contextualize it with proper English Dubai district context.
 
-CRITICAL RULES:
-1. Strictly follow the exact 5-part structure:
-   - Part 1: 'A Squared Real Estate proudly presents this [adjective] [property type] for $rentOrSale in [Community / Building].'
-   - Part 2: 'Offering approximately [Size] sq. ft., this home features [X] bedrooms and [Y] bathrooms, with a practical layout suited to comfortable everyday living.' (If studio: adapt to 'Offering approximately [Size] sq. ft., this studio features 1 bathroom, with a practical layout suited to comfortable everyday living.').
-   - Part 3: Header 'Property Highlights' followed immediately by clean hyphen bullets (-):
-     - [X] bedrooms
-     - [Y] bathrooms
-     - Approx. [Size] sq. ft.
-     - Located in [Community, Sub-community / Building]
-     - $priceBulletLabel: AED [Formatted Price]
-     (If additional verified attributes like Furnished/Unfurnished or Covered Parking are in input, up to 2 extra clean bullets may be included).
-   - Part 4: 'Enjoy [property type] living in [Community], with convenient access to destinations across Dubai.'
-   - Part 5: 'Contact A Squared Real Estate to arrange a viewing or request further details.'
-2. NO cheesy emojis (no 🏊, 🏠, ✨, 🏢, 🔑) in portal_description. Use clean hyphens (-) for bullets.
-3. Keep the language natural, professional, direct, and completely free from exaggerated marketing hype.
-4. Return strictly valid JSON with these 7 keys:
+8. Investment Rationale & Capital Preservation (approx. 110-130 words)
+   - Articulate the investment thesis: robust rental yields in Dubai's resilient real estate market, consistent capital appreciation, tax-free returns, high tenant demand, and UAE Golden Visa qualification where eligible (properties AED 2M+).
+   - Summarize the defensive quality of prime Dubai real estate for wealth preservation and enduring portfolio performance.
+
+9. Private Viewings & Advisory Call to Action (approx. 70-90 words)
+   - Conclude with a distinguished invitation for qualified purchasers, tenants, and investors to schedule an exclusive private walkthrough or request technical floor plans and investment documentation from A Squared Real Estate.
+
+STRICT WRITING & PORTAL GUIDELINES:
+1. MANDATORY WORD COUNT: The 'portal_description' MUST CONTAIN AT LEAST 750 WORDS (aim for 750 to 950 words; minimum 700 words strictly enforced). Write rich, eloquent paragraphs across each numbered section.
+2. NO CHEESY EMOJIS (no 🏊, 🏠, ✨, 🏢, 🔑) in portal_description. Use clean hyphens (-) for bullets.
+3. HIGH VARIABILITY: Dynamically alter tone, vocabulary, transitions, and sentence cadence on every generation so no two listings feel identical.
+4. ELEGANT VOCABULARY: Maintain sophisticated, polished British/International English suitable for prime real estate portals (Property Finder, Bayut, Dubizzle).
+
+RETURN STRICTLY VALID JSON WITH THESE 7 KEYS:
 {
-  \"portal_title\": \"String (Under 80 characters, e.g. '3 BR Townhouse for Rent | Jebel Ali Village | AED 220,000')\",
-  \"portal_description\": \"String (The exact signature 5-part A SQUARED format shown above)\",
-  \"whatsapp_copy\": \"String (High-impact WhatsApp broker broadcast formatted with bold * tags and clean bullets)\",
-  \"instagram_copy\": \"String (Refined Instagram caption matching the exact highlights and top Dubai real estate hashtags)\",
-  \"investor_email\": \"String (VIP Investor Pitch: Subject line + investment thesis + viewing CTA)\",
-  \"arabic_summary\": \"String (Formal Arabic real estate description matching the exact property details and 5-part structure)\",
-  \"russian_summary\": \"String (High-end Russian real estate description matching the exact property details and 5-part structure)\"
-}";
+  "portal_title": "High-converting property title under 80 characters (e.g. '2 BR Luxury Residence | Prime Community | Panoramic Views')",
+  "portal_description": "The full, minimum 700-word editorial property narrative following the 9-part structure above",
+  "whatsapp_copy": "High-impact broker broadcast formatted with bold tags (*Title*) and clean bullet highlights with viewing CTA",
+  "instagram_copy": "Refined Instagram caption with lifestyle hook, key specs, call-to-action, and top Dubai real estate hashtags",
+  "investor_email": "VIP Investor Pitch: Subject line + investment thesis + yield/capital appreciation outlook + viewing CTA",
+  "arabic_summary": "Comprehensive, formal Arabic real estate description matching the property details and luxury tone",
+  "russian_summary": "High-end Russian real estate description matching the property details and luxury tone"
+}
+EOT;
 
-$userPrompt = "Generate A Squared Real Estate marketing copy for:
+$userPrompt = <<<EOT
+Generate comprehensive, full-length A Squared Real Estate marketing copy for:
 Building Name: $building
 Full Property Name: $name
 Reference: $reference
 Location / Community: $community
 Property Type: $property_type
-Floor: " . ($floor ?: 'High Floor') . "
+Floor: $displayFloor
 Purpose: $purpose
-Price: " . ($formattedPrice ? "AED $formattedPrice" : "Price on Application") . "
-Size: " . ($size_sqm ? "$size_sqm Sq. M. / " : "") . ($size_sqft ? "$size_sqft Sq. Ft." : "N/A") . "
+Price: $displayPrice
+Size: $displaySize
 Bedrooms: $bedrooms
 Bathrooms: $bathrooms
 Furnishing: $furnishing
 Usage: $usage
 Additional Details & Notes: $rough_notes
-";
+
+MANDATORY REQUIREMENT: Ensure the 'portal_description' achieves a minimum of 700 words (aim for 750 to 900 words) across the complete 9-part editorial structure.
+EOT;
 
 $payload = [
     'model' => 'gpt-4o',
@@ -181,7 +221,8 @@ $payload = [
         ['role' => 'user', 'content' => $userPrompt]
     ],
     'response_format' => ['type' => 'json_object'],
-    'temperature' => 0.3
+    'temperature' => 0.7,
+    'max_tokens' => 4096
 ];
 
 $ch = curl_init('https://api.openai.com/v1/chat/completions');
@@ -192,7 +233,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Authorization: Bearer ' . $openAiKey
 ]);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

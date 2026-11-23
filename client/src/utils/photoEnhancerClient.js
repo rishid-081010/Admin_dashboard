@@ -150,12 +150,12 @@ export async function enhanceRealEstatePhoto(source, customAdjustments = {}) {
       applySharpnessConvolution(ctx, width, height, sharpness);
     }
 
-    // 4. Output High-Quality JPEG Blob
+    // 4. Output Lossless High-Quality PNG Blob
     const blob = await new Promise((res) => {
-      canvas.toBlob((b) => res(b), 'image/jpeg', 0.94);
+      canvas.toBlob((b) => res(b), 'image/png');
     });
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.94);
+    const dataUrl = canvas.toDataURL('image/png');
 
     return {
       blob,

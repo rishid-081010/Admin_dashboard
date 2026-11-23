@@ -1,0 +1,71 @@
+{
+  "restore_point_id": "RESTORE-POINT-ENTIRE-ADMIN-DASHBOARD-20261029",
+  "scope": "ENTIRE_ADMIN_DASHBOARD_FULL_STACK",
+  "created_at": "2026-10-29T17:08:41.174Z",
+  "created_timestamp": 1793293721174,
+  "title": "Complete Restore Point for the Entire A SQUARED Admin Dashboard",
+  "status": "VERIFIED_OPERATIONAL",
+  "build_and_runtime_verification": {
+    "client_build": "Vite v5.4.21 production build passed with exit code 0 (2,301 modules)",
+    "node_server": "server/index.js verified (Express + Sharp + PDF-Lib + Canvas)",
+    "hostinger_live_production": [
+      {
+        "url": "https://dashboard.asquared.ae/parse-documents.php",
+        "status": 200,
+        "engine": "GPT-4o Vision & Multimodal Parser"
+      },
+      {
+        "url": "https://admin.asquared.ae/dashboard/parse-documents.php",
+        "status": 200,
+        "engine": "GPT-4o Vision & Multimodal Parser"
+      }
+    ]
+  },
+  "local_full_archive": {
+    "filename": "restore_point_20261029_entire_admin_dashboard_full.zip",
+    "path": "C:\\Users\\moham\\.gemini\\antigravity\\scratch\\Admin_dashboard_cloned\\restore_point_20261029_entire_admin_dashboard_full.zip",
+    "size_mb": "34.91",
+    "total_bytes": 36610416,
+    "total_files": 460,
+    "sha256_checksum": "8a01681c0a8d7a06cd5cd73c6169b689a5611e0db2cfd8e598e7ce604419915e",
+    "includes": [
+      "Entire Client Source (client/src/**/* across all 12 modules)",
+      "Client Public Assets & PHP Engines (client/public/**/*)",
+      "Client Compiled Production Build (client/dist/**/*)",
+      "Server Backend Code & Services (server/**/*)",
+      "Server Uploads & Templates (server/uploads/**/*, server/templates/**/*)",
+      "Root Files & PHP Mirror (root_files/**/*)",
+      "Environment Configuration (.env, .env.example)",
+      "Deployment & Maintenance Automation Scripts (scripts/**/*)",
+      "Package Configurations (package.json, package-lock.json, vite.config.js)"
+    ]
+  },
+  "github_backup": {
+    "repository": "rishid-081010/Admin_dashboard",
+    "commit_sha": "eff2142e45d4a4e5ac92eb800b0e9628b6bd84ff",
+    "backup_branch": "backup-entire-admin-dashboard-20261029",
+    "release_tag": "restore-point-entire-admin-dashboard-20261029",
+    "github_web_url": "https://github.com/rishid-081010/Admin_dashboard/tree/backup-entire-admin-dashboard-20261029"
+  },
+  "all_dashboard_modules_covered": [
+    "1. Overview Dashboard (Real-time telemetry, calls today, n8n stats, immediate activities)",
+    "2. Listing Studio (AI Title Deed/Oqood & Emirates ID extraction, KYC verification, photo uploads, marketing copy)",
+    "3. Property Listings Directory & Details (Listing cards, status, before/after enhancement sliders, rental NOC form download)",
+    "4. Lead Ingestion Studio & Data Cleaning (50/50 dual flush view, clean files hub, column deduplication, master push)",
+    "5. Cleaned Files & Data Library (Unified fullscreen view, file exports, master data catalog)",
+    "6. Master Owner Directory & Owner 360 (Portfolio valuation, WhatsApp actions, verified phone numbers)",
+    "7. Buildings Directory & Building 360 (Tower inventory, floor plans, unit breakdown, owner associations)",
+    "8. AI Agent Center (26-tool copilot querying Supabase & Bitrix CRM)",
+    "9. Voice Agent Center (Vapi call logs, audio waveform scrubber, interactive synchronized transcript)",
+    "10. Broker Activity & Call Audits (Daily call audits, PDF generator, compliance checkmarks)",
+    "11. Workflows Directory (n8n live workflow telemetry, latency monitors, error triage)",
+    "12. OmniSearch (Global cross-database search for owners, buildings, phones, lead IDs)",
+    "13. Roles Management & Security (SuperAdmin, Admin, Agent permissions and password controls)",
+    "14. Account Settings & Authentication (Profile settings, dark luxury theme, session manager)"
+  ],
+  "revert_instructions": {
+    "one_command_instant_restore": "node scripts/restore_entire_dashboard.js",
+    "manual_zip_extraction": "Extract restore_point_20261029_entire_admin_dashboard_full.zip into C:\\Users\\moham\\.gemini\\antigravity\\scratch\\Admin_dashboard_cloned, then run: npm --prefix client run build",
+    "github_branch_revert": "git fetch origin && git checkout backup-entire-admin-dashboard-20261029 -- . && npm --prefix client run build"
+  }
+}

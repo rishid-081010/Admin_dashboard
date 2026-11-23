@@ -46,8 +46,8 @@ gen_headers = {
 
 gen_url = 'https://developers.hostinger.com/api/hosting/v1/files/upload-urls'
 
-# Deploy to both subdomains to ensure zero drift
-target_domains = ['dashboard.asquared.ae', 'admin.asquared.ae', 'asquared.ae']
+# Strictly deploy ONLY to dashboard.asquared.ae. DO NOT TOUCH admin.asquared.ae or asquared.ae!
+target_domains = ['dashboard.asquared.ae']
 
 dist_dir = 'client/dist'
 if not os.path.exists(dist_dir):

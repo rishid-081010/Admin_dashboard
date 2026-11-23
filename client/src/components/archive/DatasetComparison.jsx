@@ -208,7 +208,7 @@ export default function DatasetComparison() {
           )}
         </div>
 
-        <div className="text-[11px] text-white/40 font-mono hidden md:block">
+        <div className="text-[11px] text-white/40 font-sans tabular-nums hidden md:block">
           Database benchmark: <span className="text-white font-semibold">3.04M Verified Rows</span>
         </div>
       </div>
@@ -241,7 +241,7 @@ export default function DatasetComparison() {
                 )}
               </div>
               <div>
-                <div className="text-[11px] font-mono uppercase font-bold tracking-wider opacity-75">
+                <div className="text-[11px] font-sans tabular-nums uppercase font-bold tracking-wider opacity-75">
                   Executive Decision Engine · Confidence 96.8%
                 </div>
                 <div className="text-base font-bold font-serif text-white mt-0.5">
@@ -278,7 +278,7 @@ export default function DatasetComparison() {
             <div className="bg-[#03152d]/80 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
               <div className="flex items-center justify-between text-xs text-white/50 mb-1">
                 <span>Already in Database</span>
-                <span className="font-mono text-amber-400 font-bold">{overlapPct}%</span>
+                <span className="font-sans tabular-nums text-amber-400 font-bold">{overlapPct}%</span>
               </div>
               <div className="text-2xl font-bold font-serif text-white">
                 {selectedDataset.summary.alreadyInDb.toLocaleString()}
@@ -293,7 +293,7 @@ export default function DatasetComparison() {
             <div className="bg-[#03152d]/80 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
               <div className="flex items-center justify-between text-xs text-white/50 mb-1">
                 <span>Expansion Units</span>
-                <span className="font-mono text-emerald-400 font-bold">{expansionPct}%</span>
+                <span className="font-sans tabular-nums text-emerald-400 font-bold">{expansionPct}%</span>
               </div>
               <div className="text-2xl font-bold font-serif text-emerald-400">
                 {selectedDataset.summary.expansionUnits.toLocaleString()}
@@ -308,7 +308,7 @@ export default function DatasetComparison() {
             <div className="bg-[#03152d]/80 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
               <div className="flex items-center justify-between text-xs text-white/50 mb-1">
                 <span>New Buildings</span>
-                <span className="font-mono text-blue-400 font-bold">{newBuildingPct}%</span>
+                <span className="font-sans tabular-nums text-blue-400 font-bold">{newBuildingPct}%</span>
               </div>
               <div className="text-2xl font-bold font-serif text-blue-400">
                 {selectedDataset.summary.newBuildings.toLocaleString()}
@@ -323,7 +323,7 @@ export default function DatasetComparison() {
             <div className="bg-[#03152d]/80 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
               <div className="flex items-center justify-between text-xs text-white/50 mb-1">
                 <span>Needs Review</span>
-                <span className="font-mono text-purple-400 font-bold">{reviewPct}%</span>
+                <span className="font-sans tabular-nums text-purple-400 font-bold">{reviewPct}%</span>
               </div>
               <div className="text-2xl font-bold font-serif text-purple-300">
                 {selectedDataset.summary.invalidOrNeedsReview.toLocaleString()}
@@ -369,7 +369,7 @@ export default function DatasetComparison() {
             <div className="overflow-x-auto mt-3">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 text-white/40 font-mono text-[11px]">
+                  <tr className="border-b border-white/10 text-white/40 font-sans tabular-nums text-[11px]">
                     <th className="py-2.5 px-3">UNIT #</th>
                     <th className="py-2.5 px-3">BUILDING NAME</th>
                     <th className="py-2.5 px-3">COMMUNITY</th>
@@ -381,7 +381,7 @@ export default function DatasetComparison() {
                 <tbody className="divide-y divide-white/5">
                   {filteredRecords.map((row, idx) => (
                     <tr key={idx} className="hover:bg-white/[0.04] transition-colors">
-                      <td className="py-2.5 px-3 font-mono font-bold text-white">
+                      <td className="py-2.5 px-3 font-sans tabular-nums font-bold text-white">
                         {row.unit}
                       </td>
                       <td className="py-2.5 px-3 font-semibold text-white">
@@ -403,10 +403,10 @@ export default function DatasetComparison() {
                           {row.status}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 font-mono text-white/70">
+                      <td className="py-2.5 px-3 font-sans tabular-nums text-white/70">
                         {row.matchType}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-bold">
+                      <td className="py-2.5 px-3 text-right font-sans tabular-nums text-emerald-400 font-bold">
                         {row.confidence}
                       </td>
                     </tr>

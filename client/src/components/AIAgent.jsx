@@ -14,27 +14,27 @@ const SUGGESTED_PROMPTS = [
 function AudioPlayerCard({ label, url }) {
   const filename = url.split('/').pop()?.split('?')[0] || 'call_recording.wav';
   return (
-    <div className="my-2.5 p-3.5 bg-[#06111e] border border-blue-500/30 rounded-xl flex flex-col gap-2.5 shadow-lg shadow-black/30">
+    <div className="my-2.5 p-3.5 ds-subcard flex flex-col gap-2.5 shadow-lg shadow-black/30">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-[#070e1c] border border-[#1b2b3d] flex items-center justify-center text-[#b7a990] shrink-0">
             <Volume2 className="w-4 h-4" />
           </div>
           <div>
             <div className="text-xs font-bold text-white tracking-wide">
               {label || 'AI Telephony Call Recording'}
             </div>
-            <div className="text-[11px] font-mono text-slate-400 truncate max-w-xs sm:max-w-md">
+            <div className="text-[11px] font-sans tabular-nums text-slate-400 truncate max-w-xs sm:max-w-md">
               {filename}
             </div>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/15 text-blue-300 border border-blue-500/25 shrink-0">
+        <span className="px-2 py-0.5 rounded text-[10px] font-sans tabular-nums bg-[#070e1c] text-[#e2e0cc] border border-[#1b2b3d] shrink-0">
           Stereo WAV
         </span>
       </div>
 
-      <audio controls src={url} className="w-full h-8 accent-blue-500 rounded bg-[#0a1829]" />
+      <audio controls src={url} className="w-full h-8 accent-[#b7a990] rounded bg-[#0a1829]" />
 
       <div className="flex items-center gap-2 pt-1 border-t border-[#1b2b3d]/60">
         <a
@@ -42,7 +42,7 @@ function AudioPlayerCard({ label, url }) {
           download={filename}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#183153] hover:bg-[#203a63] border border-[#b7a990]/40 text-white text-xs font-semibold transition-all shadow-md cursor-pointer"
         >
           <Download className="w-3.5 h-3.5" />
           <span>Download Audio (.wav)</span>
@@ -51,7 +51,7 @@ function AudioPlayerCard({ label, url }) {
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0c1829] hover:bg-[#152538] text-slate-300 hover:text-white border border-[#233549] text-xs transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0c1829] hover:bg-[#152538] text-slate-300 hover:text-white border border-[#1b2b3d] text-xs transition-colors cursor-pointer"
         >
           <ExternalLink className="w-3 h-3" />
           <span>Open Direct</span>
@@ -81,7 +81,7 @@ function PdfAuditCard({ label, url }) {
   };
 
   return (
-    <div className="my-2.5 p-3.5 bg-[#06111e] border border-rose-500/30 rounded-xl flex flex-col gap-2.5 shadow-lg shadow-black/30">
+    <div className="my-2.5 p-3.5 ds-subcard border-rose-500/30 flex flex-col gap-2.5 shadow-lg shadow-black/30">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 mt-0.5">
@@ -91,12 +91,12 @@ function PdfAuditCard({ label, url }) {
             <div className="text-xs font-bold text-white tracking-wide">
               {label || 'Daily Telephony Call Audit Report'}
             </div>
-            <div className="text-[11px] font-mono text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-md">
+            <div className="text-[11px] font-sans tabular-nums text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-md">
               {filename}
             </div>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/15 text-rose-300 border border-rose-500/25 shrink-0">
+        <span className="px-2 py-0.5 rounded text-[10px] font-sans tabular-nums bg-rose-500/15 text-rose-300 border border-rose-500/25 shrink-0">
           Official Audit PDF
         </span>
       </div>
@@ -141,12 +141,12 @@ function CsvExportCard({ label, url }) {
             <div className="text-xs font-bold text-white tracking-wide">
               {label || 'Exported Real Estate Dataset'}
             </div>
-            <div className="text-[11px] font-mono text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-md">
+            <div className="text-[11px] font-sans tabular-nums text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-md">
               {filename}
             </div>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 shrink-0">
+        <span className="px-2 py-0.5 rounded text-[10px] font-sans tabular-nums bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 shrink-0">
           CSV Export
         </span>
       </div>
@@ -229,7 +229,7 @@ function renderInline(text) {
       parts.push(<em key={idx++} className="italic text-slate-300">{match[3]}</em>);
     } else if (match[4]) {
       parts.push(
-        <code key={idx++} className="font-mono text-xs px-1.5 py-0.5 rounded bg-[#06111e] text-blue-300 border border-blue-500/20">
+        <code key={idx++} className="font-sans tabular-nums text-xs px-1.5 py-0.5 rounded bg-[#06111e] text-blue-300 border border-blue-500/20">
           {match[4]}
         </code>
       );
@@ -334,11 +334,11 @@ function FormattedMessage({ content }) {
       const headerRow = currentTable[0];
       const bodyRows = currentTable.slice(1);
       elements.push(
-        <div key={elKey++} className="my-3 overflow-x-auto rounded-lg border border-[#233549] bg-[#06111e]">
+        <div key={elKey++} className="my-3 overflow-x-auto rounded-lg border border-white/10 bg-[#06111e]/50 backdrop-blur-md">
           <table className="w-full text-left text-xs border-collapse">
             {headerRow && (
               <thead>
-                <tr className="border-b border-[#233549] bg-[#0c1829]">
+                <tr className="border-b border-white/10 bg-white/[0.04]">
                   {headerRow.map((cell, cIdx) => (
                     <th key={cIdx} className="px-3 py-2 font-semibold text-slate-300">
                       {renderInline(cell)}
@@ -551,13 +551,9 @@ export default function AIAgent({ setActiveTab }) {
       {/* ─── Top Header: Minimalist & Clean ───────────────────────────── */}
       <div className="shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl sm:text-3xl text-white font-bold tracking-tight">
+          <h1 className="ds-page-title">
             AI Agent
           </h1>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Operational
-          </span>
         </div>
 
         <button
@@ -571,7 +567,7 @@ export default function AIAgent({ setActiveTab }) {
       </div>
 
       {/* ─── Main Chat Card ───────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 ds-card flex flex-col overflow-hidden">
         
         {/* Messages Stream */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 custom-scrollbar space-y-4">
@@ -583,7 +579,7 @@ export default function AIAgent({ setActiveTab }) {
                 className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-full`}
               >
                 {/* Message Header: Role label + timestamp */}
-                <div className="flex items-center gap-2 mb-1 px-1 text-[11px] font-mono text-slate-400">
+                <div className="flex items-center gap-2 mb-1 px-1 text-[11px] font-sans tabular-nums text-slate-400">
                   <span className="font-semibold text-slate-300">
                     {isUser ? 'You' : 'Antigravity OS'}
                   </span>
@@ -595,8 +591,8 @@ export default function AIAgent({ setActiveTab }) {
                 <div
                   className={`rounded-2xl p-4 text-[13.5px] leading-relaxed max-w-[92%] sm:max-w-[82%] shadow-sm ${
                     isUser
-                      ? 'bg-[#183153] text-white border border-white/10 rounded-tr-sm'
-                      : 'bg-[#071322] text-slate-200 border border-[#233549] rounded-tl-sm'
+                      ? 'bg-[#183153] text-[#e2e0cc] border border-[#b7a990]/30 rounded-tr-sm'
+                      : 'bg-[#070e1c]/75 backdrop-blur-md text-slate-200 border border-white/10 rounded-tl-sm'
                   }`}
                 >
                   {/* Tool Badges if executed */}
@@ -605,7 +601,7 @@ export default function AIAgent({ setActiveTab }) {
                       {msg.toolCalls.map((t, tIdx) => (
                         <span
                           key={tIdx}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#06111e] text-blue-300 border border-blue-500/25"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-sans tabular-nums bg-[#06111e] text-[#e2e0cc] border border-[#1b2b3d]"
                         >
                           <span>Executed:</span>
                           <span className="font-bold">{t.tool}</span>
@@ -630,9 +626,9 @@ export default function AIAgent({ setActiveTab }) {
           {/* Loading indicator */}
           {loading && (
             <div className="flex items-start max-w-full">
-              <div className="bg-[#071322] border border-[#233549] rounded-2xl rounded-tl-sm p-3.5 flex items-center gap-2.5 text-xs text-slate-400">
-                <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
-                <span className="font-mono">Processing query across databases...</span>
+              <div className="bg-[#070e1c] border border-[#1b2b3d] rounded-2xl rounded-tl-sm p-3.5 flex items-center gap-2.5 text-xs text-slate-400">
+                <RefreshCw className="w-3.5 h-3.5 text-[#b7a990] animate-spin" />
+                <span className="font-sans tabular-nums">Processing query across databases...</span>
               </div>
             </div>
           )}
@@ -641,19 +637,16 @@ export default function AIAgent({ setActiveTab }) {
         </div>
 
         {/* ─── Bottom Toolbar: Suggestion Chips + Input Bar ─────────────── */}
-        <div className="shrink-0 p-3 sm:p-4 border-t border-[#233549] bg-[#071322]">
+        <div className="shrink-0 p-3 sm:p-4 border-t border-white/10 bg-[#070e1c]/70 backdrop-blur-md">
           
           {/* Quick-Action Chips */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2.5 custom-scrollbar">
-            <span className="text-[11px] font-mono text-slate-400 shrink-0 uppercase tracking-wider">
-              Quick queries:
-            </span>
             {SUGGESTED_PROMPTS.map((promptText, pIdx) => (
               <button
                 key={pIdx}
                 onClick={() => handleSend(promptText)}
                 disabled={loading}
-                className="shrink-0 px-2.5 py-1 text-xs bg-[#0c1829] hover:bg-[#132238] border border-[#233549] hover:border-blue-500/40 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer disabled:opacity-40"
+                className="shrink-0 px-2.5 py-1 text-xs bg-[#0c1829] hover:bg-[#122238] border border-[#1b2b3d] hover:border-[#b7a990]/40 text-[#94a3b8] hover:text-white rounded-lg transition-colors cursor-pointer disabled:opacity-40"
               >
                 {promptText}
               </button>

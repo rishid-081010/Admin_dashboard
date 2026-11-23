@@ -55,7 +55,8 @@ if ($action === 'health') {
         'engine' => 'OpenAI Image Edits API',
         'models' => ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'],
         'gd_available' => extension_loaded('gd') && function_exists('imagecreatefromstring'),
-        'watermark_path' => $foundWm,
+        'asquared_watermark_enabled' => false,
+        'foreign_watermark_removal' => true,
         'timestamp' => gmdate('c')
     ]);
     exit;
@@ -148,91 +149,12 @@ EOT;
 
 /**
  * Applies the official A Squared Real Estate watermark (isolated emblem + text)
- * to the bottom-right corner of the enhanced property photograph.
+ * Disabled: Property photos retain natural beauty and clean surfaces without added watermarks.
+ * Foreign watermark removal via AI remains fully active.
  */
 function applyASquaredWatermark($imageBinaryData) {
-    if (empty($imageBinaryData)) return $imageBinaryData;
-    if (!extension_loaded('gd') || !function_exists('imagecreatefromstring')) {
-        return $imageBinaryData;
-    }
-
-    $wmCandidates = [
-        __DIR__ . '/asquared-watermark.png',
-        __DIR__ . '/../asquared-watermark.png',
-        __DIR__ . '/client/public/asquared-watermark.png',
-        dirname(__DIR__) . '/asquared-watermark.png',
-        '/home/u292760294/domains/asquared.ae/public_html/asquared-watermark.png',
-        '/home/u292760294/domains/asquared.ae/public_html/dashboard/asquared-watermark.png',
-        '/home/u292760294/domains/asquared.ae/public_html/admin/asquared-watermark.png',
-    ];
-
-    $wmFile = null;
-    foreach ($wmCandidates as $p) {
-        if (file_exists($p) && is_file($p)) {
-            $wmFile = $p;
-            break;
-        }
-    }
-
-    if (!$wmFile) {
-        return $imageBinaryData;
-    }
-
-    $baseImg = @imagecreatefromstring($imageBinaryData);
-    if (!$baseImg) return $imageBinaryData;
-
-    $wmImg = @imagecreatefrompng($wmFile);
-    if (!$wmImg) {
-        imagedestroy($baseImg);
-        return $imageBinaryData;
-    }
-
-    $baseW = imagesx($baseImg);
-    $baseH = imagesy($baseImg);
-    $wmW = imagesx($wmImg);
-    $wmH = imagesy($wmImg);
-
-    if ($baseW <= 0 || $baseH <= 0 || $wmW <= 0 || $wmH <= 0) {
-        imagedestroy($baseImg);
-        imagedestroy($wmImg);
-        return $imageBinaryData;
-    }
-
-    // Portal Standard Watermark sizing: ~17% of image width
-    $targetW = max(100, (int)round($baseW * 0.17));
-    $targetH = (int)round($targetW * ($wmH / $wmW));
-
-    // Position: Bottom-Right corner with 3.5% padding
-    $padX = (int)round($baseW * 0.035);
-    $padY = (int)round($baseH * 0.035);
-    $destX = max(0, $baseW - $targetW - $padX);
-    $destY = max(0, $baseH - $targetH - $padY);
-
-    imagealphablending($baseImg, true);
-
-    // Resample and composite watermark onto base image
-    imagecopyresampled(
-        $baseImg,
-        $wmImg,
-        $destX,
-        $destY,
-        0,
-        0,
-        $targetW,
-        $targetH,
-        $wmW,
-        $wmH
-    );
-
-    // Render out as high-quality JPEG (quality 94)
-    ob_start();
-    imagejpeg($baseImg, null, 94);
-    $resultBinary = ob_get_clean();
-
-    imagedestroy($baseImg);
-    imagedestroy($wmImg);
-
-    return (!empty($resultBinary) && strlen($resultBinary) > 1000) ? $resultBinary : $imageBinaryData;
+    // Feature disabled: Return enhanced image unmodified (no A Squared watermark added)
+    return $imageBinaryData;
 }
 
 // Helper: Download URL or Read Local File to Temp File
@@ -312,7 +234,7 @@ if ($action === 'enhance-image') {
 
     if (empty($imageUrl) && !empty($imageId)) {
         // Look up image in Supabase
-        $chImg = curl_init($SUPABASE_URL . '/rest/v1/real_estate_images?id=eq.' . $imageId . '&select=id,listing_id,original_image_location');
+        $chImg = curl_init($SUPABASE_URL . '/rest/v1/real_estate_images?id=eq.' . $imageId . '&select=id,listing_id,original_image_location,generated_image_location,status');
         curl_setopt($chImg, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($chImg, CURLOPT_HTTPHEADER, [
             'apikey: ' . $SUPABASE_KEY,
@@ -325,6 +247,18 @@ if ($action === 'enhance-image') {
             $imageUrl = $rows[0]['original_image_location'];
             if (empty($listingId) || $listingId === 'general') {
                 $listingId = $rows[0]['listing_id'];
+            }
+            // IDEMPOTENCY / RE-ENHANCE GUARD: If already completed and no directive was specified, skip re-calling OpenAI!
+            $forceReEnhance = !empty($payload['force']) || !empty($_GET['force']) || !empty($directive);
+            if (!$forceReEnhance && !empty($rows[0]['generated_image_location']) && $rows[0]['status'] === 'completed') {
+                echo json_encode([
+                    'success' => true,
+                    'image_id' => $imageId,
+                    'generated_image_location' => $rows[0]['generated_image_location'],
+                    'cached' => true,
+                    'message' => 'Image already enhanced. Re-enhancement skipped to prevent duplicate API cost.'
+                ]);
+                exit;
             }
         }
     }
@@ -364,7 +298,7 @@ if ($action === 'enhance-image') {
         'model' => $targetModel,
         'image' => $cfile,
         'prompt' => $effectivePrompt,
-        'quality' => 'high'
+        'quality' => 'standard'
     ];
 
     $ch = curl_init('https://api.openai.com/v1/images/edits');
@@ -414,11 +348,27 @@ if ($action === 'enhance-image') {
         exit;
     }
 
-    // Apply official A Squared Real Estate transparent watermark (isolated emblem + typography)
-    $binaryData = applyASquaredWatermark($binaryData);
+    // A Squared watermark overlay disabled as requested (foreign watermark removal preserved via AI)
+    // $binaryData = applyASquaredWatermark($binaryData);
 
-    // Upload enhanced image to Supabase Storage: generated/{listingId}/{timestamp}_enhanced.jpg
-    $filename = round(microtime(true) * 1000) . '_enhanced_' . ($targetModel === 'gpt-image-2.5-sunburst' ? 'sunburst' : 'flare') . '.jpg';
+    // Convert output image to high-fidelity lossless PNG
+    if (extension_loaded('gd') && function_exists('imagecreatefromstring')) {
+        $imgRes = @imagecreatefromstring($binaryData);
+        if ($imgRes) {
+            imagealphablending($imgRes, false);
+            imagesavealpha($imgRes, true);
+            ob_start();
+            imagepng($imgRes, null, 6);
+            $pngData = ob_get_clean();
+            imagedestroy($imgRes);
+            if (!empty($pngData) && strlen($pngData) > 1000) {
+                $binaryData = $pngData;
+            }
+        }
+    }
+
+    // Upload enhanced image to Supabase Storage: generated/{listingId}/{timestamp}_enhanced.png
+    $filename = round(microtime(true) * 1000) . '_enhanced_' . ($targetModel === 'gpt-image-2.5-sunburst' ? 'sunburst' : 'flare') . '.png';
     $storagePath = 'generated/' . $listingId . '/' . $filename;
     $storageUploadUrl = $SUPABASE_URL . '/storage/v1/object/property-images/' . $storagePath;
 
@@ -428,7 +378,7 @@ if ($action === 'enhance-image') {
     curl_setopt($chUp, CURLOPT_HTTPHEADER, [
         'apikey: ' . $SUPABASE_KEY,
         'Authorization: Bearer ' . $SUPABASE_KEY,
-        'Content-Type: image/jpeg',
+        'Content-Type: image/png',
         'x-upsert: true'
     ]);
     curl_setopt($chUp, CURLOPT_POSTFIELDS, $binaryData);

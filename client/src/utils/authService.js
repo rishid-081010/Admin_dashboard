@@ -1,9 +1,9 @@
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
-const AUTH_STORAGE_KEY = 'asq_dashboard_user';
-const IMPERSONATION_BACKUP_KEY = 'asq_impersonator_backup';
-export const AUTH_CHANGE_EVENT = 'asq:auth-changed';
+export const AUTH_STORAGE_KEY = 'asq_dashboard_user';
+export const IMPERSONATION_STORAGE_KEY = 'asq_impersonation_original';
+export const IMPERSONATION_EVENT = 'asq-impersonation-changed';
 export const REVOCATION_NOTICE_KEY = 'asq_revocation_notice';
 
 export const authService = {
@@ -16,48 +16,6 @@ export const authService = {
     } catch (e) {
       console.error('Failed to parse auth user', e);
       return null;
-    }
-  },
-
-  isImpersonating() {
-    try {
-      return !!sessionStorage.getItem(IMPERSONATION_BACKUP_KEY);
-    } catch {
-      return false;
-    }
-  },
-
-  startImpersonation(targetUser) {
-    try {
-      const currentUser = this.getCurrentUser();
-      if (!currentUser) return { success: false, error: 'No active session.' };
-      if (!sessionStorage.getItem(IMPERSONATION_BACKUP_KEY)) {
-        sessionStorage.setItem(IMPERSONATION_BACKUP_KEY, JSON.stringify(currentUser));
-      }
-      const impersonated = {
-        ...targetUser,
-        isImpersonated: true,
-        impersonatorName: currentUser.name || currentUser.email
-      };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(impersonated));
-      window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: impersonated }));
-      return { success: true, user: impersonated };
-    } catch (e) {
-      return { success: false, error: e.message };
-    }
-  },
-
-  stopImpersonation() {
-    try {
-      const backup = sessionStorage.getItem(IMPERSONATION_BACKUP_KEY);
-      if (!backup) return { success: false, error: 'Not impersonating.' };
-      sessionStorage.removeItem(IMPERSONATION_BACKUP_KEY);
-      const original = JSON.parse(backup);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(original));
-      window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: original }));
-      return { success: true, user: original };
-    } catch (e) {
-      return { success: false, error: e.message };
     }
   },
 
@@ -114,7 +72,6 @@ export const authService = {
       };
 
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
-      window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: sessionUser }));
       return { success: true, user: sessionUser };
     } catch (err) {
       console.error('Login error:', err);
@@ -123,7 +80,7 @@ export const authService = {
   },
 
   // Register / create new user
-  async register(email, password, name = '', role = 'agent') {
+  async register(email, password, name = '', role = 'admin') {
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPassword = (password || '').trim();
 
@@ -226,136 +183,258 @@ export const authService = {
     }
   },
 
-  // Session revocation: revoke a single user
-  async revokeUserSession(userId, userEmail, revokedBy = 'SuperAdmin') {
+  // Logout (completely clears all persistent session credentials so user remains logged out across browser close/reopen)
+  logout() {
     try {
-      const nowIso = new Date().toISOString();
-      const getUrl = `${SUPABASE_BASE_URL}/asq_dashboard_state?key=eq.revoked_sessions&select=key,value&limit=1`;
-      const resGet = await fetch(getUrl, {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
-      });
-      let currentVal = { revoked_user_ids: [], revoked_emails: [], revoked_all_agents_at: null, history: [] };
-      if (resGet.ok) {
-        const rows = await resGet.json();
-        if (rows && rows[0]?.value) currentVal = rows[0].value;
-      }
-      const cleanEmail = (userEmail || '').toLowerCase();
-      const userIds = Array.from(new Set([...(currentVal.revoked_user_ids || []), userId].filter(Boolean)));
-      const emails = Array.from(new Set([...(currentVal.revoked_emails || []), cleanEmail].filter(Boolean)));
-      const history = [
-        { target: cleanEmail || userId, revoked_at: nowIso, revoked_by: revokedBy },
-        ...(currentVal.history || []).slice(0, 49)
-      ];
-
-      const saveBody = {
-        key: 'revoked_sessions',
-        value: { ...currentVal, revoked_user_ids: userIds, revoked_emails: emails, history },
-        updated_at: nowIso
-      };
-      const saveRes = await fetch(`${SUPABASE_BASE_URL}/asq_dashboard_state`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates,return=representation'
-        },
-        body: JSON.stringify(saveBody)
-      });
-      if (!saveRes.ok) throw new Error(`Cloud update error ${saveRes.status}`);
-      return { success: true };
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      // Also clear any legacy keys if present
+      localStorage.removeItem('asq_user');
+      localStorage.removeItem('supabase.auth.token');
     } catch (e) {
-      console.error('revokeUserSession error:', e);
+      console.error('Error during logout:', e);
+    }
+  },
+
+  // ─── "VIEW AS" USER IMPERSONATION ENGINE ─────────────────────────────────
+  startImpersonation(targetUser) {
+    try {
+      const current = this.getCurrentUser();
+      if (!current) return { success: false, error: 'No active session.' };
+
+      // Save real user if not already impersonating
+      if (!this.isImpersonating()) {
+        localStorage.setItem(IMPERSONATION_STORAGE_KEY, JSON.stringify(current));
+      }
+
+      const impersonatedSession = {
+        id: targetUser.id,
+        email: targetUser.email,
+        name: targetUser.name || targetUser.email.split('@')[0],
+        role: targetUser.role || 'agent',
+        isImpersonated: true,
+        impersonatedBy: current.email,
+        lastLogin: current.lastLogin || new Date().toISOString()
+      };
+
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(impersonatedSession));
+      window.dispatchEvent(new CustomEvent(IMPERSONATION_EVENT, { detail: impersonatedSession }));
+      return { success: true, user: impersonatedSession };
+    } catch (e) {
+      console.error('startImpersonation error:', e);
       return { success: false, error: e.message };
     }
   },
 
-  // Session revocation: revoke all agent sessions
-  async revokeAllAgentSessions(revokedBy = 'SuperAdmin') {
+  stopImpersonation() {
+    try {
+      const original = localStorage.getItem(IMPERSONATION_STORAGE_KEY);
+      if (!original) return { success: false, error: 'No original session to restore.' };
+
+      const parsedOriginal = JSON.parse(original);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsedOriginal));
+      localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
+
+      window.dispatchEvent(new CustomEvent(IMPERSONATION_EVENT, { detail: null }));
+      return { success: true, user: parsedOriginal };
+    } catch (e) {
+      console.error('stopImpersonation error:', e);
+      return { success: false, error: e.message };
+    }
+  },
+
+  isImpersonating() {
+    try {
+      return Boolean(localStorage.getItem(IMPERSONATION_STORAGE_KEY));
+    } catch (e) {
+      return false;
+    }
+  },
+
+  getOriginalSuperAdmin() {
+    try {
+      const stored = localStorage.getItem(IMPERSONATION_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // ─── REMOTE SESSION REVOCATION & FORCE LOGOUT ───────────────────────────
+  async revokeUserSession(targetUserId, targetUserEmail, adminName = 'SuperAdmin') {
     try {
       const nowIso = new Date().toISOString();
-      const getUrl = `${SUPABASE_BASE_URL}/asq_dashboard_state?key=eq.revoked_sessions&select=key,value&limit=1`;
-      const resGet = await fetch(getUrl, {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+      // Fetch current revoked_sessions
+      const readUrl = `${SUPABASE_BASE_URL}/asq_dashboard_state?key=eq.revoked_sessions&select=key,value&limit=1`;
+      const readRes = await fetch(readUrl, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
       });
+
       let currentVal = { revoked_user_ids: [], revoked_emails: [], revoked_all_agents_at: null, history: [] };
-      if (resGet.ok) {
-        const rows = await resGet.json();
-        if (rows && rows[0]?.value) currentVal = rows[0].value;
+      if (readRes.ok) {
+        const rows = await readRes.json();
+        if (rows && rows[0]?.value) {
+          currentVal = rows[0].value;
+        }
       }
-      const saveBody = {
+
+      // Add to revoked lists if not already present
+      const userIds = Array.from(new Set([...(currentVal.revoked_user_ids || []), targetUserId]));
+      const emails = Array.from(new Set([...(currentVal.revoked_emails || []), targetUserEmail.toLowerCase()]));
+      const history = [
+        {
+          user_id: targetUserId,
+          email: targetUserEmail,
+          revoked_at: nowIso,
+          revoked_by: adminName
+        },
+        ...(currentVal.history || []).slice(0, 49)
+      ];
+
+      const payload = {
+        key: 'revoked_sessions',
+        value: {
+          ...currentVal,
+          revoked_user_ids: userIds,
+          revoked_emails: emails,
+          history
+        },
+        updated_at: nowIso
+      };
+
+      const writeRes = await fetch(`${SUPABASE_BASE_URL}/asq_dashboard_state`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!writeRes.ok) {
+        throw new Error(`Cloud update error ${writeRes.status}`);
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('revokeUserSession error:', err);
+      return { success: false, error: err.message };
+    }
+  },
+
+  async revokeAllAgentSessions(adminName = 'SuperAdmin') {
+    try {
+      const nowIso = new Date().toISOString();
+      const readUrl = `${SUPABASE_BASE_URL}/asq_dashboard_state?key=eq.revoked_sessions&select=key,value&limit=1`;
+      const readRes = await fetch(readUrl, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+
+      let currentVal = { revoked_user_ids: [], revoked_emails: [], revoked_all_agents_at: null, history: [] };
+      if (readRes.ok) {
+        const rows = await readRes.json();
+        if (rows && rows[0]?.value) {
+          currentVal = rows[0].value;
+        }
+      }
+
+      const payload = {
         key: 'revoked_sessions',
         value: {
           ...currentVal,
           revoked_all_agents_at: nowIso,
           history: [
-            { target: 'ALL_AGENTS', revoked_at: nowIso, revoked_by: revokedBy },
+            {
+              target: 'ALL_AGENTS',
+              revoked_at: nowIso,
+              revoked_by: adminName
+            },
             ...(currentVal.history || []).slice(0, 49)
           ]
         },
         updated_at: nowIso
       };
-      const saveRes = await fetch(`${SUPABASE_BASE_URL}/asq_dashboard_state`, {
+
+      const writeRes = await fetch(`${SUPABASE_BASE_URL}/asq_dashboard_state`, {
         method: 'POST',
         headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates,return=representation'
+          'Prefer': 'resolution=merge-duplicates,return=representation'
         },
-        body: JSON.stringify(saveBody)
+        body: JSON.stringify(payload)
       });
-      if (!saveRes.ok) throw new Error(`Cloud update error ${saveRes.status}`);
+
+      if (!writeRes.ok) {
+        throw new Error(`Cloud update error ${writeRes.status}`);
+      }
+
       return { success: true };
-    } catch (e) {
-      console.error('revokeAllAgentSessions error:', e);
-      return { success: false, error: e.message };
+    } catch (err) {
+      console.error('revokeAllAgentSessions error:', err);
+      return { success: false, error: err.message };
     }
   },
 
-  // Periodic check whether current session is revoked
-  async checkSessionRevocation(currentUser) {
-    if (!currentUser || currentUser.isImpersonated) return { isRevoked: false };
+  // Check if current user session is revoked in cloud
+  async checkSessionRevocation(user) {
+    if (!user || user.isImpersonated) return { isRevoked: false };
     try {
-      const getUrl = `${SUPABASE_BASE_URL}/asq_dashboard_state?key=eq.revoked_sessions&select=key,value&limit=1`;
-      const res = await fetch(getUrl, {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+      const readUrl = `${SUPABASE_BASE_URL}/asq_dashboard_state?key=eq.revoked_sessions&select=key,value&limit=1`;
+      const readRes = await fetch(readUrl, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
       });
-      if (res.ok) {
-        const rows = await res.json();
+
+      if (readRes.ok) {
+        const rows = await readRes.json();
         if (rows && rows[0]?.value) {
           const val = rows[0].value;
-          const userEmail = (currentUser.email || '').toLowerCase();
-          const isTargeted =
-            (val.revoked_user_ids && val.revoked_user_ids.includes(currentUser.id)) ||
+          const userEmail = (user.email || '').toLowerCase();
+          const isDirectlyRevoked = 
+            (val.revoked_user_ids && val.revoked_user_ids.includes(user.id)) ||
             (val.revoked_emails && val.revoked_emails.includes(userEmail));
 
-          let isAllAgentsRevoked = false;
-          if (currentUser.role === 'agent' && val.revoked_all_agents_at) {
-            const loginTime = currentUser.lastLogin ? new Date(currentUser.lastLogin).getTime() : 0;
-            const revokeTime = new Date(val.revoked_all_agents_at).getTime();
-            if (revokeTime > loginTime) isAllAgentsRevoked = true;
+          let isGlobalAgentRevoked = false;
+          if (user.role === 'agent' && val.revoked_all_agents_at) {
+            const loginTime = user.lastLogin ? new Date(user.lastLogin).getTime() : 0;
+            const revokedTime = new Date(val.revoked_all_agents_at).getTime();
+            if (revokedTime > loginTime) {
+              isGlobalAgentRevoked = true;
+            }
           }
 
-          if (isTargeted || isAllAgentsRevoked) {
-            // Acknowledge revocation by cleaning up target list
-            const remainingEmails = (val.revoked_emails || []).filter(e => e !== userEmail);
-            const remainingIds = (val.revoked_user_ids || []).filter(id => id !== currentUser.id);
+          if (isDirectlyRevoked || isGlobalAgentRevoked) {
+            // Un-flag user from revoked list so they can log back in later cleanly
+            const nextEmails = (val.revoked_emails || []).filter(e => e !== userEmail);
+            const nextUserIds = (val.revoked_user_ids || []).filter(id => id !== user.id);
             fetch(`${SUPABASE_BASE_URL}/asq_dashboard_state`, {
               method: 'POST',
               headers: {
-                apikey: SUPABASE_ANON_KEY,
-                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
                 'Content-Type': 'application/json',
-                Prefer: 'resolution=merge-duplicates'
+                'Prefer': 'resolution=merge-duplicates'
               },
               body: JSON.stringify({
                 key: 'revoked_sessions',
-                value: { ...val, revoked_emails: remainingEmails, revoked_user_ids: remainingIds },
+                value: { ...val, revoked_emails: nextEmails, revoked_user_ids: nextUserIds },
                 updated_at: new Date().toISOString()
               })
             }).catch(e => console.warn(e));
 
+            // Force local logout
             sessionStorage.setItem(REVOCATION_NOTICE_KEY, 'Your session was remotely terminated by an administrator. Please log in again.');
             this.logout();
             return { isRevoked: true };
@@ -363,22 +442,8 @@ export const authService = {
         }
       }
     } catch (e) {
-      console.warn('Session revocation check skipped:', e);
+      console.warn('Session revocation check skipped due to network/offline:', e);
     }
     return { isRevoked: false };
-  },
-
-  // Logout (completely clears all persistent session credentials)
-  logout() {
-    try {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      sessionStorage.removeItem(AUTH_STORAGE_KEY);
-      sessionStorage.removeItem(IMPERSONATION_BACKUP_KEY);
-      localStorage.removeItem('asq_user');
-      localStorage.removeItem('supabase.auth.token');
-      window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: null }));
-    } catch (e) {
-      console.error('Error during logout:', e);
-    }
   }
 };

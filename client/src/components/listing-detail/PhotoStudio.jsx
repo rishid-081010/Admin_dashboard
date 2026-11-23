@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
   Sparkles, RefreshCw, CheckCircle2, Sliders, Download, 
-  RotateCcw, Trash2, ArrowLeft, ChevronUp, ChevronDown, 
+  RotateCcw, Trash2, ArrowLeft, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   Upload, Image as ImageIcon, Send, X, Layers, Check 
 } from 'lucide-react';
 
@@ -125,7 +125,7 @@ export default function PhotoStudio({
           value={customPrompt}
           onChange={(e) => setCustomPrompt(e.target.value)}
           placeholder="Custom AI enhancement instructions (e.g. lift deep shadows on floor, compress window glare, preserve authentic finishes)..."
-          className="w-full glass-input rounded-xl p-3 text-bone-100 text-xs font-mono placeholder-slate-500 focus:outline-none transition-all leading-relaxed"
+          className="w-full glass-input rounded-xl p-3 text-bone-100 text-xs font-sans tabular-nums placeholder-slate-500 focus:outline-none transition-all leading-relaxed"
         />
       </div>
 
@@ -157,17 +157,17 @@ export default function PhotoStudio({
           />
         </div>
 
-        {/* Status Breakdown Grid */}
+        {/* Status Breakdown Grid (Monolithic White Typography) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           <div className="glass-pill rounded-xl p-3 text-center border border-white/[0.06]">
-            <span className="text-xl sm:text-2xl font-bold text-emerald-400 block">{completedCount}</span>
+            <span className="text-xl sm:text-2xl font-bold text-white block">{completedCount}</span>
             <span className="text-[11px] text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Enhanced
             </span>
           </div>
 
           <div className="glass-pill rounded-xl p-3 text-center border border-white/[0.06]">
-            <span className={`text-xl sm:text-2xl font-bold block ${processingCount > 0 ? 'text-blue-400' : 'text-white/40'}`}>
+            <span className={`text-xl sm:text-2xl font-bold block ${processingCount > 0 ? 'text-white' : 'text-white/40'}`}>
               {processingCount}
             </span>
             <span className="text-[11px] text-white/60 font-medium flex items-center justify-center gap-1 mt-0.5">
@@ -201,7 +201,7 @@ export default function PhotoStudio({
           </div>
           <div>
             <p className="text-xs font-bold text-white">Add Additional Property Photos</p>
-            <p className="text-[11px] text-white/50">Upload RAW JPEG, PNG, or WebP. Auto-enhancement & watermarking applied automatically.</p>
+            <p className="text-[11px] text-white/50">Upload photos (JPEG, PNG, or WebP). Automatic enhancement &amp; watermark removal applied automatically.</p>
           </div>
         </div>
 
@@ -277,7 +277,7 @@ export default function PhotoStudio({
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-700/80 text-white/80 shadow-md">
-                      RAW
+                      ORIGINAL
                     </span>
                   )}
                 </div>
@@ -288,19 +288,19 @@ export default function PhotoStudio({
                     type="button"
                     onClick={() => onReorder(idx, idx - 1)}
                     disabled={idx === 0}
-                    className="p-1 rounded hover:bg-white/20 text-white disabled:opacity-30 cursor-pointer"
+                    className="w-6 h-6 rounded hover:bg-white/20 text-white disabled:opacity-30 inline-flex items-center justify-center cursor-pointer"
                     title="Move photo left"
                   >
-                    <ChevronUp className="w-3.5 h-3.5 -rotate-90" />
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => onReorder(idx, idx + 1)}
                     disabled={idx === images.length - 1}
-                    className="p-1 rounded hover:bg-white/20 text-white disabled:opacity-30 cursor-pointer"
+                    className="w-6 h-6 rounded hover:bg-white/20 text-white disabled:opacity-30 inline-flex items-center justify-center cursor-pointer"
                     title="Move photo right"
                   >
-                    <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -308,7 +308,7 @@ export default function PhotoStudio({
               {/* Photo Metadata Bar */}
               <div className="p-3.5 bg-black/30 border-t border-white/[0.06] space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-white/80 font-mono truncate">
+                  <span className="text-xs font-semibold text-white/80 font-sans tabular-nums truncate">
                     #{idx + 1} • {(img.room_type || 'Property Photo').replace(/_/g, ' ')}
                   </span>
                   {!isCover && (
@@ -355,12 +355,12 @@ export default function PhotoStudio({
                     <RefreshCw className={`w-3 h-3 ${isRetrying[img.id] ? 'animate-spin' : ''}`} />
                   </button>
 
-                  {isEnhanced && onDownloadSingle && (
+                  {onDownloadSingle && (img.generated_image_location || img.original_image_location) && (
                     <button
                       type="button"
-                      onClick={() => onDownloadSingle(img.generated_image_location, `0${idx + 1}_${img.room_type || 'photo'}.jpg`)}
+                      onClick={() => onDownloadSingle(img.generated_image_location || img.original_image_location, `0${idx + 1}_${img.room_type || 'photo'}.png`)}
                       className="py-1.5 px-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/80 hover:text-white text-xs font-semibold flex items-center gap-1 border border-white/[0.08] transition-colors cursor-pointer"
-                      title="Download photo"
+                      title="Download photo as PNG"
                     >
                       <Download className="w-3 h-3" />
                     </button>
@@ -428,7 +428,7 @@ export default function PhotoStudio({
               value={refineDirective}
               onChange={(e) => setRefineDirective(e.target.value)}
               placeholder="e.g. Lift shadow on living room marble floor, enhance exterior view through the window..."
-              className="w-full glass-input rounded-xl p-3 text-bone-100 text-xs font-mono placeholder-slate-500 focus:outline-none transition-all leading-relaxed mb-4"
+              className="w-full glass-input rounded-xl p-3 text-bone-100 text-xs font-sans tabular-nums placeholder-slate-500 focus:outline-none transition-all leading-relaxed mb-4"
             />
 
             <div className="flex justify-end gap-2">

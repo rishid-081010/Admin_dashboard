@@ -1,365 +1,193 @@
 import React, { useState, useEffect } from 'react';
-import { PhoneCall, ChevronRight, CheckCircle2, MessageSquare, Phone, Check, User, Bot, Sparkles } from 'lucide-react';
-
-const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
-
-const AGENT_MAP = {
-  sarah: { name: 'Sarah', role: 'Executive Qualifier' },
-  alex: { name: 'Alex', role: 'Senior Outbound' },
-  emma: { name: 'Emma', role: 'Community Specialist' }
-};
-
-let cachedPlannedCount = null;
-let lastPlannedCountFetch = 0;
-const CACHE_TTL_MS = 10 * 60 * 1000;
-
-async function fetchPlannedTotalCount() {
-  const now = Date.now();
-  if (cachedPlannedCount && now - lastPlannedCountFetch < CACHE_TTL_MS) {
-    return cachedPlannedCount;
-  }
-  const headers = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    Prefer: 'count=planned'
-  };
-  try {
-    const res = await fetch(`${SUPABASE_BASE_URL}/owners_data?limit=1`, { headers });
-    const contentRange = res.headers.get('Content-Range') || '';
-    const match = contentRange.match(/\/(\d+)/);
-    if (match && match[1]) {
-      const parsed = parseInt(match[1], 10);
-      cachedPlannedCount = parsed;
-      lastPlannedCountFetch = now;
-      return parsed;
-    }
-  } catch (err) {
-    console.warn('Failed to fetch planned count from owners_data:', err);
-  }
-  return 3042722;
-}
-
-function parseBuildingArea(buildingName, masterArea, note = '', summary = '') {
-  let b = buildingName || '';
-  let a = masterArea || '';
-  if (!b) {
-    const text = `${note} ${summary}`;
-    const m = text.match(/(?:at|in|unit in)\s+([A-Za-z0-9\s]+?)(?:,|\.|\s+unit|\s+tower|\s+building|$)/i);
-    if (m && m[1]) b = m[1].trim();
-  }
-  if (!b) b = 'Prime Dubai Residence';
-  if (!a) a = 'Dubai';
-  return { building: b, area: a };
-}
-
-async function fetchImmediateActionLeads() {
-  const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
-  try {
-    const completedSet = new Set();
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('completed_action_leads') : null;
-      if (stored) JSON.parse(stored).forEach(id => completedSet.add(id));
-    } catch (e) {
-      console.warn('Could not read completed_action_leads from localStorage:', e);
-    }
-
-    const [resFilter, resSummary] = await Promise.all([
-      fetch(
-        `${SUPABASE_BASE_URL}/vapi_call_logs?or=(voice_call_status.ilike.*Awaiting*,note.ilike.*positive*,note.ilike.*wants to*,note.ilike.*interested*)&order=created_at.desc&limit=100`,
-        { headers }
-      ),
-      fetch(
-        `${SUPABASE_BASE_URL}/vapi_call_logs?summary=not.is.null&order=created_at.desc&limit=50`,
-        { headers }
-      )
-    ]);
-
-    const logsA = resFilter.ok ? await resFilter.json() : [];
-    const logsB = resSummary.ok ? await resSummary.json() : [];
-    const seenIds = new Set();
-    const merged = [];
-
-    for (const item of [...logsA, ...logsB]) {
-      if (!seenIds.has(item.id)) {
-        seenIds.add(item.id);
-        merged.push(item);
-      }
-    }
-    merged.sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
-
-    const qualified = [];
-    const seenPhones = new Set();
-
-    for (const item of merged) {
-      if (completedSet.has(item.id)) continue;
-      const note = (item.note || '').trim();
-      const summary = (item.summary || '').trim();
-      const status = (item.voice_call_status || '').trim();
-      const fullText = `${note} ${summary} ${status}`.toLowerCase();
-
-      if (
-        status.toLowerCase().includes('completed') ||
-        status.toLowerCase().includes('broker handled') ||
-        status.toLowerCase().includes('action completed') ||
-        fullText.includes('action completed') ||
-        fullText.includes('broker handled') ||
-        fullText.includes('not ready') ||
-        fullText.includes('not interested') ||
-        fullText.includes('declined') ||
-        fullText.includes('wrong number') ||
-        fullText.includes('voicemail') ||
-        fullText.includes('dnp') ||
-        fullText.includes('no live person') ||
-        fullText.includes('hung up') ||
-        fullText.includes('ended abruptly') ||
-        fullText.includes('no action') ||
-        fullText.includes('silence before') ||
-        fullText.includes('never heard')
-      ) {
-        continue;
-      }
-
-      const isPositive =
-        fullText.includes('wants to sell') ||
-        fullText.includes('wants to rent') ||
-        fullText.includes('renting it out') ||
-        fullText.includes('interested in renting') ||
-        fullText.includes('interested in selling') ||
-        fullText.includes('open to selling') ||
-        fullText.includes('open to rent') ||
-        fullText.includes('open to offer') ||
-        fullText.includes('for sale') ||
-        fullText.includes('for rent') ||
-        fullText.includes('buying multiple') ||
-        fullText.includes('ready to buy') ||
-        fullText.includes('ready to sell') ||
-        (fullText.includes('positive') && (fullText.includes('studio') || fullText.includes('unit') || fullText.includes('bed') || fullText.includes('sell') || fullText.includes('rent')));
-
-      const hasNextStep =
-        fullText.includes('callback') ||
-        fullText.includes('call back') ||
-        fullText.includes('whatsapp') ||
-        fullText.includes('meeting') ||
-        fullText.includes('advisor') ||
-        fullText.includes('consultant') ||
-        fullText.includes('send') ||
-        fullText.includes('expects') ||
-        fullText.includes('vacant') ||
-        fullText.includes('available') ||
-        fullText.includes('price') ||
-        fullText.includes('valuation') ||
-        fullText.includes('offer');
-
-      if (isPositive && hasNextStep) {
-        const phoneKey = item.customer_phone || item.id;
-        if (!seenPhones.has(phoneKey)) {
-          seenPhones.add(phoneKey);
-          qualified.push(item);
-        }
-      }
-    }
-
-    // Default mock list if database has no active pending calls
-    const fallbackList = [
-      {
-        id: 'mock-1',
-        title: 'Nadine · Unit 709',
-        badge: 'Urgent Callback',
-        badgeStyle: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-        subtitle: 'Gautam Maheshchandra Rao · Al Furjan',
-        description: 'Has studio apartment, wants to sell or rent, callback scheduled Friday',
-        agent: 'Sarah',
-        phone: '+971500000001',
-        cleanPhone: '971500000001',
-        targetTab: 'voice'
-      },
-      {
-        id: 'mock-2',
-        title: 'ZaZEN GARDENS · Unit 114',
-        badge: 'WhatsApp Follow-Up',
-        badgeStyle: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-        subtitle: 'Hymavathi Rathankaram Srinivasaraju Rathankaram · Al Furjan',
-        description: 'Wants to sell three off-plan units, will share details on WhatsApp',
-        agent: 'Sarah',
-        phone: '+971500000002',
-        cleanPhone: '971500000002',
-        targetTab: 'voice'
-      },
-      {
-        id: 'mock-3',
-        title: 'SAFEER TOWER 2 · Unit 603',
-        badge: 'Ready to Rent',
-        badgeStyle: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
-        subtitle: 'Shahid Rasool Sheikh · Dubai',
-        description: 'Has other properties, open to work on selling or renting them',
-        agent: 'Sarah',
-        phone: '+971500000003',
-        cleanPhone: '971500000003',
-        targetTab: 'voice'
-      },
-      {
-        id: 'mock-4',
-        title: 'Al Majara 2 · Unit 1104',
-        badge: 'Ready to Rent',
-        badgeStyle: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
-        subtitle: 'Subhash Chander Shukla · Dubai',
-        description: 'Keen to rent out 3BR at 29 Boulevard Tower 1, discussed price and views',
-        agent: 'Sarah',
-        phone: '+971500000004',
-        cleanPhone: '971500000004',
-        targetTab: 'voice'
-      }
-    ];
-
-    if (qualified.length === 0) {
-      return fallbackList.filter(item => !completedSet.has(item.id));
-    }
-
-    const topItems = qualified.slice(0, 6);
-    const phones = topItems.map(d => d.customer_phone).filter(Boolean);
-    const ownerInfoMap = {};
-
-    if (phones.length > 0) {
-      try {
-        const queryPhones = phones.map(p => encodeURIComponent(p)).join(',');
-        const resOwners = await fetch(
-          `${SUPABASE_BASE_URL}/owner_intelligence_leads?phone_normalized=in.(${queryPhones})&select=full_name,building_name,unit_number,master_area,reported_property_type,phone_normalized`,
-          { headers }
-        );
-        if (resOwners.ok) {
-          const owners = await resOwners.json() || [];
-          owners.forEach(o => {
-            if (o.phone_normalized) {
-              if (!ownerInfoMap[o.phone_normalized]) ownerInfoMap[o.phone_normalized] = [];
-              ownerInfoMap[o.phone_normalized].push(o);
-            }
-          });
-        }
-      } catch (err) {
-        console.warn('Could not join owner_intelligence_leads:', err);
-      }
-    }
-
-    return topItems.map(item => {
-      const matchedOwners = ownerInfoMap[item.customer_phone] || [];
-      const noteLower = (item.note || '').toLowerCase();
-      const summaryLower = (item.summary || '').toLowerCase();
-      const combined = `${noteLower} ${summaryLower}`;
-
-      let bestOwner = matchedOwners.find(o => {
-        if (!o.building_name || o.building_name.length <= 2) return false;
-        const clean = o.building_name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        return combined.replace(/[^a-z0-9]/g, '').includes(clean);
-      }) || matchedOwners.find(o => o.unit_number && combined.includes(String(o.unit_number).toLowerCase())) || matchedOwners[0] || {};
-
-      const loc = parseBuildingArea(bestOwner.building_name, bestOwner.master_area, item.note, item.summary);
-      const buildingName = loc.building;
-      const areaName = bestOwner.master_area && !/^\d+$/.test(bestOwner.master_area) ? bestOwner.master_area : loc.area;
-      const unitNum = bestOwner.unit_number && !bestOwner.unit_number.includes('Joy') && bestOwner.unit_number !== '1' ? bestOwner.unit_number : '';
-      const ownerName = bestOwner.full_name || item.customer_name || 'Property Owner';
-
-      let badge = 'Urgent Callback';
-      let badgeStyle = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
-
-      if (combined.includes('whatsapp')) {
-        badge = 'WhatsApp Follow-Up';
-        badgeStyle = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
-      } else if (combined.includes('sell') || combined.includes('for sale')) {
-        badge = 'Ready to Sell';
-        badgeStyle = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
-      } else if (combined.includes('rent') || combined.includes('renting')) {
-        badge = 'Ready to Rent';
-        badgeStyle = 'bg-teal-500/15 text-teal-300 border-teal-500/30';
-      }
-
-      const cleanPhone = (item.customer_phone || '').replace(/[^0-9]/g, '');
-
-      return {
-        id: item.id,
-        title: `${buildingName}${unitNum ? ` · Unit ${unitNum}` : ''}`,
-        badge,
-        badgeStyle,
-        subtitle: `${ownerName} · ${areaName}`,
-        description: item.summary || item.note || 'Follow-up discussion scheduled with owner regarding portfolio properties.',
-        agent: item.assistantId && AGENT_MAP[item.assistantId]?.name ? AGENT_MAP[item.assistantId].name : 'Sarah',
-        phone: item.customer_phone,
-        cleanPhone,
-        targetTab: 'voice'
-      };
-    });
-  } catch (err) {
-    console.warn('Error fetching immediate action leads:', err);
-    return [];
-  }
-}
+import { 
+  Database, PhoneCall, Flame, Bot, CheckCircle2, 
+  Activity, ChevronRight, ArrowRight, RefreshCw, Zap,
+  Building2, Radio, ExternalLink, ChevronDown, Check,
+  Phone, MessageSquare
+} from 'lucide-react';
+import { 
+  fetchVoiceOverview, fetchImmediateActivities, fetchTotalLeadsCount, 
+  markLeadAsCompleted, AGENTS_CONFIG, AGENT_IDS, subscribeToVoiceTelemetry 
+} from '../utils/voiceAgentService';
+import { fetchN8nWorkflows } from '../utils/n8nService';
+import N8nLogo from './N8nLogo';
 
 export default function OverviewDashboard({ onNavigate }) {
+  const getTodayDubai = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date());
+
+  const [selectedDate, setSelectedDate] = useState(getTodayDubai());
   const [loading, setLoading] = useState(true);
-  const [totalLeads, setTotalLeads] = useState(3042722);
-  const [voiceMetrics, setVoiceMetrics] = useState({
+  const [refreshing, setRefreshing] = useState(false);
+  const [totalLeadsCount, setTotalLeadsCount] = useState(3042722);
+  const [voiceData, setVoiceData] = useState({
     totalCallsToday: 0,
     answeredCallsToday: 0,
-    qualifiedLeadsToday: 0
+    qualifiedLeadsToday: 0,
+    agents: AGENT_IDS.map(id => ({
+      ...AGENTS_CONFIG[id],
+      callsToday: 0,
+      health: 'Standby'
+    }))
   });
-  const [actionLeads, setActionLeads] = useState([]);
 
-  const loadData = async () => {
+  // Live Immediate Activities from Supabase
+  const [immediateActivities, setImmediateActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+
+  // Live n8n Workflows
+  const [n8nData, setN8nData] = useState({
+    summary: { activeWorkflows: 0, totalExecutionsToday: 0, healthyWorkflows: 0, errorWorkflows: 0 },
+    workflows: []
+  });
+  const [loadingN8n, setLoadingN8n] = useState(true);
+  const [showAllWorkflows, setShowAllWorkflows] = useState(false);
+
+  const formatTimeAgo = (isoDate) => {
+    if (!isoDate) return 'Awaiting trigger';
+    const diffSec = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
+    if (diffSec < 60) return 'Just now';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+    if (diffSec < 2592000) return `${Math.floor(diffSec / 604800)}w ago`;
+    return `${Math.floor(diffSec / 2592000)}mo ago`;
+  };
+
+  const updateVoiceStats = (res) => {
+    if (!res) return;
+    const agents = res.agents || [];
+    const parseNum = (val, fallback = 0) => {
+      if (typeof val === 'number') return isNaN(val) ? fallback : val;
+      if (typeof val === 'string') {
+        const parsed = parseInt(val.replace(/,/g, ''), 10);
+        return isNaN(parsed) ? fallback : parsed;
+      }
+      return fallback;
+    };
+
+    const totalCallsNum = res.rawTotalCalls ?? parseNum(res.totalCalls, 0);
+    const answeredCallsNum = res.rawAnsweredCalls ?? parseNum(res.answeredCalls, 0);
+    const qualifiedLeadsNum = res.rawQualifiedLeads ?? parseNum(res.qualifiedLeads, 0);
+
+    // Build dynamic agents array from the response
+    const agentCards = AGENT_IDS.map(id => {
+      const agentData = agents.find(a => a.id === id) || {};
+      const calls = agentData.rawCalls ?? parseNum(agentData.calls, 0);
+      return {
+        ...AGENTS_CONFIG[id],
+        callsToday: calls,
+        health: calls > 0 ? 'Active Running' : 'Standby'
+      };
+    });
+
+    setVoiceData({
+      totalCallsToday: totalCallsNum,
+      answeredCallsToday: answeredCallsNum,
+      qualifiedLeadsToday: qualifiedLeadsNum,
+      agents: agentCards
+    });
+  };
+
+  const loadAllTelemetry = async () => {
     try {
       setLoading(true);
-      const [leadsRes, plannedTotal] = await Promise.allSettled([
-        fetchImmediateActionLeads(),
-        fetchPlannedTotalCount()
+      const [resVoice, resActivities, resN8n, resLeadsCount] = await Promise.allSettled([
+        fetchVoiceOverview({ timeFilter: 'Daily', selectedDate }),
+        fetchImmediateActivities(),
+        fetchN8nWorkflows(),
+        fetchTotalLeadsCount()
       ]);
 
-      if (leadsRes.status === 'fulfilled' && Array.isArray(leadsRes.value)) {
-        setActionLeads(leadsRes.value);
+      if (resVoice.status === 'fulfilled' && resVoice.value) {
+        updateVoiceStats(resVoice.value);
       }
-      if (plannedTotal.status === 'fulfilled' && typeof plannedTotal.value === 'number') {
-        setTotalLeads(plannedTotal.value);
+      if (resActivities.status === 'fulfilled' && Array.isArray(resActivities.value)) {
+        setImmediateActivities(resActivities.value);
+      }
+      if (resN8n.status === 'fulfilled' && resN8n.value) {
+        setN8nData(resN8n.value);
+      }
+      if (resLeadsCount.status === 'fulfilled' && typeof resLeadsCount.value === 'number') {
+        setTotalLeadsCount(resLeadsCount.value);
       }
     } catch (err) {
-      console.warn('Error loading telemetry:', err);
+      console.warn('Error loading live telemetry:', err);
     } finally {
       setLoading(false);
+      setLoadingActivities(false);
+      setLoadingN8n(false);
     }
   };
 
+  // Fetch live daily telemetry from Supabase & n8n
   useEffect(() => {
-    loadData();
-  }, []);
+    loadAllTelemetry();
+  }, [selectedDate]);
 
-  const handleMarkDone = (leadId, phone, e) => {
+  // Subscribe to live Realtime WebSocket updates for voice telemetry
+  useEffect(() => {
+    const unsubscribe = subscribeToVoiceTelemetry((events) => {
+      // Re-fetch voice stats in background without displaying full screen spinner
+      fetchVoiceOverview({ timeFilter: 'Daily', selectedDate })
+        .then(res => {
+          if (res) updateVoiceStats(res);
+        })
+        .catch(err => console.warn('Background realtime sync error:', err));
+      
+      // Also silently refresh immediate activities stream
+      fetchImmediateActivities()
+        .then(acts => {
+          if (Array.isArray(acts)) setImmediateActivities(acts);
+        })
+        .catch(() => {});
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [selectedDate]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadAllTelemetry();
+    } catch (err) {
+      console.warn('Failed refreshing telemetry:', err);
+    } finally {
+      setTimeout(() => setRefreshing(false), 400);
+    }
+  };
+
+  const handleCompleteLead = async (leadId, phone, e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    setActionLeads(prev => prev.filter(item => item.id !== leadId));
+    // Optimistically remove from state immediately
+    setImmediateActivities(prev => prev.filter(act => act.id !== leadId));
     try {
-      if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('completed_action_leads');
-        const list = stored ? JSON.parse(stored) : [];
-        if (!list.includes(leadId)) {
-          list.push(leadId);
-          localStorage.setItem('completed_action_leads', JSON.stringify(list));
-        }
-      }
+      await markLeadAsCompleted(leadId, phone);
     } catch (err) {
-      console.warn('LocalStorage save failed:', err);
+      console.warn('Failed to mark lead as completed:', err);
     }
   };
 
   return (
     <div className="w-full flex flex-col gap-6 select-text text-white font-sans animate-fade-in pr-1 pb-16">
-      {/* Title Header */}
+
+      {/* ─── 1. TOP HEADER SECTION ─────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
         <div>
-          <h1 className="ds-page-title">Overview</h1>
+          <h1 className="ds-page-title">
+            Overview
+          </h1>
         </div>
       </div>
 
-      {/* 4 Metric Cards */}
+      {/* ─── 2. TOP 4 KEY METRIC CARDS (Standardized Tokens) ───────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        {/* Card 1: Total Leads */}
         <div 
           onClick={() => onNavigate && onNavigate('owners')}
           className="ds-card ds-card-interactive p-6 cursor-pointer"
@@ -368,10 +196,11 @@ export default function OverviewDashboard({ onNavigate }) {
             Total Leads Registry
           </div>
           <div className="text-3xl sm:text-4xl font-bold text-white tracking-tight my-1.5 font-sans tabular-nums">
-            {totalLeads.toLocaleString()}
+            {totalLeadsCount.toLocaleString()}
           </div>
         </div>
 
+        {/* Card 2: Calls Dialed */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
           className="ds-card ds-card-interactive p-6 cursor-pointer"
@@ -380,10 +209,11 @@ export default function OverviewDashboard({ onNavigate }) {
             Calls Dialed Today
           </div>
           <div className="text-3xl sm:text-4xl font-bold text-white tracking-tight my-1.5 font-sans tabular-nums">
-            {voiceMetrics.totalCallsToday.toLocaleString()}
+            {voiceData.totalCallsToday.toLocaleString()}
           </div>
         </div>
 
+        {/* Card 3: Connected */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
           className="ds-card ds-card-interactive p-6 cursor-pointer"
@@ -392,10 +222,11 @@ export default function OverviewDashboard({ onNavigate }) {
             Connected Calls
           </div>
           <div className="text-3xl sm:text-4xl font-bold text-white tracking-tight my-1.5 font-sans tabular-nums">
-            {voiceMetrics.answeredCallsToday.toLocaleString()}
+            {Number(voiceData.answeredCallsToday || 0).toLocaleString()}
           </div>
         </div>
 
+        {/* Card 4: Qualified Leads */}
         <div 
           onClick={() => onNavigate && onNavigate('voice')}
           className="ds-card ds-card-interactive p-6 cursor-pointer"
@@ -404,17 +235,18 @@ export default function OverviewDashboard({ onNavigate }) {
             Qualified Leads
           </div>
           <div className="text-3xl sm:text-4xl font-bold text-white tracking-tight my-1.5 font-sans tabular-nums">
-            {voiceMetrics.qualifiedLeadsToday.toLocaleString()}
+            {voiceData.qualifiedLeadsToday.toLocaleString()}
           </div>
         </div>
+
       </div>
 
-      {/* Immediate Action Required Section */}
+      {/* ─── 3. IMMEDIATE ACTION REQUIRED ───────────────────────────────────── */}
       <div className="ds-card p-6 sm:p-7">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[#1b2b3d]">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc]">
-              <PhoneCall className="w-5 h-5 text-[#b7a990]" />
+              <Flame className="w-5 h-5 text-[#b7a990]" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-white tracking-tight">
@@ -422,8 +254,9 @@ export default function OverviewDashboard({ onNavigate }) {
               </h3>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => onNavigate && onNavigate('voice')}
               className="ds-btn-secondary inline-flex items-center gap-1.5"
             >
@@ -433,20 +266,21 @@ export default function OverviewDashboard({ onNavigate }) {
           </div>
         </div>
 
-        {loading ? (
+        {/* List of immediate hot leads */}
+        {loadingActivities ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {[1, 2, 3, 4].map(idx => (
-              <div key={idx} className="p-6 ds-subcard animate-pulse h-52 flex flex-col justify-between">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="p-6 ds-subcard animate-pulse h-52 flex flex-col justify-between">
                 <div>
-                  <div className="h-5 bg-white/10 rounded w-2/3 mb-3" />
-                  <div className="h-4 bg-white/5 rounded w-1/2 mb-4" />
-                  <div className="h-14 bg-white/5 rounded-xl w-full" />
+                  <div className="h-5 bg-white/10 rounded w-2/3 mb-3"></div>
+                  <div className="h-4 bg-white/5 rounded w-1/2 mb-4"></div>
+                  <div className="h-14 bg-white/5 rounded-xl w-full"></div>
                 </div>
-                <div className="h-8 bg-white/5 rounded-lg w-full mt-3" />
+                <div className="h-8 bg-white/5 rounded-lg w-full mt-3"></div>
               </div>
             ))}
           </div>
-        ) : actionLeads.length === 0 ? (
+        ) : immediateActivities.length === 0 ? (
           <div className="p-12 text-center ds-subcard text-slate-400 text-sm flex flex-col items-center justify-center gap-2">
             <CheckCircle2 className="w-8 h-8 text-emerald-400/80 mb-1" />
             <p className="font-semibold text-white">All Clear — No Pending Action Required</p>
@@ -454,46 +288,47 @@ export default function OverviewDashboard({ onNavigate }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {actionLeads.map(lead => (
-              <div 
-                key={lead.id}
-                onClick={() => onNavigate && onNavigate(lead.targetTab || 'voice')}
+            {immediateActivities.map((act) => (
+              <div
+                key={act.id}
+                onClick={() => onNavigate && onNavigate(act.targetTab || 'voice')}
                 className="p-6 ds-subcard ds-subcard-interactive cursor-pointer flex flex-col justify-between gap-4 group"
               >
                 <div>
+                  {/* Row 1: Property Name & Action Badge */}
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <h4 
-                      className="font-bold text-white text-base sm:text-[17px] leading-snug group-hover:text-blue-300 transition-colors tracking-tight"
-                      title={lead.title}
-                    >
-                      {lead.title}
+                    <h4 className="font-bold text-white text-base sm:text-[17px] leading-snug group-hover:text-blue-300 transition-colors tracking-tight" title={act.title}>
+                      {act.title}
                     </h4>
-                    <span className={`px-3 py-1 rounded-lg text-xs font-bold border shrink-0 tracking-wide shadow-sm ${lead.badgeStyle}`}>
-                      {lead.badge}
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold border shrink-0 tracking-wide shadow-sm ${act.badgeStyle}`}>
+                      {act.badge}
                     </span>
                   </div>
 
+                  {/* Row 2: Owner Details */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="text-sm text-amber-200/90 font-semibold" title={lead.subtitle}>
-                      {lead.subtitle}
+                    <div className="text-sm text-amber-200/90 font-semibold" title={act.subtitle}>
+                      {act.subtitle}
                     </div>
                   </div>
 
+                  {/* Row 3: Spacious Lead Summary Box */}
                   <div className="p-4 rounded-xl bg-[#050d18]/65 border border-white/5 text-[13px] sm:text-[13.5px] text-slate-200 leading-relaxed font-normal shadow-inner min-h-[76px] flex items-center line-clamp-3">
-                    {lead.description}
+                    {act.description}
                   </div>
                 </div>
 
+                {/* Row 4: Footer with Agent & Generous Action Buttons (Pinned to bottom baseline) */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3.5 border-t border-white/10 mt-auto">
                   <span className="text-slate-300 flex items-center gap-2 font-sans font-medium text-xs">
-                    <User className="w-4 h-4 text-blue-400 shrink-0" />
-                    <span>{lead.agent || 'Sarah'}</span>
+                    <Bot className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>{act.agent ? act.agent.replace(/\s*\(Line\s*\d+[^)]*\)/gi, '').replace(/\s*·\s*Connected/gi, '') : 'Sarah'}</span>
                   </span>
-
+                  
                   <div className="flex items-center gap-2 shrink-0">
-                    {lead.cleanPhone && (
+                    {act.cleanPhone && (
                       <a
-                        href={`https://wa.me/${lead.cleanPhone}`}
+                        href={`https://wa.me/${act.cleanPhone}`}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -504,10 +339,9 @@ export default function OverviewDashboard({ onNavigate }) {
                         <span>WhatsApp</span>
                       </a>
                     )}
-
-                    {lead.phone && (
+                    {act.phone && (
                       <a
-                        href={`tel:${lead.phone}`}
+                        href={`tel:${act.phone}`}
                         onClick={(e) => e.stopPropagation()}
                         title="Call owner directly"
                         className="px-3.5 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 flex items-center gap-1.5 text-xs font-semibold transition-all shadow-sm"
@@ -516,10 +350,9 @@ export default function OverviewDashboard({ onNavigate }) {
                         <span>Call</span>
                       </a>
                     )}
-
                     <button
                       type="button"
-                      onClick={(e) => handleMarkDone(lead.id, lead.phone, e)}
+                      onClick={(e) => handleCompleteLead(act.id, act.phone, e)}
                       title="Mark as completed & remove from queue"
                       className="px-3.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-emerald-500/25 hover:border-emerald-500/40 hover:text-emerald-300 text-slate-200 border border-slate-700/80 flex items-center gap-1.5 text-xs font-semibold transition-all group/done shadow-sm"
                     >
@@ -533,6 +366,268 @@ export default function OverviewDashboard({ onNavigate }) {
           </div>
         )}
       </div>
+
+      {/* ─── 4. VOICE AGENTS ─────────────────────────────────────────────────── */}
+      <div className="ds-card p-6 sm:p-7">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400">
+              <PhoneCall className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Voice Agents
+              </h3>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => onNavigate && onNavigate('voice')}
+              className="ds-btn-secondary inline-flex items-center gap-1.5"
+            >
+              <span>View all dialers</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Dynamic Voice Agent Telemetry Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {voiceData.agents.map((agent, idx) => {
+            const agentThemes = {
+              blue: {
+                bgPill: 'bg-blue-500/15',
+                borderPill: 'border-blue-400/30',
+                textPill: 'text-blue-300',
+                hoverBorder: 'hover:border-blue-500/50',
+                hoverText: 'group-hover:text-blue-300'
+              },
+              purple: {
+                bgPill: 'bg-purple-500/15',
+                borderPill: 'border-purple-400/30',
+                textPill: 'text-purple-300',
+                hoverBorder: 'hover:border-purple-500/50',
+                hoverText: 'group-hover:text-purple-300'
+              },
+              emerald: {
+                bgPill: 'bg-emerald-500/15',
+                borderPill: 'border-emerald-400/30',
+                textPill: 'text-emerald-300',
+                hoverBorder: 'hover:border-emerald-500/50',
+                hoverText: 'group-hover:text-emerald-300'
+              },
+              amber: {
+                bgPill: 'bg-amber-500/15',
+                borderPill: 'border-amber-400/30',
+                textPill: 'text-amber-300',
+                hoverBorder: 'hover:border-amber-500/50',
+                hoverText: 'group-hover:text-amber-300'
+              }
+            };
+            const theme = agentThemes[agent.color] || agentThemes.blue;
+            return (
+              <div 
+                key={agent.id}
+                onClick={() => onNavigate && onNavigate('voice')}
+                className="p-4 sm:p-5 ds-subcard ds-subcard-interactive cursor-pointer flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#122238] border border-[#1b2b3d] flex items-center justify-center text-[#e2e0cc] font-bold text-sm shadow-inner shrink-0 group-hover:border-[#b7a990]/40 transition-colors">
+                    {idx + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-white group-hover:text-[#e2e0cc] transition-colors truncate">
+                        {agent.name}
+                      </h4>
+                      {agent.health === 'Active Running' || agent.callsToday > 0 ? (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span>
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-slate-500 inline-block shrink-0"></span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400 truncate mt-0.5">{agent.role}</div>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 pl-2">
+                  <div className="text-xl sm:text-2xl font-extrabold text-white font-sans tabular-nums tracking-tight leading-none">
+                    {agent.callsToday.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] uppercase font-semibold text-slate-400 mt-1">Calls</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ─── 5. AUTOMATED WORKFLOWS ─────────────────────────────────────────── */}
+      <div className="ds-card p-6 sm:p-7">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[#1b2b3d]">
+          <div className="flex items-center gap-3">
+            {/* n8n Official Brand Logo in place of generic pulse icon (Image 2 & 3) */}
+            <div className="p-2.5 rounded-xl bg-[#ff6d5a]/15 border border-[#ff6d5a]/30 shadow-sm shadow-[#ff6d5a]/10 flex items-center justify-center shrink-0">
+              <N8nLogo className="w-5 h-5" color="#FF6D5A" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Automated Workflows
+              </h3>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => onNavigate && onNavigate('workflows')}
+              className="h-9 px-3.5 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Open Workflows Sidetab"
+            >
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+            <a
+              href="https://n8n.asquared.ae/executions"
+              target="_blank"
+              rel="noreferrer"
+              className="h-9 px-3.5 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Open live executions history in n8n"
+            >
+              <span>Executions Log</span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+            </a>
+            <a
+              href="https://n8n.asquared.ae"
+              target="_blank"
+              rel="noreferrer"
+              className="h-9 px-3.5 rounded-xl bg-[#ff6d5a] hover:bg-[#ff553d] text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-[#ff6d5a]/25 cursor-pointer"
+              title="Open n8n Console"
+            >
+              <span>n8n Console</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+
+        {/* Active Workflows Grid */}
+        {loadingN8n ? (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="p-5 bg-[#06111e] border border-[#1a2c42] rounded-2xl animate-pulse h-28"></div>
+            ))}
+          </div>
+        ) : n8nData.workflows.length === 0 ? (
+          <div className="p-8 text-center bg-[#06111e] border border-[#1a2c42] rounded-2xl text-slate-400 text-sm">
+            No workflows found.
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5">
+              {(showAllWorkflows ? n8nData.workflows : n8nData.workflows.slice(0, 8)).map((wf) => (
+                <a
+                  key={wf.id}
+                  href={wf.n8nUrl || `https://n8n.asquared.ae/workflow/${wf.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-5 sm:p-5.5 ds-subcard ds-subcard-interactive hover:border-[#ff6d5a]/40 flex flex-col justify-between gap-3.5 transition-all shadow-md group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border mt-0.5 ${
+                        wf.status === 'healthy' 
+                          ? 'bg-[#ff6d5a]/10 border-[#ff6d5a]/25 text-[#ff6d5a]' 
+                          : wf.status === 'running'
+                          ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                          : wf.status === 'error'
+                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                          : 'bg-slate-500/10 border-slate-500/20 text-slate-400'
+                      }`}>
+                        <N8nLogo className="w-5 h-5" color={wf.status === 'error' ? '#f43f5e' : '#FF6D5A'} />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-white text-sm sm:text-base font-bold leading-snug group-hover:text-orange-300 transition-colors break-words" title={wf.name}>
+                          {wf.name}
+                        </h4>
+                        <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-1.5 font-sans tabular-nums">
+                          <span className="text-slate-300 flex items-center gap-1">
+                            <span className="text-slate-500">Last run:</span>
+                            <span className="font-semibold text-white">{formatTimeAgo(wf.lastExecutedAt)}</span>
+                            {wf.recentLogs?.[0]?.id && (
+                              <span 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`https://n8n.asquared.ae/execution/${wf.recentLogs[0].id}`, '_blank');
+                                }}
+                                className="px-1.5 py-0.2 rounded bg-[#ff6d5a]/15 hover:bg-[#ff6d5a]/30 text-[#ff6d5a] border border-[#ff6d5a]/30 cursor-pointer text-[10px] font-bold transition-all"
+                                title={`Open Live Execution #${wf.recentLogs[0].id} in n8n`}
+                              >
+                                #{wf.recentLogs[0].id}
+                              </span>
+                            )}
+                          </span>
+                          {wf.updatedAt && (
+                            <>
+                              <span className="text-slate-600">·</span>
+                              <span className="text-slate-400" title="When workflow was last saved in n8n canvas (matches 'Last updated' in n8n)">
+                                Saved: {formatTimeAgo(wf.updatedAt)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`px-3 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 shrink-0 shadow-sm ${
+                      wf.status === 'healthy'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : wf.status === 'running'
+                        ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                        : wf.status === 'error'
+                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                        : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+                    }`}>
+                      <span className={`w-2 h-2 rounded-full ${
+                        wf.status === 'healthy' ? 'bg-emerald-400 animate-pulse' :
+                        wf.status === 'running' ? 'bg-blue-400 animate-pulse' :
+                        wf.status === 'error' ? 'bg-rose-400' : 'bg-slate-400'
+                      }`} />
+                      <span className="capitalize">{wf.status || 'Active'}</span>
+                    </div>
+                  </div>
+
+                  {/* Workflow Execution Stats & Link Footer */}
+                  <div className="pt-3 border-t border-[#18283a] flex items-center justify-between text-xs">
+                    <span className="text-slate-300 font-sans tabular-nums font-medium flex items-center gap-2">
+                      <span className="text-white font-bold">{wf.executionsToday}</span> runs today
+                      {wf.errorToday > 0 ? (
+                        <span className="text-rose-400 font-bold">· {wf.errorToday} error{wf.errorToday > 1 ? 's' : ''}</span>
+                      ) : null}
+                    </span>
+                    <span className="text-[#ff6d5a] group-hover:text-orange-300 font-semibold flex items-center gap-1 transition-colors">
+                      <span>Open workflow</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {n8nData.workflows.length > 8 && (
+              <div className="mt-5 text-center">
+                <button
+                  onClick={() => setShowAllWorkflows(!showAllWorkflows)}
+                  className="ds-btn-secondary inline-flex items-center gap-2 hover:border-[#ff6d5a]/40"
+                >
+                  <span>{showAllWorkflows ? 'Show Less' : `Show All (${n8nData.workflows.length})`}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showAllWorkflows ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
     </div>
   );
 }

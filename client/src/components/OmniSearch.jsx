@@ -647,7 +647,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
             <span className="text-sm font-bold text-white tracking-wide">OMNI SEARCH ENGINE</span>
-            <kbd className="px-2 py-0.5 rounded text-[10.5px] bg-white/10 text-white/60 font-mono border border-white/10">
+            <kbd className="px-2 py-0.5 rounded text-[10.5px] bg-white/10 text-white/60 font-sans tabular-nums border border-white/10">
               Ctrl + F6
             </kbd>
           </div>
@@ -663,15 +663,9 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
       {/* Main Header */}
       <div className="flex flex-col items-center justify-center mt-2 mb-4 shrink-0">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-          <span>SEARCH DATABASE</span>
-          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            Canonical 2.0
-          </span>
+        <h1 className="ds-page-title text-2xl sm:text-3xl text-center">
+          Omni Database Search
         </h1>
-        <p className="text-xs text-white/50 mt-1">
-          Fast indexed search across 2.22M+ verified owners and 69,000+ buildings
-        </p>
       </div>
 
       {/* Center Search Container */}
@@ -679,7 +673,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         
         {/* Big Search Bar */}
         <div className="relative mb-3 shrink-0">
-          <Search className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 w-5 sm:w-6 h-5 sm:h-6 text-[#3b82f6]" />
+          <Search className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 w-5 sm:w-6 h-5 sm:h-6 text-[#b7a990]" />
           <input
             ref={inputRef}
             type="text"
@@ -688,7 +682,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             onChange={(e) => setQuery(e.target.value)}
             onPaste={handlePaste}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="w-full bg-[#0c1829] border-2 border-[#233549] focus:border-[#3b82f6] rounded-2xl pl-14 sm:pl-16 pr-24 sm:pr-28 py-3.5 sm:py-4 text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/20 transition-all shadow-2xl"
+            className="w-full bg-[#06111e]/60 backdrop-blur-xl border border-white/20 focus:border-[#b7a990] focus:ring-1 focus:ring-[#b7a990]/40 rounded-2xl pl-14 sm:pl-16 pr-24 sm:pr-28 py-3.5 sm:py-4 text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none transition-all shadow-2xl"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {query && (
@@ -712,7 +706,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
             )}
             <button 
               onClick={() => handleSearch()} 
-              className="bg-[#3b82f6] hover:bg-[#2563eb] text-white p-2 sm:p-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/30 cursor-pointer"
+              className="bg-[#183153] hover:bg-[#203a63] border border-[#b7a990]/40 text-white p-2 sm:p-2.5 rounded-xl transition-all shadow-md cursor-pointer"
               title="Search"
             >
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -723,7 +717,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
         {/* Filter Pills */}
         <div className="flex items-center gap-2 mb-3 flex-wrap shrink-0">
           <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider mr-1">
-            <Filter className="w-3.5 h-3.5 text-blue-400" />
+            <Filter className="w-3.5 h-3.5 text-[#b7a990]" />
             <span>Filters:</span>
           </div>
           <div className="flex gap-1.5 flex-wrap">
@@ -731,10 +725,10 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               <button 
                 key={f}
                 onClick={() => handleFilterPillClick(f)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   filterType === f 
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 border border-blue-400' 
-                    : 'bg-[#0c1829] text-slate-300 border border-[#233549] hover:bg-[#122238] hover:text-white'
+                    ? 'bg-[#183153]/85 text-[#e2e0cc] border border-[#b7a990]/40 shadow-lg backdrop-blur-md font-semibold' 
+                    : 'bg-white/[0.04] text-[#94a3b8] border border-white/10 hover:bg-white/[0.08] hover:text-white'
                 }`}
               >
                 {f}
@@ -772,7 +766,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 text-white/50">
               <RefreshCw className="w-7 h-7 animate-spin text-blue-400 mb-2" />
-              <p className="text-sm">Searching verified canonical records...</p>
+              <p className="text-sm">Searching records...</p>
             </div>
           )}
 
@@ -788,7 +782,6 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
               {/* Actionable Query Tips */}
               <div className="bg-[#050c18] border border-white/5 rounded-xl p-3.5 text-left mb-4 space-y-2 text-xs text-slate-300">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Search Suggestions:</div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span>
                   <span><strong>Owner Name:</strong> First or last name (e.g. &ldquo;Mohammed&rdquo;, &ldquo;Al Hashimi&rdquo;)</span>
@@ -847,7 +840,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               {idResults.map((item, idx) => (
                 <div 
                   key={item.canonical_owner_id || item.owner_id || idx}
-                  className="bg-[#0c1829] border border-[#233549] hover:border-emerald-400/60 rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 group"
+                  className="ds-subcard ds-subcard-interactive p-4 transition-all flex items-center justify-between gap-4 group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
@@ -858,50 +851,24 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         <span className="text-base font-bold text-white truncate group-hover:text-emerald-300 transition-colors">
                           {item.full_name || 'Verified Owner'}
                         </span>
-                        {item.emirates_id && (
-                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                            isIdMatched(item.emirates_id, query)
-                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm'
-                              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25 font-medium'
-                          }`}>
-                            EID: {item.emirates_id}
+                        {item.emirates_id && isIdMatched(item.emirates_id, query) && (
+                          <span className="text-[10px] font-sans tabular-nums px-2 py-0.5 rounded border bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm">
+                            Matched EID: {item.emirates_id}
                           </span>
                         )}
-                        {item.lead_id && (
-                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                            isIdMatched(item.lead_id, query)
-                              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold shadow-sm'
-                              : 'bg-blue-500/20 text-blue-300 border-blue-500/30 font-medium'
-                          }`}>
-                            Lead ID: {item.lead_id}
+                        {item.lead_id && isIdMatched(item.lead_id, query) && (
+                          <span className="text-[10px] font-sans tabular-nums px-2 py-0.5 rounded border bg-blue-500/20 text-blue-300 border-blue-500/30 font-bold shadow-sm">
+                            Matched Lead ID: {item.lead_id}
                           </span>
                         )}
-                        {item.owner_id && (
-                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                            isIdMatched(item.owner_id, query)
-                              ? 'bg-purple-500/25 text-purple-300 border-purple-500/40 font-bold shadow-sm'
-                              : 'bg-purple-500/20 text-purple-300 border-purple-500/30 font-medium'
-                          }`} title="Master Leads ID">
-                            Master ID: {item.owner_id}
+                        {item.owner_id && isIdMatched(item.owner_id, query) && (
+                          <span className="text-[10px] font-sans tabular-nums px-2 py-0.5 rounded border bg-purple-500/25 text-purple-300 border-purple-500/40 font-bold shadow-sm" title="Master Leads ID">
+                            Matched Master ID: {item.owner_id}
                           </span>
                         )}
-                        {item.bitrix_id && (
-                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                            isIdMatched(item.bitrix_id, query)
-                              ? 'bg-amber-500/25 text-amber-300 border-amber-500/40 font-bold shadow-sm'
-                              : 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-medium'
-                          }`}>
-                            Bitrix #{item.bitrix_id}
-                          </span>
-                        )}
-                        {item.total_units > 1 && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                            {item.total_units} Units Portfolio
-                          </span>
-                        )}
-                        {formatAedValuation(item.total_portfolio_valuation) && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                            {formatAedValuation(item.total_portfolio_valuation)}
+                        {item.bitrix_id && isIdMatched(item.bitrix_id, query) && (
+                          <span className="text-[10px] font-sans tabular-nums px-2 py-0.5 rounded border bg-amber-500/25 text-amber-300 border-amber-500/40 font-bold shadow-sm">
+                            Matched Bitrix #{item.bitrix_id}
                           </span>
                         )}
                       </div>
@@ -925,7 +892,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                     )}
                     <button
                       onClick={() => handleSelectOwner(item)}
-                      className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 flex items-center gap-1 transition-all cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#183153] hover:bg-[#203a63] border border-[#b7a990]/40 text-white shadow-sm flex items-center gap-1 transition-all cursor-pointer"
                     >
                       <span>Owner 360</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -949,7 +916,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 {filterType === 'All' && (
                   <button 
                     onClick={() => handleFilterPillClick('Area')}
-                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
+                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all areas</span>
                     <ChevronRight className="w-3 h-3" />
@@ -962,7 +929,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                   <div
                     key={area.rawName || idx}
                     onClick={() => openAreaExplorer(area)}
-                    className="bg-[#0c1829] hover:bg-[#102035] border border-[#233549] hover:border-amber-400/50 rounded-xl p-4 transition-all shadow-xl shadow-black/40 cursor-pointer group flex flex-col justify-between"
+                    className="ds-subcard ds-subcard-interactive p-4 transition-all cursor-pointer group flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -1017,7 +984,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 {filterType === 'All' && (
                   <button 
                     onClick={() => handleFilterPillClick('Buildings')}
-                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
+                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all buildings</span>
                     <ChevronRight className="w-3 h-3" />
@@ -1029,7 +996,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 <div 
                   key={b.rawName || idx}
                   onClick={() => handleSelectBuilding(b)}
-                  className="bg-[#0c1829] hover:bg-[#102035] border border-[#233549] hover:border-[#385175] rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 cursor-pointer group"
+                  className="ds-subcard ds-subcard-interactive p-4 transition-all flex items-center justify-between gap-4 cursor-pointer group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-11 h-11 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/25 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -1040,7 +1007,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         <span className="text-base font-bold text-white group-hover:text-blue-300 transition-colors">
                           {b.name}
                         </span>
-                        <span className="text-[10px] bg-blue-500/20 text-blue-300 font-mono px-2 py-0.5 rounded border border-blue-500/30 font-bold uppercase">
+                        <span className="text-[10px] bg-blue-500/20 text-blue-300 font-sans tabular-nums px-2 py-0.5 rounded border border-blue-500/30 font-bold uppercase">
                           {b.area}
                         </span>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
@@ -1098,7 +1065,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 {filterType === 'All' && (
                   <button 
                     onClick={() => handleFilterPillClick('Owners')}
-                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
+                    className="text-blue-400 hover:text-blue-300 normal-case font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all owners</span>
                     <ChevronRight className="w-3 h-3" />
@@ -1109,7 +1076,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
               {ownerResults.map((item, idx) => (
                 <div 
                   key={item.canonical_owner_id || item.owner_id || idx}
-                  className="bg-[#0c1829] hover:bg-[#102035] border border-[#233549] hover:border-[#385175] rounded-xl p-4 transition-all shadow-xl shadow-black/40 flex items-center justify-between gap-4 group"
+                  className="ds-subcard ds-subcard-interactive p-4 transition-all flex items-center justify-between gap-4 group"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-white/5 text-white/70 border border-white/10 flex items-center justify-center shrink-0">
@@ -1120,38 +1087,6 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                         <span className="text-base font-bold text-white truncate group-hover:text-blue-300 transition-colors">
                           {item.full_name || 'Property Owner'}
                         </span>
-                        
-                        {item.nationality && (
-                          <span className="text-[10px] bg-white/10 text-white/70 px-2 py-0.5 rounded border border-white/10">
-                            {item.nationality}
-                          </span>
-                        )}
-
-                        {item.total_units > 1 && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1">
-                            <Layers className="w-3 h-3" />
-                            {item.total_units} Units
-                          </span>
-                        )}
-
-                        {formatAedValuation(item.total_portfolio_valuation) && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
-                            {formatAedValuation(item.total_portfolio_valuation)}
-                          </span>
-                        )}
-
-                        {item.emirates_id && (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25">
-                            EID: {item.emirates_id}
-                          </span>
-                        )}
-
-                        {item.bitrix_id && (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">
-                            Bitrix #{item.bitrix_id}
-                          </span>
-                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-white/50 flex-wrap">
                         {cleanUnitNumber(item.unit_number) && <span>Unit: <strong className="text-white/80">{cleanUnitNumber(item.unit_number)}</strong></span>}
@@ -1198,7 +1133,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10.5px] uppercase font-mono font-bold tracking-wider text-amber-400">
+                <span className="text-[10.5px] uppercase font-sans tabular-nums font-bold tracking-wider text-amber-400">
                   COMMUNITY EXPLORER
                 </span>
                 <h3 className="text-lg font-bold text-white tracking-wide">
@@ -1219,15 +1154,15 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
 
           <div className="p-4 grid grid-cols-3 gap-3 border-b border-white/5 bg-white/[0.02] shrink-0">
             <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Towers</div>
+              <div className="text-[10px] text-white/40 uppercase font-sans tabular-nums">Towers</div>
               <div className="text-lg font-extrabold text-amber-400">{selectedArea.totalBuildings}</div>
             </div>
             <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Total Units</div>
+              <div className="text-[10px] text-white/40 uppercase font-sans tabular-nums">Total Units</div>
               <div className="text-lg font-extrabold text-white">{selectedArea.totalUnits}</div>
             </div>
             <div className="bg-[#03152d] border border-white/5 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-white/40 uppercase font-mono">Owners</div>
+              <div className="text-[10px] text-white/40 uppercase font-sans tabular-nums">Owners</div>
               <div className="text-lg font-extrabold text-emerald-400">{selectedArea.totalOwners}</div>
             </div>
           </div>
@@ -1279,7 +1214,7 @@ export default function OmniSearch({ onOpenBuildingTab, isModal = false, onClose
                     </div>
                   </div>
 
-                  <button className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#183153] hover:bg-amber-600 text-white flex items-center gap-1 transition-all cursor-pointer">
+                  <button className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#183153] hover:bg-amber-600 text-white inline-flex items-center gap-1 transition-all cursor-pointer">
                     <span>View Units</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>

@@ -207,10 +207,10 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmTarget && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#0c1829] border border-red-500/30 rounded-3xl p-6 max-w-md w-full shadow-2xl shadow-black/80">
+        <div className="ds-modal-overlay">
+          <div className="ds-modal max-w-md p-6 border-rose-500/30">
             <div className="flex items-center gap-3.5 mb-4">
-              <div className="w-11 h-11 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30">
+              <div className="w-11 h-11 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/30">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
@@ -218,21 +218,21 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 <p className="text-xs text-slate-400">This action cannot be undone.</p>
               </div>
             </div>
-            <p className="text-sm text-slate-300 mb-6 leading-relaxed bg-black/30 p-3.5 rounded-xl border border-white/5">
+            <p className="text-sm text-slate-300 mb-6 leading-relaxed bg-[#06111e]/55 backdrop-blur-md p-3.5 rounded-xl border border-white/10">
               Are you sure you want to permanently delete <strong className="text-white">"{deleteConfirmTarget.name}"</strong>? All associated photos, AI copies, and documents will be removed.
             </p>
             <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setDeleteConfirmTarget(null)}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
+                className="ds-btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => executeDeleteListing(deleteConfirmTarget.id)}
-                className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow-lg shadow-red-600/30 transition-all cursor-pointer"
+                className="ds-btn-danger bg-rose-600 hover:bg-rose-500 text-white font-bold"
               >
                 Confirm Delete
               </button>
@@ -244,25 +244,22 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-sans font-bold text-white tracking-tight">
+          <h1 className="ds-page-title">
             Listings Dashboard
           </h1>
-          <p className="text-white/60 mt-1 text-xs lg:text-sm font-sans">
-            Manage property photos, enhance resolution, and generate portal listings stored in Supabase.
-          </p>
         </div>
 
         <button
           onClick={onNewListingClick}
-          className="bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0 cursor-pointer"
+          className="ds-btn-primary px-5 py-2.5"
         >
-          <PlusCircle className="w-4 h-4 text-blue-400" />
+          <PlusCircle className="w-4 h-4" />
           <span>Create New Listing</span>
         </button>
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bg-[#0c1829] border border-[#233549] p-5 space-y-4 rounded-2xl shadow-xl shadow-black/40">
+      <div className="ds-card p-5 space-y-4">
         {/* Search Input & Sort Selector Row */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative flex-1">
@@ -272,7 +269,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by property name, reference (#MG-2026), or type..."
-              className="w-full bg-[#06111e] border border-[#1b2b3d] rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#385175] transition-all"
+              className="w-full bg-[#06111e]/55 backdrop-blur-md border border-white/15 rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#b7a990] transition-all"
             />
             {searchQuery && (
               <button
@@ -293,7 +290,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#06111e] border border-[#1b2b3d] text-white text-xs font-semibold rounded-xl px-3 py-2.5 focus:outline-none cursor-pointer"
+              className="bg-[#06111e]/55 backdrop-blur-md border border-white/15 text-white text-xs font-semibold rounded-xl px-3 py-2.5 focus:outline-none cursor-pointer"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -319,8 +316,8 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 onClick={() => setStatusFilter(status)}
                 className={`px-3.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   statusFilter === status
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold'
-                    : 'bg-[#06111e] border border-[#1b2b3d] text-slate-400 hover:text-white hover:bg-[#102035]'
+                    ? 'bg-[#183153]/85 text-[#e2e0cc] border border-[#b7a990]/50 shadow-sm font-semibold'
+                    : 'bg-white/[0.04] border border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.08]'
                 }`}
               >
                 {status}
@@ -340,8 +337,8 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 onClick={() => setTypeFilter(type)}
                 className={`px-3.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   typeFilter === type
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold'
-                    : 'bg-[#06111e] border border-[#1b2b3d] text-slate-400 hover:text-white hover:bg-[#102035]'
+                    ? 'bg-[#183153]/85 text-[#e2e0cc] border border-[#b7a990]/50 shadow-sm font-semibold'
+                    : 'bg-white/[0.04] border border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.08]'
                 }`}
               >
                 {type}
@@ -353,27 +350,27 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
 
       {/* Content */}
       {loading ? (
-        <div className="bg-[#0c1829] border border-[#233549] p-12 text-center rounded-2xl shadow-xl shadow-black/40">
+        <div className="ds-card p-12 text-center">
           <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
-          <p className="text-slate-400 text-sm font-medium">Loading property listings from Supabase...</p>
+          <p className="text-slate-400 text-sm font-medium">Loading property listings...</p>
         </div>
       ) : error ? (
-        <div className="bg-[#0c1829] border border-rose-500/30 p-8 text-center text-rose-400 rounded-2xl shadow-xl shadow-black/40">
+        <div className="ds-card border-rose-500/30 p-8 text-center text-rose-400">
           <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
           <p>{error}</p>
         </div>
       ) : filteredListings.length === 0 ? (
-        <div className="bg-[#0c1829] border border-[#233549] p-12 text-center rounded-2xl shadow-xl shadow-black/40">
+        <div className="ds-card p-12 text-center">
           <Building2 className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
           <h3 className="text-lg font-sans font-bold text-white mb-1">No Listings Found</h3>
           <p className="text-slate-400 text-xs max-w-sm mx-auto mb-5">
             {searchQuery || statusFilter !== 'All Status' || typeFilter !== 'All Types'
               ? 'No listings match your filter criteria.'
-              : 'Create your first property listing with automated DLD Title Deed OCR and AI photo enhancement.'}
+              : 'Create your first property listing with automated DLD Title Deed AI extraction and photo enhancement.'}
           </p>
           <button
             onClick={onNewListingClick}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-lg shadow-blue-500/25 cursor-pointer"
+            className="ds-btn-primary"
           >
             <PlusCircle className="w-4 h-4" />
             Create Listing
@@ -387,11 +384,11 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
               <div
                 key={listing.id}
                 onClick={() => onSelectListing(listing)}
-                className="bg-[#0c1829] rounded-2xl border border-[#233549] hover:border-[#385175] shadow-xl shadow-black/40 transition-all cursor-pointer group flex flex-col justify-between overflow-hidden"
+                className="ds-card ds-card-interactive flex flex-col justify-between overflow-hidden cursor-pointer group"
               >
                 <div>
                   {/* Luxury 16:9 Cinematic Photo Banner with Overlays */}
-                  <div className="relative w-full h-44 overflow-hidden bg-[#06111e]">
+                  <div className="relative w-full h-44 overflow-hidden bg-[#06111e]/60">
                     <img
                       onError={(e) => {
                         e.target.onerror = null;
@@ -401,7 +398,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                       alt={listing.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0c1829] via-[#0c1829]/20 to-black/40" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[rgba(12,24,41,0.92)] via-[rgba(12,24,41,0.25)] to-black/40" />
 
                     {/* Top Overlay Badges */}
                     <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap z-10">
@@ -416,7 +413,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                         {listing.purpose || 'For Sale'}
                       </span>
                       {listing.reference && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-black/70 backdrop-blur-md text-slate-300 border border-white/10">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-sans tabular-nums font-medium bg-black/70 backdrop-blur-md text-slate-300 border border-white/10">
                           {listing.reference}
                         </span>
                       )}
@@ -449,7 +446,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                         {listing.community || 'Dubai'}
                       </span>
                       {listing.size_sqft && (
-                        <span className="font-mono text-slate-300">
+                        <span className="font-sans tabular-nums text-slate-300">
                           {Number(listing.size_sqft).toLocaleString()} sqft
                         </span>
                       )}
@@ -469,8 +466,8 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                 </div>
 
                 {/* Card Footer */}
-                <div className="px-5 py-3 border-t border-[#1b2b3d] text-xs flex items-center justify-between bg-black/20">
-                  <span className="text-blue-400 group-hover:translate-x-1 transition-transform font-semibold flex items-center gap-1">
+                <div className="px-5 py-3 border-t border-white/10 text-xs flex items-center justify-between bg-black/15">
+                  <span className="text-blue-400 group-hover:translate-x-1 transition-transform font-semibold inline-flex items-center gap-1.5">
                     Open Listing <ArrowRight className="w-3.5 h-3.5" />
                   </span>
                   <button
@@ -479,7 +476,7 @@ export default function Dashboard({ onNewListingClick, onSelectListing }) {
                       e.stopPropagation();
                       setDeleteConfirmTarget(listing);
                     }}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                     title="Delete Listing"
                   >
                     <Trash2 className="w-4 h-4" />

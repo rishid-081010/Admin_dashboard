@@ -19,7 +19,7 @@ function getEnhancerEndpoints() {
     return ['/api_ai_enhancer.php', 'http://localhost:5000/api/ai/enhance'];
   }
 
-  // In production (dashboard.asquared.ae or admin.asquared.ae)
+  // In production (dashboard.asquared.ae)
   const basePath = pathname.replace(/\/([^\/]*)$/, '/');
   const directUrl = `${origin}${basePath}api_ai_enhancer.php`;
   const canonicalUrl = 'https://dashboard.asquared.ae/api_ai_enhancer.php';
@@ -156,6 +156,13 @@ export async function enhanceListingBatch({
         imgUrl = 'https://dashboard.asquared.ae/' + imgUrl.replace(/^\/+/, '');
       }
       const imgId = img.id;
+
+      // Re-enhancement guard: skip if already completed and has generated image
+      if (img.status === 'completed' && img.generated_image_location && img.generated_image_location !== img.original_image_location) {
+        completed++;
+        results.push({ ...img, success: true, cached: true });
+        continue;
+      }
 
       onProgress(
         completed + failed,

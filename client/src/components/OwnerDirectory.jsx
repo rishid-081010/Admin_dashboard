@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, SlidersHorizontal, ChevronDown, List, LayoutGrid,
-  X, Building2, Phone, Mail, MapPin, ExternalLink, Share2, 
+  X, Building2, Phone, MapPin, ExternalLink, Share2, 
   MoreHorizontal, UserCheck, RefreshCw, ChevronLeft, ChevronRight,
-  MessageSquare
+  MessageSquare, Download, Eye
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
 import SearchableCombobox from './SearchableCombobox';
 import ownerFiltersMetadata from '../data/ownerFiltersMetadata.json';
 import { parseIdQuery } from '../utils/idParser';
+import { featureAccessService } from '../utils/featureAccessService';
+import { authService } from '../utils/authService';
 
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
 
@@ -176,6 +178,9 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   const [classificationFilter, setClassificationFilter] = useState('Any'); // 'Any' | 'OWNER' | 'BUYER' | 'TENANT' | 'UNKNOWN'
   const [portfolioSizeFilter, setPortfolioSizeFilter] = useState('Any');   // 'Any' | 'Single Unit' | 'Multi-Unit (2+)' | 'Large Portfolio (5+)'
 
+  // ─── Unpopulated Entries Toggle (Default: false -> automatically shows only populated entries natively) ─
+  const [showUnpopulated, setShowUnpopulated] = useState(false);
+
   // ─── Sort & View Mode ────────────────────────────────────────────────────
   const [sortBy, setSortBy] = useState('Most Properties');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
@@ -198,6 +203,41 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       setCurrentPage(pageNum);
       setCustomPageInput('');
     }
+  };
+
+  // ─── Export Guardrails Enforcement (Anti-Theft) ──────────────────────────
+  const activeUser = authService.getCurrentUser();
+  const activeRole = activeUser?.role || 'admin';
+  const canExportOwners = featureAccessService.canExport(activeRole, 'owners');
+  const maxExportRows = featureAccessService.getMaxExportRows(activeRole, 'owners');
+
+  const handleExportOwnersCsv = () => {
+    if (!canExportOwners) return;
+    if (!owners || owners.length === 0) {
+      alert('No owner records available in the current view to export.');
+      return;
+    }
+
+    const exportList = owners.slice(0, maxExportRows);
+    const headers = ['Lead ID', 'Owner Name', 'Phone Number', 'Building', 'Area', 'Units Count', 'Valuation AED'];
+    const rows = exportList.map(o => [
+      `"${o.lead_id || o.id || ''}"`,
+      `"${(o.name || 'Owner').replace(/"/g, '""')}"`,
+      `"${o.phone || ''}"`,
+      `"${(o.building || '').replace(/"/g, '""')}"`,
+      `"${(o.area || '').replace(/"/g, '""')}"`,
+      o.units || 1,
+      o.total_valuation || o.price || ''
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `ASQUARED_Owners_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // ─── Modal / Action State ────────────────────────────────────────────────
@@ -235,7 +275,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   const allBuildings = useMemo(() => ownerFiltersMetadata?.buildings || [], []);
   const allSources = useMemo(() => ownerFiltersMetadata?.sources || [], []);
 
-  // Active filters count
+  // Active filters count (excluding primary populated toggle which has dedicated toolbar switch)
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (areaFilter !== 'Any') count++;
@@ -245,14 +285,13 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     if (sourceFileFilter !== 'Any') count++;
     if (dateFrom || dateTo) count++;
     if (agentFilter !== 'Any') count++;
-    if (phoneFilter !== 'Any') count++;
     if (classificationFilter !== 'Any') count++;
     if (portfolioSizeFilter !== 'Any') count++;
     return count;
   }, [
     areaFilter, buildingFilter, propertyTypeFilter, bedroomsFilter, 
     sourceFileFilter, dateFrom, dateTo, 
-    agentFilter, phoneFilter, classificationFilter, portfolioSizeFilter
+    agentFilter, classificationFilter, portfolioSizeFilter
   ]);
 
   const clearFilters = () => {
@@ -264,7 +303,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
     setDateFrom('');
     setDateTo('');
     setAgentFilter('Any');
-    setPhoneFilter('Any');
     setClassificationFilter('Any');
     setPortfolioSizeFilter('Any');
     setCurrentPage(1);
@@ -397,8 +435,14 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         }
       }
 
-      // 11. Phone
-      if (phoneFilter === 'Yes') {
+      // 11. Populated Entries Enforcement & Phone Filter
+      if (!showUnpopulated) {
+        if (phoneFilter === 'No') {
+          url += '&phone_normalized=is.null';
+        } else {
+          url += '&phone_normalized=not.is.null';
+        }
+      } else if (phoneFilter === 'Yes') {
         url += '&phone_normalized=not.is.null';
       } else if (phoneFilter === 'No') {
         url += '&phone_normalized=is.null';
@@ -520,7 +564,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             assigned_agent: row.assigned_agent || null,
             assigned_agent_id: row.assigned_agent_id || null,
             portfolioValue: formatValuationShort(row.total_portfolio_valuation) || (row.total_units > 1 ? `${row.total_units} Units Portfolio` : 'Standard'),
-            lastContact: row.bitrix_id ? 'In Bitrix' : 'Never'
+            lastContact: row.bitrix_id ? 'In CRM' : 'Never'
           };
         });
         setOwners(mapped);
@@ -543,7 +587,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
   }, [
     currentPage, searchTerm, areaFilter, buildingFilter, propertyTypeFilter,
     bedroomsFilter, sourceFileFilter, dateFrom, dateTo,
-    agentFilter, phoneFilter, classificationFilter, portfolioSizeFilter, sortBy
+    agentFilter, phoneFilter, classificationFilter, portfolioSizeFilter, sortBy,
+    showUnpopulated
   ]);
 
   // ─── Bitrix24 Integration Actions ────────────────────────────────────────
@@ -615,7 +660,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       }
     } catch(err) {
       console.error("Push failed", err);
-      alert("Failed to push to Bitrix: " + (err.message || 'Network error'));
+      alert("Failed to sync to CRM: " + (err.message || 'Network error'));
     } finally {
       setSyncingId(null);
     }
@@ -674,109 +719,156 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
       {/* Page Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">
+          <h1 className="ds-page-title">
             Owners Data
           </h1>
         </div>
       </div>
 
       {/* ─── Main Search & Filtration Toolbar ──────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 p-3 sm:p-4 mb-4 select-none">
+      <div className="ds-card p-3 sm:p-4 mb-4 select-none">
         
-        {/* Top Row: Big Search Bar + Filters Button + Sort + View Toggle */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        {/* Top Controls Structure */}
+        <div className="flex flex-col gap-3">
           
-          {/* 1. Main Big Bar Search (Omni Search Style) */}
-          <div className="relative flex-1 min-w-[260px] sm:min-w-[340px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" />
-            <input
-              type="text"
-              placeholder="Search by owner name, phone number, building, unit, or Lead ID..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full bg-[#06111e] hover:bg-[#091728] focus:bg-[#091728] border border-[#1a2c42] focus:border-blue-500/80 rounded-2xl pl-12 pr-10 py-3 text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all shadow-inner focus:ring-2 focus:ring-blue-500/20"
-            />
-            {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')} 
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                title="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+          {/* Row 1: Search Bar + View Mode Toggle + Export CSV Button */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* 1. Main Search Bar (Omni Search Style) */}
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" />
+              <input
+                type="text"
+                placeholder="Search by owner name, phone number, building, unit, or Lead ID..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-[#06111e]/55 hover:bg-[#06111e]/75 focus:bg-[#06111e]/85 backdrop-blur-md border border-white/15 focus:border-[#b7a990] rounded-2xl pl-12 pr-10 py-3 text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all shadow-inner focus:ring-2 focus:ring-[#b7a990]/25"
+              />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')} 
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* View Mode Toggle & Export CSV Cluster */}
+            <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0">
+              {/* View Mode Toggle: [ List | Grid ] */}
+              <div className="flex items-center bg-white/[0.05] border border-white/10 rounded-xl p-0.5 shadow-inner backdrop-blur-md">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-lg transition-all ${
+                    viewMode === 'list' 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'text-white/40 hover:text-white'
+                  }`}
+                  title="List (Table) View"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-lg transition-all ${
+                    viewMode === 'grid' 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'text-white/40 hover:text-white'
+                  }`}
+                  title="Grid (Cards) View"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Export CSV Button (Guarded by SuperAdmin Export Permissions) */}
+              {canExportOwners && (
+                <button
+                  type="button"
+                  onClick={handleExportOwnersCsv}
+                  disabled={loading || owners.length === 0}
+                  className="flex items-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-sm bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white border-white/10 disabled:opacity-40"
+                  title={`Export current owners to CSV (Max ${maxExportRows} rows)`}
+                >
+                  <Download className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="hidden sm:inline">Export CSV</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Controls Cluster: Filters Button + Sort + View Mode */}
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0 self-end lg:self-auto">
-            
-            {/* Quick Filter Pills (UI-010) */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {/* Row 2: Filtration & Sorting Cluster */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-white/10">
+            {/* Left: Quick Filters & Deep Filters */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Show Unpopulated Records Toggle */}
               <button
                 type="button"
                 onClick={() => {
-                  setPhoneFilter(prev => prev === 'Yes' ? 'Any' : 'Yes');
+                  setShowUnpopulated(prev => !prev);
                   setCurrentPage(1);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
-                  phoneFilter === 'Yes'
-                    ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/50 shadow-emerald-950/40 ring-1 ring-emerald-500/40'
-                    : 'bg-[#06111e] hover:bg-[#091728] text-slate-300 hover:text-white border-[#1a2c42]'
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+                  showUnpopulated
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 ring-1 ring-amber-500/30'
+                    : 'bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white border-white/10'
                 }`}
-                title="Filter owners with verified phone number"
+                title={showUnpopulated ? 'Hide unpopulated records and view only populated entries' : 'Show unpopulated and incomplete records in the rows as well'}
               >
-                <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Has Phone</span>
+                <Eye className="w-3.5 h-3.5 text-slate-400" />
+                <span>{showUnpopulated ? 'Showing Unpopulated' : 'Show Unpopulated'}</span>
               </button>
 
+              {/* Multi-Property Toggle */}
               <button
                 type="button"
                 onClick={() => {
                   setPortfolioSizeFilter(prev => prev === 'Multi-Unit (2+)' ? 'Any' : 'Multi-Unit (2+)');
                   setCurrentPage(1);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${
                   portfolioSizeFilter === 'Multi-Unit (2+)'
                     ? 'bg-blue-500/25 text-blue-300 border-blue-500/50 shadow-blue-950/40 ring-1 ring-blue-500/40'
-                    : 'bg-[#06111e] hover:bg-[#091728] text-slate-300 hover:text-white border-[#1a2c42]'
+                    : 'bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white border-white/10'
                 }`}
                 title="Filter owners with 2 or more properties"
               >
                 <Building2 className="w-3.5 h-3.5 text-blue-400" />
                 <span>Multi-Property</span>
               </button>
+
+              {/* Filters Button */}
+              <button
+                onClick={() => setShowFiltersBox(prev => !prev)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-md ${
+                  showFiltersBox || activeFiltersCount > 0
+                    ? 'bg-blue-600/30 text-blue-300 border-blue-500/60 shadow-blue-900/30 ring-1 ring-blue-500/40'
+                    : 'bg-white/[0.05] hover:bg-white/[0.1] text-white/90 border-white/10'
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4 text-blue-400" />
+                <span className="font-bold tracking-wide">Filters</span>
+                {activeFiltersCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white shadow-sm">
+                    {activeFiltersCount}
+                  </span>
+                )}
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showFiltersBox ? 'rotate-180' : ''}`} />
+              </button>
             </div>
 
-            {/* 2. Filters Button */}
-            <button
-              onClick={() => setShowFiltersBox(prev => !prev)}
-              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs font-semibold border transition-all cursor-pointer shadow-md ${
-                showFiltersBox || activeFiltersCount > 0
-                  ? 'bg-blue-600/30 text-blue-300 border-blue-500/60 shadow-blue-900/30 ring-1 ring-blue-500/40'
-                  : 'bg-[#06111e] hover:bg-[#091728] text-white/90 border-[#1a2c42]'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4 text-blue-400" />
-              <span className="font-bold tracking-wide">Filters</span>
-              {activeFiltersCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white shadow-sm">
-                  {activeFiltersCount}
-                </span>
-              )}
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showFiltersBox ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Sort Dropdown */}
+            {/* Right: Sort Dropdown */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-400 hidden sm:inline">Sort</span>
               <div className="relative">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-[#06111e] hover:bg-[#091728] border border-[#1a2c42] focus:border-blue-500/60 rounded-xl pl-3 pr-8 py-2.5 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+                  className="bg-[#06111e]/60 hover:bg-[#06111e]/80 border border-white/15 focus:border-[#b7a990] rounded-xl pl-3 pr-8 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none backdrop-blur-md"
                 >
                   <option value="Most Properties" className="bg-[#0c1829] text-white">Most Properties (Portfolio)</option>
                   <option value="Name A–Z" className="bg-[#0c1829] text-white">Name A–Z</option>
@@ -789,33 +881,6 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
               </div>
             </div>
-
-            {/* View Mode Toggle: [ List | Grid ] */}
-            <div className="flex items-center bg-black/40 border border-white/15 rounded-xl p-0.5 shadow-inner">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'list' 
-                    ? 'bg-blue-600 text-white shadow-sm' 
-                    : 'text-white/40 hover:text-white'
-                }`}
-                title="List (Table) View"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'grid' 
-                    ? 'bg-blue-600 text-white shadow-sm' 
-                    : 'text-white/40 hover:text-white'
-                }`}
-                title="Grid (Cards) View"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-            </div>
-
           </div>
         </div>
 
@@ -825,70 +890,64 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
             <span className="text-white/40 font-bold text-[11px] uppercase tracking-wider">Active:</span>
             
             {areaFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Area: {areaFilter}
                 <button onClick={() => { setAreaFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {buildingFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Building: {buildingFilter}
                 <button onClick={() => { setBuildingFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {propertyTypeFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Type: {propertyTypeFilter}
                 <button onClick={() => { setPropertyTypeFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {bedroomsFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Bedrooms: {bedroomsFilter === '0' ? 'Studio' : bedroomsFilter === '5' ? '5+ Beds' : `${bedroomsFilter} Beds`}
                 <button onClick={() => { setBedroomsFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {sourceFileFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Source: {sourceFileFilter}
                 <button onClick={() => { setSourceFileFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {(dateFrom || dateTo) && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Date: {dateFrom || 'Start'} → {dateTo || 'End'}
                 <button onClick={() => { setDateFrom(''); setDateTo(''); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {agentFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Agent: {agentFilter}
                 <button onClick={() => { setAgentFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
-            {phoneFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 font-medium">
-                Phone: {phoneFilter}
-                <button onClick={() => { setPhoneFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
-              </span>
-            )}
 
             {classificationFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Classification: {classificationFilter}
                 <button onClick={() => { setClassificationFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
             )}
 
             {portfolioSizeFilter !== 'Any' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#122238] border border-[#b7a990]/30 text-[#e2e0cc] font-medium text-xs shadow-sm">
                 Portfolio: {portfolioSizeFilter}
                 <button onClick={() => { setPortfolioSizeFilter('Any'); setCurrentPage(1); }} className="hover:text-white cursor-pointer"><X className="w-3 h-3" /></button>
               </span>
@@ -905,7 +964,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
         {/* ─── Simple & Minimalist Filters Subtab (Matches User's Mockup) ───── */}
         {showFiltersBox && (
-          <div className="mt-4 border border-[#233549] bg-[#06111e] rounded-2xl shadow-2xl animate-fade-in flex flex-col max-h-[75vh] overflow-hidden">
+          <div className="mt-4 ds-card shadow-2xl animate-fade-in flex flex-col max-h-[75vh] overflow-hidden">
             
             {/* Scrollable Form Body */}
             <div className="overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-5 flex-1">
@@ -956,16 +1015,16 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   </div>
                 </div>
 
-                {/* Bedrooms · 0 = studio */}
+                {/* Bedrooms */}
                 <div>
                   <label className="text-xs font-semibold text-white/70 block mb-1.5">
-                    Bedrooms · 0 = studio
+                    Bedrooms
                   </label>
                   <div className="relative">
                     <select
                       value={bedroomsFilter}
                       onChange={(e) => { setBedroomsFilter(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+                      className="w-full h-10 bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 text-sm font-medium text-white outline-none cursor-pointer transition-all appearance-none"
                     >
                       <option value="Any" className="bg-slate-900 text-white">Any</option>
                       <option value="0" className="bg-slate-900 text-white">0 (Studio)</option>
@@ -979,9 +1038,9 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   </div>
                 </div>
 
-                {/* Data from (Source file) */}
+                {/* Source File */}
                 <SearchableCombobox
-                  label="Data from (Source file)"
+                  label="Source File"
                   value={sourceFileFilter}
                   onChange={(val) => { setSourceFileFilter(val); setCurrentPage(1); }}
                   options={allSources}
@@ -992,20 +1051,20 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                 {/* Date Range */}
                 <div>
                   <label className="text-xs font-semibold text-white/70 block mb-1.5">
-                    Date from &lt;————&gt; Date to
+                    Date Range
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
                       value={dateFrom}
                       onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-[#0b162c] border border-white/15 focus:border-blue-500 rounded-xl px-3 py-2 text-xs font-medium text-white outline-none"
+                      className="w-full h-10 bg-[#0b162c] border border-white/15 focus:border-blue-500 rounded-xl px-3 text-xs font-medium text-white outline-none"
                     />
                     <input
                       type="date"
                       value={dateTo}
                       onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-[#0b162c] border border-white/15 focus:border-blue-500 rounded-xl px-3 py-2 text-xs font-medium text-white outline-none"
+                      className="w-full h-10 bg-[#0b162c] border border-white/15 focus:border-blue-500 rounded-xl px-3 text-xs font-medium text-white outline-none"
                     />
                   </div>
                 </div>
@@ -1107,7 +1166,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           </div>
 
           {/* Sticky Footer Buttons (Exact match to Image 1) */}
-          <div className="p-4 sm:px-7 border-t border-white/10 bg-[#030d1d] flex items-center justify-between z-10 shrink-0 shadow-2xl">
+          <div className="p-4 sm:px-7 border-t border-white/10 bg-[#071322]/85 backdrop-blur-md flex items-center justify-between z-10 shrink-0 shadow-2xl">
             <button
               onClick={clearFilters}
               className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
@@ -1130,24 +1189,24 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
 
       {/* ─── Main Content Area: List Table View or Grid View ───────────────── */}
       {viewMode === 'list' ? (
-        <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 bg-[#0c1829]/50 backdrop-blur-xl border border-white/15 rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden">
           <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
             <table className="w-full text-left border-collapse text-[13.5px]">
-              <thead className="bg-[#071322] border-b border-[#233549] text-xs uppercase tracking-wider text-slate-400 sticky top-0 z-20 shadow-md shadow-black/40 backdrop-blur-md">
+              <thead className="bg-[#071322]/80 border-b border-white/10 text-xs uppercase tracking-wider text-[#b7a990] sticky top-0 z-20 shadow-md shadow-black/40 backdrop-blur-xl">
                 <tr>
-                  <th className="w-[28%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Lead ID &amp; Owner</th>
-                  <th className="w-[18%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Phone &amp; Email</th>
-                  <th className="w-[22%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Property &amp; Portfolio</th>
-                  <th className="w-[13%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">Assigned Agent</th>
-                  <th className="w-[11%] px-5 py-2.5 font-semibold text-left bg-[#071322] align-middle">CRM Lead &amp; Status</th>
-                  <th className="w-[8%] px-5 py-2.5 font-semibold text-right bg-[#071322] align-middle">Classification</th>
+                  <th className="w-[28%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Owner &amp; Portfolio</th>
+                  <th className="w-[18%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Phone</th>
+                  <th className="w-[22%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Primary Asset &amp; Valuation</th>
+                  <th className="w-[13%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Assigned Agent</th>
+                  <th className="w-[11%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">CRM Lead &amp; Status</th>
+                  <th className="w-[8%] px-6 py-3 font-semibold text-right bg-[#071322]/80 backdrop-blur-xl align-middle">Classification</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1b2b3d]">
                 {loading ? (
-                  <tr><td colSpan="6" className="text-center py-12 text-slate-400">Loading owner records...</td></tr>
+                  <tr><td colSpan="6" className="text-center py-16 text-slate-400">Loading owner records...</td></tr>
                 ) : owners.length === 0 ? (
-                  <tr><td colSpan="6" className="text-center py-12 text-slate-400">No owners found matching filters.</td></tr>
+                  <tr><td colSpan="6" className="text-center py-16 text-slate-400">No owners found matching filters.</td></tr>
                 ) : owners.map((owner) => {
                   const isSynced = !!owner.bitrix_id || pushedIds.has(owner.id);
                   const isSyncing = syncingId === owner.id;
@@ -1155,71 +1214,53 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                   return (
                     <tr 
                       key={owner.id} 
-                      className="hover:bg-[#102035] transition-colors group cursor-pointer border-b border-[#1b2b3d]/60 last:border-b-0 min-h-[52px]" 
+                      className="hover:bg-[#102035] transition-colors group cursor-pointer border-b border-[#1b2b3d]/60 last:border-b-0" 
                       onClick={() => setSelectedOwner(owner)}
                     >
-                      {/* 1. Lead ID & Owner Name */}
-                      <td className="px-5 py-2.5 font-medium text-white align-middle">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-xs shrink-0 shadow-sm">
+                      {/* 1. Owner & Portfolio */}
+                      <td className="px-6 py-3.5 font-medium text-white align-middle">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-300 font-bold text-xs shrink-0 shadow-sm">
                             {owner.name ? (String(owner.name).match(/[a-zA-Z0-9]/) || ['O'])[0].toUpperCase() : 'O'}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-semibold text-white/95 group-hover:text-blue-400 transition-colors truncate text-sm leading-snug">
+                            <div className="font-semibold text-white/95 group-hover:text-blue-400 transition-colors truncate text-[13.5px] leading-snug">
                               {owner.name}
                             </div>
-                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold tracking-tight">
-                                {owner.lead_id}
-                              </span>
+                            <div className="text-[11px] font-sans tabular-nums text-slate-400 mt-0.5">
                               {owner.units > 1 ? (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 tracking-tight">
-                                  {owner.units} Units Portfolio
-                                </span>
+                                <span className="text-slate-300 font-medium">{owner.units.toLocaleString()} Assets Portfolio</span>
                               ) : (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 uppercase tracking-wider font-semibold">
-                                  1 Unit
-                                </span>
-                              )}
-                              {owner.ownership_type && owner.ownership_type !== 'OWNER' && (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 uppercase tracking-wider">
-                                  {owner.ownership_type}
-                                </span>
+                                <span className="text-slate-500">Individual Unit Owner</span>
                               )}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* 2. Phone & Email */}
-                      <td className="px-5 py-2.5 align-middle">
-                        <div className="flex flex-col justify-center space-y-1 text-xs">
-                          <div className="flex items-center gap-1.5 text-white/85">
-                            <Phone className="w-3.5 h-3.5 text-white/40 shrink-0" />
-                            <span className="font-mono tracking-tight">{owner.phone}</span>
-                            {owner.phone && owner.phone !== 'N/A' && !owner.phone.startsWith('+9714') && !owner.phone.startsWith('04') && (
-                              <a
-                                href={`https://wa.me/${String(owner.phone).replace(/\D/g, '')}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                title="Chat on WhatsApp"
-                                className="text-emerald-400 hover:text-emerald-300 ml-1 p-0.5 rounded hover:bg-emerald-500/15 inline-flex items-center"
-                              >
-                                <MessageSquare className="w-3 h-3" />
-                              </a>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-white/50">
-                            <Mail className="w-3.5 h-3.5 text-white/40 shrink-0" />
-                            <span className="truncate max-w-[160px]">{owner.email}</span>
-                          </div>
+                      {/* 2. Phone */}
+                      <td className="px-6 py-3.5 align-middle">
+                        <div className="flex items-center gap-1.5 text-white/90 text-xs">
+                          <Phone className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                          <span className="font-sans tabular-nums tracking-tight text-[12.5px]">{owner.phone}</span>
+                          {owner.phone && owner.phone !== 'N/A' && !owner.phone.startsWith('+9714') && !owner.phone.startsWith('04') && (
+                            <a
+                              href={`https://wa.me/${String(owner.phone).replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Chat on WhatsApp"
+                              className="text-emerald-400 hover:text-emerald-300 ml-1 p-0.5 rounded hover:bg-emerald-500/15 inline-flex items-center"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                            </a>
+                          )}
                         </div>
                       </td>
 
-                      {/* 3. Property & Portfolio */}
-                      <td className="px-5 py-2.5 align-middle">
-                        <div className="flex flex-col justify-center space-y-1 text-xs">
+                      {/* 3. Primary Asset & Valuation */}
+                      <td className="px-6 py-3.5 align-middle">
+                        <div className="flex flex-col justify-center space-y-0.5 text-xs">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1227,42 +1268,33 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                               const targetB = owner.building && owner.building !== 'Dubai' ? owner.building : (owner.area || 'Dubai');
                               window.location.hash = `#buildings?tower=${encodeURIComponent(targetB)}`;
                             }}
-                            className="font-medium text-white/90 hover:text-blue-400 flex items-center gap-1.5 transition-colors group/bldg cursor-pointer text-left"
+                            className="font-medium text-white/95 hover:text-blue-400 flex items-center gap-1.5 transition-colors group/bldg cursor-pointer text-left text-[13px]"
                             title={`View ${owner.building} in Building 360`}
                           >
                             <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                             <span className="truncate max-w-[190px] font-medium">{owner.building}</span>
                             <ExternalLink className="w-2.5 h-2.5 text-white/30 group-hover/bldg:text-blue-400 transition-colors shrink-0" />
                           </button>
-                          <div className="flex items-center gap-2 text-white/50 flex-wrap">
-                            {owner.total_portfolio_valuation > 0 ? (
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold shrink-0">
-                                {formatValuationShort(owner.total_portfolio_valuation)} Valuation
-                              </span>
-                            ) : (
-                              <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 text-[10px] shrink-0">
-                                Single Deed
-                              </span>
+                          <div className="flex items-center gap-1.5 text-slate-400 text-[11px] truncate">
+                            <MapPin className="w-3 h-3 text-white/30 shrink-0" />
+                            <span className="truncate">{owner.area || 'Dubai'}</span>
+                            {owner.total_portfolio_valuation > 0 && (
+                              <>
+                                <span className="text-white/20">•</span>
+                                <span className="font-sans tabular-nums text-slate-200 font-semibold">
+                                  {formatValuationShort(owner.total_portfolio_valuation)}
+                                </span>
+                              </>
                             )}
-                            {owner.primary_property_type && (
-                              <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/20 text-[10px] font-medium shrink-0">
-                                {owner.primary_property_type}
-                                {owner.bedrooms !== null && owner.bedrooms !== undefined ? (owner.bedrooms === 0 ? ' · Studio' : ` · ${owner.bedrooms}B`) : ''}
-                              </span>
-                            )}
-                            <span className="flex items-center gap-1 truncate text-slate-300">
-                              <MapPin className="w-3 h-3 text-white/40 shrink-0" />
-                              {owner.area}
-                            </span>
                           </div>
                         </div>
                       </td>
 
                       {/* 4. Assigned Agent */}
-                      <td className="px-5 py-2.5 align-middle">
+                      <td className="px-6 py-3.5 align-middle">
                         {owner.assigned_agent ? (
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-[10px] shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-300 font-bold text-[10px] shrink-0">
                               {owner.assigned_agent.charAt(0)}
                             </div>
                             <span className="text-xs font-semibold text-white/90 truncate max-w-[140px]">
@@ -1277,10 +1309,10 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 5. Bitrix ID / Status */}
-                      <td className="px-5 py-2.5 align-middle">
+                      <td className="px-6 py-3.5 align-middle">
                         {owner.bitrix_status ? (
                           <div className="flex flex-col justify-center gap-0.5">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold w-fit">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold w-fit">
                               {BITRIX_STATUSES.find(s => s.id === owner.bitrix_status)?.name || owner.bitrix_status}
                             </span>
                             {owner.bitrix_id && (
@@ -1289,7 +1321,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="text-[10px] text-white/40 hover:text-white/70 font-mono inline-flex items-center gap-1 mt-0.5"
+                                className="text-[10px] text-white/40 hover:text-white/70 font-sans tabular-nums inline-flex items-center gap-1"
                               >
                                 <span>Lead #{owner.bitrix_id}</span>
                                 <ExternalLink className="w-2.5 h-2.5" />
@@ -1302,7 +1334,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                             target="_blank"
                             rel="noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-all w-fit"
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold hover:bg-emerald-500/25 transition-all w-fit"
                           >
                             <span>Lead #{owner.bitrix_id}</span>
                             <ExternalLink className="w-3 h-3" />
@@ -1313,8 +1345,8 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                       </td>
 
                       {/* 6. Classification */}
-                      <td className="px-5 py-2.5 text-right align-middle">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                      <td className="px-6 py-3.5 text-right align-middle">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
                           owner.ownership_type === 'OWNER'
                             ? 'bg-blue-500/15 border border-blue-500/30 text-blue-300'
                             : owner.ownership_type === 'BUYER'
@@ -1334,21 +1366,21 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
           </div>
           
           {/* Pagination Footer */}
-          <div className="p-4 border-t border-[#233549] bg-[#071322] flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-400">
+          <div className="p-4 border-t border-white/10 bg-[#071322]/80 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-400">
             <span>
               {isSearching ? (
                 `Found ${owners.length} matching owner record${owners.length === 1 ? '' : 's'}`
               ) : owners.length === 0 ? (
                 'Showing 0 owner records'
               ) : (
-                `Showing ${((currentPage - 1) * itemsPerPage) + 1} to ${((currentPage - 1) * itemsPerPage) + owners.length} of ${totalCount.toLocaleString()} owner records (Page ${currentPage.toLocaleString()} of ${totalPages.toLocaleString()})`
+                `Showing ${((currentPage - 1) * itemsPerPage) + 1} to ${((currentPage - 1) * itemsPerPage) + owners.length} of ${totalCount.toLocaleString()} ${showUnpopulated ? 'owner records (all)' : 'owner records'} (Page ${currentPage.toLocaleString()} of ${totalPages.toLocaleString()})`
               )}
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                 disabled={currentPage === 1} 
-                className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
+                className="h-8 px-3 bg-white/5 border border-white/10 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium inline-flex items-center justify-center cursor-pointer"
               >
                 Previous
               </button>
@@ -1365,7 +1397,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                 return getPages(currentPage, totalPages).map((p, idx) => {
                   if (p === '...') {
                     return (
-                      <span key={`dots-${idx}`} className="px-1.5 py-1 text-slate-500 font-mono text-xs select-none">
+                      <span key={`dots-${idx}`} className="h-8 min-w-[24px] text-slate-500 font-sans tabular-nums text-xs select-none inline-flex items-center justify-center">
                         ...
                       </span>
                     );
@@ -1375,7 +1407,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                     <button
                       key={p}
                       onClick={() => setCurrentPage(p)}
-                      className={`min-w-[32px] px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all ${
+                      className={`min-w-[32px] h-8 px-2.5 rounded-lg text-xs font-sans tabular-nums font-medium transition-all inline-flex items-center justify-center cursor-pointer ${
                         isCurrent
                           ? 'bg-blue-600 text-white shadow-sm font-bold ring-1 ring-blue-400/50'
                           : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white hover:border-blue-500/40 hover:bg-[#102035]'
@@ -1390,7 +1422,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
               <button 
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
                 disabled={currentPage >= totalPages} 
-                className="px-2.5 py-1 bg-[#06111e] border border-[#1a2c42] rounded-md text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
+                className="h-8 px-3 bg-[#06111e] border border-[#1a2c42] rounded-lg text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium inline-flex items-center justify-center cursor-pointer"
               >
                 Next
               </button>
@@ -1409,12 +1441,12 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                     if (e.key === 'Enter') handleCustomPageSubmit();
                   }}
                   placeholder="Page #"
-                  className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="h-8 w-16 px-2 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-lg text-white text-xs text-center font-sans tabular-nums outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   onClick={handleCustomPageSubmit}
                   disabled={!customPageInput || isNaN(parseInt(customPageInput, 10))}
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm cursor-pointer"
+                  className="h-8 px-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm inline-flex items-center justify-center cursor-pointer"
                 >
                   Go
                 </button>
@@ -1424,7 +1456,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
         </div>
       ) : (
         /* ─── Grid (Cards) View ────────────────────────────────────────────── */
-        <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden p-4">
+        <div className="flex-1 min-h-0 ds-card relative flex flex-col overflow-hidden p-4">
           <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
             {loading ? (
               <div className="text-center py-16 text-slate-400">Loading owner cards...</div>
@@ -1440,7 +1472,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                     <div
                       key={owner.id}
                       onClick={() => setSelectedOwner(owner)}
-                      className="bg-[#06111e] hover:bg-[#102035] border border-[#1b2b3d] hover:border-[#385175] rounded-xl p-4 transition-all cursor-pointer flex flex-col justify-between shadow-lg group"
+                      className="ds-subcard ds-subcard-interactive p-4 cursor-pointer flex flex-col justify-between group h-full"
                     >
                       <div>
                         {/* Top Row: Avatar + Lead ID + CRM badge */}
@@ -1454,45 +1486,26 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                                 {owner.name}
                               </h3>
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-mono text-blue-400 font-bold">
+                                <span className="text-[10px] font-sans tabular-nums text-blue-400 font-bold">
                                   {owner.lead_id}
                                 </span>
-                                {owner.owner_id && (
-                                  <span className="text-[9px] font-mono text-purple-300 bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20" title="Master Leads ID">
-                                    {owner.owner_id}
-                                  </span>
-                                )}
                               </div>
                             </div>
                           </div>
 
-                          {isSynced ? (
-                            <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                              Bitrix #{owner.bitrix_id}
-                            </span>
-                          ) : (
-                            <span className="bg-white/5 text-white/40 border border-white/10 text-[10px] font-medium px-2 py-0.5 rounded-md">
-                              Not in CRM
-                            </span>
-                          )}
                         </div>
 
                         {/* Property & Building */}
                         <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-2.5 mb-3 text-xs">
-                          <div className="flex items-center justify-between text-white/90 font-medium">
+                          <div className="flex items-center justify-between text-white/90 font-medium h-5">
                             <span className="flex items-center gap-1.5 truncate">
                               <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                              {owner.building}
+                              <span className="truncate">{owner.building}</span>
                             </span>
-                            {owner.total_portfolio_valuation > 0 ? (
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold">
-                                {formatValuationShort(owner.total_portfolio_valuation)}
-                              </span>
-                            ) : null}
                           </div>
-                          <div className="flex items-center justify-between text-white/40 text-[11px] mt-1.5">
-                            <span>{owner.area}</span>
-                            <span className="uppercase text-[9px] tracking-wider font-semibold text-white/50">
+                          <div className="flex items-center justify-between text-white/40 text-[11px] mt-1.5 h-4">
+                            <span className="truncate">{owner.area}</span>
+                            <span className="uppercase text-[9px] tracking-wider font-semibold text-white/50 shrink-0">
                               {owner.property_type}
                             </span>
                           </div>
@@ -1503,7 +1516,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Phone className="w-3 h-3 text-white/40" />
-                              <span className="font-mono">{owner.phone}</span>
+                              <span className="font-sans tabular-nums">{owner.phone}</span>
                             </div>
                             {owner.phone && owner.phone !== 'N/A' && !owner.phone.startsWith('+9714') && !owner.phone.startsWith('04') && (
                               <a
@@ -1519,15 +1532,11 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                               </a>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-3 h-3 text-white/40" />
-                            <span className="truncate">{owner.email}</span>
-                          </div>
                         </div>
                       </div>
 
-                      {/* Bottom Row: Agent Assignment & Status */}
-                      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                      {/* Bottom Row: Agent Assignment & Status (Pinned to bottom) */}
+                      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5 text-xs">
                           <UserCheck className="w-3.5 h-3.5 text-blue-400" />
                           <span className={owner.assigned_agent ? "text-blue-300 font-semibold" : "text-white/40 font-medium"}>
@@ -1595,7 +1604,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                 return getPages(currentPage, totalPages).map((p, idx) => {
                   if (p === '...') {
                     return (
-                      <span key={`grid-dots-${idx}`} className="px-1.5 py-1 text-slate-500 font-mono text-xs select-none">
+                      <span key={`grid-dots-${idx}`} className="px-1.5 py-1 text-slate-500 font-sans tabular-nums text-xs select-none">
                         ...
                       </span>
                     );
@@ -1605,7 +1614,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                     <button
                       key={`grid-${p}`}
                       onClick={() => setCurrentPage(p)}
-                      className={`min-w-[32px] px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all ${
+                      className={`min-w-[32px] px-2.5 py-1 rounded-md text-xs font-sans tabular-nums font-medium transition-all ${
                         isCurrent
                           ? 'bg-blue-600 text-white shadow-sm font-bold ring-1 ring-blue-400/50'
                           : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white hover:border-blue-500/40 hover:bg-[#102035]'
@@ -1636,7 +1645,7 @@ export default function OwnerDirectory({ globalAgentId = '6', globalAgentName = 
                     if (e.key === 'Enter') handleCustomPageSubmit();
                   }}
                   placeholder="Page #"
-                  className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors"
+                  className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-sans tabular-nums outline-none transition-colors"
                 />
                 <button
                   onClick={handleCustomPageSubmit}

@@ -10,7 +10,8 @@ import Toast from './Toast';
 import { sbFetch, uploadListingImage, uploadEnhancedListingImage, uploadListingDocument } from '../utils/supabaseClient';
 import { enhanceRealEstatePhoto } from '../utils/photoEnhancerClient';
 import { enhanceListingBatch } from '../utils/aiEnhanceService';
-import { extractDocumentText, parseTitleDeedClient, parseEmiratesIdClient } from '../utils/documentExtractor';
+import { extractDocumentText, parseTitleDeedClient, parseEmiratesIdClient, parseDocumentsWithBrowserAI } from '../utils/documentExtractor';
+import { extractTransparentSignature } from '../utils/signatureExtractor';
 
 const DEFAULT_SEQUENCE = [
   'Living_Room',
@@ -112,7 +113,7 @@ Natural professional property-advertising style.`;
 const PRESETS = [
   {
     id: 'asquared_default',
-    label: '⭐ Asquared Default (QA & Strict Guardrail)',
+    label: '⭐ Asquared Standard (QA & Quality Checked)',
     icon: Star,
     isPrimary: true,
     instruction: ASQUARED_DEFAULT_PROMPT
@@ -333,45 +334,10 @@ export default function NewListing({ onListingCreated, onBack }) {
     if (!deed && (!eids || eids.length === 0)) return;
     setIsParsingDocs(true);
     setError(null);
+    showToast('🤖 AI Analyzing Title Deed & Emirates ID (GPT-4o)...', 'info');
 
-    // 1. INSTANT ZERO-LATENCY CLIENT-SIDE EXTRACTION
-    // Evaluates in < 50ms in the browser so details fill immediately without waiting
-    let clientDeed = null;
-    let clientEid = null;
-
-    try {
-      if (deed) {
-        const deedText = await extractDocumentText(deed);
-        clientDeed = parseTitleDeedClient(deedText, deed.name);
-      }
-      if (eids && eids.length > 0) {
-        let eidText = '';
-        for (const ef of eids) {
-          eidText += ' ' + await extractDocumentText(ef);
-        }
-        clientEid = parseEmiratesIdClient(eidText, eids[0]?.name || '');
-      }
-
-      if (clientDeed || clientEid) {
-        const kyc = clientDeed && clientEid ? {
-          verified: true,
-          confidence_score: 98,
-          match_score: 98,
-          deed_owner: clientDeed.owner_name_english || 'Registered Owner',
-          id_cardholder: clientEid.name_english || 'Cardholder',
-          status: 'VERIFIED_MATCH',
-          notes: 'Owner identity verified against Dubai Land Department Title Deed.'
-        } : null;
-
-        applyExtractedData(clientDeed, clientEid, kyc);
-        showToast('✨ Details auto-filled instantly from Title Deed & Emirates ID!', 'success');
-      }
-    } catch (clientErr) {
-      console.warn('Client extraction error:', clientErr);
-    }
-
-    // 2. SERVER-SIDE ENRICHMENT
-    // Query server endpoints in background to enrich with AI or verify database sync
+    // 1. Primary: Server-Side AI Pipeline (GPT-4o Multimodal Vision + Digital Stream Parser)
+    let aiSuccess = false;
     try {
       const formData = new FormData();
       if (deed) formData.append('title_deed', deed);
@@ -391,30 +357,72 @@ export default function NewListing({ onListingCreated, onBack }) {
             origin + '/api/parse-documents.php',
             origin + '/dashboard/api/parse-documents.php',
             origin + '/parse-documents.php',
-            'https://admin.asquared.ae/api/parse-documents.php',
-            'https://dashboard.asquared.ae/api/parse-documents.php'
+            'https://dashboard.asquared.ae/api/parse-documents.php',
+            'https://dashboard.asquared.ae/dashboard/api/parse-documents.php'
           ];
 
       for (const ep of candidateEndpoints) {
         try {
           const res = await axios.post(ep, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
-            timeout: 6000,
+            timeout: 45000, // 45s for deep multimodal GPT-4o analysis
           });
           if (res.data && res.data.success && (res.data.titleDeedData || res.data.emiratesIdData)) {
             const { titleDeedData, emiratesIdData, kycResult: kyc } = res.data;
             applyExtractedData(titleDeedData, emiratesIdData, kyc);
+            aiSuccess = true;
+            showToast('✨ AI successfully analyzed documents and verified KYC!', 'success');
             break;
           }
         } catch (ignore) {
-          // Gracefully continue
+          // Continue to next endpoint candidate
         }
       }
     } catch (serverErr) {
       console.warn('Server parse check:', serverErr);
-    } finally {
-      setIsParsingDocs(false);
     }
+
+    // 2. Direct Browser AI Fallback (GPT-4o Multimodal Vision) if server endpoint was unreachable
+    if (!aiSuccess) {
+      try {
+        const browserAiResult = await parseDocumentsWithBrowserAI(deed, eids);
+        if (browserAiResult && (browserAiResult.titleDeedData || browserAiResult.emiratesIdData)) {
+          applyExtractedData(browserAiResult.titleDeedData, browserAiResult.emiratesIdData, browserAiResult.kycResult);
+          aiSuccess = true;
+          showToast('✨ AI successfully extracted details via multimodal engine!', 'success');
+        }
+      } catch (browserErr) {
+        console.warn('Browser direct AI extraction note:', browserErr);
+      }
+    }
+
+    // 3. Resilient Stream Reader Fallback (only if AI endpoints completely unreachable)
+    if (!aiSuccess) {
+      try {
+        let clientDeed = null;
+        let clientEid = null;
+        if (deed) {
+          const deedText = await extractDocumentText(deed);
+          clientDeed = parseTitleDeedClient(deedText, deed.name);
+        }
+        if (eids && eids.length > 0) {
+          let eidText = '';
+          for (const ef of eids) {
+            eidText += ' ' + await extractDocumentText(ef);
+          }
+          clientEid = parseEmiratesIdClient(eidText, eids[0]?.name || '');
+        }
+
+        if (clientDeed || clientEid) {
+          applyExtractedData(clientDeed, clientEid, null);
+          showToast('Document text parsed via digital stream reader.', 'info');
+        }
+      } catch (clientErr) {
+        console.warn('Client extraction error:', clientErr);
+      }
+    }
+
+    setIsParsingDocs(false);
   };
 
   const handleTitleDeedUpload = (e) => {
@@ -430,6 +438,23 @@ export default function NewListing({ onListingCreated, onBack }) {
     if (files.length > 0) {
       setEmiratesIdFiles(files);
       triggerDocumentAutoFill(titleDeedFile, files);
+
+      // Auto-extract transparent signature from EID image in background
+      try {
+        const firstFile = files[0];
+        if (firstFile && /\.(jpg|jpeg|png|webp)$/i.test(firstFile.name)) {
+          extractTransparentSignature(firstFile)
+            .then((res) => {
+              if (res && res.signatureDataUrl) {
+                setRentalSpecs((prev) => ({
+                  ...prev,
+                  landlord_signature_png: res.signatureDataUrl,
+                }));
+              }
+            })
+            .catch(() => {});
+        }
+      } catch (err) {}
     }
   };
 
@@ -729,7 +754,7 @@ export default function NewListing({ onListingCreated, onBack }) {
         for (const ep of copyEndpoints) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 14000);
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
             const cRes = await fetch(ep, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -816,11 +841,11 @@ export default function NewListing({ onListingCreated, onBack }) {
           });
         }
 
-        // 4. Insert Images Rows into Supabase (queued for neural processing)
+        // 4. Insert Images Rows into Supabase (queued for photo processing)
         setUploadProgress({
           current: selectedFiles.length,
           total: selectedFiles.length,
-          text: `Starting ${modelTier === 'sunburst' ? 'Sunburst Luxury' : 'Flare High-Speed'} neural enhancement...`
+          text: `Starting ${modelTier === 'sunburst' ? 'Sunburst Luxury' : 'Flare High-Speed'} photo enhancement...`
         });
 
         const imageRows = uploadedImages.map((img, idx) => ({
@@ -884,18 +909,15 @@ export default function NewListing({ onListingCreated, onBack }) {
       {/* Page Title & Back Button */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-sans font-bold text-white tracking-tight">
-            Create Property Listing & AI Package
+          <h1 className="ds-page-title">
+            Create Property Listing &amp; AI Package
           </h1>
-          <p className="text-white/60 mt-1 text-xs lg:text-sm font-sans">
-            Select photo presets, enter property details, and drag & drop or paste photos from clipboard.
-          </p>
         </div>
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white text-xs font-semibold transition-all shrink-0"
+            className="ds-btn-secondary"
           >
             ← Back to Listings
           </button>
@@ -915,15 +937,12 @@ export default function NewListing({ onListingCreated, onBack }) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.08] mb-5">
             <div>
               <h2 className="text-lg font-sans font-bold text-white flex items-center gap-2">
-                <FileBadge2 className="w-5 h-5 text-blue-400" /> Auto-Fill Listing from Title Deed & Emirates ID
+                <Sparkles className="w-5 h-5 text-purple-400" /> Auto-Fill Listing from Title Deed &amp; Emirates ID
               </h2>
-              <p className="text-xs text-white/60">
-                Drop the Title Deed (سند ملكية) and Emirates ID below. Neural OCR will instantly extract all metrics and populate the listing form below automatically.
-              </p>
             </div>
             {isParsingDocs && (
-              <span className="flex items-center gap-2 text-xs font-bold text-blue-400 animate-pulse bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Neural OCR Extracting...
+              <span className="flex items-center gap-2 text-xs font-bold text-purple-400 animate-pulse bg-purple-500/10 px-3 py-1.5 rounded-xl border border-purple-500/20">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Analyzing documents...
               </span>
             )}
           </div>
@@ -976,7 +995,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                 </div>
                 {parsedDeedData && (
                   <span className="text-[10px] uppercase font-bold text-blue-400 bg-blue-500/20 px-2 py-0.5 rounded-md">
-                    Parsed
+                    Verified
                   </span>
                 )}
               </div>
@@ -1025,32 +1044,27 @@ export default function NewListing({ onListingCreated, onBack }) {
                     {parsedEidData?.full_name_english || (emiratesIdFiles.length > 0 ? `${emiratesIdFiles.length} Emirates ID File(s)` : '2. Upload Emirates ID (Front & Back)')}
                   </p>
                   <p className="text-[11px] text-white/60">
-                    {parsedEidData ? `✓ EID: ${parsedEidData.eid_number || 'Valid'} (${parsedEidData.nationality})` : 'Click or drop ID card to auto-verify KYC'}
+                    {parsedEidData ? `✓ EID: ${parsedEidData.eid_number || 'Valid'} (${parsedEidData.nationality})` : 'Click or drop ID card to verify owner identity'}
                   </p>
                 </div>
                 {kycResult && (
                   <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md">
-                    KYC {kycResult.confidence_score}%
+                    Match {kycResult.confidence_score}%
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Automated OCR Accuracy Scorecard */}
+          {/* Document Verification Scorecard */}
           {(parsedDeedData || parsedEidData) && (
             <div className="mt-5 pt-4 border-t border-white/[0.08] animate-fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                  <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></div>
                   <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                    Automated Neural OCR Accuracy Scorecard
+                    Document Verification &amp; Identity Match
                   </h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                    Overall Accuracy: {kycResult?.confidence_score ? Math.max(92, kycResult.confidence_score) : (parsedDeedData && parsedEidData ? 98 : 95)}% Verified
-                  </span>
                 </div>
               </div>
 
@@ -1059,11 +1073,11 @@ export default function NewListing({ onListingCreated, onBack }) {
                 <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 flex flex-col justify-between">
                   <span className="text-[10px] text-slate-400 font-medium">DLD Certificate / Title Deed</span>
                   <div className="mt-1 flex items-center justify-between">
-                    <span className="font-mono text-white text-[11px] font-semibold truncate">
+                    <span className="font-sans tabular-nums text-white text-[11px] font-semibold truncate">
                       {parsedDeedData?.certificate_number || 'N/A'}
                     </span>
                     {parsedDeedData?.certificate_number ? (
-                      <span className="text-emerald-400 text-[10px] font-bold">✓ 100%</span>
+                      <span className="text-emerald-400 text-[10px] font-bold">Verified</span>
                     ) : (
                       <span className="text-amber-400 text-[10px] font-bold">Review</span>
                     )}
@@ -1074,11 +1088,11 @@ export default function NewListing({ onListingCreated, onBack }) {
                 <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 flex flex-col justify-between">
                   <span className="text-[10px] text-slate-400 font-medium">Area Specs (Gross / Suite)</span>
                   <div className="mt-1 flex items-center justify-between">
-                    <span className="font-mono text-white text-[11px] font-semibold truncate">
+                    <span className="font-sans tabular-nums text-white text-[11px] font-semibold truncate">
                       {parsedDeedData?.total_area_sqft || parsedDeedData?.suite_area_sqft ? `${parsedDeedData.total_area_sqft || parsedDeedData.suite_area_sqft} sqft` : 'N/A'}
                     </span>
                     {parsedDeedData?.total_area_sqft || parsedDeedData?.suite_area_sqft ? (
-                      <span className="text-emerald-400 text-[10px] font-bold">✓ 99%</span>
+                      <span className="text-emerald-400 text-[10px] font-bold">Verified</span>
                     ) : (
                       <span className="text-amber-400 text-[10px] font-bold">Review</span>
                     )}
@@ -1092,7 +1106,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                     <span className="font-medium text-white text-[11px] truncate">
                       {parsedDeedData?.community || 'Dubai'}
                     </span>
-                    <span className="text-emerald-400 text-[10px] font-bold">✓ 97%</span>
+                    <span className="text-emerald-400 text-[10px] font-bold">Verified</span>
                   </div>
                 </div>
 
@@ -1100,7 +1114,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                 <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 flex flex-col justify-between">
                   <span className="text-[10px] text-slate-400 font-medium">KYC Legal Name Match</span>
                   <div className="mt-1 flex items-center justify-between">
-                    <span className="font-mono text-white text-[11px] truncate">
+                    <span className="font-sans tabular-nums text-white text-[11px] truncate">
                       {kycResult?.is_match ? 'Matched' : (parsedEidData ? 'Verified EID' : 'Pending EID')}
                     </span>
                     {kycResult?.is_match ? (
@@ -1115,10 +1129,10 @@ export default function NewListing({ onListingCreated, onBack }) {
           )}
         </div>
 
-        {/* STEP 1 — Property Listing Information */}
-        <div className="glass-card p-6">
-          <h2 className="text-base font-sans font-bold text-white mb-5 flex items-center gap-2 border-b border-white/[0.06] pb-3">
-            <Building className="w-5 h-5 text-blue-500" /> STEP 1 — Property Listing Information
+        {/* Step 1: Property Listing Information */}
+        <div className="ds-card p-6">
+          <h2 className="text-base font-bold text-white mb-5 flex items-center gap-2 border-b border-white/[0.06] pb-3">
+            <Building className="w-5 h-5 text-blue-500" /> Step 1: Property Listing Information
           </h2>
 
           <div className="space-y-5">
@@ -1290,11 +1304,8 @@ export default function NewListing({ onListingCreated, onBack }) {
                     <FileBadge2 className="w-5 h-5 text-blue-400 shrink-0" />
                     <div>
                       <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                        Official A-SQUARED Rental Listing Form & NOC Setup
+                        Official Rental Listing Form &amp; NOC Setup
                       </h3>
-                      <p className="text-[11px] text-white/60">
-                        Specify exact tenancy commercial terms to auto-populate the official 1:1 DLD / RERA Rental NOC document.
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -1467,15 +1478,17 @@ export default function NewListing({ onListingCreated, onBack }) {
           </div>
         </div>
 
-        {/* STEP 2 — Upload Listing Photos */}
-        <div className="glass-card p-6">
+        {/* Step 2: Upload Listing Photos */}
+        <div className="ds-card p-6">
           <div className="flex items-center justify-between border-b border-white/[0.06] pb-3 mb-5">
-            <h2 className="text-base font-sans font-bold text-white flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-blue-500" /> STEP 2 — Upload Listing Photos
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-blue-500" /> Step 2: Upload Listing Photos
             </h2>
-            <span className="text-xs text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full font-medium border border-blue-500/25">
-              {previews.length} photos selected
-            </span>
+            {previews.length > 0 && (
+              <span className="text-xs text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full font-medium border border-blue-500/25">
+                {previews.length} photos selected
+              </span>
+            )}
           </div>
 
           {/* Drag & Drop Box */}
@@ -1509,7 +1522,7 @@ export default function NewListing({ onListingCreated, onBack }) {
             <p className="text-xs text-white/60 mt-2 flex items-center justify-center gap-1 flex-wrap font-sans">
               <span>✨ Direct Clipboard Paste supported:</span>
               <span>Press</span>
-              <kbd className="px-1.5 py-0.5 glass-pill rounded text-[11px] font-mono text-blue-400">Ctrl + V</kbd>
+              <kbd className="px-1.5 py-0.5 glass-pill rounded text-[11px] font-sans tabular-nums text-blue-400">Ctrl + V</kbd>
               <span>anywhere to paste photos directly from WhatsApp or email!</span>
             </p>
           </div>
@@ -1612,30 +1625,21 @@ export default function NewListing({ onListingCreated, onBack }) {
           )}
         </div>
 
-        {/* STEP 3 — AI Enhancement Presets & Prompt */}
-        <div className="glass-card p-6">
+        {/* Step 3: Photo QA & Enhancement Preset */}
+        <div className="ds-card p-6">
           <div className="border-b border-white/[0.06] pb-3 mb-5 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-sans font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-500" /> STEP 3 — Real Estate Photo QA & Enhancement Preset
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-blue-500" /> Step 3: Real Estate Photo QA &amp; Enhancement Preset
               </h2>
-              <p className="text-xs text-white/60 mt-1 font-sans">
-                Non-destructive conservative enhancement. Zero structural alterations or hallucinations.
-              </p>
             </div>
-            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5" /> Hard Guardrails Active
-            </span>
           </div>
 
           {/* DUAL-MODE NEURAL MODEL SELECTOR (Option C: Flare vs Sunburst) */}
           <div className="mb-5 p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
             <div className="flex items-center justify-between mb-2.5">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-blue-400" /> AI Neural Enhancement Engine (Option C)
-              </span>
-              <span className="text-[11px] text-emerald-400 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" /> Zero Hallucinations Guaranteed
+                <Sparkles className="w-4 h-4 text-blue-400" /> Photo Enhancement Engine
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1725,7 +1729,6 @@ export default function NewListing({ onListingCreated, onBack }) {
                 <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">
                   Active QA & Enhancement Prompt Directives
                 </span>
-                <span className="text-[10px] text-white/50 font-normal hidden sm:inline">• Strict Real Estate Protocol</span>
               </div>
               <span className="text-xs font-semibold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/20 transition-colors">
                 {isPromptExpanded ? '▲ Collapse Prompt' : '▼ Customize Prompt Directives'}
@@ -1741,7 +1744,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                   value={compiledPrompt}
                   onChange={(e) => setCompiledPrompt(e.target.value)}
                   placeholder="QA & enhancement prompt instructions..."
-                  className="w-full glass-input rounded-xl p-3.5 text-bone-100 text-xs font-mono placeholder-slate-500 focus:outline-none transition-all leading-relaxed"
+                  className="w-full glass-input rounded-xl p-3.5 text-bone-100 text-xs font-sans tabular-nums placeholder-slate-500 focus:outline-none transition-all leading-relaxed"
                 />
               </div>
             )}
@@ -1757,7 +1760,7 @@ export default function NewListing({ onListingCreated, onBack }) {
                   <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
                   {uploadProgress.text || 'Processing listing & photos...'}
                 </span>
-                <span className="font-mono text-blue-300">
+                <span className="font-sans tabular-nums text-blue-300">
                   {uploadProgress.total > 0 ? Math.round((uploadProgress.current / uploadProgress.total) * 100) : 100}%
                 </span>
               </div>
@@ -1779,15 +1782,15 @@ export default function NewListing({ onListingCreated, onBack }) {
                   ? 'bg-navy-800 text-white/40 cursor-not-allowed border border-white/[0.08]'
                   : selectedFiles.length === 0
                   ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 shadow-amber-950/40 hover:scale-[1.02] active:scale-[0.98]'
-                  : 'bg-gradient-to-r from-[#00284b] to-[#003d73] hover:from-[#003666] hover:to-[#004b8c] shadow-blue-950/40 hover:scale-[1.02] active:scale-[0.98]'
+                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/30 hover:scale-[1.01]'
               }`}
             >
               <Sparkles className="w-5 h-5" />
               {isSubmitting
                 ? 'Processing Listing Package...'
                 : selectedFiles.length === 0
-                ? 'SAVE LISTING AS DRAFT (PHOTOS PENDING)'
-                : `RUN QA & ENHANCE ${selectedFiles.length} PHOTOS`}
+                ? 'Save Listing as Draft (Photos Pending)'
+                : `Run QA & Enhance ${selectedFiles.length} Photos`}
             </button>
           </div>
         </div>

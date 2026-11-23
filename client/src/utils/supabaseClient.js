@@ -119,8 +119,8 @@ export async function uploadListingImage(file, listingId) {
 /**
  * Upload an enhanced/refined image directly to Supabase Storage bucket property-images (generated folder)
  */
-export async function uploadEnhancedListingImage(blob, listingId, baseFilename = 'photo.jpg') {
-  const cleanName = baseFilename.replace(/[^a-zA-Z0-9._-]/g, '_');
+export async function uploadEnhancedListingImage(blob, listingId, baseFilename = 'photo.png') {
+  const cleanName = baseFilename.replace(/\.jpe?g$/i, '.png').replace(/[^a-zA-Z0-9._-]/g, '_');
   const path = `generated/${listingId}/${Date.now()}_enhanced_${cleanName}`;
   const uploadUrl = `${SUPABASE_STORAGE_URL}/object/property-images/${path}`;
 
@@ -129,7 +129,7 @@ export async function uploadEnhancedListingImage(blob, listingId, baseFilename =
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'image/jpeg',
+      'Content-Type': 'image/png',
       'x-upsert': 'true',
     },
     body: blob,

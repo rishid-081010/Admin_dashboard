@@ -329,7 +329,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                 <span className="text-white flex items-center gap-1.5">
                   <FileText className="w-4 h-4 text-blue-400" /> 1. Title Deed / Oqood (سند ملكية)
                 </span>
-                <span className="text-blue-400/80 text-[11px] font-mono uppercase">PDF / Image (Max 1)</span>
+                <span className="text-blue-400/80 text-[11px] font-sans tabular-nums uppercase">PDF / Image (Max 1)</span>
               </div>
               <input
                 ref={deedInputRef}
@@ -355,7 +355,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                       <p className="text-xs font-bold text-white truncate">
                         {titleDeedFile?.name || `${titleDeedData?.building_name || 'Title Deed'} — Unit ${titleDeedData?.unit_number || ''}`}
                       </p>
-                      <p className="text-[11px] text-blue-400 font-mono">
+                      <p className="text-[11px] text-blue-400 font-sans tabular-nums">
                         DLD Cert: {titleDeedData?.certificate_number || 'OCR Extracted'} • {titleDeedData?.total_area_sqft ? `${titleDeedData.total_area_sqft} sqft` : 'Ready'}
                       </p>
                     </div>
@@ -379,7 +379,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                 <span className="text-white flex items-center gap-1.5">
                   <UserCheck className="w-4 h-4 text-emerald-400" /> 2. Emirates ID (Front & Back)
                 </span>
-                <span className="text-emerald-400/80 text-[11px] font-mono uppercase">PDF / Image (Max 2)</span>
+                <span className="text-emerald-400/80 text-[11px] font-sans tabular-nums uppercase">PDF / Image (Max 2)</span>
               </div>
               <input
                 ref={eidInputRef}
@@ -406,7 +406,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                       <p className="text-xs font-bold text-white truncate">
                         {emiratesIdData?.full_name_english || (emiratesIdFiles.length > 0 ? `${emiratesIdFiles.length} ID Card File(s)` : 'Emirates ID')}
                       </p>
-                      <p className="text-[11px] text-emerald-400 font-mono">
+                      <p className="text-[11px] text-emerald-400 font-sans tabular-nums">
                         EID: {emiratesIdData?.eid_number || '784-XXXX-XXXXXXX-X'} • {emiratesIdData?.nationality || 'UAE Resident'}
                       </p>
                     </div>
@@ -430,7 +430,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                 <span className="text-white flex items-center gap-1.5">
                   <ImageIcon className="w-4 h-4 text-sky-400" /> 3. Property Photos (Bulk Upload)
                 </span>
-                <span className="text-sky-400/80 text-[11px] font-mono uppercase">{photoFiles.length} Selected</span>
+                <span className="text-sky-400/80 text-[11px] font-sans tabular-nums uppercase">{photoFiles.length} Selected</span>
               </div>
               <input
                 ref={photosInputRef}
@@ -490,7 +490,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                   placeholder="e.g. 4,850,000"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs font-mono focus:border-blue-400 focus:outline-none"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs font-sans tabular-nums focus:border-blue-400 focus:outline-none"
                 />
               </div>
 
@@ -557,7 +557,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                   type="number"
                   value={validityDays}
                   onChange={(e) => setValidityDays(Number(e.target.value))}
-                  className="w-full px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs font-mono focus:border-blue-400 focus:outline-none"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs font-sans tabular-nums focus:border-blue-400 focus:outline-none"
                 />
               </div>
             </div>
@@ -583,7 +583,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                   type="text"
                   value={brokerBrn}
                   onChange={(e) => setBrokerBrn(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs font-mono focus:border-blue-400 focus:outline-none"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs font-sans tabular-nums focus:border-blue-400 focus:outline-none"
                 />
               </div>
             </div>
@@ -663,7 +663,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                   <Building2 className="w-4 h-4 text-blue-400" />
                   Verified DLD Property Specifications
                 </h3>
-                <span className="text-[11px] font-mono text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
+                <span className="text-[11px] font-sans tabular-nums text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
                   Deed #{titleDeedData.certificate_number || '2024/DXB'}
                 </span>
               </div>
@@ -675,7 +675,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                 </div>
                 <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                   <p className="text-[10px] uppercase font-bold text-white/60">Unit Number</p>
-                  <p className="text-xs font-bold text-blue-300 font-mono mt-0.5">{titleDeedData.unit_number || 'N/A'}</p>
+                  <p className="text-xs font-bold text-blue-300 font-sans tabular-nums mt-0.5">{titleDeedData.unit_number || 'N/A'}</p>
                 </div>
                 <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                   <p className="text-[10px] uppercase font-bold text-white/60">Community</p>
@@ -683,13 +683,13 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                 </div>
                 <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                   <p className="text-[10px] uppercase font-bold text-white/60">Total Gross Area</p>
-                  <p className="text-xs font-bold text-emerald-400 font-mono mt-0.5">
+                  <p className="text-xs font-bold text-emerald-400 font-sans tabular-nums mt-0.5">
                     {titleDeedData.total_area_sqft ? `${titleDeedData.total_area_sqft.toLocaleString()} Sq.Ft` : 'N/A'}
                   </p>
                 </div>
                 <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                   <p className="text-[10px] uppercase font-bold text-white/60">Suite Area</p>
-                  <p className="text-xs font-bold text-white font-mono mt-0.5">
+                  <p className="text-xs font-bold text-white font-sans tabular-nums mt-0.5">
                     {titleDeedData.suite_area_sqft ? `${titleDeedData.suite_area_sqft.toLocaleString()} Sq.Ft` : 'N/A'}
                   </p>
                 </div>
@@ -860,13 +860,13 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                     <div className="p-3 rounded-xl bg-navy-950/60 border border-white/[0.05]">
                       <span className="text-[10px] uppercase font-bold text-white/60 block mb-1">Owner / Principal</span>
                       <p className="font-bold text-white">{titleDeedData?.owner_name_english || emiratesIdData?.full_name_english || 'Authorized Property Owner'}</p>
-                      <p className="text-white/60 font-mono text-[11px]">EID: {emiratesIdData?.eid_number || '784-XXXX-XXXXXXX-X'}</p>
+                      <p className="text-white/60 font-sans tabular-nums text-[11px]">EID: {emiratesIdData?.eid_number || '784-XXXX-XXXXXXX-X'}</p>
                     </div>
 
                     <div className="p-3 rounded-xl bg-navy-950/60 border border-white/[0.05]">
                       <span className="text-[10px] uppercase font-bold text-white/60 block mb-1">Authorized Broker</span>
                       <p className="font-bold text-white">{brokerName}</p>
-                      <p className="text-white/60 font-mono text-[11px]">{brokerBrn}</p>
+                      <p className="text-white/60 font-sans tabular-nums text-[11px]">{brokerBrn}</p>
                     </div>
                   </div>
 
@@ -876,7 +876,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                       {titleDeedData?.building_name || 'Property'} {titleDeedData?.unit_number ? `— Unit ${titleDeedData.unit_number}` : ''} ({titleDeedData?.community || 'Dubai'})
                     </p>
                     <p className="text-white/60">
-                      Asking Price: <span className="text-blue-300 font-mono font-bold">AED {price || 'On Application'}</span> • Commission: <span className="text-white font-mono">{commissionRate}</span> • Validity: <span className="text-white font-mono">{validityDays} Days</span>
+                      Asking Price: <span className="text-blue-300 font-sans tabular-nums font-bold">AED {price || 'On Application'}</span> • Commission: <span className="text-white font-sans tabular-nums">{commissionRate}</span> • Validity: <span className="text-white font-sans tabular-nums">{validityDays} Days</span>
                     </p>
                   </div>
                 </div>
@@ -963,7 +963,7 @@ export default function TitleDeedDossierStudio({ onSelectListing }) {
                       <div key={idx} className="rounded-2xl overflow-hidden bg-navy-950 border border-white/[0.08] aspect-video relative group">
                         <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
                         <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                          <p className="text-[10px] text-white font-mono truncate">{photo.name}</p>
+                          <p className="text-[10px] text-white font-sans tabular-nums truncate">{photo.name}</p>
                         </div>
                       </div>
                     ))}

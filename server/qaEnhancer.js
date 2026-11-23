@@ -191,16 +191,11 @@ export async function applyDarkroomTransformations(inputPath, adjustments = {}, 
 
   // Export with optimal chroma
   const originalExt = (metadata.format || 'jpeg').toLowerCase();
-  if (originalExt === 'png') {
-    await pipeline.png({ quality: 98, compressionLevel: 6 }).toFile(outputPath);
-  } else if (originalExt === 'webp') {
-    await pipeline.webp({ quality: 96, effort: 5 }).toFile(outputPath);
-  } else {
-    await pipeline.jpeg({ quality: 96, chromaSubsampling: '4:4:4', mozjpeg: true }).toFile(outputPath);
-  }
+  const targetPath = outputPath.replace(/\.jpe?g$/i, '.png');
+  await pipeline.png({ compressionLevel: 6 }).toFile(targetPath);
 
   return {
-    outputPath,
+    outputPath: targetPath,
     appliedAdjustments: {
       brightness,
       saturation,
@@ -215,58 +210,12 @@ export async function applyDarkroomTransformations(inputPath, adjustments = {}, 
 
 /**
  * Applies the official A Squared Real Estate watermark (isolated emblem + text)
- * to the bottom-right corner of the enhanced property photograph.
+ * Disabled: Property photos retain natural beauty and clean surfaces without added watermarks.
+ * Foreign watermark removal via AI remains fully active.
  */
 export async function applyASquaredWatermark(imagePath) {
-  try {
-    const wmCandidates = [
-      path.join(__dirname, '../client/public/asquared-watermark.png'),
-      path.join(__dirname, 'asquared-watermark.png'),
-      'C:/Users/moham/.gemini/antigravity/scratch/asquared-watermark.png',
-      'C:/Users/moham/.gemini/antigravity/scratch/Admin_dashboard_cloned/client/public/asquared-watermark.png'
-    ];
-    let wmPath = null;
-    for (const p of wmCandidates) {
-      if (fs.existsSync(p)) {
-        wmPath = p;
-        break;
-      }
-    }
-    if (!wmPath) {
-      console.warn('[Watermark] asquared-watermark.png not found; skipping watermark overlay.');
-      return;
-    }
-
-    const metadata = await sharp(imagePath).metadata();
-    const baseW = metadata.width || 1200;
-    const baseH = metadata.height || 900;
-
-    const targetW = Math.max(100, Math.round(baseW * 0.17));
-    const padX = Math.round(baseW * 0.035);
-    const padY = Math.round(baseH * 0.035);
-
-    const resizedWm = await sharp(wmPath)
-      .resize({ width: targetW })
-      .toBuffer();
-
-    const wmMeta = await sharp(resizedWm).metadata();
-    const destX = Math.max(0, baseW - targetW - padX);
-    const destY = Math.max(0, baseH - wmMeta.height - padY);
-
-    const watermarkedBuf = await sharp(imagePath)
-      .composite([{
-        input: resizedWm,
-        left: destX,
-        top: destY
-      }])
-      .jpeg({ quality: 94 })
-      .toBuffer();
-
-    fs.writeFileSync(imagePath, watermarkedBuf);
-    console.log(`[Watermark] Official A Squared watermark successfully composited on ${path.basename(imagePath)}`);
-  } catch (err) {
-    console.error('[Watermark] Failed to composite watermark:', err.message);
-  }
+  // Feature disabled: Return without applying A Squared watermark
+  return imagePath;
 }
 
 /**
@@ -278,7 +227,7 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
   if (!apiKey || apiKey.includes('your_openai_api_key')) {
     console.warn('[Neural Enhancer] No valid OpenAI API key; using local photographic fallback.');
     const fbRes = await applyDarkroomTransformations(inputPath, {}, outputPath);
-    await applyASquaredWatermark(outputPath);
+    // await applyASquaredWatermark(outputPath);
     return fbRes;
   }
 
@@ -299,7 +248,7 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
     }
   } catch (mErr) {}
 
-  console.log(`[Neural Enhancer] Executing ${targetModel} on: ${path.basename(inputPath)} (Quality: high)...`);
+  console.log(`[Neural Enhancer] Executing ${targetModel} on: ${path.basename(inputPath)} (Quality: standard)...`);
   const startTime = Date.now();
 
   try {
@@ -312,7 +261,7 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
     formData.append('model', targetModel);
     formData.append('image', blob, path.basename(inputPath));
     formData.append('prompt', effectivePrompt);
-    formData.append('quality', 'high');
+    formData.append('quality', 'standard');
 
     const res = await fetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',
@@ -335,17 +284,21 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
     const imgUrl = data.data?.[0]?.url;
 
     if (b64Data) {
-      fs.writeFileSync(outputPath, Buffer.from(b64Data, 'base64'));
-      await applyASquaredWatermark(outputPath);
-      console.log(`[Neural Enhancer] Successfully enhanced with ${targetModel} (${elapsed}s) -> ${outputPath}`);
-      return { outputPath, success: true, modelUsed: targetModel, elapsed };
+      const rawBuf = Buffer.from(b64Data, 'base64');
+      const pngBuf = await sharp(rawBuf).png({ compressionLevel: 6 }).toBuffer();
+      const finalOutputPath = outputPath.replace(/\.jpe?g$/i, '.png');
+      fs.writeFileSync(finalOutputPath, pngBuf);
+      console.log(`[Neural Enhancer] Successfully enhanced with ${targetModel} (${elapsed}s) -> ${finalOutputPath}`);
+      return { outputPath: finalOutputPath, success: true, modelUsed: targetModel, elapsed };
     } else if (imgUrl) {
       const dlRes = await fetch(imgUrl);
       const ab = await dlRes.arrayBuffer();
-      fs.writeFileSync(outputPath, Buffer.from(ab));
-      await applyASquaredWatermark(outputPath);
-      console.log(`[Neural Enhancer] Successfully downloaded ${targetModel} output (${elapsed}s) -> ${outputPath}`);
-      return { outputPath, success: true, modelUsed: targetModel, elapsed };
+      const rawBuf = Buffer.from(ab);
+      const pngBuf = await sharp(rawBuf).png({ compressionLevel: 6 }).toBuffer();
+      const finalOutputPath = outputPath.replace(/\.jpe?g$/i, '.png');
+      fs.writeFileSync(finalOutputPath, pngBuf);
+      console.log(`[Neural Enhancer] Successfully downloaded ${targetModel} output (${elapsed}s) -> ${finalOutputPath}`);
+      return { outputPath: finalOutputPath, success: true, modelUsed: targetModel, elapsed };
     }
 
     throw new Error('Neural model returned payload without image data.');
@@ -353,7 +306,7 @@ export async function enhanceWithNeuralModel(inputPath, customPrompt = '', outpu
     console.error(`[Neural Enhancer] Error in ${targetModel}:`, err.message);
     console.log('[Neural Enhancer] Engaging deterministic darkroom fallback...');
     const fbRes = await applyDarkroomTransformations(inputPath, {}, outputPath);
-    await applyASquaredWatermark(outputPath);
+    // await applyASquaredWatermark(outputPath);
     return fbRes;
   }
 }

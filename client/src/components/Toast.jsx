@@ -18,17 +18,17 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
       <div
-        className={`glass-panel flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl border ${
+        className={`flex items-center gap-3 px-4 py-3.5 rounded-xl shadow-2xl border backdrop-blur-xl ${
           isSuccess
-            ? 'border-emerald-500/40 bg-emerald-950/80 text-emerald-200'
+            ? 'border-emerald-500/40 bg-[#0c1829] text-emerald-200'
             : isError
-            ? 'border-red-500/40 bg-red-950/80 text-red-200'
-            : 'border-blue-500/40 bg-navy-950/90 text-bone-100'
+            ? 'border-rose-500/40 bg-[#0c1829] text-rose-200'
+            : 'border-[#1b2b3d] bg-[#0c1829] text-[#e2e0cc]'
         }`}
       >
         {isSuccess && <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />}
-        {isError && <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />}
-        {!isSuccess && !isError && <Info className="w-5 h-5 text-blue-400 flex-shrink-0" />}
+        {isError && <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />}
+        {!isSuccess && !isError && <Info className="w-5 h-5 text-[#b7a990] flex-shrink-0" />}
 
         <span className="text-xs font-semibold tracking-wide font-sans">{message}</span>
 

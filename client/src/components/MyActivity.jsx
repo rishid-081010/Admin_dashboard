@@ -69,9 +69,6 @@ export default function MyActivity({ currentUser }) {
   const [timeline, setTimeline] = useState([]);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
-  const [newNoteText, setNewNoteText] = useState('');
-  const [savingNote, setSavingNote] = useState(false);
-  const [savingReassign, setSavingReassign] = useState(false);
 
   // Initial load of agents
   useEffect(() => {
@@ -107,7 +104,7 @@ export default function MyActivity({ currentUser }) {
 
     try {
       const data = await activityService.getActivity(selectedAgentId, {
-        limit: 200,
+        limit: 100,
         sortBy
       });
       setItems(data.items || []);
@@ -128,7 +125,6 @@ export default function MyActivity({ currentUser }) {
   const handleOpenDetail = async (item) => {
     setSelectedItem(item);
     setAudioPlaying(false);
-    setNewNoteText('');
     setLoadingTimeline(true);
     try {
       const tl = await activityService.getItemTimeline(item.id);
@@ -138,65 +134,6 @@ export default function MyActivity({ currentUser }) {
       setTimeline([]);
     } finally {
       setLoadingTimeline(false);
-    }
-  };
-
-  // Add follow-up note to Bitrix timeline
-  const handleAddNote = async () => {
-    if (!selectedItem || !newNoteText.trim()) return;
-    setSavingNote(true);
-    try {
-      const author = selectedAgentId !== 'all' ? selectedAgentId : '144';
-      const res = await activityService.addNote(selectedItem.id, newNoteText.trim(), author);
-      if (res.success) {
-        const newEntry = {
-          id: res.comment_id || String(Date.now()),
-          created: new Date().toISOString(),
-          author_id: author,
-          raw_comment: newNoteText.trim(),
-          recording_url: '',
-          transcript_url: '',
-          call_note: newNoteText.trim(),
-          voice_status: '',
-          is_voice_call: false
-        };
-        setTimeline(prev => [newEntry, ...prev]);
-        setNewNoteText('');
-      }
-    } catch (err) {
-      console.error('Failed to add note:', err);
-    } finally {
-      setSavingNote(false);
-    }
-  };
-
-  // Reassign lead to another agent in Bitrix
-  const handleReassignAgent = async (newAgentId) => {
-    if (!selectedItem || !newAgentId || String(newAgentId) === String(selectedItem.assigned_by_id)) return;
-    setSavingReassign(true);
-    try {
-      const res = await activityService.reassignAgent(selectedItem.id, newAgentId);
-      if (res.success) {
-        const targetAgent = agents.find(a => String(a.id) === String(newAgentId));
-        const agentName = targetAgent?.name || KNOWN_AGENTS[String(newAgentId)] || `Agent #${newAgentId}`;
-        const agentPhoto = targetAgent?.photo || null;
-        setItems(prev => prev.map(it => it.id === selectedItem.id ? {
-          ...it,
-          assigned_by_id: String(newAgentId),
-          assigned_by_name: agentName,
-          assigned_by_photo: agentPhoto
-        } : it));
-        setSelectedItem(prev => ({
-          ...prev,
-          assigned_by_id: String(newAgentId),
-          assigned_by_name: agentName,
-          assigned_by_photo: agentPhoto
-        }));
-      }
-    } catch (err) {
-      console.error('Failed to reassign agent:', err);
-    } finally {
-      setSavingReassign(false);
     }
   };
 
@@ -314,13 +251,10 @@ export default function MyActivity({ currentUser }) {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5 pb-4 border-b border-white/[0.08]">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              MY ACTIVITY &amp; PIPELINE
+            <h1 className="ds-page-title">
+              My Activity &amp; Pipeline
             </h1>
           </div>
-          <p className="text-slate-400 text-xs mt-1">
-            Real-time telesales owner cards, voice recordings, sentiment qualification, and agent follow-up.
-          </p>
         </div>
 
         {/* Right Controls: Agent Selector, Refresh & View Mode */}
@@ -350,7 +284,7 @@ export default function MyActivity({ currentUser }) {
               <div className="absolute right-0 mt-2 w-72 bg-[#061324] border border-[#233b59] rounded-2xl shadow-2xl z-50 p-2 animate-fade-in backdrop-blur-xl">
                 <div className="p-1.5 border-b border-white/[0.08]">
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       placeholder="Search active agent..."
@@ -428,35 +362,31 @@ export default function MyActivity({ currentUser }) {
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-blue-400' : ''}`} />
           </button>
 
-          {/* Dedicated Agent Webhooks Gateway */}
+          {/* Dedicated Lead Integration Links */}
           <button
             onClick={() => {
               setIsWebhookModalOpen(true);
               loadWebhooks();
             }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all shadow-sm cursor-pointer"
-            title="Connect agent webhooks to Bitrix24 automations and n8n"
+            title="Connect lead integration links to automations and CRM"
           >
             <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>Agent Webhooks</span>
+            <span>Lead Integration Links</span>
           </button>
 
           {/* Board / List Switcher */}
-          <div className="flex gap-1 bg-[#071322] border border-[#1b2b3d] p-1 rounded-xl shadow-inner">
+          <div className="ds-filter-bar">
             <button
               onClick={() => setView('board')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                view === 'board' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
+              className={`ds-filter-pill ${view === 'board' ? 'ds-filter-pill-active' : ''} flex items-center gap-1.5`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
               <span>Board</span>
             </button>
             <button
               onClick={() => setView('list')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                view === 'list' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
+              className={`ds-filter-pill ${view === 'list' ? 'ds-filter-pill-active' : ''} flex items-center gap-1.5`}
             >
               <List className="w-3.5 h-3.5" />
               <span>List</span>
@@ -467,48 +397,48 @@ export default function MyActivity({ currentUser }) {
 
       {/* Metric Quick Stats Pills */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
-        <div className="bg-[#081729]/80 border border-[#1d324d] rounded-xl p-3 flex items-center justify-between">
+        <div className="ds-subcard p-3 flex items-center justify-between">
           <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Total Assigned</div>
-            <div className="text-xl font-bold text-white mt-0.5">{totalItems}</div>
+            <div className="ds-kicker">Total Assigned</div>
+            <div className="text-xl font-bold font-sans tabular-nums text-white mt-0.5">{totalItems}</div>
           </div>
           <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
             <Hash className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-[#081729]/80 border border-[#1d324d] rounded-xl p-3 flex items-center justify-between">
+        <div className="ds-subcard p-3 flex items-center justify-between">
           <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Ready for Call</div>
-            <div className="text-xl font-bold text-sky-400 mt-0.5">{readyCount}</div>
+            <div className="ds-kicker text-sky-400">Ready for Call</div>
+            <div className="text-xl font-bold font-sans tabular-nums text-white mt-0.5">{readyCount}</div>
           </div>
           <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
             <Phone className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-[#081729]/80 border border-emerald-500/30 rounded-xl p-3 flex items-center justify-between shadow-lg shadow-emerald-500/5">
+        <div className="ds-subcard border-emerald-500/30 p-3 flex items-center justify-between shadow-lg shadow-emerald-500/5">
           <div>
-            <div className="text-[11px] text-emerald-400 uppercase tracking-wider font-semibold flex items-center gap-1">
+            <div className="ds-kicker text-emerald-400 flex items-center gap-1">
               <span>Interested</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             </div>
-            <div className="text-xl font-bold text-emerald-300 mt-0.5">{interestedCount}</div>
+            <div className="text-xl font-bold font-sans tabular-nums text-white mt-0.5">{interestedCount}</div>
           </div>
           <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300">
             <Flame className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-[#081729]/80 border border-rose-500/30 rounded-xl p-3 flex items-center justify-between shadow-lg shadow-rose-500/5">
+        <div className="ds-subcard border-rose-500/30 p-3 flex items-center justify-between shadow-lg shadow-rose-500/5">
           <div>
-            <div className="text-[11px] text-rose-400 uppercase tracking-wider font-semibold flex items-center gap-1">
+            <div className="ds-kicker text-rose-400 flex items-center gap-1">
               <span>Overdue (&gt;48h)</span>
               {items.filter(it => it.priority_level === 'critical').length > 0 && (
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
               )}
             </div>
-            <div className="text-xl font-bold text-rose-300 mt-0.5">
+            <div className="text-xl font-bold font-sans tabular-nums text-white mt-0.5">
               {items.filter(it => it.priority_level === 'critical').length}
             </div>
           </div>
@@ -517,10 +447,10 @@ export default function MyActivity({ currentUser }) {
           </div>
         </div>
 
-        <div className="bg-[#081729]/80 border border-[#1d324d] rounded-xl p-3 flex items-center justify-between">
+        <div className="ds-subcard p-3 flex items-center justify-between">
           <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Won / Success</div>
-            <div className="text-xl font-bold text-teal-400 mt-0.5">{wonCount}</div>
+            <div className="ds-kicker text-teal-400">Won / Success</div>
+            <div className="text-xl font-bold font-sans tabular-nums text-white mt-0.5">{wonCount}</div>
           </div>
           <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
             <CheckCircle2 className="w-4 h-4" />
@@ -531,16 +461,16 @@ export default function MyActivity({ currentUser }) {
       {/* Filter / Search Bar */}
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by owner name, project, unit, or phone number..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-[#071526] border border-[#1b2f4a] rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all shadow-inner"
+            className="ds-input pl-9 pr-8"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-white">
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -632,7 +562,7 @@ export default function MyActivity({ currentUser }) {
                         <span className={`w-2.5 h-2.5 rounded-full ${col.highlight ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'}`} />
                         <h3 className="font-bold text-xs text-white uppercase tracking-wider">{col.title}</h3>
                       </div>
-                      <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full font-bold ${col.bg} ${col.text} border ${col.border}`}>
+                      <span className={`text-[11px] font-sans tabular-nums px-2 py-0.5 rounded-full font-bold ${col.bg} ${col.text} border ${col.border}`}>
                         {colItems.length}
                       </span>
                     </div>
@@ -656,7 +586,7 @@ export default function MyActivity({ currentUser }) {
 
                           {/* Priority Ranking & SLA Waiting Badge (Earlier = Higher Priority) */}
                           <div className="flex items-center justify-between mb-2 pl-1.5 pr-1">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-tight inline-flex items-center gap-1.5 ${
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-sans tabular-nums font-bold tracking-tight inline-flex items-center gap-1.5 ${
                               item.priority_level === 'critical'
                                 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm shadow-rose-500/20'
                                 : item.priority_level === 'high'
@@ -672,7 +602,7 @@ export default function MyActivity({ currentUser }) {
                             </span>
 
                             {item.priority_level === 'critical' && (
-                              <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider font-mono">
+                              <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider font-sans tabular-nums">
                                 Overdue
                               </span>
                             )}
@@ -684,7 +614,7 @@ export default function MyActivity({ currentUser }) {
                               <div className="text-[12px] font-bold text-white tracking-tight leading-snug">
                                 Telesales - Owners data
                               </div>
-                              <div className="text-[11px] font-mono font-semibold text-blue-400">
+                              <div className="text-[11px] font-sans tabular-nums font-semibold text-blue-400">
                                 #{item.id}
                               </div>
                             </div>
@@ -757,13 +687,13 @@ export default function MyActivity({ currentUser }) {
                           <div className="grid grid-cols-2 gap-2 mb-2 pl-1.5 pt-1 border-t border-white/[0.05]">
                             <div>
                               <span className="text-[10px] text-slate-400 block font-medium">Unit Number</span>
-                              <span className="text-xs font-mono font-semibold text-white block">
+                              <span className="text-xs font-sans tabular-nums font-semibold text-white block">
                                 {item.unit_number || 'TBD'}
                               </span>
                             </div>
                             <div>
                               <span className="text-[10px] text-slate-400 block font-medium">Contact Number</span>
-                              <span className="text-xs font-mono text-slate-300 block truncate">
+                              <span className="text-xs font-sans tabular-nums text-slate-300 block truncate">
                                 {item.contact_number || 'N/A'}
                               </span>
                             </div>
@@ -778,7 +708,7 @@ export default function MyActivity({ currentUser }) {
                                 target="_blank"
                                 rel="noreferrer"
                                 onClick={e => e.stopPropagation()}
-                                className="text-[11px] text-blue-400 hover:text-blue-300 truncate block underline font-mono"
+                                className="text-[11px] text-blue-400 hover:text-blue-300 truncate block underline font-sans tabular-nums"
                               >
                                 {item.whatsapp_link}
                               </a>
@@ -812,20 +742,20 @@ export default function MyActivity({ currentUser }) {
           </div>
         ) : (
           /* List / Table View */
-          <div className="h-full bg-[#081628] border border-[#1e3450] rounded-2xl shadow-xl overflow-hidden flex flex-col">
+          <div className="h-full ds-card overflow-hidden flex flex-col">
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#05101d] sticky top-0 z-10 text-slate-400 uppercase text-[10px] tracking-wider border-b border-[#1e3450]">
+                <thead className="ds-table-header sticky top-0 z-10">
                   <tr>
-                    <th className="py-3 px-4 font-semibold">Priority</th>
-                    <th className="py-3 px-4 font-semibold">Card ID</th>
-                    <th className="py-3 px-4 font-semibold">Project &amp; Location</th>
-                    <th className="py-3 px-4 font-semibold">Owner Name</th>
-                    <th className="py-3 px-4 font-semibold">Unit</th>
-                    <th className="py-3 px-4 font-semibold">Contact &amp; WhatsApp</th>
-                    <th className="py-3 px-4 font-semibold">Stage</th>
-                    <th className="py-3 px-4 font-semibold">Aging / Date</th>
-                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                    <th className="ds-table-header-cell">Priority</th>
+                    <th className="ds-table-header-cell">Card ID</th>
+                    <th className="ds-table-header-cell">Project &amp; Location</th>
+                    <th className="ds-table-header-cell">Owner Name</th>
+                    <th className="ds-table-header-cell">Unit</th>
+                    <th className="ds-table-header-cell">Contact &amp; WhatsApp</th>
+                    <th className="ds-table-header-cell">Stage</th>
+                    <th className="ds-table-header-cell">Aging / Date</th>
+                    <th className="ds-table-header-cell text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.05]">
@@ -833,10 +763,10 @@ export default function MyActivity({ currentUser }) {
                     <tr
                       key={item.id}
                       onClick={() => handleOpenDetail(item)}
-                      className="hover:bg-white/[0.03] transition-colors cursor-pointer group"
+                      className="ds-table-row cursor-pointer group"
                     >
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-tight inline-flex items-center gap-1.5 ${
+                      <td className="ds-table-cell">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-sans tabular-nums font-bold tracking-tight inline-flex items-center gap-1.5 ${
                           item.priority_level === 'critical'
                             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                             : item.priority_level === 'high'
@@ -851,7 +781,7 @@ export default function MyActivity({ currentUser }) {
                           <span>{item.waiting_human}</span>
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-mono font-bold text-blue-400">
+                      <td className="py-3 px-4 font-sans tabular-nums font-bold text-blue-400">
                         #{item.id}
                       </td>
                       <td className="py-3 px-4">
@@ -861,10 +791,10 @@ export default function MyActivity({ currentUser }) {
                       <td className="py-3 px-4 font-semibold text-slate-200 uppercase">
                         {item.owner_name}
                       </td>
-                      <td className="py-3 px-4 font-mono text-white">
+                      <td className="py-3 px-4 font-sans tabular-nums text-white">
                         {item.unit_number || '—'}
                       </td>
-                      <td className="py-3 px-4 font-mono">
+                      <td className="py-3 px-4 font-sans tabular-nums">
                         <div className="text-slate-300">{item.contact_number || '—'}</div>
                         {item.whatsapp_link && (
                           <a
@@ -912,17 +842,17 @@ export default function MyActivity({ currentUser }) {
 
       {/* Item Detail & Voice Audio Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#071322] border border-[#233b59] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="ds-modal-overlay">
+          <div className="ds-modal max-w-2xl max-h-[90vh]">
             {/* Modal Header */}
-            <div className="p-4 border-b border-[#233b59] bg-[#05101d] flex items-center justify-between">
+            <div className="p-4 border-b border-white/10 bg-white/[0.03] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-bold text-white text-base leading-tight">
-                    {selectedItem.project_name} <span className="font-mono text-blue-400 text-sm">#{selectedItem.id}</span>
+                    {selectedItem.project_name} <span className="font-sans tabular-nums text-blue-400 text-sm">#{selectedItem.id}</span>
                   </h3>
                   <p className="text-slate-400 text-xs">
                     {selectedItem.location} • Unit {selectedItem.unit_number || 'N/A'}
@@ -947,26 +877,11 @@ export default function MyActivity({ currentUser }) {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Responsible Agent</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-bold text-blue-400 text-sm block">
-                      {selectedItem.assigned_by_name || currentAgent.name}
-                    </span>
-                    <select
-                      value={selectedItem.assigned_by_id || ''}
-                      onChange={e => handleReassignAgent(e.target.value)}
-                      disabled={savingReassign}
-                      className="bg-[#030912] border border-white/20 text-slate-300 text-[11px] rounded-lg px-2 py-0.5 focus:outline-none focus:border-blue-500 cursor-pointer"
-                      title="Reassign to another agent in Bitrix"
-                    >
-                      {agents.map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <span className="font-bold text-blue-400 text-sm mt-0.5 block">{currentAgent.name}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Contact Phone</span>
-                  <a href={`tel:${selectedItem.contact_number}`} className="font-mono font-bold text-white hover:text-emerald-400 mt-0.5 block">
+                  <a href={`tel:${selectedItem.contact_number}`} className="font-sans tabular-nums font-bold text-white hover:text-emerald-400 mt-0.5 block">
                     {selectedItem.contact_number || 'Unlisted'}
                   </a>
                 </div>
@@ -977,7 +892,7 @@ export default function MyActivity({ currentUser }) {
                       href={selectedItem.whatsapp_link}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-mono text-blue-400 hover:text-blue-300 underline mt-0.5 block truncate"
+                      className="font-sans tabular-nums text-blue-400 hover:text-blue-300 underline mt-0.5 block truncate"
                     >
                       Open Chat
                     </a>
@@ -993,20 +908,11 @@ export default function MyActivity({ currentUser }) {
                   Update Pipeline Stage in Bitrix24
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  {[
-                    { stageId: 'DT1100_44:ASQ_READY_CALL', title: 'Ready for Call' },
-                    { stageId: 'DT1100_44:CLIENT', title: 'No Answer' },
-                    { stageId: 'DT1100_44:UC_5B620Q', title: 'Contacted' },
-                    { stageId: 'DT1100_44:UC_HGMTGR', title: 'Has Property' },
-                    { stageId: 'DT1100_44:UC_4IMVM8', title: 'Interested to Sell/Rent' },
-                    { stageId: 'DT1100_44:SUCCESS', title: 'Won / Success' },
-                    { stageId: 'DT1100_44:UC_QE3TNO', title: 'Not Interested' },
-                    { stageId: 'DT1100_44:FAIL', title: 'Archived / Lost' }
-                  ].map(c => {
-                    const isActive = selectedItem.stage_id === c.stageId;
+                  {kanbanColumns.map(c => {
+                    const isActive = selectedItem.stage_id === c.stageId || selectedItem.stage_key === c.key;
                     return (
                       <button
-                        key={c.stageId}
+                        key={c.key}
                         onClick={() => handleStageChange(selectedItem.id, c.stageId)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                           isActive 
@@ -1021,32 +927,6 @@ export default function MyActivity({ currentUser }) {
                 </div>
               </div>
 
-              {/* Log Note / Follow-up directly to Bitrix24 */}
-              <div className="bg-[#050f1c] border border-white/10 rounded-xl p-4">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mb-2 flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Log Follow-up Note directly to Bitrix24 Timeline</span>
-                </span>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Enter call notes, client feedback, or agreed callback time..."
-                    value={newNoteText}
-                    onChange={e => setNewNoteText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleAddNote(); }}
-                    className="flex-1 bg-[#030912] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
-                  <button
-                    onClick={handleAddNote}
-                    disabled={savingNote || !newNoteText.trim()}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-md"
-                  >
-                    {savingNote ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    <span>Post to Bitrix</span>
-                  </button>
-                </div>
-              </div>
-
               {/* Voice Call AI Recordings & Sentiment Timeline */}
               <div className="bg-[#050f1c] border border-white/10 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -1056,7 +936,7 @@ export default function MyActivity({ currentUser }) {
                       Voice Call Intelligence &amp; Audio Recordings
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-400">
+                  <span className="text-[10px] font-sans tabular-nums text-slate-400">
                     {timeline.length} call log(s)
                   </span>
                 </div>
@@ -1085,7 +965,7 @@ export default function MyActivity({ currentUser }) {
                                 href={entry.recording_url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-[10px] text-emerald-300 underline font-mono flex items-center gap-1"
+                                className="text-[10px] text-emerald-300 underline font-sans tabular-nums flex items-center gap-1"
                               >
                                 Download .wav <ExternalLink className="w-2.5 h-2.5" />
                               </a>
@@ -1121,7 +1001,7 @@ export default function MyActivity({ currentUser }) {
                               href={entry.transcript_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs text-blue-400 hover:text-blue-300 underline font-mono flex items-center gap-1"
+                              className="text-xs text-blue-400 hover:text-blue-300 underline font-sans tabular-nums flex items-center gap-1"
                             >
                               <span>View Full Call Transcript</span>
                               <ExternalLink className="w-3 h-3" />
@@ -1130,7 +1010,7 @@ export default function MyActivity({ currentUser }) {
                         )}
 
                         {/* Timestamp */}
-                        <div className="text-[10px] text-slate-500 text-right pt-1 font-mono">
+                        <div className="text-[10px] text-slate-500 text-right pt-1 font-sans tabular-nums">
                           {entry.created ? new Date(entry.created).toLocaleString() : ''}
                         </div>
                       </div>
@@ -1167,10 +1047,10 @@ export default function MyActivity({ currentUser }) {
       {/* AGENT WEBHOOK GATEWAY MODAL                                         */}
       {/* =================================================================== */}
       {isWebhookModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#061324] border border-[#233b59] w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="ds-modal-overlay">
+          <div className="ds-modal max-w-4xl max-h-[90vh]">
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-[#233b59] flex items-center justify-between bg-[#081729]">
+            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.03]">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                   <Radio className="w-5 h-5 animate-pulse" />
@@ -1178,15 +1058,9 @@ export default function MyActivity({ currentUser }) {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                      AGENT REAL-TIME WEBHOOK GATEWAY
+                      Lead Integration Links
                     </h2>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
-                      Live Gateway
-                    </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Bidirectional webhooks connecting Bitrix24 automations, VAPI telephony, and n8n workflows directly to each agent's personal dashboard board.
-                  </p>
                 </div>
               </div>
               <button
@@ -1204,17 +1078,17 @@ export default function MyActivity({ currentUser }) {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">Universal Webhook Endpoint</span>
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">Universal Inbound Lead Link</span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-mono">Accepts GET / POST</span>
+                  <span className="text-[10px] text-slate-400 font-sans tabular-nums">Active Inbound Link</span>
                 </div>
                 <p className="text-xs text-slate-400 mb-3 leading-relaxed">
-                  Automatically routes to any agent by specifying <code className="text-amber-300 font-mono">agent_id</code> or <code className="text-amber-300 font-mono">assigned_by_id</code> in the query parameter or JSON body.
+                  Automatically routes new leads to any advisor using their Advisor ID.
                 </p>
-                <div className="flex items-center gap-2 bg-[#02070f] border border-white/10 rounded-lg p-2 font-mono text-xs text-emerald-300 overflow-x-auto">
-                  <span className="truncate select-all flex-1">https://admin.asquared.ae/dashboard/api_agent_webhook.php</span>
+                <div className="flex items-center gap-2 bg-[#02070f] border border-white/10 rounded-lg p-2 font-sans tabular-nums text-xs text-emerald-300 overflow-x-auto">
+                  <span className="truncate select-all flex-1">https://dashboard.asquared.ae/dashboard/api_agent_webhook.php</span>
                   <button
-                    onClick={() => handleCopyWebhook('https://admin.asquared.ae/dashboard/api_agent_webhook.php', 'universal')}
+                    onClick={() => handleCopyWebhook('https://dashboard.asquared.ae/dashboard/api_agent_webhook.php', 'universal')}
                     className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded text-[11px] font-sans font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer"
                   >
                     {copiedWebhookId === 'universal' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -1238,7 +1112,7 @@ export default function MyActivity({ currentUser }) {
                       <div>
                         <div className="text-xs font-bold text-white flex items-center gap-2">
                           <span>{currentAgent.name}</span>
-                          <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                          <span className="text-[10px] font-sans tabular-nums text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
                             Agent #{currentAgent.id}
                           </span>
                         </div>
@@ -1247,12 +1121,12 @@ export default function MyActivity({ currentUser }) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-[#02070f] border border-blue-500/20 rounded-lg p-2 font-mono text-xs text-sky-300 overflow-x-auto mb-3">
+                  <div className="flex items-center gap-2 bg-[#02070f] border border-blue-500/20 rounded-lg p-2 font-sans tabular-nums text-xs text-sky-300 overflow-x-auto mb-3">
                     <span className="truncate select-all flex-1">
-                      {`https://admin.asquared.ae/dashboard/api_agent_webhook.php?agent_id=${selectedAgentId}`}
+                      {`https://dashboard.asquared.ae/api_agent_webhook.php?agent_id=${selectedAgentId}`}
                     </span>
                     <button
-                      onClick={() => handleCopyWebhook(`https://admin.asquared.ae/dashboard/api_agent_webhook.php?agent_id=${selectedAgentId}`, `agent_${selectedAgentId}`)}
+                      onClick={() => handleCopyWebhook(`https://dashboard.asquared.ae/api_agent_webhook.php?agent_id=${selectedAgentId}`, `agent_${selectedAgentId}`)}
                       className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded text-[11px] font-sans font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer"
                     >
                       {copiedWebhookId === `agent_${selectedAgentId}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -1279,10 +1153,10 @@ export default function MyActivity({ currentUser }) {
                         <CheckCircle2 className="w-4 h-4" />
                         <span>Status 200 OK — Gateway Online & Verified!</span>
                       </div>
-                      <div className="text-[11px] text-slate-400 font-mono">
+                      <div className="text-[11px] text-slate-400 font-sans tabular-nums">
                         {pingResult[selectedAgentId].message || 'Ping logged to Supabase asq_crm_events_v1 audit table.'}
                       </div>
-                      <div className="text-[10px] text-slate-500 mt-1 font-mono">
+                      <div className="text-[10px] text-slate-500 mt-1 font-sans tabular-nums">
                         Received At: {pingResult[selectedAgentId].received_at || new Date().toISOString()}
                       </div>
                     </div>
@@ -1296,11 +1170,11 @@ export default function MyActivity({ currentUser }) {
                   <div className="flex items-center gap-2">
                     <UserCheck className="w-4 h-4 text-blue-400" />
                     <span className="text-xs font-bold text-white uppercase tracking-wider">
-                      All Agent Webhooks Directory ({webhookList.length || agents.length})
+                      Advisor Lead Links Directory ({webhookList.length || agents.length})
                     </span>
                   </div>
                   <div className="relative w-64">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       placeholder="Filter by agent name or ID..."
@@ -1314,13 +1188,13 @@ export default function MyActivity({ currentUser }) {
                 {loadingWebhooks ? (
                   <div className="text-center py-8 text-slate-400 text-xs">
                     <RefreshCw className="w-4 h-4 animate-spin inline-block mr-2 text-blue-400" />
-                    Loading agent webhooks from Bitrix24 &amp; Supabase...
+                    Loading advisor integration links...
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-72 overflow-y-auto custom-scrollbar p-1">
                     {(filteredWebhookList.length > 0 ? filteredWebhookList : agents).map(agt => {
                       const id = String(agt.id);
-                      const url = `https://admin.asquared.ae/dashboard/api_agent_webhook.php?agent_id=${id}`;
+                      const url = `https://dashboard.asquared.ae/api_agent_webhook.php?agent_id=${id}`;
                       const isPinged = pingResult[id];
 
                       return (
@@ -1339,17 +1213,17 @@ export default function MyActivity({ currentUser }) {
                                 <div className="text-[10px] text-slate-400 truncate">{agt.email || `ID: ${id}`}</div>
                               </div>
                             </div>
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold shrink-0">
+                            <span className="text-[10px] font-sans tabular-nums px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold shrink-0">
                               #{id}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 bg-[#02070f] border border-white/5 rounded-lg px-2 py-1 text-[11px] font-mono text-slate-300">
+                          <div className="flex items-center gap-1.5 bg-[#02070f] border border-white/5 rounded-lg px-2 py-1 text-[11px] font-sans tabular-nums text-slate-300">
                             <span className="truncate flex-1 text-slate-400">...api_agent_webhook.php?agent_id={id}</span>
                             <button
                               onClick={() => handleCopyWebhook(url, `list_${id}`)}
                               className="p-1 hover:bg-white/10 rounded text-slate-300 hover:text-white transition-all cursor-pointer"
-                              title="Copy full webhook URL"
+                              title="Copy lead link"
                             >
                               {copiedWebhookId === `list_${id}` ? (
                                 <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -1372,7 +1246,7 @@ export default function MyActivity({ currentUser }) {
                           </div>
 
                           {isPinged && (
-                            <div className="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
+                            <div className="text-[10px] text-emerald-400 flex items-center gap-1 font-sans tabular-nums">
                               <CheckCircle2 className="w-3 h-3" />
                               <span>Verified Online ({new Date(isPinged.received_at || Date.now()).toLocaleTimeString()})</span>
                             </div>
@@ -1400,13 +1274,13 @@ export default function MyActivity({ currentUser }) {
                   <div className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
                     <p>
-                      <strong>Handler URL:</strong> Set handler to <code className="text-emerald-300 font-mono">https://admin.asquared.ae/dashboard/api_agent_webhook.php?agent_id={`{{Responsible}}`}</code>
+                      <strong>Handler URL:</strong> Set handler to <code className="text-emerald-300 font-sans tabular-nums">https://dashboard.asquared.ae/api_agent_webhook.php?agent_id={`{{Responsible}}`}</code>
                     </p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
                     <p>
-                      <strong>Payload POST Body:</strong> The webhook accepts JSON with <code className="text-amber-300 font-mono">item_id</code>, <code className="text-amber-300 font-mono">stage_id</code>, <code className="text-amber-300 font-mono">call_note</code>, <code className="text-amber-300 font-mono">audio_url</code>, and <code className="text-amber-300 font-mono">transcript_url</code>. All events are logged to Supabase and immediately visible on the agent's board.
+                      <strong>Accepted Fields:</strong> Accepts lead updates with <code className="text-amber-300 font-sans tabular-nums">item_id</code>, <code className="text-amber-300 font-sans tabular-nums">stage_id</code>, <code className="text-amber-300 font-sans tabular-nums">call_note</code>, <code className="text-amber-300 font-sans tabular-nums">audio_url</code>, and <code className="text-amber-300 font-sans tabular-nums">transcript_url</code>. All updates are logged and immediately visible on the advisor's board.
                     </p>
                   </div>
                 </div>
@@ -1414,14 +1288,14 @@ export default function MyActivity({ currentUser }) {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-[#233b59] bg-[#05101d] flex items-center justify-between">
+            <div className="p-4 border-t border-[#1b2b3d] bg-[#06111e] flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Supabase Audit Logging Active (Table: <code>asq_crm_events_v1</code>)</span>
+                <span>Audit Logging Active</span>
               </div>
               <button
                 onClick={() => setIsWebhookModalOpen(false)}
-                className="px-4 py-2 bg-[#1b2b3d] hover:bg-[#283e58] text-white text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                className="ds-btn-secondary"
               >
                 Done
               </button>

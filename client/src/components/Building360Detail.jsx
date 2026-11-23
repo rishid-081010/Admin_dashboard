@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import Owner360Detail from './Owner360Detail';
+import { featureAccessService } from '../utils/featureAccessService';
+import { authService } from '../utils/authService';
 
 const SUPABASE_BASE_URL = 'https://qgxgtavkovqklijfpnfl.supabase.co/rest/v1';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneGd0YXZrb3Zxa2xpamZwbmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjA1MzksImV4cCI6MjA5MzYzNjUzOX0.hbxMBy0qm8Q3WVQTE8218JhtGtdNm7a9rYCUisTRb08';
@@ -84,7 +86,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
   const [owners, setOwners] = useState(initialOwners);
   const [loading, setLoading] = useState(!initialOwners || initialOwners.length === 0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [unitFilter, setUnitFilter] = useState('all'); // 'all', 'with_phone', 'unlisted', 'commercial', 'residential'
+  const [unitFilter, setUnitFilter] = useState('with_phone'); // 'with_phone' (default populated), 'all', 'unlisted', 'commercial', 'residential'
   const [sortBy, setSortBy] = useState('unit_asc');
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
   const [copiedPhone, setCopiedPhone] = useState(null);
@@ -336,9 +338,15 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
   };
 
   const handleExportCsv = () => {
-    if (!owners.length) return;
+    const activeUser = authService.getCurrentUser();
+    const canExport = featureAccessService.canExport(activeUser?.role, 'buildings');
+    if (!canExport || !owners.length) return;
+
+    const maxRows = featureAccessService.getMaxExportRows(activeUser?.role, 'buildings');
+    const exportOwners = owners.slice(0, maxRows);
+
     const headers = ['Unit Number', 'Floor', 'Owner Name', 'Lead ID', 'Phone Number', 'Property Type', 'Size SQM', 'Size SQFT', 'Area', 'CRM Status'];
-    const rows = owners.map(o => [
+    const rows = exportOwners.map(o => [
       `"${String(o.unit || '').replace(/"/g, '""')}"`,
       `"${String(o.floor || '').replace(/"/g, '""')}"`,
       `"${String(o.name || '').replace(/"/g, '""')}"`,
@@ -391,61 +399,67 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
         <div className="flex items-center gap-3 min-w-0">
           <button 
             onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 text-xs font-semibold transition-all group shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#070e1c] hover:bg-[#122238] text-white/90 hover:text-white border border-[#1b2b3d] text-xs font-semibold transition-all group shrink-0"
           >
             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
             <span>Back</span>
           </button>
 
-          <div className="flex items-center gap-2 text-xs text-white/40 font-mono truncate">
+          <div className="flex items-center gap-2 text-xs text-white/40 font-sans tabular-nums truncate">
             <span>BUILDINGS</span>
+            {building.area && (
+              <>
+                <span>/</span>
+                <span className="text-white/60 uppercase">{building.area}</span>
+              </>
+            )}
             <span>/</span>
-            <span className="text-white/60 uppercase">{building.area || 'DUBAI'}</span>
-            <span>/</span>
-            <span className="text-blue-400 font-bold truncate">{building.name}</span>
+            <span className="text-[#b7a990] font-bold truncate">{building.name}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <button 
             onClick={copyTowerName}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 text-xs font-semibold transition-all"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#070e1c] hover:bg-[#122238] text-white/80 hover:text-white border border-[#1b2b3d] text-xs font-semibold transition-all"
             title="Copy Tower Name"
           >
             {copiedTowerName ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copiedTowerName ? 'Copied' : 'Copy Name'}</span>
           </button>
 
-          <button 
-            onClick={handleExportCsv}
-            disabled={owners.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
+          {featureAccessService.canExport(authService.getCurrentUser()?.role, 'buildings') && (
+            <button 
+              onClick={handleExportCsv}
+              disabled={owners.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#183153] hover:bg-[#203a63] text-white border border-[#b7a990]/40 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── 2. Building 360 Hero Banner ────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-5 sm:p-6 mb-5 shadow-xl shadow-black/40 relative overflow-hidden shrink-0">
+      <div className="ds-card p-5 sm:p-6 mb-5 relative overflow-hidden shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           
           {/* Left: Building Identity */}
           <div className="flex items-start gap-4 min-w-0">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-600/30 to-indigo-600/20 border border-blue-400/30 flex items-center justify-center text-blue-300 shrink-0 shadow-lg">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#070e1c] border border-[#1b2b3d] flex items-center justify-center text-[#e2e0cc] shrink-0 shadow-lg">
               <Building2 className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
 
             <div className="min-w-0">
               <h1 
-                className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight truncate font-sans" 
+                className="text-2xl sm:text-4xl font-editorial font-bold text-white tracking-tight leading-tight truncate" 
               >
                 {building.name}
               </h1>
 
               <div className="text-slate-400 text-xs mt-1">
-                {building.area ? `${building.area} · ` : ''}{building.propertyType || 'Residential'}
+                {building.area || 'Dubai'}
               </div>
             </div>
           </div>
@@ -453,26 +467,27 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           {/* Right: 4 Key Metrics Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:max-w-xl w-full">
             <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 text-center">
-              <div className="text-[10px] uppercase font-mono text-slate-400 font-medium">Units</div>
+              <div className="text-[10px] uppercase font-sans tabular-nums text-slate-400 font-medium">Units</div>
               <div className="text-xl sm:text-2xl font-bold font-sans text-white mt-0.5">
                 {metrics.verifiedUnits.toLocaleString()}
               </div>
             </div>
 
             <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 text-center">
-              <div className="text-[10px] uppercase font-mono text-slate-400 font-medium">Owners</div>
+              <div className="text-[10px] uppercase font-sans tabular-nums text-slate-400 font-medium">Owners</div>
               <div className="text-xl sm:text-2xl font-bold font-sans text-white mt-0.5">
                 {metrics.totalOwners.toLocaleString()}
               </div>
             </div>
 
             <div className="bg-[#06111e] border border-[#1b2b3d] rounded-xl p-3 text-center col-span-2 sm:col-span-2">
-              <div className="text-[10px] uppercase font-mono text-slate-400 font-medium flex items-center justify-center gap-1.5">
+              <div className="text-[10px] uppercase font-sans tabular-nums text-slate-400 font-medium flex items-center justify-center gap-1.5">
                 <span>With Phone</span>
                 <span className="text-emerald-400 font-bold">({metrics.phoneCoverage}%)</span>
               </div>
-              <div className="text-xl sm:text-2xl font-bold font-sans text-emerald-400 mt-0.5">
-                {metrics.withPhone.toLocaleString()} <span className="text-xs text-slate-400 font-normal">/ {metrics.totalOwners.toLocaleString()}</span>
+              <div className="text-xl sm:text-2xl font-bold font-sans text-white mt-0.5 flex items-baseline justify-center gap-1.5">
+                <span>{metrics.withPhone.toLocaleString()}</span>
+                <span className="text-xs text-slate-400 font-normal">/ {metrics.totalOwners.toLocaleString()}</span>
               </div>
               {/* Progress bar */}
               <div className="w-full bg-[#1b2b3d] h-1.5 rounded-full mt-2 overflow-hidden">
@@ -488,7 +503,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
       </div>
 
       {/* ── 3. Search & Filter Bar ──────────────────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl p-4 mb-4 shadow-xl shadow-black/40 shrink-0 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="ds-card p-4 mb-4 shrink-0 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         
         {/* Search input */}
         <div className="flex-1 flex items-center bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 focus-within:border-blue-500/60 focus-within:ring-1 focus-within:ring-blue-500/30 transition-all">
@@ -508,10 +523,10 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
         {/* Filter Tabs & Sort Controls */}
         <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
           {/* Quick Filter Tabs */}
-          <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1 overflow-x-auto">
+          <div className="h-9 flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl px-1.5 overflow-x-auto">
             {[
-              { id: 'all', label: 'All Units' },
               { id: 'with_phone', label: 'With Phone' },
+              { id: 'all', label: 'All Units' },
               { id: 'unlisted', label: 'Unlisted' },
               { id: 'commercial', label: 'Commercial' },
               { id: 'residential', label: 'Residential' }
@@ -522,10 +537,10 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                   setUnitFilter(tab.id);
                   setCurrentPage(1);
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-all whitespace-nowrap border ${
                   unitFilter === tab.id
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
+                    ? 'bg-[#183153] text-[#e2e0cc] border-[#b7a990] shadow-sm font-semibold'
+                    : 'text-[#94a3b8] hover:text-white hover:bg-white/5 border-transparent'
                 }`}
               >
                 {tab.label}
@@ -537,7 +552,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-black/40 border border-white/10 text-white text-xs rounded-xl px-3 py-2 font-medium focus:outline-none cursor-pointer"
+            className="h-9 bg-black/40 border border-white/10 text-white text-xs rounded-xl px-3 font-medium focus:outline-none cursor-pointer flex items-center"
           >
             <option value="unit_asc">Unit # (Asc)</option>
             <option value="unit_desc">Unit # (Desc)</option>
@@ -546,17 +561,17 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           </select>
 
           {/* View mode toggle */}
-          <div className="hidden sm:flex items-center bg-black/40 border border-white/10 rounded-xl p-1">
+          <div className="h-9 hidden sm:flex items-center bg-black/40 border border-white/10 rounded-xl px-1 gap-0.5">
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'table' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white'}`}
+              className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${viewMode === 'table' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white'}`}
               title="Table View"
             >
               <ListFilter className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white'}`}
+              className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${viewMode === 'grid' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white'}`}
               title="Card Grid View"
             >
               <LayoutGrid className="w-4 h-4" />
@@ -567,7 +582,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
       </div>
 
       {/* ── 4. Main Units & Owners Content View ─────────────────────── */}
-      <div className="bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 overflow-hidden flex-1 flex flex-col min-h-0 mb-4">
+      <div className="ds-card overflow-hidden flex-1 flex flex-col min-h-0 mb-4">
         
         {loading ? (
           <div className="py-24 text-center text-slate-400 flex flex-col items-center justify-center flex-1">
@@ -585,7 +600,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
           <div className="overflow-x-auto flex-1 custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-20 bg-[#071322] backdrop-blur-md shadow-md shadow-black/30">
-                <tr className="border-b border-[#233549] bg-[#071322] text-[11.5px] uppercase font-mono text-slate-400 tracking-wider">
+                <tr className="border-b border-[#233549] bg-[#071322] text-[11.5px] uppercase font-sans tabular-nums text-slate-400 tracking-wider">
                   <th className="py-2.5 px-4 w-[12%] bg-[#071322]">Unit &amp; Floor</th>
                   <th className="py-2.5 px-4 w-[28%] bg-[#071322]">Owner Name</th>
                   <th className="py-2.5 px-4 w-[15%] bg-[#071322]">Lead ID</th>
@@ -604,10 +619,10 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                     {/* Unit & Floor */}
                     <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[11.5px]">
+                        <span className="font-sans tabular-nums font-bold px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[11.5px]">
                           Unit {owner.unit}
                         </span>
-                        <span className="text-[10px] text-white/40 font-mono">
+                        <span className="text-[10px] text-white/40 font-sans tabular-nums">
                           Fl. {owner.floor}
                         </span>
                       </div>
@@ -621,7 +636,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                     </td>
 
                     {/* Lead ID */}
-                    <td className="py-2.5 px-4 font-mono text-white/60">
+                    <td className="py-2.5 px-4 font-sans tabular-nums text-white/60">
                       {owner.lead_id}
                     </td>
 
@@ -633,10 +648,10 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                           className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 transition-all"
                         >
                           {copiedPhone === owner.phone ? <Check className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
-                          <span className="font-mono">{copiedPhone === owner.phone ? 'Copied!' : owner.phone}</span>
+                          <span className="font-sans tabular-nums">{copiedPhone === owner.phone ? 'Copied!' : owner.phone}</span>
                         </button>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700/50">
+                        <span className="text-xs text-slate-500 font-sans">
                           Unlisted
                         </span>
                       )}
@@ -645,7 +660,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                     {/* Property Classification & Specs */}
                     <td className="py-2.5 px-4 text-white/70">
                       <div className="text-[12px] font-medium">{owner.type}</div>
-                      <div className="text-[10.5px] text-white/40 font-mono mt-0.5">
+                      <div className="text-[10.5px] text-white/40 font-sans tabular-nums mt-0.5">
                         {owner.isVerifiedSize ? (
                           `${owner.sqft.toLocaleString()} sqft (${owner.sqm} sqm)`
                         ) : (
@@ -661,7 +676,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                           e.stopPropagation();
                           handleOpenOwner(owner);
                         }}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1 shadow-sm transition-all group-hover:scale-105"
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#183153] hover:bg-[#203a63] border border-[#b7a990]/40 text-white inline-flex items-center gap-1 shadow-sm transition-all"
                       >
                         <span>Owner 360</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -683,15 +698,15 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    <span className="text-xs font-sans tabular-nums font-bold px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
                       Unit {owner.unit}
                     </span>
-                    <span className="text-[10px] text-white/40 font-mono">
+                    <span className="text-[10px] text-white/40 font-sans tabular-nums">
                       Fl. {owner.floor}
                     </span>
                   </div>
 
-                  <span className="text-[10px] text-white/40 font-mono">
+                  <span className="text-[10px] text-white/40 font-sans tabular-nums">
                     {owner.lead_id}
                   </span>
                 </div>
@@ -702,7 +717,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                   </h4>
                   <div className="text-[11px] text-white/50 flex items-center justify-between mt-1">
                     <span>{owner.type}</span>
-                    <span className="font-mono text-white/40">
+                    <span className="font-sans tabular-nums text-white/40">
                       {owner.isVerifiedSize ? `${owner.sqft.toLocaleString()} sqft` : 'Unspecified'}
                     </span>
                   </div>
@@ -715,10 +730,10 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                       className="px-2 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 transition-all"
                     >
                       {copiedPhone === owner.phone ? <Check className="w-3 h-3" /> : <Phone className="w-3 h-3" />}
-                      <span className="font-mono">{copiedPhone === owner.phone ? 'Copied' : owner.phone}</span>
+                      <span className="font-sans tabular-nums">{copiedPhone === owner.phone ? 'Copied' : owner.phone}</span>
                     </button>
                   ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700/50">
+                    <span className="text-xs text-slate-500 font-sans">
                       Unlisted
                     </span>
                   )}
@@ -749,7 +764,7 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="px-3 py-1.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 font-semibold"
+              className="h-8 px-3 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all inline-flex items-center gap-1 font-semibold text-xs cursor-pointer"
             >
               <ChevronLeft className="w-3.5 h-3.5" /> Previous
             </button>
@@ -757,15 +772,15 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
             <button
               onClick={() => customPageInputRef.current?.focus()}
               title="Click to jump to custom page"
-              className="px-2.5 py-1 text-slate-400 hover:text-white font-mono text-xs transition-colors cursor-pointer"
+              className="h-8 px-3 rounded-lg bg-[#06111e] border border-[#1a2c42] text-slate-400 hover:text-white font-sans tabular-nums text-xs transition-colors inline-flex items-center justify-center cursor-pointer"
             >
-              Page <span className="text-white font-bold">{currentPage}</span> of {totalPages}
+              Page <span className="text-white font-bold ml-1 mr-1">{currentPage}</span> of {totalPages}
             </button>
 
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              className="px-3 py-1.5 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 font-semibold"
+              className="h-8 px-3 rounded-lg bg-[#06111e] hover:bg-[#122238] border border-[#1a2c42] text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all inline-flex items-center gap-1 font-semibold text-xs cursor-pointer"
             >
               Next <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -784,12 +799,12 @@ export default function Building360Detail({ building, onBack, onSelectOwner, ini
                   if (e.key === 'Enter') handleCustomPageSubmit();
                 }}
                 placeholder="Page #"
-                className="w-16 px-2 py-1 bg-[#06111e] border border-[#1a2c42] focus:border-blue-500 rounded-md text-white text-xs text-center font-mono outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="h-8 w-16 px-2 bg-[#06111e] border border-[#1b2b3d] focus:border-[#b7a990] rounded-lg text-white text-xs text-center font-sans tabular-nums outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <button
                 onClick={handleCustomPageSubmit}
                 disabled={!customPageInput || isNaN(parseInt(customPageInput, 10))}
-                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm cursor-pointer"
+                className="h-8 px-2.5 bg-[#183153] hover:bg-[#203a63] border border-[#b7a990]/50 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm inline-flex items-center justify-center cursor-pointer"
               >
                 Go
               </button>

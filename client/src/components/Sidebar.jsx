@@ -1,24 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, LogOut } from 'lucide-react';
-import { rbacService, FEATURE_ACCESS_EVENT } from '../utils/rbacService';
+import { featureAccessService, FEATURE_ACCESS_EVENT } from '../utils/featureAccessService';
 
 export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout }) {
   const isListingActive = activeTab === 'listing' || activeTab === 'dashboard' || activeTab === 'new' || activeTab === 'detail' || activeTab.startsWith('detail');
   const isLeadsActive = activeTab === 'leads' || activeTab === 'sources';
-  const [, setRbacVersion] = useState(0);
+
+  // Reactive state synced with feature access changes
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    const handleUpdate = () => setRbacVersion(v => v + 1);
+    const handleUpdate = () => setTick(t => t + 1);
     window.addEventListener(FEATURE_ACCESS_EVENT, handleUpdate);
-    rbacService.fetchFromCloud();
+    // Background refresh from cloud on mount
+    featureAccessService.fetchFromCloud();
     return () => window.removeEventListener(FEATURE_ACCESS_EVENT, handleUpdate);
   }, []);
 
-  const role = currentUser?.role || 'admin';
-  const isAllowed = (featKey) => rbacService.isFeatureAllowed(role, featKey);
-  const showPortfolio = rbacService.isSectionVisible(role, 'portfolio');
-  const showOperations = rbacService.isSectionVisible(role, 'operations');
-  const showAdmin = rbacService.isSectionVisible(role, 'admin');
+  const userRole = currentUser?.role || 'admin';
+  const can = (featureKey) => featureAccessService.isFeatureAllowed(userRole, featureKey);
+  const showPortfolio = featureAccessService.isSectionVisible(userRole, 'portfolio');
+  const showOperations = featureAccessService.isSectionVisible(userRole, 'operations');
+  const showAdmin = featureAccessService.isSectionVisible(userRole, 'admin');
 
   return (
     <aside 
@@ -31,7 +34,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
       {/* Brand Header */}
       <div 
         onClick={() => {
-          const target = isAllowed('overview') ? 'overview' : rbacService.getFirstAccessibleTab(role);
+          const target = can('overview') ? 'overview' : featureAccessService.getFirstAccessibleTab(userRole);
           setActiveTab(target);
         }}
         className="brand-logo flex flex-col items-center justify-center py-2.5 px-2 cursor-pointer select-none group border-b border-white/10 shrink-0"
@@ -39,12 +42,13 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         <img 
           src="./asquared-logo-transparent.png" 
           alt="A SQUARED REAL ESTATE" 
-          className="w-[160px] max-w-full h-auto object-contain transition-transform group-hover:scale-[1.02] drop-shadow-md" 
+          className="w-[160px] max-w-full h-auto object-contain transition-transform group-hover:scale-[1.02] drop-shadow-md"
         />
       </div>
 
-      {/* Grouped Section Navigation */}
+      {/* Navigation Links grouped into 3 logical sections: PORTFOLIO, OPERATIONS, ADMIN */}
       <nav className="w-full flex-1 flex flex-col py-1 min-h-0 overflow-y-auto custom-scrollbar space-y-2.5">
+        
         {/* ── SECTION 1: PORTFOLIO ── */}
         {showPortfolio && (
           <div className="space-y-0.5">
@@ -52,7 +56,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               Portfolio
             </div>
 
-            {isAllowed('overview') && (
+            {/* 1. Overview */}
+            {can('overview') && (
               <button 
                 onClick={() => setActiveTab('overview')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -65,7 +70,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('owners') && (
+            {/* 2. Owners Data */}
+            {can('owners') && (
               <button 
                 onClick={() => setActiveTab('owners')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -78,7 +84,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('buildings') && (
+            {/* 3. Buildings & Communities */}
+            {can('buildings') && (
               <button 
                 onClick={() => setActiveTab('buildings')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -91,7 +98,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('search') && (
+            {/* 4. Search Engine */}
+            {can('search') && (
               <button 
                 onClick={() => setActiveTab('search')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -104,11 +112,12 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('transactions') && (
+            {/* 5. Transactions (External link to DLD Transaction Dashboard) */}
+            {can('transactions') && (
               <a 
                 href="https://transactionaldashboard.asquared.ae/" 
                 target="_blank" 
-                rel="noreferrer" 
+                rel="noreferrer"
                 className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left text-[#94a3b8] hover:text-white hover:bg-white/[0.04]"
               >
                 <span>Transactions</span>
@@ -125,7 +134,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               Operations
             </div>
 
-            {isAllowed('workflows') && (
+            {/* 6. Workflows */}
+            {can('workflows') && (
               <button 
                 onClick={() => setActiveTab('workflows')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -138,7 +148,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('leads') && (
+            {/* 7. Data Cleaning */}
+            {can('leads') && (
               <button 
                 onClick={() => setActiveTab('leads')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -151,7 +162,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('listing') && (
+            {/* 8. Listing Studio */}
+            {can('listing') && (
               <button 
                 onClick={() => setActiveTab('listing')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -164,7 +176,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('voice') && (
+            {/* 9. Voice Agent Centre */}
+            {can('voice') && (
               <button 
                 onClick={() => setActiveTab('voice')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -177,7 +190,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('agent') && (
+            {/* 10. AI Agent */}
+            {can('agent') && (
               <button 
                 onClick={() => setActiveTab('agent')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -187,6 +201,20 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                 }`}
               >
                 <span>AI Agent</span>
+              </button>
+            )}
+
+            {/* 11. My Activity */}
+            {can('activity') && (
+              <button 
+                onClick={() => setActiveTab('activity')} 
+                className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
+                  activeTab === 'activity' 
+                    ? 'bg-[#183153]/85 text-[#e2e0cc] border border-[#b7a990]/40 shadow-lg backdrop-blur-md' 
+                    : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.08]'
+                }`}
+              >
+                <span>My Activity</span>
               </button>
             )}
           </div>
@@ -199,7 +227,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               Admin
             </div>
 
-            {isAllowed('roles') && (
+            {/* 12. Roles */}
+            {can('roles') && (
               <button 
                 onClick={() => setActiveTab('roles')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -212,7 +241,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               </button>
             )}
 
-            {isAllowed('settings') && (
+            {/* 13. Account & Settings */}
+            {can('settings') && (
               <button 
                 onClick={() => setActiveTab('settings')} 
                 className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
@@ -240,13 +270,13 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                 {currentUser.name || 'Administrator'}
               </div>
               <div className="text-[10px] text-slate-300 truncate flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
                 <span className="capitalize">{currentUser.role || 'admin'}</span>
               </div>
             </div>
           </div>
           {onLogout && (
-            <button 
+            <button
               onClick={onLogout}
               title="Sign Out"
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all cursor-pointer"
