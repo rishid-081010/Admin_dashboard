@@ -294,8 +294,24 @@ export const featureAccessService = {
         };
         localStorage.setItem(FEATURE_STORAGE_KEY, JSON.stringify(merged));
         window.dispatchEvent(new CustomEvent(FEATURE_ACCESS_EVENT, { detail: merged }));
-        return { success: true, config: merged, updatedAt: rows[0].updated_at };
       }
+
+      // Also fetch custom roles from Supabase
+      try {
+        const rolesRes = await fetch(`${SUPABASE_BASE_URL}/roles?select=*`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (rolesRes.ok) {
+          const customRoles = await rolesRes.json();
+          localStorage.setItem('asq_roles_list_cache', JSON.stringify(customRoles));
+          window.dispatchEvent(new CustomEvent(FEATURE_ACCESS_EVENT, { detail: customRoles }));
+        }
+      } catch (e) {}
+
+      return { success: true, config: this.getFeatureAccess() };
     } catch (err) {
       console.warn('Feature access cloud fetch failed, continuing with cached/default values:', err);
     }
@@ -349,8 +365,26 @@ export const featureAccessService = {
 
   // Check if a specific feature key is allowed for a given user role
   isFeatureAllowed(userRole, featureKey) {
+    const rawRole = (userRole || '').toLowerCase().trim();
+    if (rawRole.includes('super')) return true;
+
+    // Check custom roles defined in Supabase
+    try {
+      const cachedRoles = localStorage.getItem('asq_roles_list_cache');
+      if (cachedRoles) {
+        const roles = JSON.parse(cachedRoles);
+        const match = roles.find(r => 
+          (r.key && r.key.toLowerCase() === rawRole) || 
+          (r.name && r.name.toLowerCase() === rawRole)
+        );
+        if (match && match.sections) {
+          const sections = match.sections.split(';').map(s => s.trim().toLowerCase());
+          return sections.includes((featureKey || '').toLowerCase());
+        }
+      }
+    } catch (e) {}
+
     const role = normalizeRole(userRole);
-    // SuperAdmin possesses permanent wildcard access to all features
     if (role === 'superadmin') return true;
 
     const accessMap = this.getFeatureAccess();
@@ -371,55 +405,52 @@ export const featureAccessService = {
 
   // Check if an activeTab or route name is allowed (handles aliases like 'sources' -> 'leads', 'new'/'detail' -> 'listing')
   isTabAllowed(userRole, tabName) {
-    const role = normalizeRole(userRole);
-    if (role === 'superadmin') return true;
+    const rawRole = (userRole || '').toLowerCase().trim();
+    if (rawRole.includes('super')) return true;
 
     // Strip hash, query params, and leading/trailing slashes
     const raw = (tabName || '').toLowerCase().replace(/^#+/, '').replace(/^\/+/, '').split('?')[0].split('/')[0].trim();
 
     // Map sub-tabs & aliases to parent feature key
     if (raw === 'new' || raw === 'detail' || raw === 'new-listing' || raw === 'listing-detail' || raw === 'dashboard') {
-      return this.isFeatureAllowed(role, 'listing');
+      return this.isFeatureAllowed(userRole, 'listing');
     }
     if (raw === 'sources' || raw === 'datalibrary' || raw === 'datacleaning') {
-      return this.isFeatureAllowed(role, 'leads');
-    }
-    if (raw === 'myactivity') {
-      return this.isFeatureAllowed(role, 'activity');
+      return this.isFeatureAllowed(userRole, 'leads');
     }
     if (raw === 'voiceagent') {
-      return this.isFeatureAllowed(role, 'voice');
+      return this.isFeatureAllowed(userRole, 'voice');
     }
     if (raw === 'ai-agent') {
-      return this.isFeatureAllowed(role, 'agent');
+      return this.isFeatureAllowed(userRole, 'agent');
     }
     if (raw === 'role') {
-      return this.isFeatureAllowed(role, 'roles');
+      return this.isFeatureAllowed(userRole, 'roles');
     }
 
-    return this.isFeatureAllowed(role, raw);
+    return this.isFeatureAllowed(userRole, raw);
   },
 
   // Check if at least one feature in a section is visible (if not, whole section header is hidden)
   isSectionVisible(userRole, sectionId) {
-    const role = normalizeRole(userRole);
-    if (role === 'superadmin') return true;
+    const rawRole = (userRole || '').toLowerCase().trim();
+    if (rawRole.includes('super')) return true;
 
     const section = FEATURE_SECTIONS.find(s => s.id === sectionId);
     if (!section) return true;
 
     // Check if at least one feature in this section is allowed
-    return section.features.some(feature => this.isFeatureAllowed(role, feature.key));
+    return section.features.some(feature => this.isFeatureAllowed(userRole, feature.key));
   },
 
   // Get the first accessible tab for a role (used for silent fallback redirect)
   getFirstAccessibleTab(userRole) {
-    const role = normalizeRole(userRole);
-    if (role === 'superadmin') return 'overview';
+    const rawRole = (userRole || '').toLowerCase().trim();
+    if (rawRole.includes('super')) return 'overview';
 
     for (const section of FEATURE_SECTIONS) {
       for (const feature of section.features) {
-        if (!feature.isExternal && this.isFeatureAllowed(role, feature.key)) {
+        if (!feature.isExternal && this.isFeatureAllowed(userRole, feature.key)) {
           return feature.tab;
         }
       }

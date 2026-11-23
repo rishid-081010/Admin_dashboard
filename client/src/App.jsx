@@ -18,7 +18,6 @@ const Buildings = lazy(() => import('./components/Buildings'));
 const OmniSearch = lazy(() => import('./components/OmniSearch'));
 const WorkflowsDirectory = lazy(() => import('./components/WorkflowsDirectory'));
 const SourcesDirectory = lazy(() => import('./components/SourcesDirectory'));
-const MyActivity = lazy(() => import('./components/MyActivity'));
 const VoiceAgent = lazy(() => import('./components/VoiceAgent'));
 const AIAgent = lazy(() => import('./components/AIAgent'));
 const AccountSettings = lazy(() => import('./components/AccountSettings'));
@@ -39,7 +38,6 @@ function TabLoadingSkeleton() {
 const ROUTE_MAP = {
   overview: '/dashboard/overview',
   owners: '/dashboard/owners',
-  activity: '/dashboard/myactivity',
   search: '/dashboard/search',
   team: '/dashboard/team',
   leads: '/dashboard/datacleaning',
@@ -65,7 +63,6 @@ function getRouteInfo() {
 
   const target = (hashPath || path.split('/').pop() || '').toLowerCase();
   
-  if (target === 'myactivity' || target === 'activity') return { tab: 'activity', id: listingId };
   if (target === 'datalibrary' || target === 'sources') return { tab: 'leads', id: listingId, autoOpenLibrary: true };
   if (target === 'datacleaning' || target === 'leads') return { tab: 'leads', id: listingId };
   if (target === 'voiceagent' || target === 'voice') return { tab: 'voice', id: listingId };
@@ -225,7 +222,6 @@ export default function App() {
                         window.location.pathname.includes('/workflows') ||
                         window.location.pathname.includes('/owners') ||
                         window.location.pathname.includes('/buildings') ||
-                        window.location.pathname.includes('/myactivity') ||
                         window.location.pathname.includes('/search') ||
                         window.location.pathname.includes('/voiceagent') ||
                         window.location.pathname.includes('/roles') ||
@@ -405,8 +401,6 @@ export default function App() {
               {activeTab === 'sources' && isAllowed('leads') && (
                 <LeadIngestionStudio initialOpenLibrary={true} />
               )}
-
-              {activeTab === 'activity' && isAllowed('activity') && <MyActivity currentUser={currentUser} />}
 
               {activeTab === 'voice' && isAllowed('voice') && <VoiceAgent />}
 

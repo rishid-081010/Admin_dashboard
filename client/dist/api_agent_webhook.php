@@ -87,9 +87,7 @@ if ($action === 'list_webhooks') {
     $res = callBitrixApi('user.get', ['filter' => ['ACTIVE' => true]]);
     $users = $res['result'] ?? [];
     
-    $proto = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'dashboard.asquared.ae';
-    $baseUrl = $proto . '://' . $host . '/api_agent_webhook.php';
+    $baseUrl = 'https://admin.asquared.ae/dashboard/api_agent_webhook.php';
     $agentWebhooks = [];
     
     foreach ($users as $u) {

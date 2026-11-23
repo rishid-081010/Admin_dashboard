@@ -203,20 +203,6 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                 <span>AI Agent</span>
               </button>
             )}
-
-            {/* 11. My Activity */}
-            {can('activity') && (
-              <button 
-                onClick={() => setActiveTab('activity')} 
-                className={`w-full flex items-center px-3 py-1.5 rounded-xl text-[13px] font-medium tracking-wide transition-all text-left ${
-                  activeTab === 'activity' 
-                    ? 'bg-[#183153]/85 text-[#e2e0cc] border border-[#b7a990]/40 shadow-lg backdrop-blur-md' 
-                    : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.08]'
-                }`}
-              >
-                <span>My Activity</span>
-              </button>
-            )}
           </div>
         )}
 

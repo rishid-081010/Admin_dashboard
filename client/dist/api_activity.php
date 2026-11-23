@@ -1,7 +1,7 @@
 <?php
 // ==============================================================================
 // AS PROPERTIES - BITRIX24 ACTIVITY & TELESALES ENGINE
-// Endpoint: /api_activity.php
+// Endpoint: https://admin.asquared.ae/dashboard/api_activity.php
 // Bridges Bitrix24 SPA (entityTypeId: 1100 - Telesales Owners Data),
 // Timeline Comments (Audio recordings & Voice Transcripts), and Agent Assignments.
 // ==============================================================================
@@ -21,18 +21,18 @@ $ENTITY_TYPE_ID = 1100; // SPA "Telesales - Owners data"
 
 // Stage dictionary mapping
 $STAGE_MAP = [
-    'DT1100_44:NEW' => ['name' => 'Import Data', 'key' => 'import', 'color' => '#a855f7'],
+    'DT1100_44:NEW' => ['name' => 'Import Data', 'key' => 'import', 'color' => '#f6989c'],
     'DT1100_44:ASQ_READY_CALL' => ['name' => 'Validated - Ready for Call', 'key' => 'ready', 'color' => '#39A8EF'],
-    'DT1100_44:CLIENT' => ['name' => 'No Answer', 'key' => 'no_answer', 'color' => '#06b6d4'],
-    'DT1100_44:ASQ_DUPLICATE_REVIEW' => ['name' => 'Duplicate Review', 'key' => 'duplicate', 'color' => '#eab308'],
+    'DT1100_44:CLIENT' => ['name' => 'No Answer', 'key' => 'no_answer', 'color' => '#10e5fc'],
+    'DT1100_44:ASQ_DUPLICATE_REVIEW' => ['name' => 'Duplicate Review', 'key' => 'duplicate', 'color' => '#F7A700'],
     'DT1100_44:UC_5B620Q' => ['name' => 'Contacted', 'key' => 'contacted', 'color' => '#00c4fb'],
     'DT1100_44:UC_HGMTGR' => ['name' => 'Has Property', 'key' => 'has_property', 'color' => '#468ee5'],
-    'DT1100_44:UC_4IMVM8' => ['name' => 'Interested to Sell/Rent', 'key' => 'interested', 'color' => '#10b981'],
-    'DT1100_44:UC_R5D0DH' => ['name' => 'No Property', 'key' => 'no_property', 'color' => '#f59e0b'],
-    'DT1100_44:UC_QE3TNO' => ['name' => 'Not Interested', 'key' => 'not_interested', 'color' => '#ef4444'],
-    'DT1100_44:SUCCESS' => ['name' => 'Success / Won', 'key' => 'success', 'color' => '#059669'],
-    'DT1100_44:FAIL' => ['name' => 'Failed / Archived', 'key' => 'failed', 'color' => '#f43f5e'],
-    'DT1100_44:UC_181HFA' => ['name' => 'Reshuffle Pool', 'key' => 'reshuffle', 'color' => '#64748b'],
+    'DT1100_44:UC_4IMVM8' => ['name' => 'Interested to Sell/Rent', 'key' => 'interested', 'color' => '#75d900'],
+    'DT1100_44:UC_R5D0DH' => ['name' => 'No Property', 'key' => 'no_property', 'color' => '#ffab00'],
+    'DT1100_44:UC_QE3TNO' => ['name' => 'Not Interested', 'key' => 'not_interested', 'color' => '#ff5752'],
+    'DT1100_44:SUCCESS' => ['name' => 'Success / Won', 'key' => 'success', 'color' => '#00ff00'],
+    'DT1100_44:FAIL' => ['name' => 'Failed / Archived', 'key' => 'failed', 'color' => '#EE1D24'],
+    'DT1100_44:UC_181HFA' => ['name' => 'Reshuffle Pool', 'key' => 'reshuffle', 'color' => '#EE1D24'],
 ];
 
 function callBitrix($method, $payload = []) {
@@ -41,7 +41,7 @@ function callBitrix($method, $payload = []) {
     
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     
@@ -67,12 +67,8 @@ function callBitrix($method, $payload = []) {
     return $decoded ?: ['error' => 'Invalid JSON from Bitrix24', 'raw' => $raw];
 }
 
-// Read input parameters (supports GET, form-data POST, and raw JSON input)
-$rawBody = file_get_contents('php://input');
-$jsonBody = json_decode($rawBody, true) ?: [];
-$input = array_merge($_GET, $_POST, $jsonBody);
-
-$action = $input['action'] ?? 'get_activity';
+// Read input parameters
+$action = $_GET['action'] ?? $_POST['action'] ?? 'get_activity';
 
 // -----------------------------------------------------------------------------
 // 1. ACTION: GET_AGENTS
@@ -112,16 +108,15 @@ if ($action === 'get_agents') {
 
 // -----------------------------------------------------------------------------
 // 2. ACTION: GET_ACTIVITY
-// Returns assigned cards for an agent, mapped with project, unit, and phone.
-// Automatically pages up to $limit (up to 300 leads).
+// Returns assigned cards for an agent, mapped with project, unit, and phone
 // -----------------------------------------------------------------------------
 if ($action === 'get_activity') {
-    $agentId = $input['agent_id'] ?? '144'; // default to Vikram
-    $stageId = $input['stage_id'] ?? null;
-    $sortBy = $input['sort_by'] ?? 'oldest'; // 'oldest' (FIFO Priority) or 'newest'
-    $search = trim($input['search'] ?? '');
-    $limit = min(max((int)($input['limit'] ?? 100), 1), 300);
-    $start = (int)($input['start'] ?? 0);
+    $agentId = $_GET['agent_id'] ?? $_POST['agent_id'] ?? '144'; // default to Vikram
+    $stageId = $_GET['stage_id'] ?? $_POST['stage_id'] ?? null;
+    $sortBy = $_GET['sort_by'] ?? $_POST['sort_by'] ?? 'oldest'; // 'oldest' (FIFO Priority) or 'newest'
+    $search = trim($_GET['search'] ?? $_POST['search'] ?? '');
+    $limit = min(max((int)($_GET['limit'] ?? $_POST['limit'] ?? 50), 1), 100);
+    $start = (int)($_GET['start'] ?? $_POST['start'] ?? 0);
     
     $filter = [];
     if ($agentId !== 'all') {
@@ -136,53 +131,27 @@ if ($action === 'get_activity') {
         ? ['updatedTime' => 'desc', 'id' => 'desc']
         : ['movedTime' => 'asc', 'updatedTime' => 'asc', 'id' => 'asc'];
     
-    $selectFields = [
-        'id', 'title', 'stageId', 'createdTime', 'updatedTime', 'movedTime', 'lastActivityTime', 'assignedById',
-        'ufCrm19_1776147554', // Category
-        'ufCrm19_1776147607', // Project Name
-        'ufCrm19_1776147625', // Location
-        'ufCrm19_1776147649', // Owner Name
-        'ufCrm19_1776186597', // Unit Number
-        'ufCrm19_1776186627', // Contact Number
-        'ufCrm19_1785239877'  // Whatsapp Link
+    // Bitrix payload
+    $payload = [
+        'entityTypeId' => $ENTITY_TYPE_ID,
+        'filter' => $filter,
+        'select' => [
+            'id', 'title', 'stageId', 'createdTime', 'updatedTime', 'movedTime', 'lastActivityTime', 'assignedById',
+            'ufCrm19_1776147554', // Category
+            'ufCrm19_1776147607', // Project Name
+            'ufCrm19_1776147625', // Location
+            'ufCrm19_1776147649', // Owner Name
+            'ufCrm19_1776186597', // Unit Number
+            'ufCrm19_1776186627', // Contact Number
+            'ufCrm19_1785239877'  // Whatsapp Link
+        ],
+        'order' => $order,
+        'start' => $start
     ];
     
-    $rawItems = [];
-    $currentStart = $start;
-    $total = 0;
-    
-    // Multi-page fetch loop up to $limit
-    while (count($rawItems) < $limit) {
-        $payload = [
-            'entityTypeId' => $ENTITY_TYPE_ID,
-            'filter' => $filter,
-            'select' => $selectFields,
-            'order' => $order,
-            'start' => $currentStart
-        ];
-        
-        $res = callBitrix('crm.item.list', $payload);
-        $pageItems = $res['result']['items'] ?? [];
-        if ($total === 0) {
-            $total = $res['total'] ?? count($pageItems);
-        }
-        
-        if (empty($pageItems)) {
-            break;
-        }
-        
-        $rawItems = array_merge($rawItems, $pageItems);
-        
-        if (isset($res['next']) && (int)$res['next'] > 0 && count($rawItems) < $limit) {
-            $currentStart = (int)$res['next'];
-        } else {
-            break;
-        }
-    }
-    
-    if (count($rawItems) > $limit) {
-        $rawItems = array_slice($rawItems, 0, $limit);
-    }
+    $res = callBitrix('crm.item.list', $payload);
+    $rawItems = $res['result']['items'] ?? [];
+    $total = $res['total'] ?? count($rawItems);
     
     // Fetch agent lookup map for quick photo/name binding
     $usersRes = callBitrix('user.get', ['filter' => ['ACTIVE' => true]]);
@@ -241,9 +210,9 @@ if ($action === 'get_activity') {
         $ageDays = floor($ageHours / 24);
         
         if ($ageDays > 0) {
-            $waitingHuman = $ageDays . 'd waiting';
+            $waitingHuman = $ageDays . ($ageDays === 1 ? 'd waiting' : 'd waiting');
         } elseif ($ageHours > 0) {
-            $waitingHuman = $ageHours . 'h waiting';
+            $waitingHuman = $ageHours . ($ageHours === 1 ? 'h waiting' : 'h waiting');
         } else {
             $mins = max(1, floor($ageSeconds / 60));
             $waitingHuman = $mins . 'm waiting';
@@ -299,7 +268,7 @@ if ($action === 'get_activity') {
             'crm_link' => 'https://crm.asquared.ae/crm/type/' . $ENTITY_TYPE_ID . '/details/' . $item['id'] . '/'
         ];
         
-        // Text search filter if provided
+        // Client-side text search filter if provided
         if (!empty($search)) {
             $haystack = strtolower(
                 $card['title'] . ' ' .
@@ -335,7 +304,7 @@ if ($action === 'get_activity') {
 // Pulls timeline comments, voice call notes, audio URL, and transcripts
 // -----------------------------------------------------------------------------
 if ($action === 'get_item_timeline') {
-    $itemId = (int)($input['item_id'] ?? $input['id'] ?? 0);
+    $itemId = (int)($_GET['item_id'] ?? $_POST['item_id'] ?? 0);
     if ($itemId <= 0) {
         echo json_encode(['success' => false, 'error' => 'Missing item_id']);
         exit();
@@ -402,12 +371,12 @@ if ($action === 'get_item_timeline') {
 
 // -----------------------------------------------------------------------------
 // 4. ACTION: UPDATE_STAGE
-// Updates card stage and optionally responsible agent in Bitrix24
+// Updates card stage in Bitrix24
 // -----------------------------------------------------------------------------
 if ($action === 'update_stage') {
-    $itemId = (int)($input['item_id'] ?? $input['id'] ?? 0);
-    $newStageId = $input['stage_id'] ?? $input['stage'] ?? '';
-    $assignedById = $input['assigned_by_id'] ?? $input['agent_id'] ?? null;
+    $itemId = (int)($_POST['item_id'] ?? $_GET['item_id'] ?? 0);
+    $newStageId = $_POST['stage_id'] ?? $_GET['stage_id'] ?? '';
+    $assignedById = $_POST['assigned_by_id'] ?? $_GET['assigned_by_id'] ?? null;
     
     if ($itemId <= 0 || empty($newStageId)) {
         echo json_encode(['success' => false, 'error' => 'Missing item_id or stage_id']);
@@ -415,7 +384,7 @@ if ($action === 'update_stage') {
     }
     
     $fields = ['stageId' => $newStageId];
-    if (!empty($assignedById) && $assignedById !== 'all') {
+    if (!empty($assignedById)) {
         $fields['assignedById'] = (int)$assignedById;
     }
     
@@ -438,8 +407,8 @@ if ($action === 'update_stage') {
 // Reassigns responsible person in Bitrix24
 // -----------------------------------------------------------------------------
 if ($action === 'reassign_agent') {
-    $itemId = (int)($input['item_id'] ?? $input['id'] ?? 0);
-    $newAgentId = (int)($input['agent_id'] ?? $input['assigned_by_id'] ?? 0);
+    $itemId = (int)($_POST['item_id'] ?? $_GET['item_id'] ?? 0);
+    $newAgentId = (int)($_POST['agent_id'] ?? $_GET['agent_id'] ?? 0);
     
     if ($itemId <= 0 || $newAgentId <= 0) {
         echo json_encode(['success' => false, 'error' => 'Missing item_id or agent_id']);
@@ -460,41 +429,8 @@ if ($action === 'reassign_agent') {
     exit();
 }
 
-// -----------------------------------------------------------------------------
-// 6. ACTION: ADD_NOTE
-// Adds a timeline comment/note to the card in Bitrix24
-// -----------------------------------------------------------------------------
-if ($action === 'add_note') {
-    $itemId = (int)($input['item_id'] ?? $input['id'] ?? 0);
-    $comment = trim($input['comment'] ?? $input['note'] ?? '');
-    $authorId = (int)($input['author_id'] ?? $input['agent_id'] ?? 0);
-    
-    if ($itemId <= 0 || empty($comment)) {
-        echo json_encode(['success' => false, 'error' => 'Missing item_id or comment']);
-        exit();
-    }
-    
-    $fields = [
-        'ENTITY_ID' => $itemId,
-        'ENTITY_TYPE' => 'DYNAMIC_' . $ENTITY_TYPE_ID,
-        'COMMENT' => $comment
-    ];
-    if ($authorId > 0) {
-        $fields['AUTHOR_ID'] = $authorId;
-    }
-    
-    $res = callBitrix('crm.timeline.comment.add', ['fields' => $fields]);
-    
-    if (isset($res['result'])) {
-        echo json_encode(['success' => true, 'comment_id' => $res['result']]);
-    } else {
-        echo json_encode(['success' => false, 'error' => $res['error_description'] ?? 'Bitrix comment add failed', 'raw' => $res]);
-    }
-    exit();
-}
-
 // Default response
 echo json_encode([
     'success' => false,
-    'error' => 'Unknown action. Available actions: get_agents, get_activity, get_item_timeline, update_stage, reassign_agent, add_note'
+    'error' => 'Unknown action. Available actions: get_agents, get_activity, get_item_timeline, update_stage, reassign_agent'
 ]);
