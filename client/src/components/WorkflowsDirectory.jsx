@@ -4,7 +4,7 @@ import {
   ArrowUpDown, Layers, X, Clock, Activity, 
   CheckCircle2, AlertTriangle, Layers3, ChevronLeft, 
   ChevronRight, ChevronDown, Eye, AlertCircle, ShieldAlert,
-  Play, Pause, Info, Tag, Filter
+  Play, Pause, Info, Tag, Filter, SlidersHorizontal
 } from 'lucide-react';
 import axios from 'axios';
 import initialTelemetry from '../../public/n8n_telemetry.json';
@@ -16,6 +16,7 @@ export default function WorkflowsDirectory() {
   const [loading, setLoading] = useState(false);
   const [lastProbed, setLastProbed] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFiltersBox, setShowFiltersBox] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'paused', 'executed', 'errors'
   const [folderFilter, setFolderFilter] = useState('all');
   const [sortBy, setSortBy] = useState('updated'); // 'updated', 'executed', 'errors', 'latency', 'created', 'name-asc', 'name-desc', 'executions'
@@ -286,12 +287,24 @@ export default function WorkflowsDirectory() {
     }
   };
 
-  const hasActiveFilters = statusFilter !== 'all' || folderFilter !== 'all' || searchTerm.trim() !== '';
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (statusFilter !== 'all') count++;
+    if (folderFilter !== 'all') count++;
+    if (sortBy !== 'updated') count++;
+    if (pageSize !== 25) count++;
+    return count;
+  }, [statusFilter, folderFilter, sortBy, pageSize]);
+
+  const hasActiveFilters = statusFilter !== 'all' || folderFilter !== 'all' || sortBy !== 'updated' || pageSize !== 25 || searchTerm.trim() !== '';
 
   const resetFilters = () => {
     setStatusFilter('all');
     setFolderFilter('all');
+    setSortBy('updated');
+    setPageSize(25);
     setSearchTerm('');
+    setCurrentPage(1);
   };
 
   // Render compound operational status badge
@@ -543,10 +556,10 @@ export default function WorkflowsDirectory() {
       </div>
 
       {/* ── 4. Search & Filter Bar ─────────────────────────────────────────────────── */}
-      <div className="ds-card p-2.5 sm:p-3 shrink-0 flex flex-col gap-2">
+      <div className="ds-card p-2.5 sm:p-3 shrink-0 flex flex-col gap-2 select-none">
         
-        {/* Top Filter Row: Search & Status Filters Dropdown */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Search input + Single Filters Button matching Owners Data */}
+        <div className="flex items-center justify-between gap-3">
           
           {/* Search input */}
           <div className="flex-1 flex items-center bg-[#071322] border border-[#1e2f42] rounded-xl px-3.5 py-2 focus-within:border-blue-500/70 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
@@ -569,101 +582,157 @@ export default function WorkflowsDirectory() {
             )}
           </div>
 
-          {/* Single Box: Filters Dropdown */}
-          <div className="flex items-center gap-2 bg-[#071322] border border-[#1e2f42] rounded-xl px-3.5 py-2 text-xs text-slate-300 shrink-0 focus-within:border-blue-500/70 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
-            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-            <span className="text-slate-400 font-medium">Filters:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="bg-transparent text-white font-medium outline-none cursor-pointer pr-1"
-            >
-              <option value="all" className="bg-[#071322] text-white">All ({summary.totalWorkflows})</option>
-              <option value="active" className="bg-[#071322] text-white">Active ({summary.activeCount})</option>
-              <option value="paused" className="bg-[#071322] text-white">Paused ({summary.pausedCount})</option>
-              <option value="executed" className="bg-[#071322] text-white">Executed Today ({summary.executedTodayCount})</option>
-              <option value="errors" className="bg-[#071322] text-rose-400">Errors ({summary.errorsCount})</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Bottom Filter Row: Folders, Sort, Page Size & Reset */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1b2b3d]">
-          
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Folder Filter Dropdown */}
-            <div className="flex items-center gap-2 bg-[#071322] border border-[#1e2f42] rounded-xl px-3 py-1.5 text-xs text-slate-300">
-              <Layers3 className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-slate-400">Folder:</span>
-              <select
-                value={folderFilter}
-                onChange={(e) => setFolderFilter(e.target.value)}
-                className="bg-transparent text-white font-medium outline-none cursor-pointer pr-1"
-              >
-                <option value="all" className="bg-[#071322] text-white">All Folders ({summary.totalWorkflows})</option>
-                {folders.map(f => (
-                  <option key={f.name} value={f.name} className="bg-[#071322] text-white">
-                    {f.name} ({f.count})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="flex items-center gap-2 bg-[#071322] border border-[#1e2f42] rounded-xl px-3 py-1.5 text-xs text-slate-300">
-              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-slate-400">Sort:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-transparent text-white font-medium outline-none cursor-pointer pr-1"
-              >
-                <option value="updated" className="bg-[#071322] text-white">Last modified in canvas</option>
-                <option value="executed" className="bg-[#071322] text-white">Last executed (recent)</option>
-                <option value="errors" className="bg-[#071322] text-white">Most errors today</option>
-                <option value="latency" className="bg-[#071322] text-white">Highest latency</option>
-                <option value="executions" className="bg-[#071322] text-white">Most executions today</option>
-                <option value="name-asc" className="bg-[#071322] text-white">Name (A-Z)</option>
-                <option value="name-desc" className="bg-[#071322] text-white">Name (Z-A)</option>
-                <option value="created" className="bg-[#071322] text-white">Creation date</option>
-              </select>
-            </div>
-
-            {/* Page Size Dropdown */}
-            <div className="flex items-center gap-1.5 bg-[#071322] border border-[#1e2f42] rounded-xl px-3 py-1.5 text-xs text-slate-300">
-              <span className="text-slate-400">Show:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="bg-transparent text-white font-medium outline-none cursor-pointer pr-1"
-              >
-                <option value={15} className="bg-[#071322] text-white">15 per page</option>
-                <option value={25} className="bg-[#071322] text-white">25 per page</option>
-                <option value={50} className="bg-[#071322] text-white">50 per page</option>
-                <option value={100} className="bg-[#071322] text-white">100 per page</option>
-                <option value="all" className="bg-[#071322] text-white">All workflows</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Reset Filters button if active */}
-          {hasActiveFilters && (
-            <button
-              onClick={resetFilters}
-              className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>Reset filters</span>
-            </button>
-          )}
+          {/* Single Filters Button (Exact Owners Data Design) */}
+          <button
+            onClick={() => setShowFiltersBox(prev => !prev)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-md shrink-0 ${
+              showFiltersBox || activeFiltersCount > 0
+                ? 'bg-blue-600/30 text-blue-300 border-blue-500/60 shadow-blue-900/30 ring-1 ring-blue-500/40'
+                : 'bg-white/[0.05] hover:bg-white/[0.1] text-white/90 border-white/10'
+            }`}
+            title="Toggle filters"
+          >
+            <SlidersHorizontal className="w-4 h-4 text-blue-400" />
+            <span className="font-bold tracking-wide">Filters</span>
+            {activeFiltersCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white shadow-sm">
+                {activeFiltersCount}
+              </span>
+            )}
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showFiltersBox ? 'rotate-180' : ''}`} />
+          </button>
 
         </div>
+
+        {/* ─── Expandable Filters Subtab (Exact Owners Data Design) ──── */}
+        {showFiltersBox && (
+          <div className="mt-2.5 p-4 bg-[#071322] border border-[#1b2b3d] rounded-xl shadow-2xl animate-fade-in flex flex-col gap-4">
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              
+              {/* 1. Workflow Status */}
+              <div>
+                <label className="text-xs font-semibold text-white/70 block mb-1.5 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Status</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+                  >
+                    <option value="all" className="bg-[#071322] text-white">All Workflows ({summary.totalWorkflows})</option>
+                    <option value="active" className="bg-[#071322] text-white">Active ({summary.activeCount})</option>
+                    <option value="paused" className="bg-[#071322] text-white">Paused ({summary.pausedCount})</option>
+                    <option value="executed" className="bg-[#071322] text-white">Executed Today ({summary.executedTodayCount})</option>
+                    <option value="errors" className="bg-[#071322] text-rose-400">Errors ({summary.errorsCount})</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* 2. Folder Category */}
+              <div>
+                <label className="text-xs font-semibold text-white/70 block mb-1.5 flex items-center gap-1.5">
+                  <Layers3 className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Folder</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={folderFilter}
+                    onChange={(e) => {
+                      setFolderFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+                  >
+                    <option value="all" className="bg-[#071322] text-white">All Folders ({summary.totalWorkflows})</option>
+                    {folders.map(f => (
+                      <option key={f.name} value={f.name} className="bg-[#071322] text-white">
+                        {f.name} ({f.count})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* 3. Sort Order */}
+              <div>
+                <label className="text-xs font-semibold text-white/70 block mb-1.5 flex items-center gap-1.5">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Sort By</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+                  >
+                    <option value="updated" className="bg-[#071322] text-white">Last modified in canvas</option>
+                    <option value="executed" className="bg-[#071322] text-white">Last executed (recent)</option>
+                    <option value="errors" className="bg-[#071322] text-white">Most errors today</option>
+                    <option value="latency" className="bg-[#071322] text-white">Highest latency</option>
+                    <option value="executions" className="bg-[#071322] text-white">Most executions today</option>
+                    <option value="name-asc" className="bg-[#071322] text-white">Name (A-Z)</option>
+                    <option value="name-desc" className="bg-[#071322] text-white">Name (Z-A)</option>
+                    <option value="created" className="bg-[#071322] text-white">Creation date</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* 4. Show Page Size */}
+              <div>
+                <label className="text-xs font-semibold text-white/70 block mb-1.5 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Show</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="w-full bg-[#0b162c] hover:bg-[#0f1d3a] border border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2 text-xs font-medium text-white outline-none cursor-pointer transition-all appearance-none"
+                  >
+                    <option value={15} className="bg-[#071322] text-white">15 per page</option>
+                    <option value={25} className="bg-[#071322] text-white">25 per page</option>
+                    <option value={50} className="bg-[#071322] text-white">50 per page</option>
+                    <option value={100} className="bg-[#071322] text-white">100 per page</option>
+                    <option value="all" className="bg-[#071322] text-white">All workflows</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40 pointer-events-none" />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Bottom Action Row */}
+            <div className="flex items-center justify-between pt-3 border-t border-[#1b2b3d]">
+              <button
+                onClick={resetFilters}
+                className="px-3.5 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset all filters</span>
+              </button>
+
+              <button
+                onClick={() => setShowFiltersBox(false)}
+                className="px-5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-900/30 cursor-pointer"
+              >
+                Show results
+              </button>
+            </div>
+
+          </div>
+        )}
 
       </div>
 
