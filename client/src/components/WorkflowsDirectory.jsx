@@ -4,7 +4,7 @@ import {
   ArrowUpDown, Layers, X, Clock, Activity, 
   CheckCircle2, AlertTriangle, Layers3, ChevronLeft, 
   ChevronRight, ChevronDown, Eye, AlertCircle, ShieldAlert,
-  Play, Pause, Info, Tag
+  Play, Pause, Info, Tag, Filter
 } from 'lucide-react';
 import axios from 'axios';
 import initialTelemetry from '../../public/n8n_telemetry.json';
@@ -24,6 +24,7 @@ export default function WorkflowsDirectory() {
   const [selectedWorkflow, setSelectedWorkflow] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [copiedDrawerId, setCopiedDrawerId] = useState(false);
+  const [customPageInput, setCustomPageInput] = useState('');
 
   // Fetch live n8n telemetry from API endpoint or static json
   const fetchTelemetry = useCallback(async (manual = false) => {
@@ -398,10 +399,10 @@ export default function WorkflowsDirectory() {
   };
 
   return (
-    <div className="w-full flex flex-col h-full animate-fade-in text-white/90 gap-3.5 overflow-y-auto custom-scrollbar select-text pr-1 -mr-1">
+    <div className="w-full flex flex-col h-full animate-fade-in text-white/90 gap-2.5 overflow-y-auto custom-scrollbar select-text pr-1">
       
       {/* ── 1. Top Header Bar ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 pt-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0 pt-0.5">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="ds-page-title">
@@ -427,9 +428,9 @@ export default function WorkflowsDirectory() {
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0c1829] hover:bg-[#132238] text-slate-200 hover:text-white border border-[#233549] text-xs font-semibold transition-all shadow-sm cursor-pointer"
-            title="Open Automation Canvas (Requires Admin Credentials)"
+            title="Open Your n8n"
           >
-            <span>Automation Canvas (Admin)</span>
+            <span>Your n8n</span>
             <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
           </a>
         </div>
@@ -437,7 +438,7 @@ export default function WorkflowsDirectory() {
 
       {/* ── 2. Transparent Offline / Stale Notice Banner ────────────────────────────── */}
       {isStale && (
-        <div className="shrink-0 flex items-start sm:items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-200/90 text-xs">
+        <div className="shrink-0 flex items-start sm:items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-200/90 text-xs">
           <div className="flex items-center gap-2.5">
             <Info className="w-4 h-4 text-amber-400 shrink-0" />
             <div>
@@ -459,46 +460,46 @@ export default function WorkflowsDirectory() {
       )}
 
       {/* ── 3. Top Metric Cards ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 shrink-0">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
         
         {/* Card 1: Total Workflows */}
-        <div className="ds-card ds-card-interactive p-5 flex flex-col justify-between h-full">
-          <div className="flex items-center justify-between mb-1">
+        <div className="ds-card ds-card-interactive p-3 sm:p-3.5 flex flex-col justify-between min-h-[74px]">
+          <div className="flex items-center justify-between mb-0.5">
             <span className="text-[11px] uppercase font-sans tabular-nums tracking-wider text-slate-400 font-bold">Total Workflows</span>
             <Layers className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-white font-sans tabular-nums mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-white font-sans tabular-nums mt-0.5">
             {summary.totalWorkflows}
           </div>
-          <div className="h-[18px] mt-1.5 flex items-center text-[11px] text-slate-400 font-sans tabular-nums truncate">
+          <div className="h-[14px] mt-0.5 flex items-center text-[11px] text-slate-400 font-sans tabular-nums truncate">
             {summary.activeCount} active · {summary.pausedCount} paused
           </div>
         </div>
 
         {/* Card 2: Active Automations */}
-        <div className="ds-card ds-card-interactive p-5 flex flex-col justify-between h-full">
-          <div className="flex items-center justify-between mb-1">
+        <div className="ds-card ds-card-interactive p-3 sm:p-3.5 flex flex-col justify-between min-h-[74px]">
+          <div className="flex items-center justify-between mb-0.5">
             <span className="text-[11px] uppercase font-sans tabular-nums tracking-wider text-slate-400 font-bold">Active Automations</span>
             <Activity className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-white font-sans tabular-nums mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-white font-sans tabular-nums mt-0.5">
             {summary.activeCount}
           </div>
-          <div className="h-[18px] mt-1.5 flex items-center text-[11px] text-emerald-400/90 font-sans tabular-nums truncate font-medium">
+          <div className="h-[14px] mt-0.5 flex items-center text-[11px] text-emerald-400/90 font-sans tabular-nums truncate font-medium">
             Real-time triggers active
           </div>
         </div>
 
         {/* Card 3: Executions Today */}
-        <div className="ds-card ds-card-interactive p-5 flex flex-col justify-between h-full">
-          <div className="flex items-center justify-between mb-1">
+        <div className="ds-card ds-card-interactive p-3 sm:p-3.5 flex flex-col justify-between min-h-[74px]">
+          <div className="flex items-center justify-between mb-0.5">
             <span className="text-[11px] uppercase font-sans tabular-nums tracking-wider text-slate-400 font-bold">Executions Today</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-white font-sans tabular-nums mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-white font-sans tabular-nums mt-0.5">
             {summary.totalExecutionsToday.toLocaleString()}
           </div>
-          <div className="h-[18px] mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-400 font-sans tabular-nums truncate">
+          <div className="h-[14px] mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400 font-sans tabular-nums truncate">
             <span className="text-emerald-400 font-semibold">{summary.totalSuccessToday} ok</span>
             <span>·</span>
             <span className={summary.totalErrorsToday > 0 ? "text-rose-400 font-semibold" : "text-slate-500"}>
@@ -507,26 +508,44 @@ export default function WorkflowsDirectory() {
           </div>
         </div>
 
-        {/* Card 4: Average Speed */}
-        <div className="ds-card ds-card-interactive p-5 flex flex-col justify-between h-full">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] uppercase font-sans tabular-nums tracking-wider text-slate-400 font-bold">Average Speed</span>
-            <Clock className="w-4 h-4 text-slate-400" />
+        {/* Card 4: No. of Errors Today */}
+        <div 
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            setStatusFilter(statusFilter === 'errors' ? 'all' : 'errors');
+            setCurrentPage(1);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setStatusFilter(statusFilter === 'errors' ? 'all' : 'errors');
+              setCurrentPage(1);
+            }
+          }}
+          className="ds-card ds-card-interactive p-3 sm:p-3.5 flex flex-col justify-between min-h-[74px] cursor-pointer transition-all hover:border-rose-500/30"
+          title="Click to filter error workflows (Resets to page 1)"
+        >
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="text-[11px] uppercase font-sans tabular-nums tracking-wider text-slate-400 font-bold">Errors Today</span>
+            <AlertTriangle className={`w-4 h-4 ${summary.totalErrorsToday > 0 ? 'text-rose-400' : 'text-slate-400'}`} />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-white font-sans tabular-nums mt-1">
-            {summary.avgRuntimeSec ? `${summary.avgRuntimeSec}s` : '—'}
+          <div className={`text-xl sm:text-2xl font-extrabold font-sans tabular-nums mt-0.5 ${summary.totalErrorsToday > 0 ? 'text-rose-400' : 'text-white'}`}>
+            {summary.totalErrorsToday.toLocaleString()}
           </div>
-          <div className="h-[18px] mt-1.5 flex items-center text-[11px] text-slate-400 font-sans tabular-nums truncate">
-            Avg processing time
+          <div className="h-[14px] mt-0.5 flex items-center text-[11px] font-sans tabular-nums truncate text-slate-400">
+            {summary.errorsCount > 0 
+              ? `${summary.errorsCount} failing workflow${summary.errorsCount > 1 ? 's' : ''}` 
+              : 'Zero failing workflows'}
           </div>
         </div>
 
       </div>
 
       {/* ── 4. Search & Filter Bar ─────────────────────────────────────────────────── */}
-      <div className="ds-card p-4 shrink-0 flex flex-col gap-3">
+      <div className="ds-card p-2.5 sm:p-3 shrink-0 flex flex-col gap-2">
         
-        {/* Top Filter Row: Search & Status Tabs */}
+        {/* Top Filter Row: Search & Status Filters Dropdown */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           
           {/* Search input */}
@@ -550,29 +569,24 @@ export default function WorkflowsDirectory() {
             )}
           </div>
 
-          {/* Status Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-            {[
-              { id: 'all', label: `All (${summary.totalWorkflows})` },
-              { id: 'active', label: `Active (${summary.activeCount})` },
-              { id: 'paused', label: `Paused (${summary.pausedCount})` },
-              { id: 'executed', label: `Executed Today (${summary.executedTodayCount})` },
-              { id: 'errors', label: `Errors (${summary.errorsCount})`, isAlert: summary.errorsCount > 0 }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setStatusFilter(tab.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  statusFilter === tab.id
-                    ? 'bg-[#183153] text-white border border-white/20 shadow-sm'
-                    : tab.isAlert
-                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/25 hover:bg-rose-500/20'
-                      : 'bg-[#071322] text-slate-400 hover:text-white border border-[#1e2f42] hover:bg-[#0b1929]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* Single Box: Filters Dropdown */}
+          <div className="flex items-center gap-2 bg-[#071322] border border-[#1e2f42] rounded-xl px-3.5 py-2 text-xs text-slate-300 shrink-0 focus-within:border-blue-500/70 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
+            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+            <span className="text-slate-400 font-medium">Filters:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-transparent text-white font-medium outline-none cursor-pointer pr-1"
+            >
+              <option value="all" className="bg-[#071322] text-white">All ({summary.totalWorkflows})</option>
+              <option value="active" className="bg-[#071322] text-white">Active ({summary.activeCount})</option>
+              <option value="paused" className="bg-[#071322] text-white">Paused ({summary.pausedCount})</option>
+              <option value="executed" className="bg-[#071322] text-white">Executed Today ({summary.executedTodayCount})</option>
+              <option value="errors" className="bg-[#071322] text-rose-400">Errors ({summary.errorsCount})</option>
+            </select>
           </div>
         </div>
 
@@ -653,24 +667,27 @@ export default function WorkflowsDirectory() {
 
       </div>
 
-      {/* ── 5. Main Workflows Table ────────────────────────────────────────────────── */}
-      <div className="ds-card overflow-hidden flex-1 flex flex-col min-h-0">
-        <div className="overflow-x-auto flex-1 custom-scrollbar">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-20 bg-[#071322]/80 backdrop-blur-md shadow-md shadow-black/30">
-              <tr className="border-b border-white/10 bg-[#071322]/80 text-[11px] uppercase font-sans tabular-nums text-slate-400 tracking-wider">
-                <th className="py-2.5 px-4 w-[14%] align-middle bg-[#071322]/80">Status</th>
-                <th className="py-2.5 px-5 w-[36%] align-middle bg-[#071322]/80">Workflow Name</th>
-                <th className="py-2.5 px-4 w-[13%] align-middle bg-[#071322]/80">Runs Today</th>
-                <th className="py-2.5 px-4 w-[11%] align-middle bg-[#071322]/80">Speed</th>
-                <th className="py-2.5 px-4 w-[16%] align-middle bg-[#071322]">Last Run / Saved</th>
-                <th className="py-2.5 px-4 w-[10%] text-right align-middle bg-[#071322]">Action</th>
+      {/* ── 5. Main Workflows Table (Spacious Scroll Section matching Owners Data) ──── */}
+      <div 
+        className="flex-1 min-h-[500px] bg-[#0c1829]/50 backdrop-blur-xl border border-white/15 rounded-2xl shadow-xl shadow-black/40 relative flex flex-col overflow-hidden"
+        style={{ minHeight: '500px' }}
+      >
+        <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
+          <table className="w-full text-left border-collapse text-[13.5px]">
+            <thead className="bg-[#071322]/80 border-b border-white/10 text-xs uppercase tracking-wider text-[#b7a990] sticky top-0 z-20 shadow-md shadow-black/40 backdrop-blur-xl">
+              <tr>
+                <th className="w-[14%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Status</th>
+                <th className="w-[36%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Workflow Name</th>
+                <th className="w-[14%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Runs Today</th>
+                <th className="w-[11%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Speed</th>
+                <th className="w-[15%] px-6 py-3 font-semibold text-left bg-[#071322]/80 backdrop-blur-xl align-middle">Last Run / Saved</th>
+                <th className="w-[10%] px-6 py-3 font-semibold text-right bg-[#071322]/80 backdrop-blur-xl align-middle">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1b2b3d] text-xs">
+            <tbody className="divide-y divide-[#1b2b3d]">
               {paginatedWorkflows.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                  <td colSpan="6" className="py-16 text-center text-slate-400">
                     No workflows match the selected criteria.
                   </td>
                 </tr>
@@ -682,25 +699,25 @@ export default function WorkflowsDirectory() {
                 return (
                   <tr 
                     key={wf.id}
-                    className="hover:bg-[#102035] transition-colors group cursor-pointer"
+                    className="hover:bg-[#102035] transition-colors group cursor-pointer border-b border-[#1b2b3d]/60 last:border-b-0"
                     onClick={() => setSelectedWorkflow(wf)}
                   >
                     {/* Operational Health Badge */}
-                    <td className="py-2.5 px-4 align-middle">
+                    <td className="px-6 py-3.5 align-middle">
                       {renderStatusBadge(wf)}
                     </td>
 
                     {/* Workflow Name */}
-                    <td className="py-2.5 px-5 align-middle">
+                    <td className="px-6 py-3.5 align-middle">
                       <div>
-                        <h4 className="font-semibold text-white text-[13.5px] group-hover:text-blue-300 transition-colors truncate max-w-[380px]" title={wf.name}>
+                        <h4 className="font-semibold text-white/95 text-[13.5px] group-hover:text-blue-400 transition-colors truncate max-w-[420px]" title={wf.name}>
                           {wf.name}
                         </h4>
                       </div>
                     </td>
 
                     {/* Executions Today with Zero-Success Fix */}
-                    <td className="py-2.5 px-4 font-sans tabular-nums align-middle">
+                    <td className="px-6 py-3.5 font-sans tabular-nums align-middle">
                       <div className="text-[13px] font-bold text-white">
                         {(wf.executionsToday || 0).toLocaleString()} <span className="text-[11px] text-slate-400 font-normal">runs</span>
                       </div>
@@ -723,7 +740,7 @@ export default function WorkflowsDirectory() {
                     </td>
 
                     {/* Latency */}
-                    <td className="py-2.5 px-4 font-sans tabular-nums align-middle text-slate-300">
+                    <td className="px-6 py-3.5 font-sans tabular-nums align-middle text-slate-300">
                       {wf.avgDurationSec !== null && wf.avgDurationSec !== undefined ? (
                         <span className="text-xs">{wf.avgDurationSec}s</span>
                       ) : (
@@ -732,7 +749,7 @@ export default function WorkflowsDirectory() {
                     </td>
 
                     {/* Last Run / Saved */}
-                    <td className="py-2.5 px-4 font-sans tabular-nums text-[11.5px] align-middle">
+                    <td className="px-6 py-3.5 font-sans tabular-nums text-[12px] align-middle">
                       <div>
                         {wf.lastExecutedAt ? (
                           <span className="text-white font-medium">{formatTimeAgo(wf.lastExecutedAt)}</span>
@@ -742,9 +759,26 @@ export default function WorkflowsDirectory() {
                       </div>
                     </td>
 
-                    {/* Action Arrow (Revealed smoothly on hover) */}
-                    <td className="py-2.5 px-4 text-right align-middle text-slate-500 group-hover:text-white transition-colors">
-                      <ChevronRight className="w-4 h-4 inline-block opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                    {/* Quick Row Action */}
+                    <td className="px-6 py-3.5 text-right align-middle" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <a
+                          href={wf.n8nUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+                          title="Open workflow in n8n canvas"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <button
+                          onClick={() => setSelectedWorkflow(wf)}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-300 hover:text-white transition-all cursor-pointer"
+                          title="Inspect run history"
+                        >
+                          Details
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -753,50 +787,98 @@ export default function WorkflowsDirectory() {
           </table>
         </div>
 
-        {/* ── 6. Table Footer with Numbered Pagination ───────────────────────────── */}
-        <div className="p-3.5 border-t border-[#233549] bg-[#071322] flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-400 shrink-0">
+        {/* ── 6. Table Footer with Full Pagination Matching Owners Data ─────────── */}
+        <div className="p-4 border-t border-white/10 bg-[#071322]/80 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-400">
           
-          <div className="flex items-center gap-3">
-            <div>
-              Showing <span className="font-sans tabular-nums text-white font-semibold">{totalItems === 0 ? 0 : startIndex + 1}</span> to <span className="font-sans tabular-nums text-white font-semibold">{endIndex}</span> of <span className="font-sans tabular-nums text-white font-semibold">{totalItems}</span> workflows
-            </div>
-            {summary.snapshotDate && (
-              <span className="text-[11px] text-slate-500 hidden sm:inline">
-                · Snapshot: {formatDateTime(summary.snapshotDate)}
-              </span>
-            )}
-          </div>
+          <span>
+            Showing <strong className="text-white font-sans tabular-nums font-semibold">{totalItems === 0 ? 0 : startIndex + 1}</strong> to <strong className="text-white font-sans tabular-nums font-semibold">{endIndex}</strong> of <strong className="text-white font-sans tabular-nums font-semibold">{totalItems.toLocaleString()}</strong> workflows (Page <strong className="text-white font-sans tabular-nums font-semibold">{safePage.toLocaleString()}</strong> of <strong className="text-white font-sans tabular-nums font-semibold">{totalPages.toLocaleString()}</strong>)
+          </span>
 
-          {/* Numbered Pagination Buttons */}
-          {pageSize !== 'all' && totalPages > 1 && (
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+              disabled={safePage <= 1} 
+              className="h-8 px-3 bg-white/5 border border-white/10 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium inline-flex items-center justify-center cursor-pointer"
+            >
+              Previous
+            </button>
+            
+            {/* Dynamic Numbered Pages: 1, 2, 3 ... tot */}
+            {(() => {
+              const getPages = (cur, tot) => {
+                if (tot <= 7) return Array.from({ length: tot }, (_, i) => i + 1);
+                if (cur <= 4) return [1, 2, 3, 4, 5, '...', tot];
+                if (cur >= tot - 3) return [1, '...', tot - 4, tot - 3, tot - 2, tot - 1, tot];
+                return [1, '...', cur - 1, cur, cur + 1, '...', tot];
+              };
+
+              return getPages(safePage, totalPages).map((p, idx) => {
+                if (p === '...') {
+                  return (
+                    <span key={`dots-${idx}`} className="h-8 min-w-[24px] text-slate-500 font-sans tabular-nums text-xs select-none inline-flex items-center justify-center">
+                      ...
+                    </span>
+                  );
+                }
+                const isCurrent = safePage === p;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p)}
+                    className={`min-w-[32px] h-8 px-2.5 rounded-lg text-xs font-sans tabular-nums font-medium transition-all inline-flex items-center justify-center cursor-pointer ${
+                      isCurrent
+                        ? 'bg-blue-600 text-white shadow-sm font-bold ring-1 ring-blue-400/50'
+                        : 'bg-[#06111e] border border-[#1a2c42] text-slate-300 hover:text-white hover:border-blue-500/40 hover:bg-[#102035]'
+                    }`}
+                  >
+                    {p.toLocaleString()}
+                  </button>
+                );
+              });
+            })()}
+
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+              disabled={safePage >= totalPages} 
+              className="h-8 px-3 bg-[#06111e] border border-[#1a2c42] rounded-lg text-slate-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium inline-flex items-center justify-center cursor-pointer"
+            >
+              Next
+            </button>
+
+            {/* Custom Page Input Box */}
+            <div className="flex items-center gap-1.5 ml-2 pl-2.5 border-l border-[#233549]">
+              <span className="text-xs text-slate-400 whitespace-nowrap font-medium">Go to:</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={customPageInput}
+                onChange={(e) => setCustomPageInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const p = parseInt(customPageInput, 10);
+                    if (!isNaN(p) && p >= 1 && p <= totalPages) {
+                      setCurrentPage(p);
+                      setCustomPageInput('');
+                    }
+                  }
+                }}
+                placeholder="Page #"
+                className="w-16 h-8 px-2 bg-[#06111e] border border-[#1a2c42] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
               <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={safePage <= 1}
-                className="w-7 h-7 rounded-lg border border-[#233549] text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none transition-colors inline-flex items-center justify-center cursor-pointer"
-                title="Previous page"
+                onClick={() => {
+                  const p = parseInt(customPageInput, 10);
+                  if (!isNaN(p) && p >= 1 && p <= totalPages) {
+                    setCurrentPage(p);
+                    setCustomPageInput('');
+                  }
+                }}
+                className="h-8 px-2.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              <div className="flex items-center gap-1">
-                {renderPageButtons()}
-              </div>
-
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={safePage >= totalPages}
-                className="w-7 h-7 rounded-lg border border-[#233549] text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none transition-colors inline-flex items-center justify-center cursor-pointer"
-                title="Next page"
-              >
-                <ChevronRight className="w-4 h-4" />
+                Go
               </button>
             </div>
-          )}
-
-          {/* Last Probed Indicator */}
-          <div className="font-sans tabular-nums text-[11px] text-slate-500">
-            Probed: {lastProbed.toLocaleTimeString()}
           </div>
         </div>
 
