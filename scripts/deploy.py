@@ -127,9 +127,15 @@ def deploy_to_domain(domain):
 
     def upload_file(item):
         local_path, remote_rel_path = item
-        size = os.path.getsize(local_path)
-        with open(local_path, 'rb') as f:
-            file_bytes = f.read()
+        if not os.path.exists(local_path):
+            return True
+        try:
+            size = os.path.getsize(local_path)
+            with open(local_path, 'rb') as f:
+                file_bytes = f.read()
+        except Exception as e:
+            print(f'  Skipping unreadable file {local_path}: {e}')
+            return True
 
         target_url = f"{upload_base_url}/{remote_rel_path}?override=true"
         post_headers = {

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CornerDownLeft, Trash2, ArrowUpRight, ArrowUp, ArrowRight, Plus, X, Bookmark, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2, Workflow, CheckCircle2, ShieldAlert, AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare, PanelLeft, PanelLeftClose, Search, Maximize2, Minimize2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Send, CornerDownLeft, Trash2, ArrowUpRight, ArrowUp, ArrowRight, Plus, X, Bookmark, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2, Workflow, CheckCircle2, ShieldAlert, AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare, PanelLeft, PanelLeftClose, PanelLeftOpen, Search, Maximize2, Minimize2 } from 'lucide-react';
 import { sendAgentMessage } from '../utils/aiAgentService';
 import { downloadOrGenerateAuditPdf } from '../utils/clientAuditPdfGenerator';
 import { authService } from '../utils/authService';
@@ -801,17 +802,223 @@ export default function AIAgent({ currentUser, setActiveTab }) {
     return (s.title || '').toLowerCase().includes(sessionSearch.toLowerCase().trim());
   });
 
-  return (
+  const renderSavedPromptsPopover = () => {
+    if (!savedPromptsOpen) return null;
+    return (
+      <div className="absolute bottom-full left-0 right-0 sm:right-auto sm:w-[440px] mb-2 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-2xl shadow-black/80 overflow-hidden z-40">
+        {/* Popover Header */}
+        <div className="px-4 py-3 border-b border-[#1b2b3d] bg-[#071322] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bookmark className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-xs font-semibold text-white tracking-wide">Saved Prompts</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#183153] text-slate-300 border border-[#233549]">
+              {savedPrompts.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {input.trim() && !showAddPromptForm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNewPromptTitle(input.trim().slice(0, 28));
+                  setNewPromptText(input.trim());
+                  setShowAddPromptForm(true);
+                }}
+                className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-[#183153] hover:bg-blue-600 text-blue-200 hover:text-white rounded-lg transition-colors cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Save input</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowAddPromptForm((v) => !v)}
+              className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-[#0c1829] hover:bg-[#183153] text-slate-300 hover:text-white border border-[#233549] rounded-lg transition-colors cursor-pointer"
+            >
+              <Plus className="w-3 h-3" />
+              <span>New</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSavedPromptsOpen(false)}
+              className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Inline Add Prompt Form */}
+        {showAddPromptForm && (
+          <form
+            onSubmit={handleSavePrompt}
+            className="p-3 bg-[#06111e] border-b border-[#1b2b3d] space-y-2"
+          >
+            <input
+              type="text"
+              value={newPromptTitle}
+              onChange={(e) => setNewPromptTitle(e.target.value)}
+              placeholder="Prompt title (e.g. Marina High-Net-Worth)"
+              className="w-full bg-[#0c1829] border border-[#233549] focus:border-blue-500/60 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none"
+            />
+            <textarea
+              rows={2}
+              value={newPromptText}
+              onChange={(e) => setNewPromptText(e.target.value)}
+              placeholder="Enter the exact prompt text..."
+              required
+              className="w-full bg-[#0c1829] border border-[#233549] focus:border-blue-500/60 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none resize-none"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAddPromptForm(false)}
+                className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-white cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!newPromptText.trim()}
+                className="px-3 py-1 text-[11px] font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-40"
+              >
+                Save Prompt
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Saved Prompts List */}
+        <div className="max-h-60 overflow-y-auto custom-scrollbar divide-y divide-[#1b2b3d]/50">
+          {savedPrompts.length === 0 ? (
+            <div className="p-5 text-center text-xs text-slate-400">
+              No saved prompts yet. Click <strong className="text-white">+ New</strong> to save one.
+            </div>
+          ) : (
+            savedPrompts.map((p) => (
+              <div
+                key={p.id}
+                onClick={() => {
+                  setInput(p.text);
+                  setSavedPromptsOpen(false);
+                  setTimeout(() => inputRef.current?.focus(), 30);
+                }}
+                className="px-4 py-2.5 hover:bg-[#071322] transition-colors cursor-pointer flex items-center justify-between gap-3 group"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-white truncate group-hover:text-blue-300 transition-colors">
+                    {p.title}
+                  </div>
+                  <div className="text-[11px] text-slate-400 truncate">
+                    {p.text}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSavedPromptsOpen(false);
+                      handleSend(p.text);
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-[#183153] rounded-lg transition-colors cursor-pointer"
+                    title="Run prompt immediately"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeletePrompt(p.id, e)}
+                    className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                    title="Delete saved prompt"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderInputCard = () => (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSend();
+      }}
+      className="bg-[#071322] border border-[#233549] focus-within:border-blue-500/60 rounded-2xl px-4 py-3 shadow-xl shadow-black/40 transition-colors w-full"
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Ask Maya AI anything..."
+        disabled={loading}
+        className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none py-1.5 disabled:opacity-50"
+      />
+
+      <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#1b2b3d]/50">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setSavedPromptsOpen(true);
+              setShowAddPromptForm(true);
+              if (input.trim()) {
+                setNewPromptTitle(input.trim().slice(0, 28));
+                setNewPromptText(input.trim());
+              }
+            }}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-[#0c1829] rounded-lg transition-colors cursor-pointer"
+            title="Add new saved prompt"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSavedPromptsOpen((v) => !v)}
+            className={`inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer px-2.5 py-1 rounded-lg ${
+              savedPromptsOpen
+                ? 'bg-[#183153] text-white'
+                : 'text-slate-300 hover:text-white hover:bg-[#0c1829]'
+            }`}
+          >
+            <Bookmark className="w-3.5 h-3.5 text-blue-400" />
+            <span>Saved prompts</span>
+          </button>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || !input.trim()}
+          className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-md shadow-blue-600/25"
+          title="Send message"
+        >
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </form>
+  );
+
+  const chatContent = (
     <div
-      className={`w-full h-full flex bg-[#0c1829] text-white font-sans select-text overflow-hidden transition-all ${
+      className={`flex text-white font-sans select-text overflow-hidden transition-all ${
         isFullscreen
-          ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none border-none'
-          : 'border border-[#233549] rounded-2xl shadow-xl shadow-black/40'
+          ? 'fixed inset-0 z-[999999] w-screen h-screen bg-[#070d18]'
+          : 'w-full h-full bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40'
       }`}
     >
-
-      {/* ─── Left Sidebar: Chat History (Gemini Style) ─────────────── */}
-      {sidebarOpen && (
+      {/* ─── Left Sidebar: Full Drawer or Slim Icon Rail (ChatGPT Style) ─── */}
+      {sidebarOpen ? (
         <aside className="w-64 sm:w-72 shrink-0 border-r border-[#1b2b3d] bg-[#050e1a]/95 flex flex-col h-full z-20">
           {/* Top Bar: Collapse */}
           <div className="p-3 border-b border-[#1b2b3d] flex items-center justify-between">
@@ -906,9 +1113,45 @@ export default function AIAgent({ currentUser, setActiveTab }) {
             </div>
           )}
         </aside>
+      ) : (
+        <aside className="w-[52px] shrink-0 border-r border-[#1b2b3d] bg-[#050e1a]/95 flex flex-col items-center py-3.5 justify-between h-full z-20">
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#10243e] transition-colors cursor-pointer"
+              title="Open chat history"
+            >
+              <PanelLeftOpen className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={handleNewChat}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#10243e] transition-colors cursor-pointer"
+              title="New chat"
+            >
+              <Plus className="w-5 h-5 text-blue-400" />
+            </button>
+
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#10243e] transition-colors cursor-pointer"
+              title="Recent chats"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Bottom Avatar Monogram */}
+          <div
+            className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 text-white text-xs font-semibold flex items-center justify-center shadow-md shadow-blue-500/20"
+            title={displayName}
+          >
+            {displayName.charAt(0)}
+          </div>
+        </aside>
       )}
 
-      {/* ─── Right Area: Main Viewport (Header, Stream/Hero, Input) ── */}
+      {/* ─── Right Area: Main Viewport (Header, Centered Hero or Stream/Bottom Dock) ─── */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
         {/* Top Header */}
         <div className="shrink-0 px-4 sm:px-5 py-3 border-b border-[#1b2b3d] bg-[#071322]/80 flex items-center justify-between">
@@ -919,7 +1162,7 @@ export default function AIAgent({ currentUser, setActiveTab }) {
                 title="Open chat history"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#183153] border border-[#233549] transition-colors cursor-pointer"
               >
-                <PanelLeft className="w-4 h-4" />
+                <PanelLeftOpen className="w-4 h-4" />
               </button>
             )}
             <span className="text-sm font-semibold text-white tracking-tight">Maya AI</span>
@@ -928,13 +1171,14 @@ export default function AIAgent({ currentUser, setActiveTab }) {
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-[#0c1829] hover:bg-[#183153] border border-[#233549] hover:border-blue-500/40 rounded-xl transition-colors cursor-pointer"
-            title={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-[#0c1829] hover:bg-[#183153] border border-[#233549] hover:border-blue-500/40 rounded-xl transition-colors cursor-pointer shadow-sm"
+            title={isFullscreen ? 'Exit full screen (Esc)' : 'Enter full screen'}
           >
             {isFullscreen ? (
               <>
                 <Minimize2 className="w-3.5 h-3.5 text-blue-400" />
                 <span>Exit full screen</span>
+                <span className="text-[10px] text-slate-500 font-mono ml-0.5">Esc</span>
               </>
             ) : (
               <>
@@ -945,292 +1189,121 @@ export default function AIAgent({ currentUser, setActiveTab }) {
           </button>
         </div>
 
-        {/* ─── Main Viewport: Welcome Hero OR Active Chat Stream ────────── */}
+        {/* ─── Main Viewport Body ─── */}
         {isWelcomeState ? (
-          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center px-4 sm:px-8 py-6">
-            <div className="w-full max-w-4xl flex flex-col items-center text-center">
-              <h1 className="text-3xl sm:text-5xl font-semibold text-white tracking-tight text-center mb-4">
-                Hi {displayName}, welcome back
-              </h1>
+          /* Centered ChatGPT-style layout */
+          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 w-full max-w-3xl mx-auto -mt-10">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-white tracking-tight text-center mb-6">
+              Hi {displayName}, welcome back
+            </h1>
+
+            {/* Centered Input Card */}
+            <div className="w-full relative" ref={savedPromptsRef}>
+              {renderSavedPromptsPopover()}
+              {renderInputCard()}
+
+              {/* Suggested prompt pills directly under input box */}
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                {SUGGESTED_PROMPTS.map((promptText, pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    onClick={() => handleSend(promptText)}
+                    disabled={loading}
+                    className="px-3.5 py-1.5 text-xs bg-[#071322] hover:bg-[#183153] border border-[#233549] hover:border-blue-500/40 text-slate-300 hover:text-white rounded-full transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {promptText}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 custom-scrollbar">
-          <div className="max-w-4xl mx-auto space-y-4">
-            {messages.map((msg, idx) => {
-              const isUser = msg.role === 'user';
-              return (
-                <div
-                  key={idx}
-                  className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-full`}
-                >
-                  {/* Message Header: Role label + timestamp */}
-                  <div className="flex items-center gap-2 mb-1 px-1 text-[11px] font-mono text-slate-400">
-                    <span className="font-semibold text-slate-300">
-                      {isUser ? 'You' : 'Maya AI'}
-                    </span>
-                    <span>·</span>
-                    <span>{msg.timestamp}</span>
-                  </div>
+          /* Active Chat Stream + Anchored Bottom Dock */
+          <>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 custom-scrollbar">
+              <div className="max-w-3xl mx-auto space-y-4">
+                {messages.map((msg, idx) => {
+                  const isUser = msg.role === 'user';
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-full`}
+                    >
+                      {/* Message Header: Role label + timestamp */}
+                      <div className="flex items-center gap-2 mb-1 px-1 text-[11px] font-mono text-slate-400">
+                        <span className="font-semibold text-slate-300">
+                          {isUser ? 'You' : 'Maya AI'}
+                        </span>
+                        <span>·</span>
+                        <span>{msg.timestamp}</span>
+                      </div>
 
-                  {/* Message Box */}
-                  <div
-                    className={`rounded-2xl p-4 text-[13.5px] leading-relaxed max-w-[92%] sm:max-w-[82%] shadow-sm ${
-                      isUser
-                        ? 'bg-[#183153] text-white border border-white/10 rounded-tr-sm'
-                        : 'bg-[#071322] text-slate-200 border border-[#233549] rounded-tl-sm'
-                    }`}
-                  >
-                    <div className="select-text font-normal">
-                      {isUser ? (
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
-                      ) : (
-                        <FormattedMessage content={msg.content} />
-                      )}
+                      {/* Message Box */}
+                      <div
+                        className={`rounded-2xl p-4 text-[13.5px] leading-relaxed max-w-[92%] sm:max-w-[85%] shadow-sm ${
+                          isUser
+                            ? 'bg-[#183153] text-white border border-white/10 rounded-tr-sm'
+                            : 'bg-[#071322] text-slate-200 border border-[#233549] rounded-tl-sm'
+                        }`}
+                      >
+                        <div className="select-text font-normal">
+                          {isUser ? (
+                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                          ) : (
+                            <FormattedMessage content={msg.content} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Loading indicator */}
+                {loading && (
+                  <div className="flex items-start max-w-full">
+                    <div className="bg-[#071322] border border-[#233549] rounded-2xl rounded-tl-sm p-3.5 flex items-center gap-2.5 text-xs text-slate-400">
+                      <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                      <span className="font-mono">Thinking...</span>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-
-            {/* Loading indicator */}
-            {loading && (
-              <div className="flex items-start max-w-full">
-                <div className="bg-[#071322] border border-[#233549] rounded-2xl rounded-tl-sm p-3.5 flex items-center gap-2.5 text-xs text-slate-400">
-                  <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
-                  <span className="font-mono">Thinking...</span>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-      )}
-
-      {/* ─── Bottom Dock: Quick Prompt Pills + Unified Input Box ──────── */}
-      <div className="shrink-0 w-full max-w-4xl mx-auto px-4 sm:px-6 pb-5 pt-2 relative" ref={savedPromptsRef}>
-        {/* Saved Prompts Popover Drawer */}
-        {savedPromptsOpen && (
-          <div className="absolute bottom-full left-4 right-4 sm:left-6 sm:right-auto sm:w-[440px] mb-2 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-2xl shadow-black/70 overflow-hidden z-40">
-            {/* Popover Header */}
-            <div className="px-4 py-3 border-b border-[#1b2b3d] bg-[#071322] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bookmark className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-xs font-semibold text-white tracking-wide">Saved Prompts</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#183153] text-slate-300 border border-[#233549]">
-                  {savedPrompts.length}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                {input.trim() && !showAddPromptForm && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewPromptTitle(input.trim().slice(0, 28));
-                      setNewPromptText(input.trim());
-                      setShowAddPromptForm(true);
-                    }}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-[#183153] hover:bg-blue-600 text-blue-200 hover:text-white rounded-lg transition-colors cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Save input</span>
-                  </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setShowAddPromptForm((v) => !v)}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-[#0c1829] hover:bg-[#183153] text-slate-300 hover:text-white border border-[#233549] rounded-lg transition-colors cursor-pointer"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>New</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSavedPromptsOpen(false)}
-                  className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-                  title="Close"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+
+                <div ref={messagesEndRef} />
               </div>
             </div>
 
-            {/* Inline Add Prompt Form */}
-            {showAddPromptForm && (
-              <form
-                onSubmit={handleSavePrompt}
-                className="p-3 bg-[#06111e] border-b border-[#1b2b3d] space-y-2"
-              >
-                <input
-                  type="text"
-                  value={newPromptTitle}
-                  onChange={(e) => setNewPromptTitle(e.target.value)}
-                  placeholder="Prompt title (e.g. Marina High-Net-Worth)"
-                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-blue-500/60 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none"
-                />
-                <textarea
-                  rows={2}
-                  value={newPromptText}
-                  onChange={(e) => setNewPromptText(e.target.value)}
-                  placeholder="Enter the exact prompt text..."
-                  required
-                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-blue-500/60 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none resize-none"
-                />
-                <div className="flex items-center justify-end gap-2">
+            {/* Bottom Dock: Quick Prompt Pills + Unified Input Box */}
+            <div className="shrink-0 w-full max-w-3xl mx-auto px-4 sm:px-6 pb-5 pt-2 relative" ref={savedPromptsRef}>
+              {renderSavedPromptsPopover()}
+
+              {/* Quick Prompt Pills Row */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-3 custom-scrollbar">
+                {SUGGESTED_PROMPTS.map((promptText, pIdx) => (
                   <button
+                    key={pIdx}
                     type="button"
-                    onClick={() => setShowAddPromptForm(false)}
-                    className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-white cursor-pointer"
+                    onClick={() => handleSend(promptText)}
+                    disabled={loading}
+                    className="shrink-0 px-3.5 py-1.5 text-xs bg-[#071322] hover:bg-[#183153] border border-[#233549] hover:border-blue-500/40 text-slate-300 hover:text-white rounded-full transition-colors cursor-pointer disabled:opacity-40 whitespace-nowrap"
                   >
-                    Cancel
+                    {promptText}
                   </button>
-                  <button
-                    type="submit"
-                    disabled={!newPromptText.trim()}
-                    className="px-3 py-1 text-[11px] font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-40"
-                  >
-                    Save Prompt
-                  </button>
-                </div>
-              </form>
-            )}
+                ))}
+              </div>
 
-            {/* Saved Prompts List */}
-            <div className="max-h-60 overflow-y-auto custom-scrollbar divide-y divide-[#1b2b3d]/50">
-              {savedPrompts.length === 0 ? (
-                <div className="p-5 text-center text-xs text-slate-400">
-                  No saved prompts yet. Click <strong className="text-white">+ New</strong> to save one.
-                </div>
-              ) : (
-                savedPrompts.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => {
-                      setInput(p.text);
-                      setSavedPromptsOpen(false);
-                      setTimeout(() => inputRef.current?.focus(), 30);
-                    }}
-                    className="px-4 py-2.5 hover:bg-[#071322] transition-colors cursor-pointer flex items-center justify-between gap-3 group"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium text-white truncate group-hover:text-blue-300 transition-colors">
-                        {p.title}
-                      </div>
-                      <div className="text-[11px] text-slate-400 truncate">
-                        {p.text}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSavedPromptsOpen(false);
-                          handleSend(p.text);
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-[#183153] rounded-lg transition-colors cursor-pointer"
-                        title="Run prompt immediately"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeletePrompt(p.id, e)}
-                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                        title="Delete saved prompt"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+              {renderInputCard()}
             </div>
-          </div>
+          </>
         )}
 
-        {/* Quick Prompt Pills Row */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 custom-scrollbar">
-          {SUGGESTED_PROMPTS.map((promptText, pIdx) => (
-            <button
-              key={pIdx}
-              type="button"
-              onClick={() => handleSend(promptText)}
-              disabled={loading}
-              className="shrink-0 px-3.5 py-1.5 text-xs bg-[#071322] hover:bg-[#183153] border border-[#233549] hover:border-blue-500/40 text-slate-300 hover:text-white rounded-full transition-colors cursor-pointer disabled:opacity-40 whitespace-nowrap"
-            >
-              {promptText}
-            </button>
-          ))}
-        </div>
-
-        {/* Rounded Prompt Input Card */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          className="bg-[#071322] border border-[#233549] focus-within:border-blue-500/60 rounded-2xl px-4 py-3 shadow-lg shadow-black/30 transition-colors"
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask Maya AI anything..."
-            disabled={loading}
-            className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none py-1.5 disabled:opacity-50"
-          />
-
-          <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#1b2b3d]/50">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSavedPromptsOpen(true);
-                  setShowAddPromptForm(true);
-                  if (input.trim()) {
-                    setNewPromptTitle(input.trim().slice(0, 28));
-                    setNewPromptText(input.trim());
-                  }
-                }}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-[#0c1829] rounded-lg transition-colors cursor-pointer"
-                title="Add new saved prompt"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSavedPromptsOpen((v) => !v)}
-                className={`inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer px-2.5 py-1 rounded-lg ${
-                  savedPromptsOpen
-                    ? 'bg-[#183153] text-white'
-                    : 'text-slate-300 hover:text-white hover:bg-[#0c1829]'
-                }`}
-              >
-                <Bookmark className="w-3.5 h-3.5 text-blue-400" />
-                <span>Saved prompts</span>
-              </button>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-md shadow-blue-600/25"
-              title="Send message"
-            >
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </form>
       </div>
-
     </div>
-  </div>
-);
+  );
+
+  if (isFullscreen) {
+    return createPortal(chatContent, document.body);
+  }
+
+  return chatContent;
 }
