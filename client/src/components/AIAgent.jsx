@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CornerDownLeft, Trash2, ArrowUpRight, ArrowUp, ArrowRight, Plus, X, Bookmark, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2, Workflow, CheckCircle2, ShieldAlert, AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare, PanelLeft, PanelLeftClose, Search } from 'lucide-react';
+import { Send, CornerDownLeft, Trash2, ArrowUpRight, ArrowUp, ArrowRight, Plus, X, Bookmark, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2, Workflow, CheckCircle2, ShieldAlert, AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare, PanelLeft, PanelLeftClose, Search, Maximize2, Minimize2 } from 'lucide-react';
 import { sendAgentMessage } from '../utils/aiAgentService';
 import { downloadOrGenerateAuditPdf } from '../utils/clientAuditPdfGenerator';
 import { authService } from '../utils/authService';
@@ -99,33 +99,6 @@ const DEFAULT_SAVED_PROMPTS = [
   { id: 'sp-2', title: 'Marina Owners Export', text: 'Export 5 Marina owners to CSV' },
   { id: 'sp-3', title: 'Business Bay 2BR Avg', text: 'Average 2-bed price in Business Bay' },
   { id: 'sp-4', title: 'n8n Health Check', text: 'Check n8n workflow health and errors' }
-];
-
-const CAPABILITY_CARDS = [
-  {
-    title: 'Owner Intelligence',
-    description: 'Search 414k+ verified owners, unit portfolios, and direct contacts.',
-    borderHover: 'hover:border-blue-500/45',
-    sampleQuery: 'Find 5 owners with verified phones in Dubai Marina'
-  },
-  {
-    title: 'Market & Building 360',
-    description: 'Inspect tower dossiers, average prices, and DLD community stats.',
-    borderHover: 'hover:border-[#b7a990]/45',
-    sampleQuery: 'Show me buildings and coverage in Business Bay'
-  },
-  {
-    title: 'Call Intelligence',
-    description: 'Access Vapi call recordings, transcripts, and daily call audit PDFs.',
-    borderHover: 'hover:border-sky-400/45',
-    sampleQuery: 'Download today\'s call audit PDF'
-  },
-  {
-    title: 'Workflows & CRM',
-    description: 'Monitor n8n workflow health, listings, and Bitrix24 CRM syncs.',
-    borderHover: 'hover:border-emerald-500/45',
-    sampleQuery: 'Check n8n workflow health and errors'
-  }
 ];
 
 function AudioPlayerCard({ label, url }) {
@@ -594,6 +567,21 @@ export default function AIAgent({ currentUser, setActiveTab }) {
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessionSearch, setSessionSearch] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    setIsFullscreen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -814,19 +802,20 @@ export default function AIAgent({ currentUser, setActiveTab }) {
   });
 
   return (
-    <div className="w-full h-full flex bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 text-white font-sans select-text overflow-hidden">
+    <div
+      className={`w-full h-full flex bg-[#0c1829] text-white font-sans select-text overflow-hidden transition-all ${
+        isFullscreen
+          ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none border-none'
+          : 'border border-[#233549] rounded-2xl shadow-xl shadow-black/40'
+      }`}
+    >
 
       {/* ─── Left Sidebar: Chat History (Gemini Style) ─────────────── */}
       {sidebarOpen && (
         <aside className="w-64 sm:w-72 shrink-0 border-r border-[#1b2b3d] bg-[#050e1a]/95 flex flex-col h-full z-20">
-          {/* Top Bar: Brand + Collapse */}
-          <div className="p-3.5 border-b border-[#1b2b3d] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-xs">
-                M
-              </div>
-              <span className="font-semibold text-sm text-white tracking-tight">Maya AI</span>
-            </div>
+          {/* Top Bar: Collapse */}
+          <div className="p-3 border-b border-[#1b2b3d] flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">Chats</span>
             <button
               onClick={() => setSidebarOpen(false)}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#10243e] transition-colors cursor-pointer"
@@ -934,51 +923,35 @@ export default function AIAgent({ currentUser, setActiveTab }) {
               </button>
             )}
             <span className="text-sm font-semibold text-white tracking-tight">Maya AI</span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              Operational
-            </span>
           </div>
 
           <button
-            onClick={handleNewChat}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-[#0c1829] hover:bg-[#183153] border border-[#233549] rounded-xl transition-colors cursor-pointer"
-            title="Start fresh conversation"
+            type="button"
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-[#0c1829] hover:bg-[#183153] border border-[#233549] hover:border-blue-500/40 rounded-xl transition-colors cursor-pointer"
+            title={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
           >
-            <Plus className="w-3.5 h-3.5 text-blue-400" />
-            <span>New chat</span>
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-blue-400" />
+                <span>Exit full screen</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
+                <span>Enter full screen</span>
+              </>
+            )}
           </button>
         </div>
 
         {/* ─── Main Viewport: Welcome Hero OR Active Chat Stream ────────── */}
         {isWelcomeState ? (
           <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center px-4 sm:px-8 py-6">
-            <div className="w-full max-w-4xl flex flex-col items-center">
-              <h1 className="text-2xl sm:text-4xl font-semibold text-white tracking-tight text-center mb-8">
+            <div className="w-full max-w-4xl flex flex-col items-center text-center">
+              <h1 className="text-3xl sm:text-5xl font-semibold text-white tracking-tight text-center mb-4">
                 Hi {displayName}, welcome back
               </h1>
-
-              {/* 4 Capability Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full">
-                {CAPABILITY_CARDS.map((card, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setInput(card.sampleQuery);
-                      inputRef.current?.focus();
-                    }}
-                    className={`rounded-2xl bg-[#071322] border border-[#233549] ${card.borderHover} p-5 text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer group flex flex-col justify-start shadow-md shadow-black/25 min-h-[110px]`}
-                  >
-                    <h3 className="text-[14px] font-semibold text-white mb-2 tracking-tight group-hover:text-blue-300 transition-colors">
-                      {card.title}
-                    </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      {card.description}
-                    </p>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         ) : (
