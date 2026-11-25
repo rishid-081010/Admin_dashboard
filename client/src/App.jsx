@@ -404,7 +404,7 @@ export default function App() {
 
               {activeTab === 'voice' && isAllowed('voice') && <VoiceAgent />}
 
-              {activeTab === 'agent' && isAllowed('agent') && <AIAgent setActiveTab={setActiveTab} />}
+              {activeTab === 'agent' && isAllowed('agent') && <AIAgent currentUser={currentUser} setActiveTab={setActiveTab} />}
 
               {activeTab === 'leads' && isAllowed('leads') && (
                 <LeadIngestionStudio initialOpenLibrary={initialRoute?.autoOpenLibrary} />

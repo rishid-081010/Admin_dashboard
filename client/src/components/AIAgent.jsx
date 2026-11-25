@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CornerDownLeft, Trash2, ArrowUpRight, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2, Workflow, CheckCircle2, ShieldAlert, AlertCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, CornerDownLeft, Trash2, ArrowUpRight, ArrowUp, ArrowRight, Plus, X, Bookmark, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2, Workflow, CheckCircle2, ShieldAlert, AlertCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { sendAgentMessage } from '../utils/aiAgentService';
 import { downloadOrGenerateAuditPdf } from '../utils/clientAuditPdfGenerator';
+import { authService } from '../utils/authService';
 
 function ExecutionPipelineCard({ pipelineEvents, isLive = false }) {
   const [expanded, setExpanded] = useState(false);
@@ -91,6 +92,40 @@ const SUGGESTED_PROMPTS = [
   'Export 5 Marina owners to CSV',
   'Average 2-bed price in Business Bay',
   'Check n8n workflow health and errors'
+];
+
+const DEFAULT_SAVED_PROMPTS = [
+  { id: 'sp-1', title: 'Daily Call Audit', text: 'Download today\'s call audit PDF' },
+  { id: 'sp-2', title: 'Marina Owners Export', text: 'Export 5 Marina owners to CSV' },
+  { id: 'sp-3', title: 'Business Bay 2BR Avg', text: 'Average 2-bed price in Business Bay' },
+  { id: 'sp-4', title: 'n8n Health Check', text: 'Check n8n workflow health and errors' }
+];
+
+const CAPABILITY_CARDS = [
+  {
+    title: 'Owner Intelligence',
+    description: 'Search 414k+ verified owners, unit portfolios, and direct contacts.',
+    borderHover: 'hover:border-blue-500/45',
+    sampleQuery: 'Find 5 owners with verified phones in Dubai Marina'
+  },
+  {
+    title: 'Market & Building 360',
+    description: 'Inspect tower dossiers, average prices, and DLD community stats.',
+    borderHover: 'hover:border-[#b7a990]/45',
+    sampleQuery: 'Show me buildings and coverage in Business Bay'
+  },
+  {
+    title: 'Call Intelligence',
+    description: 'Access Vapi call recordings, transcripts, and daily call audit PDFs.',
+    borderHover: 'hover:border-sky-400/45',
+    sampleQuery: 'Download today\'s call audit PDF'
+  },
+  {
+    title: 'Workflows & CRM',
+    description: 'Monitor n8n workflow health, listings, and Bitrix24 CRM syncs.',
+    borderHover: 'hover:border-emerald-500/45',
+    sampleQuery: 'Check n8n workflow health and errors'
+  }
 ];
 
 function AudioPlayerCard({ label, url }) {
@@ -538,18 +573,68 @@ function FormattedMessage({ content }) {
   return <div className="space-y-1">{elements}</div>;
 }
 
-export default function AIAgent({ setActiveTab }) {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: 'AI Agent ready. Ask any query across Owners Data, Call Transcripts, Market Averages, Bitrix CRM, or Workflows.',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+export default function AIAgent({ currentUser, setActiveTab }) {
+  const activeUser = currentUser || authService.getCurrentUser();
+  const agentName = activeUser?.name || 'Melanie Simsiman';
+
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [savedPromptsOpen, setSavedPromptsOpen] = useState(false);
+  const [savedPrompts, setSavedPrompts] = useState(() => {
+    try {
+      const raw = localStorage.getItem('maya_ai_saved_prompts');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_SAVED_PROMPTS;
+  });
+  const [showAddPromptForm, setShowAddPromptForm] = useState(false);
+  const [newPromptTitle, setNewPromptTitle] = useState('');
+  const [newPromptText, setNewPromptText] = useState('');
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const savedPromptsRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('maya_ai_saved_prompts', JSON.stringify(savedPrompts));
+    } catch {}
+  }, [savedPrompts]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (savedPromptsRef.current && !savedPromptsRef.current.contains(e.target)) {
+        setSavedPromptsOpen(false);
+      }
+    };
+    if (savedPromptsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [savedPromptsOpen]);
+
+  const handleSavePrompt = (e) => {
+    e.preventDefault();
+    const title = newPromptTitle.trim() || newPromptText.trim().slice(0, 28);
+    const text = newPromptText.trim();
+    if (!text) return;
+    setSavedPrompts((prev) => [
+      { id: 'sp-' + Date.now(), title, text },
+      ...prev
+    ]);
+    setNewPromptTitle('');
+    setNewPromptText('');
+    setShowAddPromptForm(false);
+  };
+
+  const handleDeletePrompt = (id, e) => {
+    e.stopPropagation();
+    setSavedPrompts((prev) => prev.filter((p) => p.id !== id));
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -575,12 +660,10 @@ export default function AIAgent({ setActiveTab }) {
 
     try {
       const res = await sendAgentMessage(query, messages);
-      
+
       const assistantMsg = {
         role: 'assistant',
         content: res.content,
-        pipelineEvents: res.pipelineEvents || [],
-        toolCalls: res.toolCalls,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
@@ -619,167 +702,343 @@ export default function AIAgent({ setActiveTab }) {
   };
 
   const handleClear = () => {
-    setMessages([
-      {
-        role: 'assistant',
-        content: 'Conversation cleared. Ready for next query.',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]);
+    setMessages([]);
+    setInput('');
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
+  const isWelcomeState = messages.length === 0 && !loading;
+
   return (
-    <div className="w-full h-full flex flex-col text-white font-sans select-text overflow-hidden gap-3 pr-1">
-      
-      {/* ─── Top Header: Minimalist & Clean ───────────────────────────── */}
-      <div className="shrink-0 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl sm:text-3xl text-white font-bold tracking-tight">
-            AI Agent
-          </h1>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Operational
-          </span>
-        </div>
+    <div className="w-full h-full flex flex-col bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 text-white font-sans select-text overflow-hidden">
 
-        <button
-          onClick={handleClear}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-[#0c1829] hover:bg-[#152538] border border-[#233549] rounded-xl transition-colors cursor-pointer"
-          title="Clear conversation"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          <span>Clear</span>
-        </button>
-      </div>
-
-      {/* ─── Main Chat Card ───────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 flex flex-col overflow-hidden">
-        
-        {/* Messages Stream */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 custom-scrollbar space-y-4">
-          {messages.map((msg, idx) => {
-            const isUser = msg.role === 'user';
-            return (
-              <div
-                key={idx}
-                className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-full`}
-              >
-                {/* Message Header: Role label + timestamp */}
-                <div className="flex items-center gap-2 mb-1 px-1 text-[11px] font-mono text-slate-400">
-                  <span className="font-semibold text-slate-300">
-                    {isUser ? 'You' : 'Antigravity OS'}
-                  </span>
-                  <span>·</span>
-                  <span>{msg.timestamp}</span>
-                </div>
-
-                {/* Message Box */}
-                <div
-                  className={`rounded-2xl p-4 text-[13.5px] leading-relaxed max-w-[92%] sm:max-w-[82%] shadow-sm ${
-                    isUser
-                      ? 'bg-[#183153] text-white border border-white/10 rounded-tr-sm'
-                      : 'bg-[#071322] text-slate-200 border border-[#233549] rounded-tl-sm'
-                  }`}
-                >
-                  {/* Multi-Step Execution Pipeline Stepper */}
-                  {!isUser && msg.pipelineEvents && msg.pipelineEvents.length > 0 && (
-                    <ExecutionPipelineCard pipelineEvents={msg.pipelineEvents} />
-                  )}
-
-                  {/* Tool Badges if executed */}
-                  {msg.toolCalls && msg.toolCalls.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-3 pb-2.5 border-b border-[#1b2b3d]">
-                      {msg.toolCalls.map((t, tIdx) => (
-                        <span
-                          key={tIdx}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#06111e] text-blue-300 border border-blue-500/25"
-                        >
-                          <span>Executed:</span>
-                          <span className="font-bold">{t.tool}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Message Content rendered with clean typography */}
-                  <div className="select-text font-normal">
-                    {isUser ? (
-                      <div className="whitespace-pre-wrap">{msg.content}</div>
-                    ) : (
-                      <FormattedMessage content={msg.content} />
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Loading indicator */}
-          {loading && (
-            <div className="flex items-start max-w-full">
-              <div className="bg-[#071322] border border-[#233549] rounded-2xl rounded-tl-sm p-3.5 flex items-center gap-2.5 text-xs text-slate-400">
-                <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
-                <span className="font-mono">Processing query across databases...</span>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* ─── Bottom Toolbar: Suggestion Chips + Input Bar ─────────────── */}
-        <div className="shrink-0 p-3 sm:p-4 border-t border-[#233549] bg-[#071322]">
-          
-          {/* Quick-Action Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2.5 custom-scrollbar">
-            <span className="text-[11px] font-mono text-slate-400 shrink-0 uppercase tracking-wider">
-              Quick queries:
+      {/* ─── Subtle Top Header (when active conversation) ──────────────── */}
+      {!isWelcomeState && (
+        <div className="shrink-0 px-5 py-3 border-b border-[#1b2b3d] bg-[#071322]/70 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm font-semibold text-white tracking-tight">Maya AI</span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Operational
             </span>
-            {SUGGESTED_PROMPTS.map((promptText, pIdx) => (
-              <button
-                key={pIdx}
-                onClick={() => handleSend(promptText)}
-                disabled={loading}
-                className="shrink-0 px-2.5 py-1 text-xs bg-[#0c1829] hover:bg-[#132238] border border-[#233549] hover:border-blue-500/40 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer disabled:opacity-40"
-              >
-                {promptText}
-              </button>
-            ))}
           </div>
 
-          {/* Input Bar */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="flex items-center gap-2 pt-1"
+          <button
+            onClick={handleClear}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-[#0c1829] hover:bg-[#183153] border border-[#233549] rounded-xl transition-colors cursor-pointer"
+            title="New conversation"
           >
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask anything (e.g. Lead transcript 89042, Business Bay avg price, uncontacted owners)..."
-                disabled={loading}
-                className="w-full bg-[#06111e] border border-[#1b2b3d] rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/70 transition-all shadow-none disabled:opacity-50"
-              />
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear</span>
+          </button>
+        </div>
+      )}
+
+      {/* ─── Main Viewport: Welcome Hero OR Active Chat Stream ────────── */}
+      {isWelcomeState ? (
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center px-4 sm:px-8 py-6">
+          <div className="w-full max-w-4xl flex flex-col items-center">
+            <h1 className="text-2xl sm:text-4xl font-semibold text-white tracking-tight text-center mb-8">
+              Welcome back {agentName}
+            </h1>
+
+            {/* 4 Capability Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full">
+              {CAPABILITY_CARDS.map((card, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setInput(card.sampleQuery);
+                    inputRef.current?.focus();
+                  }}
+                  className={`rounded-2xl bg-[#071322] border border-[#233549] ${card.borderHover} p-5 text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer group flex flex-col justify-start shadow-md shadow-black/25 min-h-[110px]`}
+                >
+                  <h3 className="text-[14px] font-semibold text-white mb-2 tracking-tight group-hover:text-blue-300 transition-colors">
+                    {card.title}
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {card.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 custom-scrollbar">
+          <div className="max-w-4xl mx-auto space-y-4">
+            {messages.map((msg, idx) => {
+              const isUser = msg.role === 'user';
+              return (
+                <div
+                  key={idx}
+                  className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-full`}
+                >
+                  {/* Message Header: Role label + timestamp */}
+                  <div className="flex items-center gap-2 mb-1 px-1 text-[11px] font-mono text-slate-400">
+                    <span className="font-semibold text-slate-300">
+                      {isUser ? 'You' : 'Maya AI'}
+                    </span>
+                    <span>·</span>
+                    <span>{msg.timestamp}</span>
+                  </div>
+
+                  {/* Message Box */}
+                  <div
+                    className={`rounded-2xl p-4 text-[13.5px] leading-relaxed max-w-[92%] sm:max-w-[82%] shadow-sm ${
+                      isUser
+                        ? 'bg-[#183153] text-white border border-white/10 rounded-tr-sm'
+                        : 'bg-[#071322] text-slate-200 border border-[#233549] rounded-tl-sm'
+                    }`}
+                  >
+                    <div className="select-text font-normal">
+                      {isUser ? (
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      ) : (
+                        <FormattedMessage content={msg.content} />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Loading indicator */}
+            {loading && (
+              <div className="flex items-start max-w-full">
+                <div className="bg-[#071322] border border-[#233549] rounded-2xl rounded-tl-sm p-3.5 flex items-center gap-2.5 text-xs text-slate-400">
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                  <span className="font-mono">Thinking...</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+      )}
+
+      {/* ─── Bottom Dock: Quick Prompt Pills + Unified Input Box ──────── */}
+      <div className="shrink-0 w-full max-w-4xl mx-auto px-4 sm:px-6 pb-5 pt-2 relative" ref={savedPromptsRef}>
+        {/* Saved Prompts Popover Drawer */}
+        {savedPromptsOpen && (
+          <div className="absolute bottom-full left-4 right-4 sm:left-6 sm:right-auto sm:w-[440px] mb-2 bg-[#0c1829] border border-[#233549] rounded-2xl shadow-2xl shadow-black/70 overflow-hidden z-40">
+            {/* Popover Header */}
+            <div className="px-4 py-3 border-b border-[#1b2b3d] bg-[#071322] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bookmark className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-xs font-semibold text-white tracking-wide">Saved Prompts</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#183153] text-slate-300 border border-[#233549]">
+                  {savedPrompts.length}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {input.trim() && !showAddPromptForm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPromptTitle(input.trim().slice(0, 28));
+                      setNewPromptText(input.trim());
+                      setShowAddPromptForm(true);
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-[#183153] hover:bg-blue-600 text-blue-200 hover:text-white rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Save input</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowAddPromptForm((v) => !v)}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-[#0c1829] hover:bg-[#183153] text-slate-300 hover:text-white border border-[#233549] rounded-lg transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>New</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSavedPromptsOpen(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                  title="Close"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Inline Add Prompt Form */}
+            {showAddPromptForm && (
+              <form
+                onSubmit={handleSavePrompt}
+                className="p-3 bg-[#06111e] border-b border-[#1b2b3d] space-y-2"
+              >
+                <input
+                  type="text"
+                  value={newPromptTitle}
+                  onChange={(e) => setNewPromptTitle(e.target.value)}
+                  placeholder="Prompt title (e.g. Marina High-Net-Worth)"
+                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-blue-500/60 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none"
+                />
+                <textarea
+                  rows={2}
+                  value={newPromptText}
+                  onChange={(e) => setNewPromptText(e.target.value)}
+                  placeholder="Enter the exact prompt text..."
+                  required
+                  className="w-full bg-[#0c1829] border border-[#233549] focus:border-blue-500/60 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none resize-none"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPromptForm(false)}
+                    className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!newPromptText.trim()}
+                    className="px-3 py-1 text-[11px] font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    Save Prompt
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Saved Prompts List */}
+            <div className="max-h-60 overflow-y-auto custom-scrollbar divide-y divide-[#1b2b3d]/50">
+              {savedPrompts.length === 0 ? (
+                <div className="p-5 text-center text-xs text-slate-400">
+                  No saved prompts yet. Click <strong className="text-white">+ New</strong> to save one.
+                </div>
+              ) : (
+                savedPrompts.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setInput(p.text);
+                      setSavedPromptsOpen(false);
+                      setTimeout(() => inputRef.current?.focus(), 30);
+                    }}
+                    className="px-4 py-2.5 hover:bg-[#071322] transition-colors cursor-pointer flex items-center justify-between gap-3 group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-white truncate group-hover:text-blue-300 transition-colors">
+                        {p.title}
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate">
+                        {p.text}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSavedPromptsOpen(false);
+                          handleSend(p.text);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-[#183153] rounded-lg transition-colors cursor-pointer"
+                        title="Run prompt immediately"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeletePrompt(p.id, e)}
+                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                        title="Delete saved prompt"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Prompt Pills Row */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 custom-scrollbar">
+          {SUGGESTED_PROMPTS.map((promptText, pIdx) => (
+            <button
+              key={pIdx}
+              type="button"
+              onClick={() => handleSend(promptText)}
+              disabled={loading}
+              className="shrink-0 px-3.5 py-1.5 text-xs bg-[#071322] hover:bg-[#183153] border border-[#233549] hover:border-blue-500/40 text-slate-300 hover:text-white rounded-full transition-colors cursor-pointer disabled:opacity-40 whitespace-nowrap"
+            >
+              {promptText}
+            </button>
+          ))}
+        </div>
+
+        {/* Rounded Prompt Input Card */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSend();
+          }}
+          className="bg-[#071322] border border-[#233549] focus-within:border-blue-500/60 rounded-2xl px-4 py-3 shadow-lg shadow-black/30 transition-colors"
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask Maya AI anything..."
+            disabled={loading}
+            className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none py-1.5 disabled:opacity-50"
+          />
+
+          <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#1b2b3d]/50">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSavedPromptsOpen(true);
+                  setShowAddPromptForm(true);
+                  if (input.trim()) {
+                    setNewPromptTitle(input.trim().slice(0, 28));
+                    setNewPromptText(input.trim());
+                  }
+                }}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-[#0c1829] rounded-lg transition-colors cursor-pointer"
+                title="Add new saved prompt"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSavedPromptsOpen((v) => !v)}
+                className={`inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer px-2.5 py-1 rounded-lg ${
+                  savedPromptsOpen
+                    ? 'bg-[#183153] text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-[#0c1829]'
+                }`}
+              >
+                <Bookmark className="w-3.5 h-3.5 text-blue-400" />
+                <span>Saved prompts</span>
+              </button>
             </div>
 
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-blue-500/25 shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed shadow-md shadow-blue-600/25"
+              title="Send message"
             >
-              <span>Send</span>
-              <Send className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
-          </form>
-        </div>
-
+          </div>
+        </form>
       </div>
 
     </div>
