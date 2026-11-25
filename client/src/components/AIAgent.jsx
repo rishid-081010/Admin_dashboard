@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, CornerDownLeft, Trash2, ArrowUpRight, ArrowUp, ArrowRight, Plus, X, Bookmark, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2, Workflow, CheckCircle2, ShieldAlert, AlertCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, CornerDownLeft, Trash2, ArrowUpRight, ArrowUp, ArrowRight, Plus, X, Bookmark, Play, ExternalLink, RefreshCw, Download, FileText, Volume2, Table, Loader2, Workflow, CheckCircle2, ShieldAlert, AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare, PanelLeft, PanelLeftClose, Search } from 'lucide-react';
 import { sendAgentMessage } from '../utils/aiAgentService';
 import { downloadOrGenerateAuditPdf } from '../utils/clientAuditPdfGenerator';
 import { authService } from '../utils/authService';
@@ -573,9 +573,27 @@ function FormattedMessage({ content }) {
   return <div className="space-y-1">{elements}</div>;
 }
 
+const SESSIONS_STORAGE_KEY = 'maya_ai_chat_sessions_v1';
+
 export default function AIAgent({ currentUser, setActiveTab }) {
   const activeUser = currentUser || authService.getCurrentUser();
-  const agentName = activeUser?.name || 'Melanie Simsiman';
+  const rawName = activeUser?.name || 'Melanie';
+  const firstName = rawName.trim().split(' ')[0] || 'Melanie';
+  const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+
+  const [sessions, setSessions] = useState(() => {
+    try {
+      const raw = localStorage.getItem(SESSIONS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sessionSearch, setSessionSearch] = useState('');
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -604,6 +622,12 @@ export default function AIAgent({ currentUser, setActiveTab }) {
       localStorage.setItem('maya_ai_saved_prompts', JSON.stringify(savedPrompts));
     } catch {}
   }, [savedPrompts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+    } catch {}
+  }, [sessions]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -644,6 +668,39 @@ export default function AIAgent({ currentUser, setActiveTab }) {
     scrollToBottom();
   }, [messages, loading]);
 
+  const handleNewChat = () => {
+    setActiveSessionId(null);
+    setMessages([]);
+    setInput('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleSelectSession = (sessionId) => {
+    const sess = sessions.find((s) => s.id === sessionId);
+    if (!sess) return;
+    setActiveSessionId(sessionId);
+    setMessages(sess.messages || []);
+    setInput('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleDeleteSession = (sessionId, e) => {
+    e.stopPropagation();
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(null);
+      setMessages([]);
+    }
+  };
+
+  const handleClearAllSessions = () => {
+    if (window.confirm('Delete all previous chat history?')) {
+      setSessions([]);
+      setActiveSessionId(null);
+      setMessages([]);
+    }
+  };
+
   const handleSend = async (textToSend) => {
     const query = (textToSend || input).trim();
     if (!query || loading) return;
@@ -653,6 +710,33 @@ export default function AIAgent({ currentUser, setActiveTab }) {
       content: query,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+
+    let currentSessionId = activeSessionId;
+    if (!currentSessionId) {
+      currentSessionId = 'sess_' + Date.now();
+      const newTitle = query.length > 36 ? query.slice(0, 36).trim() + '...' : query;
+      const newSession = {
+        id: currentSessionId,
+        title: newTitle,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        messages: [userMsg]
+      };
+      setActiveSessionId(currentSessionId);
+      setSessions((prev) => [newSession, ...prev]);
+    } else {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId
+            ? {
+                ...s,
+                updatedAt: new Date().toISOString(),
+                messages: [...(s.messages || []), userMsg]
+              }
+            : s
+        )
+      );
+    }
 
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
@@ -669,6 +753,18 @@ export default function AIAgent({ currentUser, setActiveTab }) {
 
       setMessages((prev) => [...prev, assistantMsg]);
 
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId
+            ? {
+                ...s,
+                updatedAt: new Date().toISOString(),
+                messages: [...(s.messages || []), assistantMsg]
+              }
+            : s
+        )
+      );
+
       // Handle UI directives if instructed by the AI
       if (res.uiDirectives && res.uiDirectives.length > 0) {
         for (const dir of res.uiDirectives) {
@@ -680,14 +776,23 @@ export default function AIAgent({ currentUser, setActiveTab }) {
         }
       }
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: 'Unable to complete request. Please verify network or database connection.',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
+      const errorMsg = {
+        role: 'assistant',
+        content: 'Unable to complete request. Please verify network or database connection.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId
+            ? {
+                ...s,
+                updatedAt: new Date().toISOString(),
+                messages: [...(s.messages || []), errorMsg]
+              }
+            : s
+        )
+      );
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -701,21 +806,133 @@ export default function AIAgent({ currentUser, setActiveTab }) {
     }
   };
 
-  const handleClear = () => {
-    setMessages([]);
-    setInput('');
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
   const isWelcomeState = messages.length === 0 && !loading;
 
-  return (
-    <div className="w-full h-full flex flex-col bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 text-white font-sans select-text overflow-hidden">
+  const filteredSessions = sessions.filter((s) => {
+    if (!sessionSearch.trim()) return true;
+    return (s.title || '').toLowerCase().includes(sessionSearch.toLowerCase().trim());
+  });
 
-      {/* ─── Subtle Top Header (when active conversation) ──────────────── */}
-      {!isWelcomeState && (
-        <div className="shrink-0 px-5 py-3 border-b border-[#1b2b3d] bg-[#071322]/70 flex items-center justify-between">
+  return (
+    <div className="w-full h-full flex bg-[#0c1829] border border-[#233549] rounded-2xl shadow-xl shadow-black/40 text-white font-sans select-text overflow-hidden">
+
+      {/* ─── Left Sidebar: Chat History (Gemini Style) ─────────────── */}
+      {sidebarOpen && (
+        <aside className="w-64 sm:w-72 shrink-0 border-r border-[#1b2b3d] bg-[#050e1a]/95 flex flex-col h-full z-20">
+          {/* Top Bar: Brand + Collapse */}
+          <div className="p-3.5 border-b border-[#1b2b3d] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-xs">
+                M
+              </div>
+              <span className="font-semibold text-sm text-white tracking-tight">Maya AI</span>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#10243e] transition-colors cursor-pointer"
+              title="Close chat history"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* New Chat Pill Button */}
+          <div className="p-3">
+            <button
+              onClick={handleNewChat}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[#10243e] hover:bg-[#18355a] text-white border border-[#23456e]/60 hover:border-blue-400/60 text-xs font-semibold transition-all shadow-sm group cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
+              <span>New chat</span>
+            </button>
+          </div>
+
+          {/* Search filter if 3+ sessions */}
+          {sessions.length >= 3 && (
+            <div className="px-3 pb-2">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" />
+                <input
+                  type="text"
+                  value={sessionSearch}
+                  onChange={(e) => setSessionSearch(e.target.value)}
+                  placeholder="Search chats..."
+                  className="w-full bg-[#0c1829] text-xs text-white placeholder-slate-500 rounded-lg pl-8 pr-2.5 py-1.5 border border-[#1b2b3d] focus:outline-none focus:border-blue-500/60 transition-colors"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Chat History List */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-2 py-1 custom-scrollbar space-y-1">
+            <div className="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+              <span>Recent Chats</span>
+              <span className="text-[10px] text-slate-500 font-mono">{sessions.length}</span>
+            </div>
+
+            {filteredSessions.length === 0 ? (
+              <div className="px-3 py-6 text-center text-xs text-slate-500">
+                {sessions.length === 0 ? 'No chat history yet. Start a new conversation!' : 'No chats found.'}
+              </div>
+            ) : (
+              filteredSessions.map((sess) => {
+                const isActive = sess.id === activeSessionId;
+                return (
+                  <div
+                    key={sess.id}
+                    onClick={() => handleSelectSession(sess.id)}
+                    className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-[#183153] text-white font-medium border border-blue-500/40 shadow-sm'
+                        : 'text-slate-300 hover:bg-[#0c1a2d] hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-1">
+                      <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                      <span className="truncate">{sess.title || 'Untitled conversation'}</span>
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteSession(sess.id, e)}
+                      title="Delete chat"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer: Clear all history */}
+          {sessions.length > 0 && (
+            <div className="p-2 border-t border-[#1b2b3d] shrink-0">
+              <button
+                onClick={handleClearAllSessions}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Clear all history</span>
+              </button>
+            </div>
+          )}
+        </aside>
+      )}
+
+      {/* ─── Right Area: Main Viewport (Header, Stream/Hero, Input) ── */}
+      <div className="flex-1 flex flex-col min-w-0 h-full relative">
+        {/* Top Header */}
+        <div className="shrink-0 px-4 sm:px-5 py-3 border-b border-[#1b2b3d] bg-[#071322]/80 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
+            {!sidebarOpen && (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                title="Open chat history"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#183153] border border-[#233549] transition-colors cursor-pointer"
+              >
+                <PanelLeft className="w-4 h-4" />
+              </button>
+            )}
             <span className="text-sm font-semibold text-white tracking-tight">Maya AI</span>
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -724,48 +941,47 @@ export default function AIAgent({ currentUser, setActiveTab }) {
           </div>
 
           <button
-            onClick={handleClear}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-[#0c1829] hover:bg-[#183153] border border-[#233549] rounded-xl transition-colors cursor-pointer"
-            title="New conversation"
+            onClick={handleNewChat}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-[#0c1829] hover:bg-[#183153] border border-[#233549] rounded-xl transition-colors cursor-pointer"
+            title="Start fresh conversation"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear</span>
+            <Plus className="w-3.5 h-3.5 text-blue-400" />
+            <span>New chat</span>
           </button>
         </div>
-      )}
 
-      {/* ─── Main Viewport: Welcome Hero OR Active Chat Stream ────────── */}
-      {isWelcomeState ? (
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center px-4 sm:px-8 py-6">
-          <div className="w-full max-w-4xl flex flex-col items-center">
-            <h1 className="text-2xl sm:text-4xl font-semibold text-white tracking-tight text-center mb-8">
-              Welcome back {agentName}
-            </h1>
+        {/* ─── Main Viewport: Welcome Hero OR Active Chat Stream ────────── */}
+        {isWelcomeState ? (
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center px-4 sm:px-8 py-6">
+            <div className="w-full max-w-4xl flex flex-col items-center">
+              <h1 className="text-2xl sm:text-4xl font-semibold text-white tracking-tight text-center mb-8">
+                Hi {displayName}, welcome back
+              </h1>
 
-            {/* 4 Capability Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full">
-              {CAPABILITY_CARDS.map((card, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setInput(card.sampleQuery);
-                    inputRef.current?.focus();
-                  }}
-                  className={`rounded-2xl bg-[#071322] border border-[#233549] ${card.borderHover} p-5 text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer group flex flex-col justify-start shadow-md shadow-black/25 min-h-[110px]`}
-                >
-                  <h3 className="text-[14px] font-semibold text-white mb-2 tracking-tight group-hover:text-blue-300 transition-colors">
-                    {card.title}
-                  </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {card.description}
-                  </p>
-                </button>
-              ))}
+              {/* 4 Capability Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full">
+                {CAPABILITY_CARDS.map((card, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setInput(card.sampleQuery);
+                      inputRef.current?.focus();
+                    }}
+                    className={`rounded-2xl bg-[#071322] border border-[#233549] ${card.borderHover} p-5 text-left transition-all duration-200 hover:-translate-y-0.5 cursor-pointer group flex flex-col justify-start shadow-md shadow-black/25 min-h-[110px]`}
+                  >
+                    <h3 className="text-[14px] font-semibold text-white mb-2 tracking-tight group-hover:text-blue-300 transition-colors">
+                      {card.title}
+                    </h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      {card.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
+        ) : (
         <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 custom-scrollbar">
           <div className="max-w-4xl mx-auto space-y-4">
             {messages.map((msg, idx) => {
@@ -1042,5 +1258,6 @@ export default function AIAgent({ currentUser, setActiveTab }) {
       </div>
 
     </div>
-  );
+  </div>
+);
 }

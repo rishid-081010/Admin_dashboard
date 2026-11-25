@@ -113,10 +113,10 @@ def deploy_to_domain(domain):
     # Priority sorting: index.html & index-*.js first
     def priority_key(item):
         _, remote_path = item
+        if 'index.html' in remote_path:
+            return -1
         if 'assets/' in remote_path:
             return 0
-        if 'index.html' in remote_path:
-            return 3
         if remote_path.endswith('.php') or remote_path.endswith('.htaccess'):
             return 1
         return 2
